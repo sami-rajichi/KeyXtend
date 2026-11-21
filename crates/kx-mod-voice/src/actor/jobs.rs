@@ -49,7 +49,10 @@ impl Actor {
             Back::Shown(shown) => self.shown(shown),
             Back::Net { take, round, note } => self.net_note(take, round, note),
             Back::Sending { take, round, run } => self.opened_net(take, round, run),
-            Back::Tested { ticket, answer } => self.panel.tested(ticket, answer),
+            Back::Tested { ticket, answer } => {
+                let at = self.ports.calendar.now();
+                self.panel.tested(ticket, answer, at);
+            }
             Back::Trial { take, at, note } => self.trial_note(take, at, note),
             Back::Tried { take, at, run } => self.tried(take, at, run),
         }

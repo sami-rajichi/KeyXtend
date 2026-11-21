@@ -4,8 +4,8 @@
 use super::act::BarButton;
 use super::panel::{Fact, ServiceName, Unavailable, VoicePanel};
 use crate::Secret;
+use crate::ports::LocalTime;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 listed! {
     /// Where the bar goes, from the `place` setting.
@@ -181,8 +181,8 @@ pub enum CloudWhy {
     Account,
     /// The free allowance is used up.
     Allowance {
-        /// How long until it renews, when the service tells.
-        renews_in: Option<Duration>,
+        /// The wall time it renews at, from when the fault came, when the service tells.
+        renews_at: Option<LocalTime>,
     },
     /// Too many requests, still after one wait.
     Rate,

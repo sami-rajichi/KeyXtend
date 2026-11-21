@@ -5,7 +5,8 @@ use super::*;
 
 /// Each fault the service's run tells, with the line the bar shows.
 fn faults() -> Vec<(CloudFault, CloudWhy)> {
-    let renews_in = Some(Duration::from_secs(600));
+    let renews_in = Some(Duration::from_mins(10));
+    let renews_at = LocalTime::at(WALL_MS + 600_000, EAST_MIN);
     vec![
         (CloudFault::Network, CloudWhy::Net),
         (CloudFault::Timeout, CloudWhy::Net),
@@ -14,7 +15,7 @@ fn faults() -> Vec<(CloudFault, CloudWhy)> {
         (CloudFault::Account, CloudWhy::Account),
         (
             CloudFault::Allowance { renews_in },
-            CloudWhy::Allowance { renews_in },
+            CloudWhy::Allowance { renews_at },
         ),
         (CloudFault::Rate, CloudWhy::Rate),
         (CloudFault::TooBig, CloudWhy::TooBig),
@@ -154,4 +155,24 @@ fn an_empty_reply_says_so_and_keeps_the_recording() {
     assert!(ask(&out).is_none() && kept(&out).is_empty());
     let want = cloud_note(CloudWhy::Empty, LocalUse::Ready, true);
     assert_eq!(rig.shown(), want);
+}
+
+#[test]
+fn a_used_allowance_names_the_wall_time_it_renews_at_from_when_the_fault_came() {
+    let mut rig = sending();
+    let renews_in = Some(Duration::from_mins(90));
+    rig.fail(CloudFault::Allowance { renews_in });
+    let VoiceBar::Note(note) = rig.shown() else {
+        panic!("a note shows");
+    };
+    let BarHint::Cloud {
+        why: CloudWhy::Allowance {
+            renews_at: Some(at),
+        },
+        ..
+    } = note.hint
+    else {
+        panic!("the used allowance's note");
+    };
+    assert_eq!((at.hour, at.minute), (14, 30), "13:00 and 90 minutes");
 }

@@ -3,10 +3,9 @@
 
 use super::VoiceMark;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, ServiceMark,
-    Unavailable,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, LocalTime, ModelSide,
+    ServiceMark, Unavailable,
 };
-use std::time::Duration;
 
 /// The start of every cloud key.
 pub const CLOUD_WORD: &str = "cloud.";
@@ -116,10 +115,8 @@ pub const VOICE_USE_LOCAL: &str = "cloud.use-local";
 pub const VOICE_SEND_WARNING: &str = "cloud.send-warning";
 /// A cloud note's line: this, then its `cloud_why_id`.
 pub const VOICE_NOTE_CLOUD: &str = "cloud.note-";
-/// The used-up allowance's line with its renewal: `$in`.
-pub const VOICE_NOTE_RENEWS: &str = "cloud.note-allowance-in";
-/// Hours, for a renewal: `$count`.
-pub const VOICE_HOURS: &str = "cloud.hours";
+/// The used-up allowance's line with the clock time it renews at: `$at`.
+pub const VOICE_NOTE_RENEWS: &str = "cloud.note-allowance-at";
 /// A Models side's chip: this, then its `model_side_id`.
 pub const VOICE_MODELS_SIDE: &str = "cloud.side-";
 /// The side chips' group name.
@@ -214,15 +211,15 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
     })
 }
 
-/// The cloud reason whose note a key test's answer reads as, a used allowance with `renews_in`, so each reason is
+/// The cloud reason whose note a key test's answer reads as, a used allowance with `renews_at`, so each reason is
 /// written once; `None` for the rest.
 #[must_use]
-pub const fn key_check_why(check: KeyCheck, renews_in: Option<Duration>) -> Option<CloudWhy> {
+pub const fn key_check_why(check: KeyCheck, renews_at: Option<LocalTime>) -> Option<CloudWhy> {
     Some(match check {
         KeyCheck::Credit => CloudWhy::Credit,
         KeyCheck::Account => CloudWhy::Account,
         KeyCheck::Region => CloudWhy::Region,
-        KeyCheck::Allowance => CloudWhy::Allowance { renews_in },
+        KeyCheck::Allowance => CloudWhy::Allowance { renews_at },
         KeyCheck::Rate => CloudWhy::Rate,
         KeyCheck::Strange => CloudWhy::Strange,
         _ => return None,

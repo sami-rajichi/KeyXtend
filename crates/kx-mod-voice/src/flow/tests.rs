@@ -1,10 +1,11 @@
-//! The flow on a test clock (plan task 17): each file covers some of the plan's edge cases 1 to 14 and 16 to 18.
+//! The flow on a test clock (plan task 17): each file covers some of the plan's edge cases, up to 28 with part 2's
+//! cloud files.
 
 use super::*;
 use kx_module_api::ports::{
-    BarButton, BarHint, FieldChange, FieldKind, LayoutChanged, LayoutId, PanelButton, SpeechError,
-    SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct, VoiceBar, VoiceClick, VoiceLang,
-    VoiceLit, VoicePage, VoiceText,
+    BarButton, BarHint, FieldChange, FieldKind, LayoutChanged, LayoutId, LocalTime, PanelButton,
+    SpeechError, SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct, VoiceBar, VoiceClick,
+    VoiceLang, VoiceLit, VoicePage, VoiceText,
 };
 use kx_module_api::ports::{Fingerprint, SpeechAsk, SpeechDone, SpeechModel};
 use kx_module_api::{Redacted, Secret, Zeroizing};
@@ -38,6 +39,14 @@ const BYTES: u64 = 739_508_576;
 const BOX: u64 = 7;
 /// The model file's fingerprint in the tests.
 const PRINT: Fingerprint = Fingerprint::new([7; Fingerprint::BYTES]);
+/// When a service's notes come on the wall clock: 13:00 in a place `EAST_MIN` minutes east of UTC.
+const WALL_MS: i64 = 1_794_657_600_000;
+const EAST_MIN: i16 = 60;
+
+/// The wall time a service's notes come at.
+fn wall() -> LocalTime {
+    LocalTime::at(WALL_MS, EAST_MIN).unwrap()
+}
 
 /// A clock the test moves; it never sleeps.
 #[derive(Default)]

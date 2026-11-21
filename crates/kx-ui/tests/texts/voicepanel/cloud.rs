@@ -128,7 +128,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         key: Redacted::new(56),
         typed: Redacted::new(0),
         check: KeyCheck::Works,
-        renews_in: None,
+        renews_at: None,
         address: None,
         address_fault: None,
         model: text(""),

@@ -95,7 +95,7 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
         s.part != Some(LinesPart::Key),
     );
     let check = key_check_id(s.check)
-        .zip(t.voice_key_check(s.check, s.renews_in))
+        .zip(t.voice_key_check(s.check, s.renews_at))
         .map(|(id, text)| Hint::new(id, text));
     let link = s.site.as_ref().map(|site| {
         let text = t.voice_with(VOICE_KEY_LINK, &[(SITE, clean(site))]);

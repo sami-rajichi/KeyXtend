@@ -8,12 +8,11 @@ use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, ServiceMark, ServiceName,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, ServiceMark, ServiceName,
     ServiceSheet, VoiceSheet,
 };
 use kx_ui::voice_acts::{KEEP, SAVE, SERVICE};
 use serde_json::Value;
-use std::time::Duration;
 
 /// Groq's key page: a 56-character key that works, nothing typed on the model line.
 pub(super) fn groq_lines() -> ServiceSheet {
@@ -23,7 +22,7 @@ pub(super) fn groq_lines() -> ServiceSheet {
         key: Redacted::new(56),
         typed: Redacted::new(0),
         check: KeyCheck::Works,
-        renews_in: None,
+        renews_at: None,
         address: None,
         address_fault: None,
         model: Redacted::new(String::new()),
@@ -127,6 +126,9 @@ fn the_key_page_says_where_keys_are_made_and_that_the_key_is_sealed() {
     assert_eq!(buttons(&p["foot"]), foot);
 }
 
+/// A used allowance's renewal: 17:00 UTC.
+const RENEWS_MS: i64 = 1_794_675_600_000;
+
 /// Each test answer with a reason, its id and its line, which is that reason's cloud note; and no answer's own line.
 const ANSWERS: [(KeyCheck, &str, &str); 7] = [
     (
@@ -166,10 +168,10 @@ const ANSWERS: [(KeyCheck, &str, &str); 7] = [
     ),
 ];
 
-/// The key test's answer `check` on Groq's key page, renewing in `renews_in`, as its id and line.
-fn answer(check: KeyCheck, renews_in: Option<Duration>) -> Vec<(String, String)> {
+/// The key test's answer `check` on Groq's key page, renewing at `renews_at`, as its id and line.
+fn answer(check: KeyCheck, renews_at: Option<LocalTime>) -> Vec<(String, String)> {
     let mut lines = groq_lines();
-    (lines.check, lines.renews_in) = (check, renews_in);
+    (lines.check, lines.renews_at) = (check, renews_at);
     marks(&one(&lines_json(lines)["sheet"]["check"]))
 }
 
@@ -182,8 +184,8 @@ fn a_tests_refusal_reads_as_the_cloud_note_of_its_reason_and_no_answer_as_its_ow
 
 #[test]
 fn a_used_allowance_on_test_names_its_renewal_when_the_service_told() {
-    let renews = "The free allowance is used up. It renews in 5 h.";
-    let got = answer(KeyCheck::Allowance, Some(Duration::from_hours(5)));
+    let renews = "The free allowance is used up. It renews at 17:00.";
+    let got = answer(KeyCheck::Allowance, LocalTime::at(RENEWS_MS, 0));
     assert_eq!(got, pairs(&[("allowance", renews)]));
 }
 

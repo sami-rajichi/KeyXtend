@@ -13,12 +13,11 @@ use kx_mod_voice::services::{Address, Service, Services, table};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud,
-    CompareSheet, DeviceLabel, DeviceName, Fact, KeyCheck, LinesPart, ModelRow, ModelSide,
-    ModelState, ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow, Unavailable,
-    VoiceSheet,
+    CompareSheet, DeviceLabel, DeviceName, Fact, KeyCheck, LinesPart, LocalTime, ModelRow,
+    ModelSide, ModelState, ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow,
+    Unavailable, VoiceSheet,
 };
 use kx_ui::UiSettings;
-use std::time::Duration;
 
 /// The start of each long Cloud page's name, then its page number from 1.
 const CLOUD_LONG: &str = "cloudLong-";
@@ -147,21 +146,26 @@ fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
     VoiceSheet::Card(Box::new(c))
 }
 
-/// A renewal of 23 hours, so a used allowance's answer shows a long count.
-const RENEWS: Duration = Duration::from_hours(23);
+/// A renewal at 23:59 UTC, as a used allowance's answer shows it.
+const RENEWS_MS: i64 = 1_794_700_740_000;
+
+/// The renewal a used allowance's answer shows.
+fn renews() -> Option<LocalTime> {
+    LocalTime::at(RENEWS_MS, 0)
+}
 
 /// The key test's answer with the longest line in language `tag`, with the renewal it shows.
-fn longest_check(tag: &str) -> (KeyCheck, Option<Duration>) {
+fn longest_check(tag: &str) -> (KeyCheck, Option<LocalTime>) {
     let t = lang(tag);
     let len = |c: &KeyCheck| {
-        t.voice_key_check(*c, Some(RENEWS))
+        t.voice_key_check(*c, renews())
             .map_or(0, |a| a.chars().count())
     };
     let check = KeyCheck::ALL
         .into_iter()
         .max_by_key(len)
         .unwrap_or(KeyCheck::Failed);
-    (check, (check == KeyCheck::Allowance).then_some(RENEWS))
+    (check, (check == KeyCheck::Allowance).then(renews).flatten())
 }
 
 /// Part `part` of the Custom row's key page in language `tag` with every line, each with its longest answer.
@@ -169,7 +173,7 @@ fn service_long(part: LinesPart, tag: &str) -> VoiceSheet {
     let VoiceSheet::Service(mut s) = lines("custom") else {
         unreachable!("a key page")
     };
-    (s.key, (s.check, s.renews_in)) = (Redacted::new(56), longest_check(tag));
+    (s.key, (s.check, s.renews_at)) = (Redacted::new(56), longest_check(tag));
     (s.address_fault, s.keep) = (Some(AddressFault::Path), Some(true));
     (s.site, s.part) = (Some("console.groq.com".to_owned()), Some(part));
     VoiceSheet::Service(s)
@@ -265,11 +269,8 @@ fn the_long_key_page_shows_the_longest_key_answer_in_each_language() {
             t.voice_key_check(c, r)
                 .map_or(0, |a: String| a.chars().count())
         };
-        let most = KeyCheck::ALL
-            .into_iter()
-            .map(|c| len(c, Some(RENEWS)))
-            .max();
-        assert_eq!(Some(len(s.check, s.renews_in)), most, "{tag}");
+        let most = KeyCheck::ALL.into_iter().map(|c| len(c, renews())).max();
+        assert_eq!(Some(len(s.check, s.renews_at)), most, "{tag}");
     }
 }
 

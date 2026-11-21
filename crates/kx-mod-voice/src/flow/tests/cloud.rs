@@ -96,7 +96,12 @@ impl Rig {
     /// The service's run tells `sent` for the last upload.
     fn sent(&mut self, sent: Sent) -> Vec<Out> {
         let (take, round) = self.upload.unwrap();
-        self.on(In::Sent { take, round, sent })
+        self.on(In::Sent {
+            take,
+            round,
+            sent,
+            at: wall(),
+        })
     }
 
     /// The service tells `texts` as pieces, then its end.
@@ -253,7 +258,16 @@ fn a_note_of_an_older_upload_or_take_is_dropped() {
     let stale = [(take, round + 1), (take + 1, round)];
     for (take, round) in stale {
         let sent = Sent::Note(CloudNote::Done);
-        assert!(ask(&rig.on(In::Sent { take, round, sent })).is_none());
+        let at = wall();
+        assert!(
+            ask(&rig.on(In::Sent {
+                take,
+                round,
+                sent,
+                at
+            }))
+            .is_none()
+        );
     }
     assert_eq!(rig.shown(), VoiceBar::Transcribing);
 }
@@ -267,6 +281,7 @@ fn a_cloud_note_prints_no_text() {
             index: 0,
             text: secret("bonjour"),
         }),
+        at: wall(),
     };
     assert!(!format!("{sent:?}").contains("bonjour"));
 }

@@ -3,7 +3,7 @@
 
 use super::panel::holds;
 use super::*;
-use std::time::Duration;
+use crate::ports::LocalTime;
 
 /// A cloud note for `why`, with "Use the local model" as `local` and Try again.
 fn cloud(why: CloudWhy, local: LocalUse) -> BarNote {
@@ -25,16 +25,17 @@ fn the_bar_offers_try_again_beside_its_other_buttons() {
 
 #[test]
 fn a_cloud_note_names_why_with_try_again_and_the_local_models_state() {
-    let renews_in = Some(Duration::from_secs(3_600));
+    let renews_at = LocalTime::at(1_794_657_600_000, 60);
     let notes = [
-        cloud(CloudWhy::Allowance { renews_in }, LocalUse::Ready),
+        cloud(CloudWhy::Allowance { renews_at }, LocalUse::Ready),
         cloud(CloudWhy::Key, LocalUse::Download { bytes: 740_000_000 }),
         cloud(CloudWhy::Language(english()), LocalUse::Dimmed),
     ];
     let shown = format!("{notes:?}");
     let parts = [
         "Allowance",
-        "renews_in: Some(3600s)",
+        "renews_at: Some(LocalTime",
+        "hour: 13",
         "Ready",
         "Key",
         "Download { bytes: 740000000 }",
@@ -52,7 +53,7 @@ fn every_reason_and_local_state_is_distinct() {
         CloudWhy::Key,
         CloudWhy::Credit,
         CloudWhy::Account,
-        CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Allowance { renews_at: None },
         CloudWhy::Rate,
         CloudWhy::TooBig,
         CloudWhy::Language(english()),
@@ -83,7 +84,7 @@ fn open_service_shows_on_the_five_notes_the_services_own_pages_settle() {
         CloudWhy::Key,
         CloudWhy::Terms,
         CloudWhy::Account,
-        CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Allowance { renews_at: None },
         CloudWhy::Off,
     ];
     assert!(opens.iter().all(CloudWhy::opens));

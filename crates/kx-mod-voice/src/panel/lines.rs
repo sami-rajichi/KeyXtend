@@ -4,14 +4,14 @@
 
 use kx_module_api::ports::{
     AddressFault, BarHint, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, LINK_SCHEME,
+    LocalTime,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
-use std::time::Duration;
 
 use super::cloud::edit;
 use super::{Do, Page, Panel};
+use crate::flow::renews;
 use crate::keys::KeyError;
-
 use crate::view::Facts;
 
 impl Panel {
@@ -96,13 +96,14 @@ impl Panel {
         Vec::new()
     }
 
-    /// The test of `ticket` answered, a refusal by its reason; dropped once the user left the page or changed the key.
-    pub fn tested(&mut self, ticket: u32, answer: Result<(), CloudFault>) {
+    /// The test of `ticket` answered at wall time `at`, a refusal by its reason; dropped once the user left the page or
+    /// changed the key.
+    pub fn tested(&mut self, ticket: u32, answer: Result<(), CloudFault>, at: LocalTime) {
         if self.cloud.test != Some(ticket) || self.page != Some(Page::Lines) {
             return;
         }
         self.cloud.test = None;
-        (self.cloud.check, self.cloud.renews_in) = answered(answer);
+        (self.cloud.check, self.cloud.renews_at) = answered(answer, at);
     }
 
     /// Service `id`'s key holds `dots` characters, as read when its page opened.
@@ -171,15 +172,18 @@ impl Panel {
     }
 }
 
-/// The key page's answer to a test, by its reason, with a used allowance's renewal; only no answer is `Failed`.
-fn answered(answer: Result<(), CloudFault>) -> (KeyCheck, Option<Duration>) {
+/// The key page's answer to a test at wall time `at`, by its reason, with a used allowance's renewal; only no answer is
+/// `Failed`.
+fn answered(answer: Result<(), CloudFault>, at: LocalTime) -> (KeyCheck, Option<LocalTime>) {
     let check = match answer {
         Ok(()) => KeyCheck::Works,
         Err(CloudFault::Key) => KeyCheck::Refused,
         Err(CloudFault::Credit) => KeyCheck::Credit,
         Err(CloudFault::Account) => KeyCheck::Account,
         Err(CloudFault::Region) => KeyCheck::Region,
-        Err(CloudFault::Allowance { renews_in }) => return (KeyCheck::Allowance, renews_in),
+        Err(CloudFault::Allowance { renews_in }) => {
+            return (KeyCheck::Allowance, renews(renews_in, at));
+        }
         Err(CloudFault::Rate) => KeyCheck::Rate,
         Err(CloudFault::Strange) => KeyCheck::Strange,
         // No answer; a key test sends no sound, so TooBig, Language and Empty cannot come and read the same.

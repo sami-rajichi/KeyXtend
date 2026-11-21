@@ -187,6 +187,7 @@ fn tell_sent(rig: &mut Rig, told: &Told, old: bool) -> Vec<Out> {
         take,
         round,
         sent: told.sent(),
+        at: wall(),
     })
 }
 

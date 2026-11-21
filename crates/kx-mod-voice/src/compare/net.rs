@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use kx_module_api::Secret;
-use kx_module_api::ports::{CloudNote, RunStep};
+use kx_module_api::ports::{CloudNote, LocalTime, RunStep};
 
 use super::end::line;
 use super::{Act, Compare, Line, Stage};
@@ -24,9 +24,16 @@ impl Compare {
         vec![Act::Send { take, lang, to }]
     }
 
-    /// A note from cloud model `at` of run `take`, its text `wait_ms` after the send; a note of another run, or of a
-    /// model that ended, is not heard.
-    pub fn net(&mut self, take: u32, at: usize, note: CloudNote, wait_ms: u32) -> Vec<Act> {
+    /// A note from cloud model `at` of run `take`, its text `wait_ms` after the send and at wall time `now`; a note of
+    /// another run, or of a model that ended, is not heard.
+    pub fn net(
+        &mut self,
+        take: u32,
+        at: usize,
+        note: CloudNote,
+        wait_ms: u32,
+        now: LocalTime,
+    ) -> Vec<Act> {
         let live = take == self.take && matches!(self.stage, Stage::Running(_));
         let writing = self
             .remotes
@@ -44,7 +51,7 @@ impl Compare {
             CloudNote::Fault(fault) => {
                 self.texts.retain(|(of, _), _| *of != at);
                 self.remotes[at].1 = RunStep::Failed;
-                self.faults.insert(at, fault);
+                self.faults.insert(at, (fault, now));
             }
         }
         match self.stage {

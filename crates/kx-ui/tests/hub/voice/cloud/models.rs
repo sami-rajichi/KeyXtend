@@ -227,7 +227,7 @@ fn a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_lin
         CloudWhy::Key,
         CloudWhy::Terms,
         CloudWhy::Account,
-        CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Allowance { renews_at: None },
         CloudWhy::Off,
     ];
     for why in opens {

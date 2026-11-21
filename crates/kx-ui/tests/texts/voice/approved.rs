@@ -4,13 +4,12 @@
 
 use crate::files::keys_of;
 use crate::lang;
-use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths};
+use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths, LocalTime};
 use kx_ui::i18n::keys::vars::FREE;
 use kx_ui::i18n::keys::{
     FACT_BILLS, FACT_FREE, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
 };
 use kx_ui::{I18n, LANGS};
-use std::time::Duration;
 
 /// The UI languages, in the order the table gives their words.
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
@@ -108,18 +107,14 @@ const ALLOWANCE: [(&str, &str, &str); 3] = [
     (
         "en",
         "Free: 8",
-        "The free allowance is used up. It renews in ",
+        "The free allowance is used up. It renews at ",
     ),
     (
         "fr",
         "Gratuit\u{a0}: 8",
-        "Le quota gratuit est épuisé. Il se renouvelle dans ",
+        "Le quota gratuit est épuisé. Il se renouvelle à ",
     ),
-    (
-        "ar",
-        "مجانًا: 8",
-        "نفدت الحصة المجانية، وتتجدد بعد مدة قدرها ",
-    ),
+    ("ar", "مجانًا: 8", "نفدت الحصة المجانية، وتتجدد في الساعة "),
 ];
 
 #[test]
@@ -150,7 +145,7 @@ fn every_warning_fact_has_its_own_short_mark_in_each_language() {
 #[test]
 fn the_free_allowance_keeps_one_term_on_the_row_and_the_renewal() {
     let renews = CloudWhy::Allowance {
-        renews_in: Some(Duration::from_hours(2)),
+        renews_at: LocalTime::at(0, 0),
     };
     for (tag, row, renewal) in ALLOWANCE {
         let t = lang(tag);

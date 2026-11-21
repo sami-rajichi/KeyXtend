@@ -235,7 +235,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         key: Redacted::new(56),
         typed: Redacted::new(0),
         check: KeyCheck::Untested,
-        renews_in: None,
+        renews_at: None,
         address: Some(hidden(1)),
         address_fault: Some(AddressFault::Host),
         model: hidden(2),

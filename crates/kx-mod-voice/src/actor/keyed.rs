@@ -94,7 +94,9 @@ impl Actor {
     /// Tests `service`'s key in a job off the actor: the key is read there, just before the call (carry 3).
     fn test_key(&mut self, service: &str, ticket: u32) {
         let (Some(head), Some(cloud)) = (self.test_head(service), self.ports.cloud.clone()) else {
-            return self.panel.tested(ticket, Err(CloudFault::Gone));
+            return self
+                .panel
+                .tested(ticket, Err(CloudFault::Gone), self.ports.calendar.now());
         };
         let (keys, back, service) = (self.keys(), self.ports.back.clone(), service.to_owned());
         let job: Job = Box::new(move || {
@@ -103,7 +105,8 @@ impl Actor {
             let _ = back.send(Msg::Back(Back::Tested { ticket, answer }));
         });
         if !(self.ports.spawn)(job) {
-            self.panel.tested(ticket, Err(CloudFault::Gone));
+            self.panel
+                .tested(ticket, Err(CloudFault::Gone), self.ports.calendar.now());
         }
     }
 

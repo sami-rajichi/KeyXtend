@@ -104,11 +104,11 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
         !sheet.acts.contains(&CloudButton::Test),
         "one test at a time"
     );
-    rig.with(|p, _| p.tested(first, Ok(())));
+    rig.with(|p, f| p.tested(first, Ok(()), f.now));
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Works);
     let second = test(&mut rig);
     rig.click(&VoiceClick::SetKey(secret(&made_key())));
-    rig.with(|p, _| p.tested(second, Ok(())));
+    rig.with(|p, f| p.tested(second, Ok(()), f.now));
     assert_eq!(
         lines_sheet(&mut rig).check,
         KeyCheck::Untested,
@@ -116,7 +116,7 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
     );
     let third = test(&mut rig);
     rig.click(&VoiceClick::Button(PanelButton::Back));
-    rig.with(|p, _| p.tested(third, Err(CloudFault::Key)));
+    rig.with(|p, f| p.tested(third, Err(CloudFault::Key), f.now));
     act(&mut rig, &named("Groq"), CloudButton::Lines);
     assert_eq!(
         lines_sheet(&mut rig).check,
@@ -124,10 +124,10 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
         "the user left"
     );
     let fourth = test(&mut rig);
-    rig.with(|p, _| p.tested(fourth, Err(CloudFault::Key)));
+    rig.with(|p, f| p.tested(fourth, Err(CloudFault::Key), f.now));
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Refused);
     let fifth = test(&mut rig);
-    rig.with(|p, _| p.tested(fifth, Err(CloudFault::Gone)));
+    rig.with(|p, f| p.tested(fifth, Err(CloudFault::Gone), f.now));
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Failed);
 }
 

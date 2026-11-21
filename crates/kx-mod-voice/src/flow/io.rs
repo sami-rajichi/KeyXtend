@@ -2,9 +2,9 @@
 //! gets, which the actor answers from the models table, the device rule and the folder.
 
 use kx_module_api::ports::{
-    BarButton, CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, SessionNote, SpeechAsk,
-    SpeechDone, SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit,
-    VoicePanel, VoiceView,
+    BarButton, CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, LocalTime, SessionNote,
+    SpeechAsk, SpeechDone, SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel,
+    VoiceLit, VoicePanel, VoiceView,
 };
 use kx_module_api::{Redacted, Secret};
 
@@ -58,6 +58,8 @@ pub enum In {
         round: u32,
         /// What it tells.
         sent: Sent,
+        /// When it came on the wall clock, which a used allowance's renewal counts from.
+        at: LocalTime,
     },
     /// A service's key was set or removed, so a running cloud dictation checks its own.
     Keys,

@@ -110,8 +110,8 @@ fn a_cloud_result_is_named_by_its_service_and_use_picks_it() {
     let sent = rig.with(|p, _| p.compare_note(take, done(0)));
     assert!(matches!(&sent[..], [Do::Compare(Act::Send { to, .. })] if *to == [turbo()]));
     let text = Redacted::new(kx_module_api::Zeroizing::new("hello world".into()));
-    rig.with(|p, _| p.compare_net(take, 0, CloudNote::Piece { index: 0, text }, 0));
-    rig.with(|p, _| p.compare_net(take, 0, CloudNote::Done, 900));
+    rig.with(|p, f| p.compare_net(take, 0, CloudNote::Piece { index: 0, text }, 0, f.now));
+    rig.with(|p, f| p.compare_net(take, 0, CloudNote::Done, 900, f.now));
     let VoiceSheet::Compare(CompareSheet::Results { rows, .. }) = rig.view().unwrap().sheet else {
         panic!("no results");
     };
@@ -178,7 +178,7 @@ fn the_running_header_names_the_first_cloud_model_still_writing() {
     rig.click(&VoiceClick::Bar(BarButton::Stop));
     rig.with(|p, _| p.compare_note(take, done(0)));
     assert_eq!(header(&mut rig), (1, 2, "Whisper Large v3 Turbo".into()));
-    rig.with(|p, _| p.compare_net(take, 0, CloudNote::Done, 700));
+    rig.with(|p, f| p.compare_net(take, 0, CloudNote::Done, 700, f.now));
     assert_eq!(header(&mut rig), (2, 2, "Whisper Large v3".into()));
 }
 
@@ -234,11 +234,16 @@ fn a_failed_cloud_models_reason_on_compare_is_the_bars_for_every_fault() {
         rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
         rig.click(&VoiceClick::Bar(BarButton::Stop));
         rig.with(|p, _| p.compare_note(take, done(0)));
-        rig.with(|p, _| p.compare_net(take, 0, CloudNote::Fault(fault), 0));
+        rig.with(|p, f| p.compare_net(take, 0, CloudNote::Fault(fault), 0, f.now));
         let view = rig.view().unwrap();
         let VoiceSheet::Compare(CompareSheet::Running { rows, .. }) = view.sheet else {
             panic!("not running: {fault:?}");
         };
-        assert_eq!(rows[0].why, Some(net_why(fault, &view.lang)), "{fault:?}");
+        let at = rig.with(|_, f| f.now);
+        assert_eq!(
+            rows[0].why,
+            Some(net_why(fault, &view.lang, at)),
+            "{fault:?}"
+        );
     }
 }

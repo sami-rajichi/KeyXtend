@@ -2,7 +2,7 @@
 //! on a ticked result; and the notes of Compare's run.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CloudNote, DevicePick, PanelButton, SpeechNote, VoiceTab};
+use kx_module_api::ports::{CloudNote, DevicePick, LocalTime, PanelButton, SpeechNote, VoiceTab};
 
 use super::{Choice, Do, Key, Page, Panel, wrap};
 use crate::compare::{Entrant, Plan, Remote};
@@ -86,9 +86,16 @@ impl Panel {
         list.into_iter().filter_map(remote).collect()
     }
 
-    /// A note from cloud model `at` of Compare's run `take`, `wait_ms` after the send.
-    pub fn compare_net(&mut self, take: u32, at: usize, note: CloudNote, wait_ms: u32) -> Vec<Do> {
-        wrap(self.compare.net(take, at, note, wait_ms))
+    /// A note from cloud model `at` of Compare's run `take`, `wait_ms` after the send and at wall time `now`.
+    pub fn compare_net(
+        &mut self,
+        take: u32,
+        at: usize,
+        note: CloudNote,
+        wait_ms: u32,
+        now: LocalTime,
+    ) -> Vec<Do> {
+        wrap(self.compare.net(take, at, note, wait_ms, now))
     }
 
     /// A note from Compare's run `take`.

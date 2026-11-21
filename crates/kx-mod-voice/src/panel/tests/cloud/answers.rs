@@ -78,7 +78,7 @@ fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
     ];
     for (fault, said) in cases {
         let sheet = tested(Err(fault));
-        assert_eq!((sheet.check, sheet.renews_in), (said, None), "{fault:?}");
+        assert_eq!((sheet.check, sheet.renews_at), (said, None), "{fault:?}");
     }
 }
 
@@ -86,23 +86,31 @@ fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
 fn a_used_allowance_on_test_carries_its_renewal_only_while_its_answer_shows() {
     let mut rig = on_groq_lines();
     let ticket = test(&mut rig);
-    rig.with(|p, _| p.tested(ticket, Err(CloudFault::Allowance { renews_in: RENEWS })));
+    rig.with(|p, f| {
+        p.tested(
+            ticket,
+            Err(CloudFault::Allowance { renews_in: RENEWS }),
+            f.now,
+        );
+    });
     let sheet = lines_sheet(&mut rig);
+    let at = sheet.renews_at.map(|t| (t.hour, t.minute));
     assert_eq!(
-        (sheet.check, sheet.renews_in),
-        (KeyCheck::Allowance, RENEWS)
+        (sheet.check, at),
+        (KeyCheck::Allowance, Some((17, 0))),
+        "12:00 and five hours"
     );
     let ticket = test(&mut rig);
-    assert_eq!(lines_sheet(&mut rig).renews_in, None, "testing again");
-    rig.with(|p, _| p.tested(ticket, Ok(())));
-    assert_eq!(lines_sheet(&mut rig).renews_in, None, "the key works");
+    assert_eq!(lines_sheet(&mut rig).renews_at, None, "testing again");
+    rig.with(|p, f| p.tested(ticket, Ok(()), f.now));
+    assert_eq!(lines_sheet(&mut rig).renews_at, None, "the key works");
 }
 
 /// Groq's key page after one test of its key answered `answer`.
 fn tested(answer: Result<(), CloudFault>) -> ServiceSheet {
     let mut rig = on_groq_lines();
     let ticket = test(&mut rig);
-    rig.with(|p, _| p.tested(ticket, answer));
+    rig.with(|p, f| p.tested(ticket, answer, f.now));
     lines_sheet(&mut rig)
 }
 
@@ -126,7 +134,7 @@ fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing()
         let [Do::Test { ticket, .. }] = out[..] else {
             panic!("no test: {out:?}");
         };
-        rig.with(|p, _| p.tested(ticket, Ok(())));
+        rig.with(|p, f| p.tested(ticket, Ok(()), f.now));
         let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
         let [Do::Take(round)] = out[..] else {
             panic!("no take: {out:?}");

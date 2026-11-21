@@ -135,9 +135,10 @@ impl Actor {
         self.net.trials.retain(|(t, _), _| *t != take);
     }
 
-    /// Tells the panel model `at`'s note.
+    /// Tells the panel model `at`'s note, with when it came on the wall clock.
     fn tell_compare(&mut self, take: u32, at: usize, note: CloudNote, wait_ms: u32) {
-        let dos = self.panel.compare_net(take, at, note, wait_ms);
+        let now = self.ports.calendar.now();
+        let dos = self.panel.compare_net(take, at, note, wait_ms, now);
         self.dos(dos);
     }
 

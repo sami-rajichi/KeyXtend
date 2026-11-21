@@ -2,10 +2,11 @@
 //! actor carries out, and the bar's line for each cloud fault.
 
 use kx_module_api::ports::{
-    CloudFault, CloudNote, CloudWhy, Fact, LocalUse, ServiceName, SpeechDone, SpeechError,
-    Unavailable, VoiceLang,
+    CloudFault, CloudNote, CloudWhy, Fact, LocalTime, LocalUse, ServiceName, SpeechDone,
+    SpeechError, Unavailable, VoiceLang,
 };
 use kx_module_api::{Mono, Redacted};
+use std::time::Duration;
 
 use super::{Lack, Ready};
 
@@ -102,14 +103,16 @@ pub struct Upload {
     pub lang: String,
 }
 
-/// The reason the bar and a Compare row give for `fault`, about language `lang`.
-pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
+/// The reason the bar and a Compare row give for `fault`, about language `lang`, which came at wall time `at`.
+pub(crate) fn why(fault: CloudFault, lang: &VoiceLang, at: LocalTime) -> CloudWhy {
     match fault {
         CloudFault::Network | CloudFault::Timeout => CloudWhy::Net,
         CloudFault::Key => CloudWhy::Key,
         CloudFault::Credit => CloudWhy::Credit,
         CloudFault::Account => CloudWhy::Account,
-        CloudFault::Allowance { renews_in } => CloudWhy::Allowance { renews_in },
+        CloudFault::Allowance { renews_in } => CloudWhy::Allowance {
+            renews_at: renews(renews_in, at),
+        },
         CloudFault::Rate => CloudWhy::Rate,
         CloudFault::TooBig => CloudWhy::TooBig,
         CloudFault::Language => CloudWhy::Language(lang.clone()),
@@ -118,6 +121,13 @@ pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
         CloudFault::Strange => CloudWhy::Strange,
         CloudFault::Range(_) | CloudFault::Gone => CloudWhy::Fault,
     }
+}
+
+/// The wall time a used allowance renews at: `renews_in` after `at`, kept in `at`'s offset, so a note left open
+/// never goes stale (owner, 2026-11-20); `None` when the service did not tell.
+pub(crate) fn renews(renews_in: Option<Duration>, at: LocalTime) -> Option<LocalTime> {
+    let ms = i64::try_from(renews_in?.as_millis()).ok()?;
+    LocalTime::at(at.unix_ms.checked_add(ms)?, at.offset_min)
 }
 
 /// Why `shown`, the service on the bar, cannot have the speech now that the language picks `now`: a pick that moved

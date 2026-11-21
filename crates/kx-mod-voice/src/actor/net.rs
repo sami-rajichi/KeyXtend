@@ -149,9 +149,15 @@ impl Actor {
         }
     }
 
-    /// Tells the flow what dictation `take`'s upload of `round` told.
+    /// Tells the flow what dictation `take`'s upload of `round` told, and when on the wall clock.
     fn sent(&mut self, take: u32, round: u32, sent: Sent) {
-        self.step(In::Sent { take, round, sent });
+        let at = self.ports.calendar.now();
+        self.step(In::Sent {
+            take,
+            round,
+            sent,
+            at,
+        });
     }
 
     /// Reads the key and sends, in a job off the actor; its notes and its run come back through the inbox.

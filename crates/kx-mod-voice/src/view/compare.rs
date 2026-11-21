@@ -21,7 +21,7 @@ impl Panel {
                 let run = CompareRun {
                     name: (*name).clone(),
                     step: *step,
-                    why: self.compare.why(i).map(|f| net_why(f, &lang)),
+                    why: self.compare.why(i).map(|(f, at)| net_why(f, &lang, at)),
                 };
                 (Key::Plain, run)
             });

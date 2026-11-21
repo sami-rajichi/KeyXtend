@@ -77,7 +77,12 @@ impl I18n {
 
     /// The 24-hour time of `when`, as `clip.time` orders it, two digits each.
     pub(super) fn time(&self, when: &When) -> String {
-        let args = [(HOUR_VAR, pair(when.hour)), (MINUTE_VAR, pair(when.minute))];
+        self.clock(when.hour, when.minute)
+    }
+
+    /// The 24-hour time `hour`:`minute`, as `clip.time` orders it, two digits each; a cloud note's renewal reads it too.
+    pub(super) fn clock(&self, hour: u8, minute: u8) -> String {
+        let args = [(HOUR_VAR, pair(hour)), (MINUTE_VAR, pair(minute))];
         self.with(CLIP_TIME, args)
     }
 

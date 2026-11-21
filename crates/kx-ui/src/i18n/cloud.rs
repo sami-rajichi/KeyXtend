@@ -6,15 +6,14 @@ use super::I18n;
 use super::compose::{clean, form};
 use super::keys::vars::{HTTPS, LANG};
 use super::keys::{
-    VOICE_HOURS, VOICE_KEY, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD,
-    VOICE_NOTE_RENEWS, cloud_why_id, fact_key, key_check_id, key_check_why,
+    VOICE_KEY, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS, cloud_why_id,
+    fact_key, key_check_id, key_check_why,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::ports::{
-    CloudWhy, Fact, FactValue, Hundredths, KeyCheck, LINK_SCHEME, VoiceLang,
+    CloudWhy, Fact, FactValue, Hundredths, KeyCheck, LINK_SCHEME, LocalTime, VoiceLang,
 };
 use serde::Serialize;
-use std::time::Duration;
 
 /// What a counted value's plural form takes after its name, as in `$days-form`.
 const FORM_END: &str = "-form";
@@ -27,8 +26,8 @@ const ALONE: &str = "alone";
 const AFTER: &str = "after";
 /// What a money value's form after a preposition takes after its name, as in `$low-after`.
 const AFTER_END: &str = "-after";
-/// A renewal's variable.
-const IN_VAR: &str = "in";
+/// A renewal's variable: the clock time it renews at.
+const AT_VAR: &str = "at";
 /// What marks a name from a service's pages while its text is filled: these around the value's name.
 const OPEN: char = '\u{1}';
 const SHUT: char = '\u{2}';
@@ -37,9 +36,6 @@ const CENTS: u32 = 2;
 /// CLDR's plural form for an Arabic fraction, by name, set for every language though only Arabic's money selects on it:
 /// `intl_pluralrules` 7.0.2 reads a fraction's few and many by its whole part, so 7.20 would take the plural.
 const FRACTION_FORM: &str = "other";
-/// Seconds in a minute, and minutes in an hour: a renewal reads in minutes below an hour.
-const SECS_PER_MIN: u64 = 60;
-const MIN_PER_HOUR: u64 = 60;
 
 /// A sentence in parts: `own` parts are names from a service's pages, laid out apart; `text` is the whole.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -121,24 +117,28 @@ impl I18n {
         self.with(key, [(HTTPS, LINK_SCHEME.to_owned())])
     }
 
-    /// The cloud note's line for `why`, naming the language or the renewal where it has one.
+    /// The cloud note's line for `why`, naming the language, or the clock time a used allowance renews at (owner,
+    /// 2026-11-20).
     #[must_use]
     pub fn voice_cloud(&self, why: &CloudWhy) -> String {
         match why {
-            CloudWhy::Allowance { renews_in: Some(d) } => {
-                self.with(VOICE_NOTE_RENEWS, [(IN_VAR, self.renewal(*d))])
-            }
+            CloudWhy::Allowance {
+                renews_at: Some(at),
+            } => self.with(
+                VOICE_NOTE_RENEWS,
+                [(AT_VAR, self.clock(at.hour, at.minute))],
+            ),
             CloudWhy::Language(lang) => self.cloud_line(cloud_why_id(why), lang),
             _ => self.text(&format!("{VOICE_NOTE_CLOUD}{}", cloud_why_id(why))),
         }
     }
 
-    /// A key test's answer: the cloud note of the reason the service gave, a used allowance's with `renews_in`, else
+    /// A key test's answer: the cloud note of the reason the service gave, a used allowance's with `renews_at`, else
     /// the key page's own line; none while untested.
     #[must_use]
-    pub fn voice_key_check(&self, check: KeyCheck, renews_in: Option<Duration>) -> Option<String> {
+    pub fn voice_key_check(&self, check: KeyCheck, renews_at: Option<LocalTime>) -> Option<String> {
         let id = key_check_id(check)?;
-        Some(match key_check_why(check, renews_in) {
+        Some(match key_check_why(check, renews_at) {
             Some(why) => self.voice_cloud(&why),
             None => self.text(&format!("{VOICE_KEY}{id}")),
         })
@@ -148,17 +148,6 @@ impl I18n {
     fn cloud_line(&self, id: &str, lang: &VoiceLang) -> String {
         let key = format!("{VOICE_NOTE_CLOUD}{id}");
         self.with(&key, [(LANG, self.voice_lang(lang))])
-    }
-
-    /// How long until an allowance renews: whole minutes below an hour, else whole hours, each rounded up.
-    fn renewal(&self, d: Duration) -> String {
-        let minutes = d.as_secs().div_ceil(SECS_PER_MIN).max(1);
-        let (key, n) = if minutes < MIN_PER_HOUR {
-            (VOICE_MINUTES, minutes)
-        } else {
-            (VOICE_HOURS, minutes.div_ceil(MIN_PER_HOUR))
-        };
-        self.counted(key, usize::try_from(n).unwrap_or(usize::MAX))
     }
 
     /// Hundredths `h` with the language's decimal mark; `cents` keeps both decimals, else trailing zeros drop.
