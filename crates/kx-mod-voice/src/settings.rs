@@ -6,10 +6,12 @@ mod cloud;
 mod drop;
 mod names;
 mod parts;
+mod picks;
 
 pub(crate) use cloud::datetime;
 pub use cloud::{FACTS_DAYS, KEEP_START, ServiceOn};
 pub use names::{INSERTS, Insert, PLACES, insert_named, place_name, place_named};
+pub use picks::Picks;
 
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
@@ -100,7 +102,7 @@ pub struct VoiceSettings {
     /// The models folder; empty until the first download asks for it.
     pub models_dir: String,
     /// The user's model per language, by row id or file name, or a service's id and model joined by `PICK_MARK`.
-    pub picks: BTreeMap<String, String>,
+    pub picks: Picks,
     /// Cloud services may be switched on; off, none is offered and every language uses its local model.
     pub cloud: bool,
     /// The services the user switched on, by row id.

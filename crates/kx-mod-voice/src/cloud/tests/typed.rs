@@ -1,7 +1,9 @@
 //! A typed row's lines: the Other model id and the address (edge 13). A typed row is neither ready nor picked until its
-//! address is typed, and a typed line's change drops the picks that named it, so none comes back by itself.
+//! address is typed, and a typed line's change drops the picks that named it, so none comes back by itself. Its Other
+//! id never prints.
 
 use super::*;
+use kx_module_api::REDACTED_MARKER;
 
 /// Custom confirmed with cloud on.
 fn custom_on() -> VoiceSettings {
@@ -107,4 +109,22 @@ fn a_typed_id_a_listed_model_has_adds_no_second_row_where_it_knows_the_language_
         Vec::<String>::new(),
         "no row that cannot be picked"
     );
+}
+
+#[test]
+fn a_typed_other_id_never_prints_in_a_choice_an_offer_or_the_settings() {
+    let mut s = custom_on();
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    assert!(rules().type_model(&mut s, "custom", "my-model"));
+    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
+    let choice = rules().choice(&s, "en").unwrap();
+    let offered = Offered::from(&choice);
+    for shown in [
+        format!("{choice:?}"),
+        format!("{offered:?}"),
+        format!("{s:?}"),
+    ] {
+        let hidden = !shown.contains("my-model") && shown.contains(REDACTED_MARKER);
+        assert!(hidden, "{shown}");
+    }
 }

@@ -7,6 +7,9 @@ mod offer;
 
 pub use offer::Offered;
 
+use std::fmt;
+
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CardPart, CloudAsk, CloudCard, Date, Fact, ServiceMark, Unavailable, UsePrice, fits_iso,
 };
@@ -40,7 +43,7 @@ pub fn pick_row(value: &str) -> Option<(&'static Service, &str, Option<&'static 
 }
 
 /// The model a cloud pick names.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Chosen<'a> {
     /// One of the row's models.
     Listed(&'a Model),
@@ -64,6 +67,16 @@ impl<'a> Chosen<'a> {
         match self {
             Self::Listed(m) => (!m.unnamed).then_some(m.id.as_str()),
             Self::Typed(id) => Some(id),
+        }
+    }
+}
+
+/// Shows a listed model; a typed Other id is the user's own, as `ServiceOn` hides it.
+impl fmt::Debug for Chosen<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Listed(m) => f.debug_tuple("Listed").field(m).finish(),
+            Self::Typed(id) => f.debug_tuple("Typed").field(&Redacted::new(id)).finish(),
         }
     }
 }
