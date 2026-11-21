@@ -18,6 +18,7 @@ mod fill;
 mod filled;
 mod fillview;
 mod lanes;
+mod lights;
 mod markup;
 mod pictures;
 mod plugin;
