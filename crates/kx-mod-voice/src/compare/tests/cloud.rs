@@ -8,6 +8,12 @@ use super::*;
 /// A compare of `models` and `clouds` that recorded speech and stopped, with its run's id.
 fn recorded_with(models: Vec<Entrant>, clouds: Vec<Remote>) -> (Compare, u32) {
     let mut compare = Compare::default();
+    let take = record(&mut compare, models, clouds);
+    (compare, take)
+}
+
+/// Starts `compare` on `models` and `clouds`, hears speech and stops; gives the run's id.
+fn record(compare: &mut Compare, models: Vec<Entrant>, clouds: Vec<Remote>) -> u32 {
     let plan = Plan {
         clouds,
         ..plan(SET, models)
@@ -18,7 +24,7 @@ fn recorded_with(models: Vec<Entrant>, clouds: Vec<Remote>) -> (Compare, u32) {
     };
     compare.note(take, SpeechNote::Heard);
     compare.stop();
-    (compare, take)
+    take
 }
 
 /// Each model's step, local ones first.
@@ -98,6 +104,13 @@ fn a_cloud_model_that_failed_keeps_its_reason_for_the_page() {
         "only the failed cloud model, after the local one"
     );
     compare.cancel();
+    assert_eq!(compare.why(1), None, "a cancelled run shows none");
+    let take = record(
+        &mut compare,
+        vec![entrant(1, false)],
+        vec![remote(1), remote(2)],
+    );
+    compare.note(take, done(0, 0));
     assert_eq!(compare.why(1), None, "a new run forgets it");
 }
 
