@@ -4,8 +4,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, KeyCheck, Link, ModelSide, Renewal, ServiceMark, VoiceClick,
-    VoiceTab,
+    AddressFault, CloudButton, CloudLine, KeyCheck, Link, ModelSide, Renewal, ServiceMark,
+    VoiceClick, VoiceTab,
 };
 
 use super::typing::Typed;
@@ -31,8 +31,8 @@ pub(crate) struct Clouds {
     pub(crate) round: u32,
     /// Why a Paste or a typed key kept nothing, Busy or Unfit, until the next round; the test's answer stays beneath.
     pub(crate) unkept: Option<KeyCheck>,
-    /// The Paste waited for.
-    pub(crate) take: Option<u32>,
+    /// The Paste waited for, and the line it goes on.
+    pub(crate) take: Option<(u32, CloudLine)>,
     /// The test waited for.
     pub(crate) test: Option<u32>,
     /// The address just refused, with why, until the page changes.
@@ -106,6 +106,7 @@ impl Panel {
             VoiceClick::SetAddress(text) => self.type_address(text, facts),
             VoiceClick::SetModel(text) => self.type_model(text, facts),
             VoiceClick::Save(line) => self.save(*line, facts),
+            VoiceClick::Paste(line) => self.paste(*line, facts),
             VoiceClick::Caret { line, at } => {
                 self.place_caret(*line, *at.expose(), facts);
                 Vec::new()
@@ -142,9 +143,7 @@ impl Panel {
             CloudButton::Lines => self.show(id, Page::Lines),
             CloudButton::Off => self.turn_off(&id, facts),
             CloudButton::Link => self.link(&id, facts),
-            CloudButton::Paste | CloudButton::Test | CloudButton::Remove => {
-                self.key_button(&id, button, facts)
-            }
+            CloudButton::Test | CloudButton::Remove => self.key_button(&id, button, facts),
         }
     }
 

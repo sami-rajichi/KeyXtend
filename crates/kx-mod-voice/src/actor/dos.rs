@@ -54,7 +54,7 @@ impl Actor {
             | Do::RemoveKey(_)
             | Do::Dots(_)
             | Do::Test { .. }
-            | Do::Take(_)
+            | Do::Take { .. }
             | Do::Link(_)) => self.key_do(key),
             edit @ (Do::Pin(_) | Do::Unpin(_) | Do::Delete(_) | Do::DeleteAll(_)) => {
                 self.edit(edit);

@@ -58,7 +58,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         (s.address, s.address_fault) =
             (Some(text("http://lan.example")), Some(AddressFault::Https));
         (s.model, s.model_refused, s.site, s.tests) = (text("no such/model"), true, None, false);
-        s.acts = vec![CloudButton::Paste, CloudButton::Facts, CloudButton::Off];
+        s.acts = vec![CloudButton::Facts, CloudButton::Off];
         (s.typing, s.caret) = (CloudLine::Address, Redacted::new(7));
         s.saves = vec![CloudLine::Address, CloudLine::Model];
     }

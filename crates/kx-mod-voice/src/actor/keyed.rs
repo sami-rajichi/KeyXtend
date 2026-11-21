@@ -6,7 +6,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use kx_module_api::Secret;
 use kx_module_api::ports::{
-    ClipTake, ClipTaken, CloudFault, CloudSpeech, CloudTest, Link, MAX_KEY_BYTES, WebLink,
+    ClipTake, ClipTaken, CloudFault, CloudSpeech, CloudTest, Link, WebLink,
 };
 
 use super::{Actor, Back, Job, Msg};
@@ -28,7 +28,7 @@ impl Actor {
                 self.panel.dots(&service, dots.unwrap_or(0));
             }
             Do::Test { service, ticket } => self.test_key(&service, ticket),
-            Do::Take(round) => self.take_clip(round),
+            Do::Take { round, max } => self.take_clip(round, max),
             Do::Link(link) => self.open_link(link),
             _ => {}
         }
@@ -123,11 +123,11 @@ impl Actor {
         })
     }
 
-    /// Asks the clipboard history for its text as Paste's `round`, waited for up to `take_ms`; an answer comes as
-    /// `ClipTaken`.
-    fn take_clip(&mut self, round: u32) {
+    /// Asks the clipboard history for at most `max` characters as Paste's `round`, waited for up to `take_ms`; an answer
+    /// comes as `ClipTaken`.
+    fn take_clip(&mut self, round: u32, max: usize) {
         self.pasting.take = Some((round, self.ports.clock.now()));
-        let take = ClipTake::new(crate::ID, round, MAX_KEY_BYTES);
+        let take = ClipTake::new(crate::ID, round, max);
         if let Err(error) = self.ports.bus.publish(&take) {
             tracing::warn!(%error, "the clipboard's text could not be asked for");
         }
@@ -142,7 +142,8 @@ impl Actor {
         {
             self.pasting.take = None;
         }
-        let dos = self.panel.pasted(taken.round, taken.text);
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.pasted(taken.round, taken.text, &facts);
         self.dos(dos);
     }
 

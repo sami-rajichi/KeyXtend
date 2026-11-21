@@ -113,7 +113,7 @@ fn enter_and_save_set_the_typed_key_which_is_wiped_and_an_empty_line_saves_nothi
 #[test]
 fn the_typed_key_is_wiped_on_paste_remove_leaving_the_page_and_closing() {
     let wipes: [fn(&mut Rig); 4] = [
-        |rig| drop(rig.click(&VoiceClick::Service(CloudButton::Paste))),
+        |rig| drop(rig.click(&VoiceClick::Paste(CloudLine::Key))),
         |rig| drop(rig.click(&VoiceClick::Service(CloudButton::Remove))),
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Back));

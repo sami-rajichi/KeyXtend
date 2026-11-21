@@ -114,9 +114,7 @@ fn each_cloud_click_sends_its_click() {
         (SIDE, "local", 0, VoiceClick::Side(ModelSide::Local)),
         (LOCAL, "local", 0, VoiceClick::Local),
     ];
-    let ids = [
-        "on", "off", "facts", "lines", "paste", "test", "remove", "link",
-    ];
+    let ids = ["on", "off", "facts", "lines", "test", "remove", "link"];
     for (id, b) in ids.into_iter().zip(CloudButton::ALL) {
         cases.push((SERVICE, id, 0, VoiceClick::Service(b)));
     }

@@ -64,7 +64,7 @@ fn a_key_tests_answers_are_the_designs_with_a_refusals_own_reasons() {
 
 #[test]
 fn the_marks_and_buttons_are_the_designs() {
-    use CloudButton::{Facts, Lines, Link, Paste, Remove, Test};
+    use CloudButton::{Facts, Lines, Link, Remove, Test};
     use ServiceMark::{NeedsAddress, NeedsKey, Off, Ready};
     assert_eq!(
         ServiceMark::ALL,
@@ -76,7 +76,6 @@ fn the_marks_and_buttons_are_the_designs() {
         CloudButton::Off,
         Facts,
         Lines,
-        Paste,
         Test,
         Remove,
         Link,
@@ -245,7 +244,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         keep: Some(true),
         site: None,
         tests: true,
-        acts: vec![CloudButton::Paste, CloudButton::Test],
+        acts: vec![CloudButton::Test, CloudButton::Remove],
         part: Some(LinesPart::Model),
         typing: CloudLine::Address,
         caret: Redacted::new(0),
@@ -264,7 +263,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
             "model_refused: true",
             "keep: Some(true)",
             "part: Some(Model)",
-            "Paste",
+            "Remove",
         ],
     );
 }

@@ -4,8 +4,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, PanelKey, ServiceName,
-    VoiceClick,
+    AddressFault, ClipText, CloudButton, CloudFault, CloudLine, HttpsUrl, KeyCheck, MAX_KEY_BYTES,
+    PanelButton, PanelKey, ServiceName, TAG_LEN, VoiceClick,
 };
 
 use super::super::super::rig::Rig;
@@ -15,6 +15,9 @@ use super::{act, apply, lines_sheet, on_cloud, put, shown};
 use crate::compare::tests::secret;
 use crate::services::table;
 use crate::services::tests::shipped::{entry, first};
+
+/// An address the Custom row takes.
+const ADDRESS: &str = "https://speech.example.com/v1/audio";
 
 /// A key-like text, built as the test runs so no key sits in the source.
 fn made_key() -> String {
@@ -43,16 +46,26 @@ pub(super) fn on_custom_lines(extra: &str) -> Rig {
     rig
 }
 
+/// Paste on `line`, answered with `clip`; the answer's own acts.
+fn paste(rig: &mut Rig, line: CloudLine, clip: ClipText) -> Vec<Do> {
+    let out = rig.click(&VoiceClick::Paste(line));
+    let [Do::Take { round, .. }] = out[..] else {
+        panic!("no take: {out:?}");
+    };
+    rig.with(|p, f| p.pasted(round, clip, f))
+}
+
 #[test]
 fn paste_sets_the_clipboards_text_as_the_key_which_shows_only_as_dots() {
     let mut rig = on_groq_lines();
-    let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
-    let [Do::Take(round)] = out[..] else {
+    let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+    let [Do::Take { round, max }] = out[..] else {
         panic!("no take: {out:?}");
     };
+    assert_eq!(max, MAX_KEY_BYTES, "a key's most");
     let key = made_key();
     let copied = secret(&format!(" {key}\n"));
-    let out = rig.with(|p, _| p.pasted(round, ClipText::Text(copied)));
+    let out = rig.with(|p, f| p.pasted(round, ClipText::Text(copied), f));
     let [Do::SetKey { service, key: set }] = &out[..] else {
         panic!("no key set: {out:?}");
     };
@@ -70,17 +83,60 @@ fn paste_sets_the_clipboards_text_as_the_key_which_shows_only_as_dots() {
     );
     assert!(!format!("{sheet:?}").contains(&key));
     // A Paste's answer after another Paste, or once the page changed, is dropped.
-    let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
-    let [Do::Take(again)] = out[..] else {
+    let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+    let [Do::Take { round: again, .. }] = out[..] else {
         panic!("no take: {out:?}");
     };
     assert!(
-        rig.with(|p, _| p.pasted(round, ClipText::Text(secret(&key))))
+        rig.with(|p, f| p.pasted(round, ClipText::Text(secret(&key)), f))
             .is_empty()
     );
-    let out = rig.with(|p, _| p.pasted(again, ClipText::Empty));
+    let out = rig.with(|p, f| p.pasted(again, ClipText::Empty, f));
     assert!(out.is_empty());
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Unfit);
+}
+
+#[test]
+fn paste_on_the_address_line_puts_the_clipboards_text_there_ready_for_save() {
+    let mut rig = on_custom_lines("");
+    rig.click(&VoiceClick::Page { back: false });
+    let out = rig.click(&VoiceClick::Paste(CloudLine::Address));
+    let [Do::Take { round, max }] = out[..] else {
+        panic!("no take: {out:?}");
+    };
+    assert_eq!(max, HttpsUrl::MAX_BYTES, "an address's most");
+    let copied = secret(&format!(" {ADDRESS}\n"));
+    let out = rig.with(|p, f| p.pasted(round, ClipText::Text(copied), f));
+    assert!(out.is_empty(), "nothing kept before Save");
+    let sheet = lines_sheet(&mut rig);
+    let address = sheet.address.as_ref().map(|a| a.expose().as_str());
+    assert_eq!(address, Some(ADDRESS), "the text, trimmed");
+    let ready = (sheet.typing, sheet.saves.contains(&CloudLine::Address));
+    assert_eq!(ready, (CloudLine::Address, true), "it takes the letters");
+    let out = rig.click(&VoiceClick::Save(CloudLine::Address));
+    assert!(!out.is_empty(), "Save keeps it");
+    let model = ClipText::Text(secret("whisper-1"));
+    assert!(paste(&mut rig, CloudLine::Model, model).is_empty());
+    assert_eq!(lines_sheet(&mut rig).model.expose(), "whisper-1");
+}
+
+#[test]
+fn a_busy_empty_or_too_long_paste_on_a_line_shows_that_lines_refusal() {
+    let mut rig = on_custom_lines(&format!(r#", address = "{ADDRESS}""#));
+    rig.click(&VoiceClick::Page { back: false });
+    paste(&mut rig, CloudLine::Address, ClipText::Empty);
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!(sheet.address_fault, Some(AddressFault::Https));
+    let address = sheet.address.as_ref().map(|a| a.expose().as_str());
+    assert_eq!(address, Some(ADDRESS), "the line keeps its text");
+    paste(&mut rig, CloudLine::Address, ClipText::TooLong);
+    let fault = lines_sheet(&mut rig).address_fault;
+    assert_eq!(fault, Some(AddressFault::Long));
+    let long = "m".repeat(*TAG_LEN.end() + 1);
+    paste(&mut rig, CloudLine::Model, ClipText::Text(secret(&long)));
+    assert!(lines_sheet(&mut rig).model_refused, "past the line's most");
+    paste(&mut rig, CloudLine::Model, ClipText::Busy);
+    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Busy);
 }
 
 #[test]

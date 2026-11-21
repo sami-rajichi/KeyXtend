@@ -92,8 +92,6 @@ listed! {
         Facts,
         /// Open the ticked service's key page.
         Lines,
-        /// Put the clipboard's text on the key line, as dots.
-        Paste,
         /// Test the key.
         Test,
         /// Remove the ticked or shown service's sealed key, also while it is off.
@@ -157,6 +155,8 @@ pub enum VoiceClick {
     SetModel(Redacted<String>),
     /// Save a typed line's text as the shown service's key, address or model id, as Enter on it does (ADR-0049).
     Save(CloudLine),
+    /// Put the clipboard history's text on a typed line: the key as dots, an address or model id as text to save.
+    Paste(CloudLine),
     /// A click on a typed line: it takes the letters, with its caret `at` into what it draws.
     Caret {
         /// The line.

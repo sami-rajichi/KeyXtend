@@ -7,7 +7,7 @@ use super::lines::groq_lines;
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{CloudLine, VoiceAct, VoiceClick, VoicePanel, VoiceSheet};
-use kx_ui::voice_acts::{CARET, PICK, SAVE, SERVICE};
+use kx_ui::voice_acts::{CARET, PASTE, PICK, SAVE, SERVICE};
 use serde_json::Value;
 
 /// The round of the view the tests click on.
@@ -39,6 +39,11 @@ fn save(line: &str, on: bool) -> [String; 5] {
     button(SAVE, line, "Save", on, "plain")
 }
 
+/// Line `line`'s Paste, which always acts.
+fn paste(line: &str) -> [String; 5] {
+    button(PASTE, line, "Paste", true, "plain")
+}
+
 #[test]
 fn the_key_line_draws_the_typed_keys_dots_and_caret_and_never_its_text() {
     let p = typed(5, CloudLine::Key, 3, &[CloudLine::Key]);
@@ -54,9 +59,9 @@ fn the_key_line_draws_the_typed_keys_dots_and_caret_and_never_its_text() {
         (Some(56), Some("")),
         "the sealed key stays as dots"
     );
-    let paste = button(SERVICE, "paste", "Paste", true, "plain");
     let test = button(SERVICE, "test", "Test", true, "plain");
-    assert_eq!(buttons(&key["buttons"]), [paste, save("key", true), test]);
+    let want = [paste("key"), save("key", true), test];
+    assert_eq!(buttons(&key["buttons"]), want);
 }
 
 #[test]
@@ -75,15 +80,14 @@ fn only_the_line_taking_the_letters_has_a_caret() {
 }
 
 #[test]
-fn each_lines_save_dims_while_it_is_empty() {
+fn each_line_has_its_paste_and_a_save_that_dims_while_it_is_empty() {
     let p = typed(0, CloudLine::Key, 0, &[CloudLine::Address]);
     let sheet = &p["sheet"];
     assert!(buttons(&sheet["key"]["buttons"]).contains(&save("key", false)));
-    assert_eq!(
-        buttons(&sheet["address"]["buttons"]),
-        [save("address", true)]
-    );
-    assert_eq!(buttons(&sheet["model"]["buttons"]), [save("model", false)]);
+    let address = buttons(&sheet["address"]["buttons"]);
+    assert_eq!(address, [paste("address"), save("address", true)]);
+    let model = buttons(&sheet["model"]["buttons"]);
+    assert_eq!(model, [paste("model"), save("model", false)]);
 }
 
 #[test]
@@ -101,6 +105,8 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
         (PICK, "model", 3, caret(CloudLine::Model, 3)),
         (SAVE, "key", 0, VoiceClick::Save(CloudLine::Key)),
         (SAVE, "model", 0, VoiceClick::Save(CloudLine::Model)),
+        (PASTE, "address", 0, VoiceClick::Paste(CloudLine::Address)),
+        (PASTE, "key", 0, VoiceClick::Paste(CloudLine::Key)),
     ];
     for (kind, id, arg, want) in cases {
         rig.hub.voice_act(kind, id, arg, i64::from(ROUND));
@@ -115,6 +121,7 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
         (CARET, "site", 0),
         (PICK, "model", -1),
         (SAVE, "keep", 0),
+        (PASTE, "site", 0),
     ] {
         rig.hub.voice_act(kind, id, arg, i64::from(ROUND));
         assert!(heard.sent.acts().is_empty(), "{kind} {id} {arg}");

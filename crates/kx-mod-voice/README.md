@@ -46,7 +46,7 @@ Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046 to ADR-0052): speak, and th
 | `WriteClipboard` | It gates `ClipboardWriterKey`, and `PasteText` and `TextPasted` for Paste at once. |
 | `OpenFolder` | It gates `FolderRevealKey`. |
 | `OpenLink` | It gates `WebLinkKey`. |
-| `ReadClipboard` | It gates `ClipTake` and `ClipTaken`, the key page's Paste through the clipboard history, waiting `take_ms`. |
+| `ReadClipboard` | It gates `ClipTake` and `ClipTaken`, each key page line's Paste through the clipboard history, waiting `take_ms`. |
 
 It provides no service, and it never injects input: the keyboard types each text. With `insert = "paste"` (Paste at once), it hands the text to the clipboard history with `PasteText`; the history checks the clipboard for a private marker as it reads it, then pastes and puts the clipboard back, and any no types the text (ADR-0048).
 

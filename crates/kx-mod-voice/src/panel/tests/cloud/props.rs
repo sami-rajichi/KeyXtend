@@ -53,6 +53,7 @@ fn click() -> impl Strategy<Value = VoiceClick> {
         1 => select(ModelSide::ALL.to_vec()).prop_map(VoiceClick::Side),
         1 => any::<bool>().prop_map(VoiceClick::KeepNothing),
         2 => lines().prop_map(VoiceClick::Save),
+        2 => lines().prop_map(VoiceClick::Paste),
         1 => (lines(), 0..MAX_AT).prop_map(caret),
         2 => any::<bool>().prop_map(VoiceClick::Confirm),
     ]
@@ -119,7 +120,7 @@ fn run(rig: &mut Rig, step: &Step) -> Result<Vec<Do>, TestCaseError> {
         Step::Key(key) => (rig.with(|p, f| p.line_key(key, f)), false),
         Step::Pasted(lag) => {
             let round = older(rig, *lag);
-            (rig.with(|p, _| p.pasted(round, ClipText::Busy)), true)
+            (rig.with(|p, f| p.pasted(round, ClipText::Busy, f)), true)
         }
         Step::Tested(lag, ok) => {
             let (ticket, answer) = (older(rig, *lag), ok.then_some(()).ok_or(CloudFault::Key));

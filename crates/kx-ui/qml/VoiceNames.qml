@@ -20,6 +20,7 @@ QtObject {
             open: "open",
             over: "over",
             page: "page",
+            paste: "paste",
             pick: "pick",
             plus: "plus",
             row: "row",
@@ -85,7 +86,8 @@ QtObject {
     readonly property string cloud: "cloud"
     readonly property string writing: "writing"
     // Each panel part's gate id in `group`; a row's, a stepper's and a download button's take their place after it, a
-    // pair's chips take its minus's and plus's, a key page's line its id, and a Models side's chip its side.
+    // pair's chips take its minus's and plus's, a key page's line and its Save and Paste its id, and a Models side's chip
+    // its side.
     readonly property var ids: ({
             list: "list",
             row: "row-",
@@ -98,6 +100,7 @@ QtObject {
             plus: "plus-",
             line: "line-",
             save: "save-",
+            paste: "paste-",
             side: "side-"
         })
 }

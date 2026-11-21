@@ -8111,8 +8111,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -8159,6 +8159,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -8273,8 +8281,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -8321,6 +8329,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -8435,8 +8451,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -8475,6 +8491,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -8581,6 +8605,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "حفظ",
                 "name": "حفظ العنوان",
@@ -8606,8 +8638,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -8636,6 +8668,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -8750,8 +8790,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -8874,6 +8914,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "حفظ",
                 "name": "حفظ العنوان",
@@ -8904,6 +8952,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -9018,8 +9074,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -9066,6 +9122,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -9185,8 +9249,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -9233,6 +9297,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -9347,8 +9419,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -9395,6 +9467,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -9509,8 +9589,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "لصق",
                 "on": true,
                 "tone": "plain"
@@ -9557,6 +9637,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -17706,8 +17794,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -17754,6 +17842,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -17868,8 +17964,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -17916,6 +18012,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18030,8 +18134,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18070,6 +18174,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18176,6 +18288,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "Save",
                 "name": "Save the address",
@@ -18201,8 +18321,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18231,6 +18351,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18345,8 +18473,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18469,6 +18597,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "Save",
                 "name": "Save the address",
@@ -18499,6 +18635,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18613,8 +18757,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18661,6 +18805,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18780,8 +18932,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18828,6 +18980,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -18942,8 +19102,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -18990,6 +19150,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -19104,8 +19272,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Paste",
                 "on": true,
                 "tone": "plain"
@@ -19152,6 +19320,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -27301,8 +27477,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -27349,6 +27525,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -27463,8 +27647,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -27511,6 +27695,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -27625,8 +27817,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -27665,6 +27857,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -27771,6 +27971,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "Enregistrer",
                 "name": "Enregistrer l’adresse",
@@ -27796,8 +28004,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -27826,6 +28034,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -27940,8 +28156,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -28064,6 +28280,14 @@ var views = {
               {
                 "arg": 0,
                 "id": "address",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "address",
                 "kind": "save",
                 "label": "Enregistrer",
                 "name": "Enregistrer l’adresse",
@@ -28094,6 +28318,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -28208,8 +28440,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -28256,6 +28488,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -28375,8 +28615,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -28423,6 +28663,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -28537,8 +28785,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -28585,6 +28833,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",
@@ -28699,8 +28955,8 @@ var views = {
             "buttons": [
               {
                 "arg": 0,
-                "id": "paste",
-                "kind": "service",
+                "id": "key",
+                "kind": "paste",
                 "label": "Coller",
                 "on": true,
                 "tone": "plain"
@@ -28747,6 +29003,14 @@ var views = {
           "model": {
             "at": 0,
             "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
               {
                 "arg": 0,
                 "id": "model",

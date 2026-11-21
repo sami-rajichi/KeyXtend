@@ -53,6 +53,8 @@ pub const SIDE: &str = "side";
 pub const LOCAL: &str = "local";
 /// Save the key page's line `id` (ADR-0049).
 pub const SAVE: &str = "save";
+/// Put the clipboard history's text on the key page's line `id`.
+pub const PASTE: &str = "paste";
 /// A press on the key page's line `id`, which picks it with its caret at the argument and sounds as a key does.
 pub const PICK: &str = "pick";
 /// The place a click puts the caret on the key page's line `id` after its pick, in what the line draws, as the
@@ -111,6 +113,7 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
         LOCAL => VoiceClick::Local,
         SAVE => VoiceClick::Save(by_id(CloudLine::ALL, cloud_line_id, id)?),
+        PASTE => VoiceClick::Paste(by_id(CloudLine::ALL, cloud_line_id, id)?),
         CARET | PICK => VoiceClick::Caret {
             line: by_id(CloudLine::ALL, cloud_line_id, id)?,
             at: Redacted::new(u32::try_from(arg).map_err(|_| Bad)?),

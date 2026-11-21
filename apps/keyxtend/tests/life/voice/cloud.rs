@@ -13,8 +13,8 @@ use kx_mod_voice::cloud::pick_text;
 use kx_mod_voice::keys::{KEYS, Keys};
 use kx_mod_voice::services::{Service, table};
 use kx_module_api::ports::{
-    BlobName, ClipPart, CloudButton, SOUND_BYTES_PER_S, SealedShelf, ServiceSheet, TextAsk,
-    TextDone, VoiceAct, VoiceClick, VoiceOpen, VoiceSheet, VoiceTab, VoiceView,
+    BlobName, ClipPart, CloudButton, CloudLine, SOUND_BYTES_PER_S, SealedShelf, ServiceSheet,
+    TextAsk, TextDone, VoiceAct, VoiceClick, VoiceOpen, VoiceSheet, VoiceTab, VoiceView,
 };
 use kx_module_api::{Bus, Redacted, Secret, Zeroizing};
 use kx_platform_fake::CloudAnswer;
@@ -212,7 +212,7 @@ fn a_key_set_on_its_line_or_pasted_is_sealed_and_reaches_neither_the_ui_nor_the_
     assert_eq!(sealed(&rig), Some(typed.clone().into_bytes()), "sealed");
     unseen(&rig, &boot, &[], std::slice::from_ref(&typed));
     rig.clip.set_text(Some(pasted.as_str()));
-    let paste = VoiceClick::Service(CloudButton::Paste);
+    let paste = VoiceClick::Paste(CloudLine::Key);
     bus.publish(&VoiceAct {
         round,
         click: paste,

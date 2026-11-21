@@ -214,6 +214,7 @@ impl Panel {
             | VoiceClick::SetAddress(_)
             | VoiceClick::SetModel(_)
             | VoiceClick::Save(_)
+            | VoiceClick::Paste(_)
             | VoiceClick::Caret { .. }
             | VoiceClick::KeepNothing(_)
             | VoiceClick::Side(_) => return self.cloud_click(&act.click, facts),

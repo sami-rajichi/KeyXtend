@@ -1,20 +1,21 @@
 //! A service's key page (ADR-0047, design "Keys"): the key set from its line or Paste, sealed and shown only as dots,
-//! its Test off the actor, Remove, the typed address and Other model kept in `services`, and the keep-nothing switch.
-//! A Paste's or a test's answer is dropped once the page or the key changed.
+//! its Test off the actor, Remove, the typed address and Other model kept in `services`, each line's Paste, and the
+//! keep-nothing switch. A Paste's or a test's answer is dropped once the page or the key changed.
 
 use kx_module_api::ports::{
-    AddressFault, BarHint, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, LINK_SCHEME,
-    Renewal,
+    AddressFault, BarHint, ClipText, CloudButton, CloudFault, CloudLine, HttpsUrl, KeyCheck,
+    LINK_SCHEME, Renewal,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
 use super::cloud::edit;
+use super::typing::line_max;
 use super::{Do, Page, Panel};
 use crate::keys::KeyError;
 use crate::view::Facts;
 
 impl Panel {
-    /// The key page's Paste, Test or Remove on service `id`.
+    /// The key page's Test or Remove on service `id`.
     pub(super) fn key_button(
         &mut self,
         id: &str,
@@ -22,14 +23,7 @@ impl Panel {
         facts: &Facts<'_>,
     ) -> Vec<Do> {
         let round = self.cloud.next();
-        if matches!(button, CloudButton::Paste | CloudButton::Remove) {
-            self.cloud.typed.key = None;
-        }
         match button {
-            CloudButton::Paste => {
-                self.cloud.take = Some(round);
-                vec![Do::Take(round)]
-            }
             CloudButton::Test if facts.keyed.contains(id) => {
                 (self.cloud.test, self.cloud.check) = (Some(round), KeyCheck::Testing);
                 vec![Do::Test {
@@ -38,11 +32,28 @@ impl Panel {
                 }]
             }
             CloudButton::Remove => {
+                self.cloud.typed.key = None;
                 (self.cloud.dots, self.cloud.check) = (0, KeyCheck::Untested);
                 vec![Do::RemoveKey(id.to_owned())]
             }
             _ => Vec::new(),
         }
+    }
+
+    /// Paste on the shown `line`: asks the clipboard history for at most what the line holds; a key typed is wiped.
+    pub(super) fn paste(&mut self, line: CloudLine, facts: &Facts<'_>) -> Vec<Do> {
+        if !self.shows_line(line, facts) {
+            return Vec::new();
+        }
+        let round = self.cloud.next();
+        if line == CloudLine::Key {
+            self.cloud.typed.key = None;
+        }
+        self.cloud.take = Some((round, line));
+        vec![Do::Take {
+            round,
+            max: line_max(line),
+        }]
     }
 
     /// The key line's text, set as the shown service's key; a test or Paste waited for, and a key typed, are dropped.
@@ -79,20 +90,53 @@ impl Panel {
         vec![Do::Dots(id.to_owned())]
     }
 
-    /// The clipboard's text a Paste of `round` took: set as the key while the page and round are still the same.
-    pub fn pasted(&mut self, round: u32, text: ClipText) -> Vec<Do> {
-        let waited = self.cloud.take == Some(round) && self.page == Some(Page::Lines);
-        if !waited {
-            return Vec::new();
-        }
-        self.cloud.take = None;
-        let unkept = match text {
-            ClipText::Text(key) => return self.set_key(&key),
-            ClipText::Empty | ClipText::TooLong => KeyCheck::Unfit,
-            ClipText::Busy => KeyCheck::Busy,
+    /// The clipboard's text a Paste of `round` took, while the page and round are still the same: set as the key, or
+    /// put on its address or model line to save; a busy clipboard or a text that cannot go shows why.
+    pub fn pasted(&mut self, round: u32, text: ClipText, facts: &Facts<'_>) -> Vec<Do> {
+        let line = match self.cloud.take {
+            Some((r, line)) if r == round && self.page == Some(Page::Lines) => line,
+            _ => return Vec::new(),
         };
-        self.cloud.unkept = Some(unkept);
+        self.cloud.take = None;
+        match (line, text) {
+            (_, ClipText::Busy) => self.cloud.unkept = Some(KeyCheck::Busy),
+            (CloudLine::Key, ClipText::Text(key)) => return self.set_key(&key),
+            (CloudLine::Key, _) => self.cloud.unkept = Some(KeyCheck::Unfit),
+            (line, ClipText::Text(text)) => self.put_line(line, text.expose().trim(), facts),
+            (line, ClipText::Empty) => self.unfit(line, true, facts),
+            (line, ClipText::TooLong) => self.unfit(line, false, facts),
+        }
         Vec::new()
+    }
+
+    /// Puts a pasted `text` on the address or model `line`, to save, and aims the letters at it; an empty or too long
+    /// one shows why instead.
+    fn put_line(&mut self, line: CloudLine, text: &str, facts: &Facts<'_>) {
+        if text.is_empty() || text.len() > line_max(line) {
+            return self.unfit(line, text.is_empty(), facts);
+        }
+        self.cloud.typed.put(line, text);
+        if line == CloudLine::Address {
+            self.cloud.refused = None;
+        } else {
+            self.cloud.refused_model = None;
+        }
+    }
+
+    /// An address or model a Paste could not put on `line`, `empty` or too long: the line keeps its text and says why,
+    /// an empty clipboard on the address line by the HTTPS it needs.
+    fn unfit(&mut self, line: CloudLine, empty: bool, facts: &Facts<'_>) {
+        let shown = Redacted::new(self.line_text(line, facts));
+        if line == CloudLine::Model {
+            self.cloud.refused_model = Some(shown);
+            return;
+        }
+        let fault = if empty {
+            AddressFault::Https
+        } else {
+            AddressFault::Long
+        };
+        self.cloud.refused = Some((shown, fault));
     }
 
     /// The test of `ticket` answered, a refusal by its reason and a used allowance with `renews`; dropped once the user

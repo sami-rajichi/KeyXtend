@@ -227,7 +227,7 @@ pub struct CloudCard {
     pub part: CardPart,
 }
 
-/// A service's key page: the key line with Paste and Test, the address and model lines and its switch.
+/// A service's key page: the key line with Test, the address and model lines, each line's Paste, and its switch.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServiceSheet {
     /// The service.

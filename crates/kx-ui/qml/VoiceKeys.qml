@@ -1,6 +1,6 @@
 // A service's key page (mock-up svcPage()): the key line as dots with Paste, Save and Test and the test's answer, Key
-// works as a lit mark and a refused one as a warning band, the address and Other model lines with their Save and why one
-// was refused, the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
+// works as a lit mark and a refused one as a warning band, the address and Other model lines with their Paste and Save
+// and why one was refused, the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
 // only draw: the key never shows as text, and a click never focuses them (ADR-0013, ADR-0049). It takes a page of rows'
 // height; a typed address puts its lines on a second page the pager turns to (ADR-0008).
 pragma ComponentBehavior: Bound

@@ -110,7 +110,8 @@ impl Actor {
         if let Some((round, _)) = self.pasting.take.filter(|(_, since)| late(*since, take)) {
             self.pasting.take = None;
             tracing::warn!("the clipboard history did not answer the key page's Paste in time");
-            let dos = self.panel.pasted(round, ClipText::Busy);
+            let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+            let dos = self.panel.pasted(round, ClipText::Busy, &facts);
             self.dos(dos);
         }
     }

@@ -1,7 +1,7 @@
 // The key page's lines over the hub's views (ADR-0049): a typed key draws only its dots and its caret, the sealed key
 // keeps its dots with the caret after them once the keys aim at it, an address reads left to right in Arabic too, a click
-// places the caret, a reader's press picks its line, an empty line's hint starts at its caret, and each Save dims while
-// its line is empty, has a name of its own and sends its line, in English, French and Arabic.
+// places the caret, a reader's press picks its line, an empty line's hint starts at its caret, each Save dims while its
+// line is empty, has a name of its own and sends its line, and each Paste sends its line, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -144,7 +144,26 @@ Item {
             mouseClick(one(box, "voice.save-model"));
             const sent = ["address", "model"].map(id => "act save " + id + " 0 " + box.round);
             compare(acts(box), sent);
-            compare(one(box, "voice.save-model").Accessible.name, box.view.sheet.model.buttons[0].name);
+            const save = box.view.sheet.model.buttons.find(b => b.kind === "save");
+            compare(one(box, "voice.save-model").Accessible.name, save.name);
+            box.visible = false;
+        }
+
+        function test_each_lines_paste_is_drawn_as_the_keys_and_sends_its_line_data() {
+            return langs_data();
+        }
+        // The owner's rule (2026-11-21): the address and model lines take the clipboard as the key line does.
+        function test_each_lines_paste_is_drawn_as_the_keys_and_sends_its_line(d) {
+            const box = make("serviceCustom", d.t);
+            const ids = ["address", "model", "key"];
+            const pastes = ids.map(id => one(box, "voice.paste-" + id));
+            const key = pastes[2];
+            for (const p of pastes) {
+                compare([p.icon, p.label, p.width, p.height], [key.icon, key.label, key.width, key.height], "as the key's");
+                verify(p.can, "it always acts");
+                mouseClick(p);
+            }
+            compare(acts(box), ids.map(id => "act paste " + id + " 0 " + box.round));
             box.visible = false;
         }
 

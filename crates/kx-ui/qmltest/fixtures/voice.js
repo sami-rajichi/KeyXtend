@@ -16,6 +16,7 @@ var acts = {
   "open": "open",
   "over": "over",
   "page": "page",
+  "paste": "paste",
   "pick": "pick",
   "plus": "plus",
   "row": "row",

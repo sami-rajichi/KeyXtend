@@ -103,8 +103,13 @@ pub enum Do {
         /// Names the test, so an answer the user no longer waits for is dropped.
         ticket: u32,
     },
-    /// Ask the clipboard history for its text (`ClipTake`) as this round, which `Panel::pasted` gets.
-    Take(u32),
+    /// Ask the clipboard history for its text (`ClipTake`), which `Panel::pasted` gets.
+    Take {
+        /// The round its answer names.
+        round: u32,
+        /// The most characters the line holds; a longer text is refused.
+        max: usize,
+    },
     /// Open this link from the services table in the browser.
     Link(Link),
 }

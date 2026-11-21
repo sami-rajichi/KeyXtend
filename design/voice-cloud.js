@@ -160,7 +160,8 @@ function keyResult(s, v) {
   if (v.test === 'bad') return line(' bad', 'triangle-alert', l.bad);
   return v.key && !s.test ? line('', 'activity', l.firstTest) : '';
 }
-// A service's page: the key line with Paste and Test, the address and model lines, its switch and where to make a key.
+// A service's page: the key line with Paste and Test, the address and model lines each with its Paste (owner,
+// 2026-11-21), its switch and where to make a key.
 function svcPage() {
   const s = byId(S.cur), v = S.svc[s.id], addr = S.typed.addr[s.id] || '', typed = S.typed.model[s.id] || '';
   const lrow = inner => '<div class="lrow">' + inner + '</div>';
@@ -168,9 +169,9 @@ function svcPage() {
   // A row with no test call shows no Test, as its first dictation tests the key (owner, 2026-11-21).
   const lines = lrow(pline('key', l.keyCap, v.key, l.keyHint, true) + btn('paste', 'clipboard-paste', l.paste) + (s.test ? btn('test', 'activity', l.test, '', !v.key || v.test === 'testing') : '')) +
     keyResult(s, v) +
-    (s.addr ? lrow(pline('addr', l.addrCap, addr, t(l.addrHint, {ex:bdi('https://example.com/v1/audio/transcriptions')}))) : '') +
+    (s.addr ? lrow(pline('addr', l.addrCap, addr, t(l.addrHint, {ex:bdi('https://example.com/v1/audio/transcriptions')})) + btn('pasteln:addr', 'clipboard-paste', l.paste)) : '') +
     (addr && !addr.startsWith('https://') ? '<div class="res bad' + A + '">' + ic('triangle-alert') + '<span' + D + '>' + t(l.addrBad, {ex:bdi('https://example.com')}) + '</span></div>' : '') +
-    lrow(pline('model', l.modelCap, typed, l.modelHint)) + na +
+    lrow(pline('model', l.modelCap, typed, l.modelHint) + btn('pasteln:model', 'clipboard-paste', l.paste)) + na +
     (s.keep0 ? '<div class="swr" data-a="keep0" role="switch" aria-checked="' + v.keep0 + '" tabindex="0"><span class="x' + A + '"' + D + '>' + l.keepNothing + '</span>' +
       '<span class="onoff' + A + '"' + D + '>' + (v.keep0 ? l.on : l.off) + '</span><span class="sw' + (v.keep0 ? ' on' : '') + '"></span></div>' : '') +
     (s.keys ? '<div class="lrow ko' + A + '">' + ic('key') + '<span class="x"' + D + '>' + t(l.makeKey, {site:bdi(s.keys)}) + '</span>' + btn('link', 'external-link', l.open, '', false, t(l.linkName, {site:s.keys})) + '</div>' : '');
@@ -209,6 +210,7 @@ Object.assign(ACT, {
   svc:() => { openSvc(tickedSvc().id); go('svcpage'); },
   svcoff:() => { Object.assign(S.svc[curSvc().id], {st:'off', test:''}); fallback(); if (S.panel !== 'cloud') go('cloud'); },
   paste:() => { Object.assign(S.svc[S.cur], {key:KEY_LEN, test:'', will:'ok', st:'ready'}); S.aim = ''; fallback(); },
+  pasteln:x => { S.typed[x][S.cur] = x === 'addr' ? HOME : OR_MODEL; S.aim = x; },
   test:() => {
     const v = S.svc[S.cur]; v.test = 'testing'; clearTimeout(ctimer);
     ctimer = setTimeout(() => { const ok = v.will === 'ok'; Object.assign(v, {test:ok ? 'ok' : 'bad', st:ok ? 'ready' : 'key'}); fallback(); render(); }, PACE.test);

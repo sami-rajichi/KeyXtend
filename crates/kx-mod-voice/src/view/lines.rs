@@ -57,7 +57,8 @@ impl Panel {
         (VoiceSheet::Service(sheet), pages)
     }
 
-    /// The key page's buttons that act now: Paste always, Test and Remove with a key, the link where keys are made.
+    /// The key page's buttons that act now: Test and Remove with a key, and the link where keys are made; each line's
+    /// Paste always acts.
     pub(super) fn lines_acts(&self, facts: &Facts<'_>) -> Vec<CloudButton> {
         let Some(row) = self.shown_row(facts) else {
             return Vec::new();
@@ -70,8 +71,10 @@ impl Panel {
             .map(|e| e.address.as_str());
         let testable = row.test_url(address.unwrap_or_default()).is_some();
         let idle = self.cloud.check != KeyCheck::Testing;
-        let mut acts = vec![CloudButton::Paste];
-        acts.extend((keyed && testable && idle).then_some(CloudButton::Test));
+        let mut acts: Vec<_> = (keyed && testable && idle)
+            .then_some(CloudButton::Test)
+            .into_iter()
+            .collect();
         acts.extend(keyed.then_some(CloudButton::Remove));
         acts.extend(row.keys.as_ref().map(|_| CloudButton::Link));
         acts.extend([CloudButton::Facts, CloudButton::Off]);

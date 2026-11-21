@@ -68,6 +68,12 @@ impl Typed {
     pub(crate) fn key_dots(&self) -> u32 {
         self.key.as_ref().map_or(0, Line::count)
     }
+
+    /// Puts `text` on `line` as typed, such as a pasted address, and aims the letters at it.
+    pub(super) fn put(&mut self, line: CloudLine, text: &str) {
+        *self.slot(line) = Some(Line::with(text, line_max(line)));
+        self.at = Some(line);
+    }
 }
 
 impl Panel {
@@ -227,7 +233,7 @@ impl Panel {
     }
 
     /// True while the shown part holds `line`.
-    fn shows_line(&mut self, line: CloudLine, facts: &Facts<'_>) -> bool {
+    pub(super) fn shows_line(&mut self, line: CloudLine, facts: &Facts<'_>) -> bool {
         self.typed_lines(facts).is_some_and(|l| l.contains(&line))
     }
 
@@ -269,7 +275,7 @@ const fn part_lines(part: Option<LinesPart>) -> &'static [CloudLine] {
 }
 
 /// The most `line` holds before Save refuses it, from the frames' own limits: a header's key, an address, a model id.
-fn line_max(line: CloudLine) -> usize {
+pub(super) fn line_max(line: CloudLine) -> usize {
     match line {
         CloudLine::Key => MAX_KEY_BYTES,
         CloudLine::Address => HttpsUrl::MAX_BYTES,

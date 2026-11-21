@@ -6,7 +6,7 @@ use std::sync::mpsc::{self, Receiver};
 
 use kx_mod_voice::{ID, VoiceModule};
 use kx_module_api::ports::{
-    ClipTake, ClipText, CloudButton, ServiceSheet, VoiceAct, VoiceClick, VoiceSheet,
+    ClipTake, ClipText, CloudButton, CloudLine, ServiceSheet, VoiceAct, VoiceClick, VoiceSheet,
 };
 use kx_module_api::{Bus, ModuleId, Redacted, Subscription, Zeroizing};
 
@@ -42,7 +42,7 @@ fn paste(bus: &Bus, heard: &Heard, takes: &Receiver<ClipTake>) -> ClipTake {
         VoiceClick::Service(CloudButton::Lines),
         lines,
     );
-    let click = VoiceClick::Service(CloudButton::Paste);
+    let click = VoiceClick::Paste(CloudLine::Key);
     bus.publish(&VoiceAct { round, click }).unwrap();
     takes.recv_timeout(WAIT).unwrap()
 }

@@ -209,12 +209,12 @@ Item {
             compare(heard(box.contentItem, s.link.text).length, 1, "where keys are made");
             compare(heard(box.contentItem, box.view.line).length, 1, "the key is sealed");
             fits(part(box, "lines"), "the key page");
-            mouseClick(one(box, "voice.paste"));
+            mouseClick(one(box, "voice.paste-key"));
             mouseClick(one(box, "voice.test"));
             mouseClick(one(box, "voice.link"));
             mouseClick(one(box, "voice.remove"));
-            const sent = ["paste", "test", "link", "remove"].map(id => "act service " + id + " 0 " + box.round);
-            compare(acts(box), sent);
+            const sent = ["test", "link", "remove"].map(id => "act service " + id + " 0 " + box.round);
+            compare(acts(box), ["act paste key 0 " + box.round].concat(sent));
             box.visible = false;
         }
 
@@ -227,7 +227,7 @@ Item {
             const box = make("serviceAssembly", d.t);
             compare(heard(box.contentItem, box.view.sheet.check.text).length, 1, "the note stays");
             compare(Board.all(box.contentItem, o => o.visible && o.Accessible.id === "voice.test").length, 0, "no Test");
-            const [paste, save] = [one(box, "voice.paste"), one(box, "voice.save-key")];
+            const [paste, save] = [one(box, "voice.paste-key"), one(box, "voice.save-key")];
             verify(paste.mapToItem(null, 0, 0).x < save.mapToItem(null, 0, 0).x, "Paste, then Save");
             box.visible = false;
         }

@@ -1,8 +1,9 @@
-//! A service's key page as QML reads it (ADR-0047): the key line as dots with Paste and Test and the test's answer,
-//! the address and Other model lines with why one was refused, the keep-nothing switch, and where keys are made.
+//! A service's key page as QML reads it (ADR-0047): the key line as dots with Test and the test's answer, the address
+//! and Other model lines with why one was refused, each line's Paste and Save, the keep-nothing switch, and where keys
+//! are made.
 //! A typed line shows its text only on the panel's own line (ADR-0040); the key never leaves as text.
 
-use super::acts::{KEEP, SAVE};
+use super::acts::{KEEP, PASTE, SAVE};
 use super::cloud::{self, Lead, Switch};
 use super::panel::{Cx, Page, Sheet};
 use super::parts::{Button, Hint, Tone, word};
@@ -13,9 +14,9 @@ use crate::i18n::keys::vars::SITE;
 use crate::i18n::keys::{
     VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN, VOICE_ADDRESS_LINE,
     VOICE_KEEP_NOTHING, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK, VOICE_KEY_SEALED,
-    VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT, VOICE_MODEL_LINE,
-    VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id, panel_button_id,
-    service_mark,
+    VOICE_LINE_PASTE, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT,
+    VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id,
+    panel_button_id, service_mark,
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -28,7 +29,7 @@ use serde::Serialize;
 pub(super) const SERVICE_PAGE: &str = "service";
 /// A typed line: its caption, its hint while empty, its text, or for the key its sealed and typed lengths and the mask
 /// `PanelLine` draws their dots from, whether it takes the letters and its caret there (ADR-0049), why it was refused,
-/// and its buttons, Save among them.
+/// and its buttons, Paste and Save among them.
 #[derive(Serialize)]
 pub(super) struct LineView {
     id: &'static str,
@@ -46,7 +47,7 @@ pub(super) struct LineView {
 
 impl LineView {
     /// Line `line` of `s` with `words`, its caption's key and its hint, and `text`; its caret while it takes the letters,
-    /// and its Save, which dims while it has nothing to save and names its line for readers.
+    /// its Paste, and its Save, which dims while it has nothing to save and names its line for readers.
     fn new(
         t: &I18n,
         s: &ServiceSheet,
@@ -56,6 +57,7 @@ impl LineView {
     ) -> Self {
         let typing = s.typing == line;
         let id = cloud_line_id(line);
+        let paste = Button::new(PASTE, id, 0, t.text(VOICE_LINE_PASTE));
         let save = Button::new(SAVE, id, 0, t.text(VOICE_LINE_SAVE))
             .named(t.text(&format!("{VOICE_LINE_SAVE_NAME}{id}")));
         Self {
@@ -69,7 +71,7 @@ impl LineView {
             typing,
             at: if typing { *s.caret.expose() } else { 0 },
             fault: None,
-            buttons: vec![save.on(s.saves.contains(&line))],
+            buttons: vec![paste, save.on(s.saves.contains(&line))],
         }
     }
 }
@@ -158,15 +160,14 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
 }
 
 /// The key line: the sealed key's dots and the typed key's, never its text, the mask `PanelLine` draws them from, and
-/// Paste, Save and Test, which a row whose first dictation tests the key does not show.
+/// Test after Paste and Save, which a row whose first dictation tests the key does not show.
 fn key(t: &I18n, s: &ServiceSheet) -> LineView {
-    let b = |x| cloud::button(t, x, &s.acts);
     let words = (VOICE_KEY_LINE, t.text(VOICE_KEY_HINT));
     let mut line = LineView::new(t, s, CloudLine::Key, words, String::new());
     (line.dots, line.typed) = (*s.key.expose(), *s.typed.expose());
     line.mask = Some(t.text(VOICE_MASK));
-    line.buttons.insert(0, b(CloudButton::Paste));
-    line.buttons.extend(s.tests.then(|| b(CloudButton::Test)));
+    let test = cloud::button(t, CloudButton::Test, &s.acts);
+    line.buttons.extend(s.tests.then_some(test));
     line
 }
 

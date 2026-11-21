@@ -106,6 +106,8 @@ pub const VOICE_MODEL_HINT: &str = "cloud.model-hint";
 pub const VOICE_MODEL_REFUSED: &str = "cloud.model-refused";
 /// A typed line's Save (ADR-0049).
 pub const VOICE_LINE_SAVE: &str = "cloud.line-save";
+/// A typed line's Paste, under the key Paste's own text.
+pub const VOICE_LINE_PASTE: &str = "cloud.key-paste";
 /// A line's Save as readers hear it: this, then its `cloud_line_id`.
 pub const VOICE_LINE_SAVE_NAME: &str = "cloud.line-save-";
 /// The keep-nothing switch's label.
@@ -162,7 +164,6 @@ pub const fn cloud_button_id(button: CloudButton) -> &'static str {
         CloudButton::Off => "off",
         CloudButton::Facts => "facts",
         CloudButton::Lines => "lines",
-        CloudButton::Paste => "paste",
         CloudButton::Test => "test",
         CloudButton::Remove => "remove",
         CloudButton::Link => "link",
@@ -187,7 +188,6 @@ pub const fn cloud_button_key(button: CloudButton) -> &'static str {
         CloudButton::Off => "cloud.off",
         CloudButton::Facts => "cloud.facts",
         CloudButton::Lines => "cloud.lines",
-        CloudButton::Paste => "cloud.key-paste",
         CloudButton::Test => "cloud.key-test",
         CloudButton::Remove => "cloud.key-remove",
         CloudButton::Link => VOICE_CARD_LINK,

@@ -4,7 +4,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceSheet, VoiceClick, VoiceTab,
+    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, ServiceSheet, VoiceClick,
+    VoiceTab,
 };
 use std::time::Duration;
 
@@ -18,11 +19,12 @@ use crate::flow::renewal;
 #[test]
 fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
     let mut rig = on_groq_lines();
-    let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
-    let [Do::Take(round)] = out[..] else {
+    let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+    let [Do::Take { round, .. }] = out[..] else {
         panic!("no take: {out:?}");
     };
-    assert!(rig.with(|p, _| p.pasted(round, ClipText::Busy)).is_empty());
+    let out = rig.with(|p, f| p.pasted(round, ClipText::Busy, f));
+    assert!(out.is_empty());
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Busy);
     assert_eq!(rig.view().unwrap().note, None, "no general fault band");
 }
@@ -133,11 +135,11 @@ fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing()
             panic!("no test: {out:?}");
         };
         rig.with(|p, _| p.tested(ticket, Ok(()), None));
-        let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
-        let [Do::Take(round)] = out[..] else {
+        let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+        let [Do::Take { round, .. }] = out[..] else {
             panic!("no take: {out:?}");
         };
-        rig.with(|p, _| p.pasted(round, clip));
+        rig.with(|p, f| p.pasted(round, clip, f));
         assert_eq!(lines_sheet(&mut rig).check, said);
         reopen(&mut rig);
         assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Works, "{said:?}");
@@ -156,8 +158,8 @@ fn reopen(rig: &mut Rig) {
 #[test]
 fn a_paste_answer_from_before_a_close_never_lands_on_the_key_page_opened_again() {
     let mut rig = on_groq_lines();
-    let paste = |rig: &mut Rig| match rig.click(&VoiceClick::Service(CloudButton::Paste))[..] {
-        [Do::Take(round)] => round,
+    let paste = |rig: &mut Rig| match rig.click(&VoiceClick::Paste(CloudLine::Key))[..] {
+        [Do::Take { round, .. }] => round,
         ref out => panic!("no take: {out:?}"),
     };
     let old = paste(&mut rig);
@@ -166,6 +168,6 @@ fn a_paste_answer_from_before_a_close_never_lands_on_the_key_page_opened_again()
     rig.click(&VoiceClick::Open(VoiceTab::Cloud));
     act(&mut rig, &shown("groq"), CloudButton::Lines);
     assert_ne!(paste(&mut rig), old, "the round goes on across the close");
-    assert!(rig.with(|p, _| p.pasted(old, ClipText::Busy)).is_empty());
+    assert!(rig.with(|p, f| p.pasted(old, ClipText::Busy, f)).is_empty());
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Untested);
 }

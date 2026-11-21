@@ -11,7 +11,7 @@ use kx_module_api::ports::{
     AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, Renewal, ServiceMark,
     ServiceName, ServiceSheet, VoiceSheet,
 };
-use kx_ui::voice_acts::{KEEP, SAVE, SERVICE};
+use kx_ui::voice_acts::{KEEP, PASTE, SAVE, SERVICE};
 use serde_json::Value;
 
 /// Groq's key page: a 56-character key that works, nothing typed on the model line.
@@ -91,8 +91,8 @@ fn the_key_page_shows_the_key_as_dots_with_paste_and_test() {
         "the mask PanelLine draws its dots from"
     );
     let save = button(SAVE, "key", "Save", false, "plain");
-    let [paste, test] =
-        [("paste", "Paste"), ("test", "Test")].map(|(id, w)| button(SERVICE, id, w, true, "plain"));
+    let paste = button(PASTE, "key", "Paste", true, "plain");
+    let test = button(SERVICE, "test", "Test", true, "plain");
     assert_eq!(buttons(&key["buttons"]), [paste, save, test]);
     assert_eq!(
         marks(&one(&p["sheet"]["check"])),
@@ -113,10 +113,10 @@ fn a_row_with_no_test_call_shows_paste_and_save_with_no_test() {
     let mut lines = groq_lines();
     (lines.tests, lines.check) = (false, KeyCheck::NoTest);
     let p = lines_json(lines);
-    let ids: Vec<_> = (p["sheet"]["key"]["buttons"].as_array().unwrap().iter())
-        .map(|b| b["id"].as_str().unwrap_or_default().to_owned())
+    let kinds: Vec<_> = (p["sheet"]["key"]["buttons"].as_array().unwrap().iter())
+        .map(|b| b["kind"].as_str().unwrap_or_default().to_owned())
         .collect();
-    assert_eq!(ids, ["paste", "key"], "Paste, then Save");
+    assert_eq!(kinds, [PASTE, SAVE], "Paste, then Save");
 }
 
 #[test]

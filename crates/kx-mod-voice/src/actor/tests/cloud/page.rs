@@ -6,8 +6,9 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    CLIP_OPEN_MAX_MS, ClipTake, ClipText, CloudButton, CloudLine, KeyCheck, MAX_KEY_BYTES,
-    PanelKey, ServiceMark, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
+    CLIP_OPEN_MAX_MS, ClipTake, ClipText, CloudButton, CloudLine, HttpsUrl, KeyCheck,
+    MAX_KEY_BYTES, PanelKey, ServiceMark, ServiceName, ServiceSheet, VoiceClick, VoiceSheet,
+    VoiceTab,
 };
 
 use super::super::taps::{Heard, held, release, waiting};
@@ -44,6 +45,29 @@ fn on_lines_with(set: impl FnOnce(&mut FakeHost)) -> Rig {
     rig.send(Msg::Open);
     rig.act(VoiceClick::Open(VoiceTab::Cloud));
     rig.act(VoiceClick::Row(0));
+    rig.act(VoiceClick::Service(CloudButton::Lines));
+    rig
+}
+
+/// Custom on with its terms confirmed and no address, on its key page, ticked on the Cloud page that lists it.
+fn on_custom() -> Rig {
+    let mut rig = Rig::build(|_, host| {
+        host.put("cloud", true.into());
+        host.put("services", table("custom = { on = 2026-11-01, terms = 1 }"));
+    });
+    rig.send(Msg::Open);
+    rig.act(VoiceClick::Open(VoiceTab::Cloud));
+    for _ in 0..u8::MAX {
+        let panel = rig.views().last().and_then(|v| v.panel.clone());
+        let Some(VoiceSheet::Cloud(page)) = panel.map(|p| p.sheet) else {
+            panic!("not the Cloud page");
+        };
+        if let Some(at) = page.rows.iter().position(|r| r.name == ServiceName::Custom) {
+            rig.act(VoiceClick::Row(u8::try_from(at).unwrap()));
+            break;
+        }
+        rig.act(VoiceClick::Page { back: false });
+    }
     rig.act(VoiceClick::Service(CloudButton::Lines));
     rig
 }
@@ -123,7 +147,7 @@ fn asked(rig: &Rig) -> ClipTake {
 #[test]
 fn paste_asks_the_clipboard_history_and_seals_its_text() {
     let mut rig = on_lines();
-    rig.act(VoiceClick::Service(CloudButton::Paste));
+    rig.act(VoiceClick::Paste(CloudLine::Key));
     let take = asked(&rig);
     assert_eq!(take, ClipTake::new(ID, take.round, MAX_KEY_BYTES));
     let key = made_key();
@@ -133,10 +157,25 @@ fn paste_asks_the_clipboard_history_and_seals_its_text() {
 }
 
 #[test]
+fn paste_on_the_address_line_asks_for_an_addresss_most_and_puts_its_text_there() {
+    let mut rig = on_custom();
+    rig.act(VoiceClick::Page { back: false });
+    rig.act(VoiceClick::Paste(CloudLine::Address));
+    let take = asked(&rig);
+    assert_eq!(take, ClipTake::new(ID, take.round, HttpsUrl::MAX_BYTES));
+    let address = "https://speech.example.com/v1/audio";
+    rig.send(Msg::Taken(take.answer(ClipText::Text(secret(address)))));
+    let sheet = lines(&rig);
+    let shown = sheet.address.as_ref().map(|a| a.expose().as_str());
+    let line = (shown, sheet.typing);
+    assert_eq!(line, (Some(address), CloudLine::Address), "at once");
+}
+
+#[test]
 fn after_a_paste_the_last_view_holds_the_keys_dots_and_nothing_typed() {
     let mut rig = on_lines();
     rig.send(Msg::LineKey(PanelKey::Text(Redacted::new("a".into()))));
-    rig.act(VoiceClick::Service(CloudButton::Paste));
+    rig.act(VoiceClick::Paste(CloudLine::Key));
     let take = asked(&rig);
     let key = made_key();
     rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
@@ -149,7 +188,7 @@ fn after_a_paste_the_last_view_holds_the_keys_dots_and_nothing_typed() {
 #[test]
 fn a_paste_unanswered_within_take_ms_shows_busy_and_its_late_answer_is_dropped() {
     let mut rig = on_lines();
-    rig.act(VoiceClick::Service(CloudButton::Paste));
+    rig.act(VoiceClick::Paste(CloudLine::Key));
     let take = asked(&rig);
     rig.advance(VoiceSettings::from_defaults().unwrap().take_wait());
     let panel = rig.views().last().and_then(|v| v.panel.clone());
@@ -175,7 +214,7 @@ fn take_ms_at_its_floor_still_takes_an_answer_just_inside_the_clipboards_longest
         host.put("paste_ms", i64::from(*PASTE_MS.start()).into());
         host.put("take_ms", i64::from(*TAKE_MS.start()).into());
     });
-    rig.act(VoiceClick::Service(CloudButton::Paste));
+    rig.act(VoiceClick::Paste(CloudLine::Key));
     let take = asked(&rig);
     rig.advance(Duration::from_millis(u64::from(CLIP_OPEN_MAX_MS) - 1));
     let key = made_key();
