@@ -8,6 +8,7 @@ use std::sync::Arc;
 use kx_module_api::SecretBytes;
 use kx_module_api::ports::{SpeechAsk, SpeechError, SpeechNote, SpeechRun};
 
+use super::ask::shut;
 use super::{Actor, Back, Job, Msg};
 use crate::flow::{In, RunCall};
 
@@ -255,9 +256,4 @@ fn carry(run: &mut Run, call: Call) -> Result<Answer, SpeechError> {
             pieces: run.0.pieces(),
         }),
     }
-}
-
-/// Drops `run`; a port that breaks again as it closes is caught, so the job still answers its lane.
-fn shut(run: Run) {
-    let _ = catch_unwind(AssertUnwindSafe(|| drop(run)));
 }

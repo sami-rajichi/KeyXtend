@@ -7,9 +7,7 @@ use kx_module_api::ports::{BarButton, FieldKind, PanelButton, VoiceBar, VoiceCli
 use super::Msg;
 use super::rig::Rig;
 use crate::INSERTS;
-
-/// The rows a panel page holds, as the ui tells them.
-const ROWS: u8 = 5;
+use crate::panel::rig::ROWS;
 
 /// A rig whose texts go in by pasting.
 fn pasting() -> Rig {

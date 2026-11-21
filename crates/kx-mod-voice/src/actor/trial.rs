@@ -60,7 +60,9 @@ impl Actor {
         take: u32,
         pieces: Result<Vec<SecretBytes>, SpeechError>,
     ) {
-        let pieces = pieces.unwrap_or_default();
+        let pieces = pieces
+            .inspect_err(|error| tracing::warn!(%error, "a Compare run's speech could not be had"))
+            .unwrap_or_default();
         let mut ats: Vec<usize> = (self.net.trials.keys())
             .filter(|(t, _)| *t == take)
             .map(|(_, at)| *at)

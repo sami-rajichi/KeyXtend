@@ -85,8 +85,8 @@ pub(super) fn head_of(s: &VoiceSettings, choice: &Choice<'_>) -> Option<Head> {
     })
 }
 
-/// Drops `run`, which cancels its requests; a port that breaks as it drops is caught.
-pub(super) fn shut(run: Wired) {
+/// Drops `run`, which cancels its requests or closes its job; a port that breaks as it drops is caught.
+pub(super) fn shut<T>(run: T) {
     let _ = catch_unwind(AssertUnwindSafe(|| drop(run)));
 }
 
