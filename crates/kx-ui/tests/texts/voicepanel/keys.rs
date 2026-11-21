@@ -1,15 +1,15 @@
 //! The Qt Quick tests' key pages: Groq's with its key tested, `OpenRouter`'s, the Custom row's, a typed key,
-//! `AssemblyAI`'s, the answers that draw a warning band, and each part with every line and the longest answer in each
-//! language.
+//! `AssemblyAI`'s, the answers that draw a warning band, and the Custom row's with its three lines and the longest
+//! answer in each language.
 
 use super::cloud::named;
-use super::{Shown, paged, shown};
+use super::{Shown, shown};
 use crate::lang;
 use crate::qml::LANGS;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, Renewal, ServiceMark,
-    ServiceName, ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, Renewal, ServiceMark, ServiceName,
+    ServiceSheet, VoiceSheet,
 };
 
 /// A renewal at 23:59 UTC, as a used allowance's answer shows it.
@@ -43,7 +43,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         site: Some("console.groq.com".to_owned()),
         tests: true,
         acts: CloudButton::ALL.to_vec(),
-        part: None,
+        lines: vec![CloudLine::Key, CloudLine::Model],
         typing: CloudLine::Key,
         caret: Redacted::new(DOTS),
         saves: Vec::new(),
@@ -61,6 +61,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         s.acts = vec![CloudButton::Facts, CloudButton::Off];
         (s.typing, s.caret) = (CloudLine::Address, Redacted::new(7));
         s.saves = vec![CloudLine::Address, CloudLine::Model];
+        s.lines = vec![CloudLine::Address, CloudLine::Model, CloudLine::Key];
     }
     VoiceSheet::Service(s)
 }
@@ -93,20 +94,18 @@ fn longest_check(tag: &str) -> (KeyCheck, Option<Renewal>) {
     (check, (check == KeyCheck::Allowance).then(renews).flatten())
 }
 
-/// Part `part` of the Custom row's key page in language `tag` with every line, each with its longest answer.
-fn service_long(part: LinesPart, tag: &str) -> VoiceSheet {
+/// The Custom row's key page in language `tag` with its three lines on one page, each with its longest answer.
+fn service_long(tag: &str) -> VoiceSheet {
     let VoiceSheet::Service(mut s) = lines("custom") else {
         unreachable!("a key page")
     };
     (s.key, (s.check, s.renews_at)) = (Redacted::new(DOTS), longest_check(tag));
-    (s.address_fault, s.keep) = (Some(AddressFault::Path), Some(true));
-    (s.site, s.part) = (Some("console.groq.com".to_owned()), Some(part));
+    s.address_fault = Some(AddressFault::Path);
     VoiceSheet::Service(s)
 }
 
-/// The key pages in language `tag`, by name; a long one shows its first part on page 1 of 2, its second on page 2.
+/// The key pages in language `tag`, by name.
 pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
-    let two = |sheet, at| paged(shown(sheet, &[]), at, 2, 0);
     let typed = groq(|s| {
         (s.typed, s.caret, s.saves) = (Redacted::new(20), Redacted::new(12), vec![CloudLine::Key]);
     });
@@ -120,11 +119,7 @@ pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
         ("serviceAssembly", shown(assembly, &[])),
         ("serviceCustom", shown(lines("custom"), &[])),
         ("serviceTyped", shown(typed, &[])),
-        ("serviceLong", two(service_long(LinesPart::Key, tag), 0)),
-        (
-            "serviceLongModel",
-            two(service_long(LinesPart::Model, tag), 1),
-        ),
+        ("serviceLong", shown(service_long(tag), &[])),
     ];
     for (name, check) in BANDS {
         let renews_at = (check == KeyCheck::Allowance).then(renews).flatten();
@@ -139,7 +134,7 @@ pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
 fn the_long_key_page_shows_the_longest_key_answer_in_each_language() {
     for tag in LANGS {
         let t = lang(tag);
-        let VoiceSheet::Service(s) = service_long(LinesPart::Key, tag) else {
+        let VoiceSheet::Service(s) = service_long(tag) else {
             unreachable!("a key page")
         };
         let len = |c, r| {

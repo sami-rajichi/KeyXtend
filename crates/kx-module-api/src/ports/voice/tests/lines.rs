@@ -94,7 +94,7 @@ fn the_key_page_hides_the_typed_key_and_its_caret_and_names_the_lines_that_save(
         site: None,
         tests: false,
         acts: vec![CloudButton::Facts],
-        part: None,
+        lines: vec![CloudLine::Key, CloudLine::Model],
         typing: CloudLine::Key,
         caret: Redacted::new(LENGTH - 1),
         saves: vec![CloudLine::Key, CloudLine::Model],

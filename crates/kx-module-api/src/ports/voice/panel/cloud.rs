@@ -93,16 +93,6 @@ listed! {
     }
 }
 
-listed! {
-    /// The part of a key page a page shows, when a typed address makes it two pages of the panel (ADR-0008).
-    pub enum LinesPart ("Every part, in page order.") {
-        /// The key line, its test's answer and where keys are made.
-        Key,
-        /// The address and Other model lines and the keep-nothing switch.
-        Model,
-    }
-}
-
 /// A cloud service as a line names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ServiceName {
@@ -261,8 +251,8 @@ pub struct ServiceSheet {
     pub tests: bool,
     /// The page's buttons that act now; the others stay in their place dimmed.
     pub acts: Vec<CloudButton>,
-    /// The lines the shown page holds; `None` while one page holds them all.
-    pub part: Option<LinesPart>,
+    /// The lines the one page shows, in its order: a typed address's address, model and key, else the key and model.
+    pub lines: Vec<CloudLine>,
     /// The shown line that takes the letters while the panel is aimed at.
     pub typing: CloudLine,
     /// That line's caret: UTF-16 units of the text it draws, or dots on the key line; it may tell a secret's length.

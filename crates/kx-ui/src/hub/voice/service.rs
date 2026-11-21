@@ -20,8 +20,7 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CloudButton, CloudLine, CloudWhy, KeyCheck, LinesPart, PanelButton, ServiceName, ServiceSheet,
-    Unavailable,
+    CloudButton, CloudLine, CloudWhy, KeyCheck, PanelButton, ServiceName, ServiceSheet, Unavailable,
 };
 use serde::Serialize;
 
@@ -107,14 +106,15 @@ impl Check {
     }
 }
 
-/// The key page's body: the key line, the test's answer, the address and model lines, keep-nothing and where keys are
-/// made; a part of two shows only its own.
+/// The key page's body: the key line with the test's answer under it, the address and model lines, the ids of those
+/// shown in page order (each its field's name), keep-nothing and where keys are made.
 #[derive(Serialize)]
 pub(super) struct KeyPage {
     key: Option<LineView>,
     check: Option<Check>,
     address: Option<LineView>,
     model: Option<LineView>,
+    order: Vec<&'static str>,
     keep: Option<Switch>,
     link: Option<Lead>,
 }
@@ -123,10 +123,7 @@ pub(super) struct KeyPage {
 pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
     let t = cx.t;
     let b = |x| cloud::button(t, x, &s.acts);
-    let (first, rest) = (
-        s.part != Some(LinesPart::Model),
-        s.part != Some(LinesPart::Key),
-    );
+    let shows = |line| s.lines.contains(&line);
     let check = key_check_id(s.check)
         .zip(t.voice_key_check(s.check, s.renews_at))
         .map(|(id, text)| Check::new(s.check, Hint::new(id, text)));
@@ -137,16 +134,15 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
     });
     let keep = |on| Switch::new(t, KEEP, t.text(VOICE_KEEP_NOTHING), on);
     let sheet = Sheet::Service(Box::new(KeyPage {
-        key: first.then(|| key(t, s)),
-        check: check.filter(|_| first),
-        address: s
-            .address
-            .as_ref()
-            .filter(|_| rest)
+        key: shows(CloudLine::Key).then(|| key(t, s)),
+        check,
+        address: (s.address.as_ref())
+            .filter(|_| shows(CloudLine::Address))
             .map(|a| address(t, s, a)),
-        model: rest.then(|| model(t, s)),
-        keep: s.keep.filter(|_| rest).map(keep),
-        link: link.filter(|_| first),
+        model: shows(CloudLine::Model).then(|| model(t, s)),
+        order: s.lines.iter().map(|&l| cloud_line_id(l)).collect(),
+        keep: s.keep.map(keep),
+        link,
     }));
     let sub = t.text(&mark_key(service_mark(s.mark)));
     let mut page = Page::new(SERVICE_PAGE, cloud::service(t, &s.service), sub, sheet);

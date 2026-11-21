@@ -1,12 +1,10 @@
 //! Typing on the key page's lines (ADR-0049, edge 22): our keyboard's keys and a click on a line work its text at the
 //! caret, and Enter or Save sets it through the page's own acts and checks. A line's text lives only while it shows,
-//! and the key typed only here, wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
+//! and the key typed only here, wiped on Save, Paste, Remove, leaving the page and the panel closing.
 
 use kx_module_api::Redacted;
 use kx_module_api::caret;
-use kx_module_api::ports::{
-    CloudLine, HttpsUrl, LinesPart, MAX_KEY_BYTES, PanelKey, PanelLine, TAG_LEN,
-};
+use kx_module_api::ports::{CloudLine, HttpsUrl, MAX_KEY_BYTES, PanelKey, PanelLine, TAG_LEN};
 use kx_module_api::text::SPACE;
 
 use super::{Do, Page, Panel};
@@ -14,12 +12,10 @@ use crate::line::Line;
 use crate::services::{Address, Service};
 use crate::view::Facts;
 
-/// The key page's lines as typed: the part they show on, the line taking the letters and each one's text once edited.
+/// The key page's lines as typed: the line taking the letters and each one's text once edited.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Typed {
-    /// The part the lines were typed on; another part's start afresh.
-    part: Option<LinesPart>,
-    /// The line taking the letters; `None` for the part's first.
+    /// The line taking the letters; `None` for the page's first.
     at: Option<CloudLine>,
     /// The key typed so far.
     pub(crate) key: Option<Line>,
@@ -30,16 +26,6 @@ pub(crate) struct Typed {
 }
 
 impl Typed {
-    /// Follows the shown part: on a new one, the old part's lines and their texts go.
-    fn follow(&mut self, part: Option<LinesPart>) {
-        if self.part != part {
-            *self = Self {
-                part,
-                ..Self::default()
-            };
-        }
-    }
-
     /// `line`'s text as edited, if it was.
     const fn draft(&self, line: CloudLine) -> Option<&Line> {
         match line {
@@ -132,7 +118,7 @@ impl Panel {
         };
     }
 
-    /// A click on `line` of the shown part: it takes the letters, with its caret `at` into what it draws.
+    /// A click on the shown `line`: it takes the letters, with its caret `at` into what it draws.
     pub(super) fn place_caret(&mut self, line: CloudLine, at: u32, facts: &Facts<'_>) {
         if !self.shows_line(line, facts) {
             return;
@@ -167,21 +153,12 @@ impl Panel {
         out
     }
 
-    /// The shown part's lines while a key page shows, following the part so a new one starts afresh.
-    pub(crate) fn typed_lines(&mut self, facts: &Facts<'_>) -> Option<&'static [CloudLine]> {
+    /// The key page's lines in page order, while it shows.
+    pub(crate) fn typed_lines(&self, facts: &Facts<'_>) -> Option<&'static [CloudLine]> {
         if self.page != Some(Page::Lines) {
             return None;
         }
-        let part = self.lines_part(self.shown_row(facts)?);
-        self.cloud.typed.follow(part);
-        Some(part_lines(part))
-    }
-
-    /// The part of the key page shown for `row`: two parts with a typed address, else none, as one page holds all.
-    fn lines_part(&self, row: &Service) -> Option<LinesPart> {
-        let typed = matches!(row.address, Address::Typed { .. });
-        let at = self.at.min(LinesPart::ALL.len() - 1);
-        LinesPart::ALL.get(at).copied().filter(|_| typed)
+        self.shown_row(facts).map(page_lines)
     }
 
     /// What `line` shows: its text as edited, else the one just refused, else the one kept; never the key.
@@ -232,8 +209,8 @@ impl Panel {
         }
     }
 
-    /// True while the shown part holds `line`.
-    pub(super) fn shows_line(&mut self, line: CloudLine, facts: &Facts<'_>) -> bool {
+    /// True while the key page shows `line`.
+    pub(super) fn shows_line(&self, line: CloudLine, facts: &Facts<'_>) -> bool {
         self.typed_lines(facts).is_some_and(|l| l.contains(&line))
     }
 
@@ -265,12 +242,12 @@ impl Panel {
     }
 }
 
-/// The lines each part of a key page shows; one page shows the key and the model.
-const fn part_lines(part: Option<LinesPart>) -> &'static [CloudLine] {
-    match part {
-        None => &[CloudLine::Key, CloudLine::Model],
-        Some(LinesPart::Key) => &[CloudLine::Key],
-        Some(LinesPart::Model) => &[CloudLine::Address, CloudLine::Model],
+/// The lines `row`'s key page shows, in page order: a typed address's address, model and key (owner, 2026-11-21), else
+/// the key and model.
+const fn page_lines(row: &Service) -> &'static [CloudLine] {
+    match row.address {
+        Address::Typed { .. } => &[CloudLine::Address, CloudLine::Model, CloudLine::Key],
+        Address::Fixed(_) => &[CloudLine::Key, CloudLine::Model],
     }
 }
 

@@ -3,7 +3,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CloudButton, CloudLine, KeyCheck, LinesPart, Pages, Renewal, ServiceSheet, VoiceSheet,
+    CloudButton, CloudLine, KeyCheck, Pages, Renewal, ServiceSheet, VoiceSheet,
 };
 
 use super::Facts;
@@ -13,8 +13,7 @@ use crate::panel::Panel;
 use crate::services::{Address, KeyTest, Service};
 
 impl Panel {
-    /// The shown service's key page, on two pages for a typed address (ADR-0008); the Cloud page once cloud no longer
-    /// offers it.
+    /// The shown service's key page, its lines on one page (ADR-0008); the Cloud page once cloud no longer offers it.
     pub(super) fn lines_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let (Some(cloud), Some(row)) = (facts.cloud, self.shown_row(facts)) else {
             return self.cloud_sheet(facts);
@@ -22,11 +21,6 @@ impl Panel {
         let s = facts.settings;
         let entry = s.services.get(&row.id);
         let typed = matches!(row.address, Address::Typed { .. });
-        let (part, pages) = if typed {
-            self.parted(&LinesPart::ALL)
-        } else {
-            (None, self.single())
-        };
         let lines = self.typed_lines(facts).unwrap_or_default();
         let typing = self.cloud.typed.at(lines).unwrap_or(CloudLine::Key);
         let text = |line| Redacted::new(self.line_text(line, facts));
@@ -47,14 +41,14 @@ impl Panel {
             site: row.keys.as_ref().map(|url| url.host().to_owned()),
             tests: row.test != KeyTest::None,
             acts: self.cloud_acts(facts),
-            part,
+            lines: lines.to_vec(),
             typing,
             caret: Redacted::new(self.line_caret(typing, facts)),
             saves: (lines.iter().copied())
                 .filter(|&l| self.line_saves(l, facts))
                 .collect(),
         };
-        (VoiceSheet::Service(sheet), pages)
+        (VoiceSheet::Service(sheet), self.single())
     }
 
     /// The key page's buttons that act now: Test and Remove with a key, and the link where keys are made; each line's

@@ -1,18 +1,18 @@
 //! A service's key page through the hub: the key as dots with Paste and Test and the test's answer, a refusal by the
 //! note of its reason with a used allowance's renewal, where keys are made and that the key is sealed, a refused
 //! address or model or a busy Paste each with its reason (carries 1, 5), the keep-nothing switch with a model no host
-//! of which keeps nothing (edge 17), and its two parts for a typed address.
+//! of which keeps nothing (edge 17), and a typed address's lines in their order.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, Renewal, ServiceMark,
-    ServiceName, ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, Renewal, ServiceMark, ServiceName,
+    ServiceSheet, VoiceSheet,
 };
 use kx_ui::voice_acts::{KEEP, PASTE, SAVE, SERVICE};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 /// Groq's key page: a 56-character key that works, nothing typed on the model line.
 pub(super) fn groq_lines() -> ServiceSheet {
@@ -32,7 +32,7 @@ pub(super) fn groq_lines() -> ServiceSheet {
         site: Some("console.groq.com".to_owned()),
         tests: true,
         acts: CloudButton::ALL.to_vec(),
-        part: None,
+        lines: vec![CloudLine::Key, CloudLine::Model],
         typing: CloudLine::Key,
         caret: Redacted::new(0),
         saves: Vec::new(),
@@ -51,6 +51,7 @@ fn custom_lines() -> ServiceSheet {
     lines.address_fault = Some(AddressFault::Https);
     lines.model = Redacted::new("no such/model".to_owned());
     (lines.model_refused, lines.site) = (true, None);
+    lines.lines = vec![CloudLine::Address, CloudLine::Model, CloudLine::Key];
     lines
 }
 
@@ -243,30 +244,15 @@ fn keep_nothing_says_why_a_model_with_no_such_host_cannot_be_used() {
 }
 
 #[test]
-fn a_key_page_in_two_parts_shows_the_key_then_the_address_model_and_keep_nothing() {
-    let mut lines = custom_lines();
-    (lines.keep, lines.site) = (Some(true), Some("console.groq.com".to_owned()));
-    lines.part = Some(LinesPart::Key);
-    let p = lines_json(lines.clone());
+fn a_typed_addresss_key_page_shows_its_address_model_and_key_in_that_order() {
+    let p = lines_json(custom_lines());
     let sheet = &p["sheet"];
-    assert_eq!(sheet["key"]["caption"], "Key");
-    assert!(sheet["check"].is_object(), "the test's answer");
-    assert_eq!(sheet["link"]["text"], "Make a key at console.groq.com");
-    for later in ["address", "model", "keep"] {
-        assert_eq!(sheet[later], Value::Null, "{later} on the next page");
+    assert_eq!(sheet["order"], json!(["address", "model", "key"]));
+    for id in ["address", "model", "key", "check"] {
+        assert!(sheet[id].is_object(), "{id} on the one page");
     }
-    lines.part = Some(LinesPart::Model);
-    let p = lines_json(lines);
-    let sheet = &p["sheet"];
-    for first in ["key", "check", "link"] {
-        assert_eq!(sheet[first], Value::Null, "{first} on the first page");
-    }
-    let typed = (
-        sheet["address"]["text"].as_str(),
-        sheet["model"]["text"].as_str(),
-    );
-    assert_eq!(typed, (Some("http://lan.example"), Some("no such/model")));
-    assert_eq!(sheet["keep"]["on"], true);
+    let p = lines_json(groq_lines());
+    assert_eq!(p["sheet"]["order"], json!(["key", "model"]), "Groq's");
 }
 
 /// The test's answer shows lit only when the key works, as a warning band when it warns, and plain while it tests or the

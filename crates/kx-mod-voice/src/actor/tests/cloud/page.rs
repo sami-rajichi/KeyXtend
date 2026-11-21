@@ -159,7 +159,6 @@ fn paste_asks_the_clipboard_history_and_seals_its_text() {
 #[test]
 fn paste_on_the_address_line_asks_for_an_addresss_most_and_puts_its_text_there() {
     let mut rig = on_custom();
-    rig.act(VoiceClick::Page { back: false });
     rig.act(VoiceClick::Paste(CloudLine::Address));
     let take = asked(&rig);
     assert_eq!(take, ClipTake::new(ID, take.round, HttpsUrl::MAX_BYTES));

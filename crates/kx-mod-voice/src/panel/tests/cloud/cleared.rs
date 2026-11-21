@@ -4,7 +4,7 @@ use kx_module_api::ports::{CloudLine, PanelKey, VoiceClick};
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
-use super::typing::{key, on_custom_model};
+use super::typing::{key, on_custom_page};
 use super::{apply, lines_sheet, put};
 use crate::settings::{PICKS, SERVICES};
 
@@ -18,7 +18,7 @@ fn empty(rig: &mut Rig) {
 #[test]
 fn saving_an_emptied_address_or_model_line_clears_it_and_the_picks_it_served() {
     let kept = r#", address = "https://a.example.com/v1", model = "my-model""#;
-    let mut rig = on_custom_model(kept);
+    let mut rig = on_custom_page(kept);
     put(&mut rig, "picks", r#"en = "custom:my-model""#);
     key(&mut rig, &PanelKey::Down);
     empty(&mut rig);

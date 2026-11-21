@@ -99,7 +99,6 @@ fn paste_sets_the_clipboards_text_as_the_key_which_shows_only_as_dots() {
 #[test]
 fn paste_on_the_address_line_puts_the_clipboards_text_there_ready_for_save() {
     let mut rig = on_custom_lines("");
-    rig.click(&VoiceClick::Page { back: false });
     let out = rig.click(&VoiceClick::Paste(CloudLine::Address));
     let [Do::Take { round, max }] = out[..] else {
         panic!("no take: {out:?}");
@@ -123,7 +122,6 @@ fn paste_on_the_address_line_puts_the_clipboards_text_there_ready_for_save() {
 #[test]
 fn a_busy_empty_or_too_long_paste_on_a_line_shows_that_lines_refusal() {
     let mut rig = on_custom_lines(&format!(r#", address = "{ADDRESS}""#));
-    rig.click(&VoiceClick::Page { back: false });
     paste(&mut rig, CloudLine::Address, ClipText::Empty);
     let sheet = lines_sheet(&mut rig);
     assert_eq!(sheet.address_fault, Some(AddressFault::Https));

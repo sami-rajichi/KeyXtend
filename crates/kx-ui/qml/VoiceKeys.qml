@@ -1,8 +1,8 @@
 // A service's key page (mock-up svcPage()): the key line as dots with Paste, Save and Test and the test's answer, Key
 // works as a lit mark and a refused one as a warning band, the address and Other model lines with their Paste and Save
-// and why one was refused, the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
-// only draw: the key never shows as text, and a click never focuses them (ADR-0013, ADR-0049). It takes a page of rows'
-// height; a typed address puts its lines on a second page the pager turns to (ADR-0008).
+// and why one was refused, the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while
+// aimed but only draw: the key never shows as text, and a click never focuses them (ADR-0013, ADR-0049). It takes a page
+// of rows' height and holds every line, in the hub's order: a typed address's address, model, then key (ADR-0008).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -21,7 +21,9 @@ Item {
     readonly property var names: host.names
     readonly property real gap: pn.row_gap_px * s
     readonly property real hintPx: pn.hint_px[0] * s * (host.ar ? lk.look.arabic_scale : 1)
-    readonly property var lines: shows ? [sheet.key, sheet.address, sheet.model].filter(l => !!l) : []
+    readonly property var lines: shows ? sheet.order.map(id => sheet[id]).filter(l => !!l) : []
+    // The key line's id, under which the test's answer shows.
+    readonly property string keyId: shows && sheet.key ? sheet.key.id : ""
     // The pager's room beside the lines while the page has more than one part.
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     // The key works, which shows as a lit mark; or its answer warns, which shows as a warning band (mock-up .res.bad).
@@ -42,7 +44,8 @@ Item {
             delegate: Column {
                 id: entry
                 required property var modelData
-                required property int index
+                // The key line, whose test's answer shows under it.
+                readonly property bool underKey: modelData.id === keys.keyId
                 width: col.width
                 spacing: keys.pn.body_gap_px * keys.s
                 Item {
@@ -92,12 +95,12 @@ Item {
                     }
                 }
                 Said {
-                    visible: entry.index === 0 && !!keys.sheet.check && !keys.works && !keys.refused
+                    visible: entry.underKey && !!keys.sheet.check && !keys.works && !keys.refused
                     icon: keys.sheet.check ? keys.lk.icons.voice.panel.cloud[keys.sheet.check.id] || "" : ""
                     text: keys.sheet.check ? keys.sheet.check.text : ""
                 }
                 VoiceMark {
-                    visible: entry.index === 0 && keys.works
+                    visible: entry.underKey && keys.works
                     host: keys.host
                     mark: keys.works ? keys.sheet.check : ({ id: "", text: "" })
                     glyph: keys.lk.icons.voice.panel.cloud.ok
@@ -105,7 +108,7 @@ Item {
                     lit: false
                 }
                 Refused {
-                    visible: entry.index === 0 && keys.refused
+                    visible: entry.underKey && keys.refused
                     text: keys.refused ? keys.sheet.check.text : ""
                 }
                 Refused {

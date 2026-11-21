@@ -22,6 +22,7 @@ pub(in crate::voice) fn typed_panel(
 ) -> VoicePanel {
     let mut lines = groq_lines();
     lines.address = Some(Redacted::new("https://a.example.com/v1".to_owned()));
+    lines.lines = vec![CloudLine::Address, CloudLine::Model, CloudLine::Key];
     (lines.typed, lines.typing, lines.caret) = (Redacted::new(typed), typing, Redacted::new(at));
     lines.saves = saves.to_vec();
     panel(VoiceSheet::Service(lines))

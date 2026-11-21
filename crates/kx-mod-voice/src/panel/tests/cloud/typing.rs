@@ -1,6 +1,6 @@
 //! Typing on the key page's lines (ADR-0049, edge 22): letters, Space, Backspace, Delete and the arrows work the line
 //! at its caret, a click places it, Enter and Save set it through the page's own acts, an empty key saves nothing, and
-//! the key typed is wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
+//! the key typed is wiped on Save, Paste, Remove, leaving the page and the panel closing.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -43,13 +43,12 @@ fn typing(sheet: &ServiceSheet) -> (u32, CloudLine, u32) {
     (*sheet.typed.expose(), sheet.typing, *sheet.caret.expose())
 }
 
-/// Custom on with `extra` in its entry, on its key page's second part: the address and model lines.
-pub(super) fn on_custom_model(extra: &str) -> Rig {
+/// Custom on with `extra` in its entry, on its key page, whose address line takes the letters first.
+pub(super) fn on_custom_page(extra: &str) -> Rig {
     let mut rig = on_cloud("");
     let entry = format!("custom = {{ on = 2026-11-01, terms = 1{extra} }}");
     put(&mut rig, "services", &entry);
     act(&mut rig, &ServiceName::Custom, CloudButton::Lines);
-    rig.click(&VoiceClick::Page { back: false });
     rig
 }
 
@@ -140,27 +139,8 @@ fn the_typed_key_is_wiped_on_paste_remove_leaving_the_page_and_closing() {
 }
 
 #[test]
-fn a_page_turn_starts_the_new_parts_lines_afresh() {
-    let mut rig = on_custom_model("");
-    rig.click(&VoiceClick::Page { back: true });
-    type_in(&mut rig, "abc");
-    assert_eq!(*lines_sheet(&mut rig).typed.expose(), 3);
-    rig.click(&VoiceClick::Page { back: false });
-    type_in(&mut rig, "x");
-    rig.click(&VoiceClick::Page { back: true });
-    assert_eq!(*lines_sheet(&mut rig).typed.expose(), 0, "the key went");
-    rig.click(&VoiceClick::Page { back: false });
-    let sheet = lines_sheet(&mut rig);
-    assert_eq!(
-        sheet.address.unwrap().expose().as_str(),
-        "",
-        "so did the address"
-    );
-}
-
-#[test]
 fn an_address_is_edited_from_the_kept_one_and_saved_through_its_own_checks() {
-    let mut rig = on_custom_model(r#", address = "https://a.example.com/v1""#);
+    let mut rig = on_custom_page(r#", address = "https://a.example.com/v1""#);
     let sheet = lines_sheet(&mut rig);
     assert_eq!(
         typing(&sheet),
@@ -199,7 +179,7 @@ fn an_address_is_edited_from_the_kept_one_and_saved_through_its_own_checks() {
 
 #[test]
 fn an_address_or_model_past_its_limit_is_refused_with_its_own_reason() {
-    let mut rig = on_custom_model("");
+    let mut rig = on_custom_page("");
     let long = format!("https://a.example.com/{}", "a".repeat(HttpsUrl::MAX_BYTES));
     key(&mut rig, &PanelKey::Text(Redacted::new(long)));
     let sheet = lines_sheet(&mut rig);
@@ -226,7 +206,7 @@ fn an_address_or_model_past_its_limit_is_refused_with_its_own_reason() {
 
 #[test]
 fn up_and_down_and_a_click_pick_the_line_and_a_click_places_its_caret() {
-    let mut rig = on_custom_model(r#", address = "https://a.example.com/v1", model = "whisper-1""#);
+    let mut rig = on_custom_page(r#", address = "https://a.example.com/v1", model = "whisper-1""#);
     assert_eq!(lines_sheet(&mut rig).typing, CloudLine::Address);
     key(&mut rig, &PanelKey::Up);
     assert_eq!(
@@ -234,23 +214,18 @@ fn up_and_down_and_a_click_pick_the_line_and_a_click_places_its_caret() {
         CloudLine::Address,
         "the first stays"
     );
-    key(&mut rig, &PanelKey::Down);
-    key(&mut rig, &PanelKey::Down);
-    assert_eq!(
-        lines_sheet(&mut rig).typing,
-        CloudLine::Model,
-        "the last stays"
-    );
+    for _ in CloudLine::ALL {
+        key(&mut rig, &PanelKey::Down);
+    }
+    let last = lines_sheet(&mut rig).typing;
+    assert_eq!(last, CloudLine::Key, "the last, the key, stays");
     caret(&mut rig, CloudLine::Address, 2);
     let sheet = lines_sheet(&mut rig);
     assert_eq!(typing(&sheet), (0, CloudLine::Address, 2));
     caret(&mut rig, CloudLine::Key, 0);
-    assert_eq!(
-        lines_sheet(&mut rig).typing,
-        CloudLine::Address,
-        "no key line on this part"
-    );
-    key(&mut rig, &PanelKey::Down);
+    let aimed = lines_sheet(&mut rig).typing;
+    assert_eq!(aimed, CloudLine::Key, "the key line on the same page");
+    key(&mut rig, &PanelKey::Up);
     caret(&mut rig, CloudLine::Model, 1);
     type_in(&mut rig, "x");
     let sheet = lines_sheet(&mut rig);

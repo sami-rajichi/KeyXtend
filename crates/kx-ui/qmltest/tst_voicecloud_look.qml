@@ -96,7 +96,8 @@ Item {
         }
         function test_a_refused_answer_or_line_shows_as_the_warning_band(d) {
             const key = make("serviceLong", d.t);
-            compare(bands(key), [key.view.sheet.check.text], "the key's answer");
+            const k = key.view.sheet;
+            compare(bands(key), [k.address.fault, k.model.fault, k.check.text], "the key's answer under the key, last");
             const custom = make("serviceCustom", d.t);
             const c = custom.view.sheet;
             compare(bands(custom), [c.address.fault, c.model.fault], "each refused line");

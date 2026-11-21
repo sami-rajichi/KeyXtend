@@ -245,7 +245,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         site: None,
         tests: true,
         acts: vec![CloudButton::Test, CloudButton::Remove],
-        part: Some(LinesPart::Model),
+        lines: vec![CloudLine::Address, CloudLine::Model, CloudLine::Key],
         typing: CloudLine::Address,
         caret: Redacted::new(0),
         saves: vec![CloudLine::Address],
@@ -262,7 +262,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
             "model_na: true",
             "model_refused: true",
             "keep: Some(true)",
-            "part: Some(Model)",
+            "lines: [Address, Model, Key]",
             "Remove",
         ],
     );

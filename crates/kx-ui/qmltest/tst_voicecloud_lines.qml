@@ -1,7 +1,8 @@
 // The key page's lines over the hub's views (ADR-0049): a typed key draws only its dots and its caret, the sealed key
 // keeps its dots with the caret after them once the keys aim at it, an address reads left to right in Arabic too, a click
 // places the caret, a reader's press picks its line, an empty line's hint starts at its caret, each Save dims while its
-// line is empty, has a name of its own and sends its line, and each Paste sends its line, in English, French and Arabic.
+// line is empty, has a name of its own and sends its line, each Paste sends its line, and a typed address's page shows
+// its address, model and key in that order, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -146,6 +147,22 @@ Item {
             compare(acts(box), sent);
             const save = box.view.sheet.model.buttons.find(b => b.kind === "save");
             compare(one(box, "voice.save-model").Accessible.name, save.name);
+            box.visible = false;
+        }
+
+        function test_a_typed_addresss_page_shows_the_address_model_and_key_on_one_page_data() {
+            return langs_data();
+        }
+        // The owner's rule (2026-11-21): the three lines in that order, the key's answer under the key, and no pager; the
+        // fit test checks it fits in every theme.
+        function test_a_typed_addresss_page_shows_the_address_model_and_key_on_one_page(d) {
+            const box = make("serviceLong", d.t);
+            const y = o => o.mapToItem(null, 0, 0).y;
+            const ys = ["address", "model", "key"].map(id => y(one(box, "voice.line-" + id)));
+            verify(ys[0] < ys[1] && ys[1] < ys[2], "address, model, key: " + ys);
+            const said = heard(box.contentItem, box.view.sheet.check.text);
+            verify(said.length === 1 && y(said[0]) > ys[2], "the key's answer under the key");
+            verify(!Board.all(box.contentItem, o => o.visible && o.Accessible.id === "voice.page-on").length, "no pager");
             box.visible = false;
         }
 

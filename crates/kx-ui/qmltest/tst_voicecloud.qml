@@ -172,14 +172,14 @@ Item {
             box.visible = false;
         }
 
-        function test_a_card_and_a_typed_key_page_turn_by_the_pager_data() {
+        function test_a_card_turns_by_the_pager_data() {
             return langs_data();
         }
-        // A card's two parts and a typed key page's two parts each keep the panel's height, with the pager beside them.
-        function test_a_card_and_a_typed_key_page_turn_by_the_pager(d) {
+        // A card's two parts each keep the panel's height, with the pager beside them.
+        function test_a_card_turns_by_the_pager(d) {
             const card = Kit.named(d.t, "cardLong-")[0];
             const price = card.replace("cardLong-", "cardLongPrice-");
-            for (const [name, by] of [[card, 1], [price, -1], ["serviceLong", 1], ["serviceLongModel", -1]]) {
+            for (const [name, by] of [[card, 1], [price, -1]]) {
                 const box = make(name, d.t);
                 const [back, on] = [one(box, "voice.page-back"), one(box, "voice.page-on")];
                 compare([back.enabled, on.enabled], [by < 0, by > 0], name + ": one way to turn");
@@ -187,11 +187,6 @@ Item {
                 compare(acts(box), ["act page  " + by + " " + box.round], name);
                 box.visible = false;
             }
-            const drawn = (box, id) => Board.all(box.contentItem, o => o.visible && o.Accessible.id === "voice." + id).length;
-            const [key, model] = [make("serviceLong", d.t), make("serviceLongModel", d.t)];
-            compare(["line-key", "line-address", "line-model", "keep"].map(id => drawn(key, id)), [1, 0, 0, 0], "the key first");
-            compare(["line-key", "line-address", "line-model", "keep"].map(id => drawn(model, id)), [0, 1, 1, 1], "then the rest");
-            key.visible = model.visible = false;
         }
 
         function test_the_key_page_shows_the_key_as_dots_with_its_answer_data() {

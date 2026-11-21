@@ -160,18 +160,19 @@ function keyResult(s, v) {
   if (v.test === 'bad') return line(' bad', 'triangle-alert', l.bad);
   return v.key && !s.test ? line('', 'activity', l.firstTest) : '';
 }
-// A service's page: the key line with Paste and Test, the address and model lines each with its Paste (owner,
-// 2026-11-21), its switch and where to make a key.
+// A service's page: the key line with Paste and Test, the address and model lines each with its Paste, its switch and
+// where to make a key; a typed address's lines come first, then the key, all on one page (owner, 2026-11-21).
 function svcPage() {
   const s = byId(S.cur), v = S.svc[s.id], addr = S.typed.addr[s.id] || '', typed = S.typed.model[s.id] || '';
   const lrow = inner => '<div class="lrow">' + inner + '</div>';
   const na = s.keep0 && v.keep0 && typed ? '<div class="res' + A + '">' + mark(l.mNa, 'x', 'out') + '<span' + D + '>' + l.noKeep + '</span></div>' : '';
   // A row with no test call shows no Test, as its first dictation tests the key (owner, 2026-11-21).
-  const lines = lrow(pline('key', l.keyCap, v.key, l.keyHint, true) + btn('paste', 'clipboard-paste', l.paste) + (s.test ? btn('test', 'activity', l.test, '', !v.key || v.test === 'testing') : '')) +
-    keyResult(s, v) +
-    (s.addr ? lrow(pline('addr', l.addrCap, addr, t(l.addrHint, {ex:bdi('https://example.com/v1/audio/transcriptions')})) + btn('pasteln:addr', 'clipboard-paste', l.paste)) : '') +
-    (addr && !addr.startsWith('https://') ? '<div class="res bad' + A + '">' + ic('triangle-alert') + '<span' + D + '>' + t(l.addrBad, {ex:bdi('https://example.com')}) + '</span></div>' : '') +
-    lrow(pline('model', l.modelCap, typed, l.modelHint) + btn('pasteln:model', 'clipboard-paste', l.paste)) + na +
+  const key = lrow(pline('key', l.keyCap, v.key, l.keyHint, true) + btn('paste', 'clipboard-paste', l.paste) + (s.test ? btn('test', 'activity', l.test, '', !v.key || v.test === 'testing') : '')) +
+    keyResult(s, v);
+  const address = !s.addr ? '' : lrow(pline('addr', l.addrCap, addr, t(l.addrHint, {ex:bdi('https://example.com/v1/audio/transcriptions')})) + btn('pasteln:addr', 'clipboard-paste', l.paste)) +
+    (addr && !addr.startsWith('https://') ? '<div class="res bad' + A + '">' + ic('triangle-alert') + '<span' + D + '>' + t(l.addrBad, {ex:bdi('https://example.com')}) + '</span></div>' : '');
+  const model = lrow(pline('model', l.modelCap, typed, l.modelHint) + btn('pasteln:model', 'clipboard-paste', l.paste)) + na;
+  const lines = (s.addr ? address + model + key : key + model) +
     (s.keep0 ? '<div class="swr" data-a="keep0" role="switch" aria-checked="' + v.keep0 + '" tabindex="0"><span class="x' + A + '"' + D + '>' + l.keepNothing + '</span>' +
       '<span class="onoff' + A + '"' + D + '>' + (v.keep0 ? l.on : l.off) + '</span><span class="sw' + (v.keep0 ? ' on' : '') + '"></span></div>' : '') +
     (s.keys ? '<div class="lrow ko' + A + '">' + ic('key') + '<span class="x"' + D + '>' + t(l.makeKey, {site:bdi(s.keys)}) + '</span>' + btn('link', 'external-link', l.open, '', false, t(l.linkName, {site:s.keys})) + '</div>' : '');
@@ -241,7 +242,7 @@ Object.assign(SAY, {
   svccard:' <strong>Service card.</strong> The facts with their date and a link to the service’s page.',
   key:' <strong>Key line.</strong> The panel’s own line, as Quick-fill’s: the key as dots with Paste and Test, Remove key in the footer. Test said Key works.',
   keybad:' <strong>Key refused.</strong> Test answered no, in the warning colours; Paste a new key, then Test again.',
-  address:' <strong>Address line.</strong> The Custom row’s address taking the letters: ring, caret and accent line (WinUI’s focused TextBox). It must be an HTTPS host name; a plain http:// or an IP address is refused, with the reason.',
+  address:' <strong>Address line.</strong> The Custom row’s address taking the letters: ring, caret and accent line (WinUI’s focused TextBox). It must be an HTTPS host name; a plain http:// or an IP address is refused, with the reason. The address, model and key lines share one page, in that order, each with its own Paste.',
   model:' <strong>Model line.</strong> OpenRouter’s Other model taking a model id. With its keep-nothing switch on, a model with no such host is Unavailable, with the reason, here and on the Models page; switch it off and the model is Ready.',
   svcpage:' <strong>Key and model.</strong> The key line, Test, the model line and where to make a key; Custom also has its address line, which must be https. Lemonfox, AssemblyAI and Custom have no test call, so the first dictation tests the key.',
   slow:' <strong>Models on a weak PC.</strong> The Local side: the default is Not for this PC, so the band says local models will be very slow here and leads to Cloud services.',

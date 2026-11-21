@@ -1,8 +1,10 @@
-//! The card and a key page keep the panel's height (ADR-0008): a card takes two pages, the voice then the price, and a
-//! key page with a typed address takes two, the key then the address and model; the pager turns them.
+//! The card and a key page keep the panel's height (ADR-0008): a card takes two pages, the voice then the price, which
+//! the pager turns, and a key page takes one, with a typed address's lines in the order address, model, key (owner,
+//! 2026-11-21).
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardPart, CloudButton, LinesPart, Pages, ServiceName, VoiceClick, VoicePanel, VoiceSheet,
+    CardPart, CloudButton, CloudLine, Pages, ServiceName, VoiceClick, VoicePanel, VoiceSheet,
 };
 
 use super::super::super::rig::Rig;
@@ -29,10 +31,10 @@ fn card(sheet: VoiceSheet) -> CardPart {
     }
 }
 
-/// The shown key page's part.
-fn lines(sheet: VoiceSheet) -> Option<LinesPart> {
+/// The shown key page's lines in page order, and the one taking the letters.
+fn lines(sheet: VoiceSheet) -> (Vec<CloudLine>, CloudLine) {
     match sheet {
-        VoiceSheet::Service(s) => s.part,
+        VoiceSheet::Service(s) => (s.lines, s.typing),
         other => panic!("not a key page: {other:?}"),
     }
 }
@@ -67,20 +69,20 @@ fn on_lines(name: &ServiceName) -> Rig {
 }
 
 #[test]
-fn a_key_page_takes_two_pages_only_with_a_typed_address() {
+fn a_key_page_takes_one_page_with_a_typed_addresss_lines_first() {
+    use CloudLine::{Address, Key, Model};
     let one = Pages { at: 0, count: 1 };
-    assert_eq!(
-        turned(&mut on_lines(&shown("groq")), 0, lines),
-        (None, one),
-        "Groq's"
-    );
+    let groq = turned(&mut on_lines(&shown("groq")), 0, lines);
+    assert_eq!(groq, ((vec![Key, Model], Key), one), "Groq's");
     let mut rig = on_lines(&ServiceName::Custom);
-    assert_eq!(
-        turned(&mut rig, 0, lines),
-        (Some(LinesPart::Key), of_two(0))
-    );
-    assert_eq!(
-        turned(&mut rig, 1, lines),
-        (Some(LinesPart::Model), of_two(1))
-    );
+    let typed = vec![Address, Model, Key];
+    let first = ((typed.clone(), Address), one);
+    assert_eq!(turned(&mut rig, 0, lines), first, "the address aimed");
+    assert_eq!(turned(&mut rig, 1, lines), first, "no second page");
+    rig.click(&VoiceClick::Caret {
+        line: Key,
+        at: Redacted::new(0),
+    });
+    let aimed = turned(&mut rig, 0, lines);
+    assert_eq!(aimed, ((typed, Key), one), "a click aims");
 }
