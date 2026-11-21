@@ -8,6 +8,7 @@ use kx_module_api::ports::Fact;
 mod assembly;
 mod eleven;
 mod gemini;
+mod groq;
 mod rows;
 
 /// `fact`'s text id and its values by name.

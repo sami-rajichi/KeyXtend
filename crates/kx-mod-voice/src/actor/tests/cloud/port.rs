@@ -99,7 +99,8 @@ fn a_gemini_dictation_asks_in_its_own_shape_with_its_bcp_47_code_and_its_own_key
     );
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     let sent = (model, run.lang.as_str());
-    assert_eq!(sent, (Some(first_id("gemini")), "en-US"));
+    let code = row.models[0].code("en");
+    assert_eq!(sent, (Some(first_id("gemini")), code.unwrap_or_default()));
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
 
