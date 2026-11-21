@@ -1,6 +1,7 @@
 //! The ui holds `Voice` as an event gate only (ADR-0042 decision 7): it hears the views and sends the clicks and the
 //! open, the level needs no grant, and its code never types, hears typing done or presses the key. It hears the key's
-//! light only to redraw the keyboard at once, in one handler, and never renames, makes or sends one.
+//! light only to redraw the keyboard at once, in one handler beside its import from the ports, and never renames, makes
+//! or sends one.
 
 use std::fs;
 use std::path::Path;
@@ -16,6 +17,10 @@ use std::sync::Arc;
 const NEVER: [&str; 3] = ["TextAsk", "TextDone", "VoiceKey"];
 /// The key's light, which only the keys' wake names, to hear it.
 const LIGHT: &str = "VoiceLit";
+/// The import the light's one other mention must sit in: the list from the ports.
+const IMPORT: &str = "use kx_module_api::ports::{";
+/// What ends that list.
+const IMPORT_END: &str = "};";
 /// The one file that hears the light, which names it twice: in its import and in one handler's argument.
 const HEARS_LIGHT: &str = "hub/bus.rs";
 /// That handler's argument.
@@ -44,7 +49,30 @@ fn hears_light(file: &Path, code: &str) -> bool {
         (2, 1),
         "{shown}: only its import and one handler"
     );
+    assert!(
+        imports_light(code),
+        "{shown}: its other mention is the import from the ports"
+    );
     true
+}
+
+/// True when `code`'s import list from the ports names the light, so its other mention is no stand-in beside a glob.
+fn imports_light(code: &str) -> bool {
+    let list = code
+        .split_once(IMPORT)
+        .and_then(|(_, rest)| rest.split_once(IMPORT_END));
+    list.is_some_and(|(names, _)| names.split(',').any(|n| n.trim() == LIGHT))
+}
+
+#[test]
+fn the_lights_other_mention_must_be_its_import_from_the_ports() {
+    let handler = format!("bus.subscribe(|{HANDLER} {{}});");
+    let real = format!("{IMPORT}\n    PowerChanged, ScrollPage, {LIGHT},\n{IMPORT_END}\n{handler}");
+    assert!(imports_light(&real), "the import list");
+    let glob = format!("use kx_module_api::ports::*;\nstruct {LIGHT};\n{handler}");
+    assert!(!imports_light(&glob), "a stand-in beside a glob import");
+    let other = format!("{IMPORT}PowerChanged{IMPORT_END}\nuse other::{LIGHT};\n{handler}");
+    assert!(!imports_light(&other), "another crate's light");
 }
 
 #[test]
