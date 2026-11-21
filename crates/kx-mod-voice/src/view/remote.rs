@@ -66,25 +66,53 @@ impl Panel {
         &self,
         facts: &Facts<'_>,
     ) -> (Vec<(Key, CompareCloud)>, Vec<ServiceName>) {
-        let mut send: Vec<ServiceName> = Vec::new();
         let mut list = Vec::new();
         for (key, row) in Self::cloud_list(facts) {
             let Some(cloud) = row.cloud.clone().filter(|_| ready(&row)) else {
                 continue;
             };
-            let tick = self.ticks.contains(&key);
-            if tick && !send.contains(&cloud.service) {
-                send.push(cloud.service.clone());
-            }
             let shown = CompareCloud {
                 name: row.name,
                 service: cloud.service,
-                tick,
+                tick: self.ticks.contains(&key),
             };
             list.push((key, shown));
         }
+        let send = sent_to(&list);
         (list, send)
     }
+
+    /// Compare's cloud models while it records: the ones its plan sends to, ticked, and their services once each.
+    pub(crate) fn planned_clouds(&self) -> (Vec<(Key, CompareCloud)>, Vec<ServiceName>) {
+        let planned = self.compare.plan().map_or(&[][..], |p| &p.clouds);
+        let list: Vec<_> = (planned.iter())
+            .map(|r| {
+                let key = Key::Cloud {
+                    service: r.service.clone(),
+                    model: r.model.clone(),
+                };
+                let shown = CompareCloud {
+                    name: r.name.clone(),
+                    service: r.shown.clone(),
+                    tick: true,
+                };
+                (key, shown)
+            })
+            .collect();
+        let send = sent_to(&list);
+        (list, send)
+    }
+}
+
+/// The ticked cloud models' services, once each, in the list's order.
+fn sent_to(list: &[(Key, CompareCloud)]) -> Vec<ServiceName> {
+    let mut send: Vec<ServiceName> = Vec::new();
+    for (_, c) in list.iter().filter(|(_, c)| c.tick) {
+        if !send.contains(&c.service) {
+            send.push(c.service.clone());
+        }
+    }
+    send
 }
 
 /// True for a cloud model whose service is ready and which can be used now.

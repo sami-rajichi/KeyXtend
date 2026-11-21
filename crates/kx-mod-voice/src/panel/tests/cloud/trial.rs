@@ -74,6 +74,24 @@ fn start_takes_only_the_ticked_ready_models_and_ticks_alone_send_nothing() {
 }
 
 #[test]
+fn while_compare_records_its_picks_and_warning_show_the_plan_and_a_click_ticks_nothing() {
+    let mut rig = on_compare();
+    rig.click(&VoiceClick::Row(0));
+    let take = start(&mut rig);
+    let planned = CompareCloud {
+        name: turbo().name,
+        service: turbo().shown,
+        tick: true,
+    };
+    let want = (vec![planned], vec![first().shown()]);
+    assert_eq!(ready(&mut rig), want, "while the microphone opens");
+    rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
+    assert!(rig.click(&VoiceClick::Row(0)).is_empty());
+    assert!(rig.panel.ticks.is_empty(), "the plan is fixed at Start");
+    assert_eq!(ready(&mut rig), want, "while the user reads");
+}
+
+#[test]
 fn cloud_off_or_a_hidden_run_lists_and_plans_no_cloud_model() {
     for hidden in [false, true] {
         let mut rig = on_compare();

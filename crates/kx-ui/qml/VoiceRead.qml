@@ -1,6 +1,7 @@
 // Compare's set text (mock-up compare()): what to do, the text to read aloud in a box, in its language's direction and
 // font, then how many models it runs on which device, or the recording's line while the user reads, then its cloud
-// models; it takes a page of rows' height, so the panel keeps its size.
+// models to tick, a page of them at a time with the pager beside; it takes a page of rows' height, so the panel keeps
+// its size.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -17,12 +18,19 @@ Item {
     readonly property var pn: lk.shape.panel
     readonly property real side: pn.head_pad_px[3] * s
     readonly property real scale: host.ar ? lk.look.arabic_scale : 1
+    readonly property var all: sheet.picks || []
+    // Start shows only while the microphone is closed; once it opens the run's plan is fixed, so the picks only show.
+    readonly property bool idle: host.view.foot.some(b => b.kind === host.names.acts.compare)
+    // The pager's room beside the body while the picks take more than one page.
+    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
+    readonly property alias body: col
 
     height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
 
     Column {
+        id: col
         x: read.side
-        width: read.width - 2 * read.side
+        width: read.width - 2 * read.side - read.pager
         anchors.verticalCenter: parent.verticalCenter
         spacing: read.pn.body_gap_px * read.s
         Line {
@@ -55,37 +63,26 @@ Item {
         Line {
             text: read.sheet.recording || read.sheet.line || ""
         }
-        // The cloud models it may send the recording to, each with its service's mark; an unticked one is muted.
+        // The cloud models it may send the recording to, each a tick target; slots stay while the count does, so a
+        // tick pops and fades in place.
         Flow {
             visible: picks.count > 0
             width: parent.width
-            spacing: read.pn.row_gap_px * read.s
+            spacing: read.pn.filter_gap_px * read.s
             layoutDirection: read.host.ar ? Qt.RightToLeft : Qt.LeftToRight
             Repeater {
                 id: picks
-                model: read.sheet.picks || []
-                delegate: Row {
-                    id: pick
-                    required property var modelData
-                    spacing: read.lk.shape.chip.gap_px * read.s
-                    Accessible.role: Accessible.StaticText
-                    Accessible.name: modelData.said
-                    Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: pick.modelData.name
-                        font.family: read.host.res.fam.latin
-                        font.pixelSize: read.pn.hint_px[0] * read.s
-                        color: pick.modelData.tick ? read.lk.palette.pop_ink : read.lk.palette.pop_muted
-                    }
-                    VoiceMark {
-                        anchors.verticalCenter: parent.verticalCenter
-                        host: read.host
-                        mark: ({ id: read.host.names.cloud, text: pick.modelData.service })
-                        lit: false
-                    }
-                }
+                model: read.all.length
+                delegate: Pick {}
             }
         }
+    }
+
+    VoicePager {
+        anchors.right: parent.right
+        anchors.rightMargin: read.pn.body_pad_px[1] * read.s
+        anchors.verticalCenter: parent.verticalCenter
+        host: read.host
     }
 
     // A line about the text, in the panel's muted ink.
@@ -99,5 +96,86 @@ Item {
         Accessible.ignored: false
         Accessible.role: Accessible.StaticText
         Accessible.name: text
+    }
+    // A cloud model to tick (no mock-up of its own, so a list row's tick box and ticked fill, VoiceRow, on a filter
+    // chip's big target, WCAG 2.5.8): its tick box, name and service's mark; a click ticks it at let-go (ADR-0024).
+    component Pick: Rectangle {
+        id: pick
+        required property int index
+        readonly property var entry: read.all[index] || ({ name: "", service: "", said: "", tick: false })
+        readonly property bool on: entry.tick
+        readonly property bool hot: read.idle && area.containsMouse
+        readonly property bool lit: on || hot
+        readonly property var sh: read.pn.filter_px
+
+        // Sends the tick click, which the module takes only while the microphone is closed.
+        function act() {
+            if (read.idle)
+                read.host.send(read.host.names.acts.row, "", index);
+        }
+
+        width: parts.width + 2 * sh[1] * read.s
+        height: sh[0] * read.s
+        radius: read.pn.row_px[3] * read.s
+        color: on ? read.lk.palette.pop_sel : "transparent"
+        border.width: on ? 0 : read.lk.shape.line.px
+        border.color: read.lk.palette.pop_line
+        onOnChanged: if (on) box.pop()
+        Accessible.role: Accessible.CheckBox
+        Accessible.name: entry.said
+        Accessible.checkable: true
+        Accessible.checked: on
+        Accessible.id: read.host.res.uid(read.host.names.group, read.host.names.ids.row + index)
+        Accessible.onPressAction: pick.act()
+        // UI Automation's Toggle on a checkable item asks Qt for this action, not the press.
+        Accessible.onToggleAction: pick.act()
+        Behavior on color {
+            ColourTween {
+                move: read.lk.motion.clip.highlight
+            }
+        }
+
+        Hover {
+            lk: read.lk
+            radius: pick.radius
+            visible: pick.hot
+            tint: read.lk.palette.pop_hover
+        }
+        Row {
+            id: parts
+            anchors.centerIn: parent
+            spacing: pick.sh[3] * read.s
+            ClipTick {
+                id: box
+                anchors.verticalCenter: parent.verticalCenter
+                number: pick.on ? 1 : null
+                glyph: read.lk.icons.voice.panel.ticked
+                mark: pick.hot || (pick.on && read.lk.contrast) ? read.lk.sel_ink : read.lk.palette.ring
+                lk: read.lk
+                res: read.host.res
+                s: read.s
+            }
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: pick.entry.name
+                font.family: read.host.res.fam.latin
+                font.pixelSize: read.lk.shape.chip.font_px[0] * read.s
+                font.weight: read.lk.shape.chip.weight
+                color: pick.lit ? read.lk.sel_ink : read.lk.palette.pop_ink
+            }
+            VoiceMark {
+                anchors.verticalCenter: parent.verticalCenter
+                host: read.host
+                mark: ({ id: read.host.names.cloud, text: pick.entry.service })
+                lit: pick.lit
+            }
+        }
+        Act {
+            id: area
+            anchors.fill: parent
+            enabled: read.idle
+            hoverEnabled: true
+            onActed: pick.act()
+        }
     }
 }

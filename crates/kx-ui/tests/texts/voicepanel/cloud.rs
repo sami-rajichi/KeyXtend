@@ -1,5 +1,5 @@
 //! The Qt Quick tests' cloud panels: the Cloud page on, then with an Off row's sealed key ticked, and off, a card
-//! asking and an old one with its warning, the Models page's Cloud side, and Compare with cloud models.
+//! asking and an old one with its warning, the Models page's Cloud side, and Compare with cloud models, ticked or not.
 
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
@@ -178,20 +178,38 @@ fn models() -> VoiceSheet {
     })
 }
 
-/// Compare's set text with a ticked cloud model and its warning.
-fn compare() -> VoiceSheet {
-    let pick = CompareCloud {
-        name: Redacted::new("Whisper Large v3 Turbo".to_owned()),
+/// Groq's cloud model `name` on Compare, `tick`ed or not.
+fn groq_pick(name: &str, tick: bool) -> CompareCloud {
+    CompareCloud {
+        name: Redacted::new(name.to_owned()),
         service: named("Groq"),
-        tick: true,
-    };
+        tick,
+    }
+}
+
+/// Compare's set text with its `cloud` models, warning that the recording goes to `send`.
+fn ready(cloud: Vec<CompareCloud>, send: Vec<ServiceName>) -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
         mic: CompareMic::Closed,
-        cloud: vec![pick],
-        send: vec![named("Groq")],
+        cloud,
+        send,
     })
+}
+
+/// Compare's set text with a ticked cloud model and its warning.
+fn compare() -> VoiceSheet {
+    ready(
+        vec![groq_pick("Whisper Large v3 Turbo", true)],
+        vec![named("Groq")],
+    )
+}
+
+/// Compare's set text with Groq's two models unticked, so no warning shows yet.
+fn compare_unticked() -> VoiceSheet {
+    let picks = ["Whisper Large v3 Turbo", "Whisper Large v3"];
+    ready(picks.map(|n| groq_pick(n, false)).to_vec(), Vec::new())
 }
 
 /// Compare's run with a cloud model that failed on its key.
@@ -227,6 +245,7 @@ pub fn panels() -> Vec<(&'static str, Shown)> {
         ("cardOld", shown(card(true), &[])),
         ("modelsCloud", paged(shown(models(), &[Use]), 0, 1, 1)),
         ("compareCloud", shown(compare(), &[])),
+        ("compareCloudUnticked", shown(compare_unticked(), &[])),
         ("comparingCloud", shown(comparing(), &[Cancel])),
     ]
 }

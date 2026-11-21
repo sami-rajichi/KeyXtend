@@ -11,7 +11,7 @@ use crate::flow::{Lend, net_why};
 use crate::panel::{Key, Panel};
 
 impl Panel {
-    /// The Compare page as it stands; while ready, the cloud models it may send the recording to, with the warning.
+    /// The Compare page as it stands: the set text, each model's turn while they run, or the results.
     pub(super) fn compare_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         if let Some((at, models)) = self.compare.running() {
             let name = models
@@ -38,9 +38,19 @@ impl Panel {
         if !self.compare.results().is_empty() {
             return self.results_sheet(facts);
         }
+        self.ready_sheet(facts)
+    }
+
+    /// The set text with the cloud models it may send the recording to and the warning; while it records, the ones its
+    /// plan sends to.
+    fn ready_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let entrants = self.entrants(facts);
         let lend = self.compare.lend();
-        let (clouds, send) = self.compare_clouds(facts);
+        let (clouds, send) = if self.compare.recording() {
+            self.planned_clouds()
+        } else {
+            self.compare_clouds(facts)
+        };
         let (cloud, pages) = self.paged(clouds);
         let sheet = CompareSheet::Ready {
             models: short(entrants.len()),

@@ -19,13 +19,17 @@ impl Panel {
         };
     }
 
-    /// A row of the shown page: open a folder in the folder list, else tick or untick it.
+    /// A row of the shown page: open a folder in the folder list, else tick or untick it; none on Compare while its run
+    /// is open, as Start fixed its plan.
     pub(super) fn row(&mut self, at: usize) -> Vec<Do> {
+        let compare = self.page == Some(Page::Tab(VoiceTab::Compare));
         let Some(key) = self.shown.get(at).cloned() else {
             return Vec::new();
         };
-        let many =
-            self.page == Some(Page::Tab(VoiceTab::Compare)) && self.compare.results().is_empty();
+        if compare && self.compare.busy() {
+            return Vec::new();
+        }
+        let many = compare && self.compare.results().is_empty();
         match key {
             Key::Dir(dir) => return self.open_dir(dir),
             Key::Opt(_) | Key::Plain => {}
