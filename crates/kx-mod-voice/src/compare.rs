@@ -271,8 +271,8 @@ impl Compare {
                 self.score(at, done);
                 at + 1
             }
-            // The recording ended: unheard, nothing runs, as at Stop; else it goes to the cloud models first, as the run
-            // hands it over only before `again`.
+            // The recording ended: unheard, nothing runs, as at Stop; else it goes to the cloud models first, as the
+            // run hands it over only before `again`.
             Stage::Recording if !self.heard => return self.nothing(),
             Stage::Running(None) | Stage::Recording => {
                 let mut acts = self.send();
