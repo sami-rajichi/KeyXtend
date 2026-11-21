@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-21 18:20 — P11: the whole-branch review's fixes
+Every finding of part 2's final, file, security and code reviews is fixed: keys and their Base64 stay in wiped memory, WinHTTP never signs in on its own, a removed key can never serve again, and Paste at once lends text with the markers that keep it out of Windows' clipboard history. On the Cloud page a ticked service with a key shows Remove key in the footer, the notes can open the service's page, and a spent allowance says when it renews, in local time and the app's date form. Tests read service facts from the table, with dated facts in one research folder, and the owner approved the new texts, Compare's list form and attached و in Arabic lists (ADR-0053). In Windows' contrast themes Preparing wears a ring, only Recording fills, and no glow leaves the system colours.
+
 ## 2026-11-20 21:30 — P11: part 2's documents as built
 The plan, the spec, the architecture pages, the security notes and the item notes now describe part 2 as built: seven offered services, all untested until the owner's check, four request shapes, sealed keys and the card check by language. ADR-0047 is marked superseded in part by ADR-0050 and ADR-0051, and the voice detail moved from `ARCHITECTURE.md` into its own architecture page. The cloud mock-up now shows AssemblyAI and no Azure, split into its data and its drawing.
 
