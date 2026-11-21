@@ -7,17 +7,26 @@ use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SOUND_BYTES_PER_S
 use super::*;
 use crate::services;
 use crate::services::piece_s;
+use crate::services::tests::shipped::{entry, pick};
 
-/// `ElevenLabs` picked for English with Scribe v3, switched on with its terms confirmed, and its key set.
-pub(super) fn eleven(fake: &Fakes, host: &mut FakeHost) {
+/// Shipped row `id` on at its terms, picked for English with its first model, and its key set.
+fn on_first_model(fake: &Fakes, host: &mut FakeHost, id: &str) {
+    let row = services::table().unwrap().get(id).unwrap();
     host.put("cloud", true.into());
-    host.put(
-        "services",
-        table("elevenlabs = { on = 2026-11-17, terms = 1 }"),
-    );
-    host.put("picks", table("en = \"elevenlabs:scribe_v3\""));
+    host.put("services", table(&entry(row, "")));
+    host.put("picks", table(&format!("en = \"{}\"", pick(row, 0))));
     let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
-    keys.set("elevenlabs", secret(&key())).unwrap();
+    keys.set(id, secret(&key())).unwrap();
+}
+
+/// Shipped row `id`'s first model id.
+fn first_id(id: &str) -> &'static str {
+    &services::table().unwrap().get(id).unwrap().models[0].id
+}
+
+/// `ElevenLabs` on and keyed, picked for English with its first model.
+pub(super) fn eleven(fake: &Fakes, host: &mut FakeHost) {
+    on_first_model(fake, host, "elevenlabs");
 }
 
 #[test]
@@ -49,20 +58,16 @@ fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
     assert!(matches!(run.header, KeyHeader::Named(_)), "its own header");
     assert_eq!(run.header, row.header, "the row's header");
     let model = run.model.as_ref().map(|m| m.expose().as_str());
-    assert_eq!((model, run.lang.as_str()), (Some("scribe_v3"), "en"));
+    assert_eq!(
+        (model, run.lang.as_str()),
+        (Some(first_id("elevenlabs")), "en")
+    );
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
 
-/// Gemini picked for English with Gemini 3.5 Transcribe, switched on with its terms confirmed, and its key set.
+/// Gemini on and keyed, picked for English with its first model.
 fn gemini(fake: &Fakes, host: &mut FakeHost) {
-    host.put("cloud", true.into());
-    host.put("services", table("gemini = { on = 2026-11-17, terms = 1 }"));
-    host.put(
-        "picks",
-        table("en = \"gemini:models/gemini-3.5-transcribe\""),
-    );
-    let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
-    keys.set("gemini", secret(&key())).unwrap();
+    on_first_model(fake, host, "gemini");
 }
 
 #[test]
@@ -94,20 +99,13 @@ fn a_gemini_dictation_asks_in_its_own_shape_with_its_bcp_47_code_and_its_own_key
     );
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     let sent = (model, run.lang.as_str());
-    assert_eq!(sent, (Some("models/gemini-3.5-transcribe"), "en-US"));
+    assert_eq!(sent, (Some(first_id("gemini")), "en-US"));
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
 
-/// `AssemblyAI` picked for English with Universal-3.6 Pro, switched on with its terms confirmed, and its key set.
+/// `AssemblyAI` on and keyed, picked for English with its first model.
 fn assembly(fake: &Fakes, host: &mut FakeHost) {
-    host.put("cloud", true.into());
-    host.put(
-        "services",
-        table("assemblyai = { on = 2026-11-19, terms = 1 }"),
-    );
-    host.put("picks", table("en = \"assemblyai:universal-3-6-pro\""));
-    let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
-    keys.set("assemblyai", secret(&key())).unwrap();
+    on_first_model(fake, host, "assemblyai");
 }
 
 #[test]
@@ -131,7 +129,7 @@ fn an_assemblyai_dictation_asks_in_its_own_shape_with_its_model_header_and_a_bea
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     assert_eq!(
         (model, run.lang.as_str()),
-        (Some("universal-3-6-pro"), "en")
+        (Some(first_id("assemblyai")), "en")
     );
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
