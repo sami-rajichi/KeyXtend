@@ -100,11 +100,10 @@ fn forget(files: &[PathBuf]) -> Result<(), String> {
     })
 }
 
-/// The end of the copy's folder `data`: its lent files go by `forget` first, then the whole folder by `finish` once
-/// the copy is `over`; while it may still run, the folder stays and the error says so.
+/// The end of the copy's data folder: its lent files go by `forget` first, then the whole folder by `finish` once the
+/// copy is `over`; while it may still run, the folder stays and the error says so, naming no path.
 fn end(
     over: bool,
-    data: &Path,
     finish: impl FnOnce() -> Result<(), String>,
     forget: impl FnOnce() -> Result<(), String>,
 ) -> Result<(), String> {
@@ -113,8 +112,7 @@ fn end(
         return finish();
     }
     let stays = format!(
-        "{} stays, as the copy may still run: remove it once {NAME} has ended",
-        data.display()
+        "the copy's data folder stays, as the copy may still run: remove it once {NAME} has ended"
     );
     Err(match lent_gone {
         Ok(()) => format!("{stays}; its lent files are gone"),
@@ -223,7 +221,7 @@ impl<'a> Fresh<'a> {
         let over = copyend::may_follow(ended.map(|e| e.gone));
         let lent = self.lent.take();
         let finish = || clipdata::finish(&self.data, marker(self.ctx));
-        end(over, &self.data, finish, || forget(&lent))
+        end(over, finish, || forget(&lent))
     }
 }
 

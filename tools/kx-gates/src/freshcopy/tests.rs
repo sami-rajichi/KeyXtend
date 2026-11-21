@@ -3,6 +3,7 @@
 
 use std::cell::Cell;
 use std::fs;
+use std::path::MAIN_SEPARATOR;
 
 use kx_test_support::tempdir::TempDir;
 
@@ -66,7 +67,6 @@ fn lent_files_go_one_already_gone_is_fine_and_a_failure_names_no_path() {
 
 #[test]
 fn the_end_removes_the_folder_once_the_copy_is_over_else_only_its_lent_files() {
-    let data = Path::new(r"D:\build\data");
     let (finished, cleared) = (Cell::new(false), Cell::new(false));
     let finish = || -> Result<(), String> {
         finished.set(true);
@@ -76,16 +76,17 @@ fn the_end_removes_the_folder_once_the_copy_is_over_else_only_its_lent_files() {
         cleared.set(true);
         Ok(())
     };
-    assert_eq!(end(true, data, finish, forget), Ok(()));
+    assert_eq!(end(true, finish, forget), Ok(()));
     assert!(finished.get() && cleared.get(), "both");
     finished.set(false);
-    let e = end(false, data, || panic!("never while it may run"), forget).expect_err("stays");
+    let e = end(false, || panic!("never while it may run"), forget).expect_err("stays");
     assert!(
         e.contains("stays") && e.contains("lent files are gone"),
         "{e}"
     );
+    assert!(!e.contains(MAIN_SEPARATOR), "no path: {e}");
     let failed = || -> Result<(), String> { Err("a lent file did not go".into()) };
-    let e = end(false, data, || panic!("never"), failed).expect_err("stays");
+    let e = end(false, || panic!("never"), failed).expect_err("stays");
     assert!(e.contains("stays") && e.contains("did not go"), "{e}");
     assert!(!finished.get());
 }
