@@ -27,6 +27,9 @@ const PAGES_VAR: &str = "pages";
 const WORD_VAR: &str = "word";
 /// The variable that plural forms select on.
 pub(super) const FORM_VAR: &str = "form";
+/// The plural form a number with decimals takes, CLDR's for a fraction, for money and factors alike:
+/// `intl_pluralrules` 7.0.2 reads a fraction's few and many by its whole part, so 7.20 would take the plural.
+pub(super) const FRACTION_FORM: &str = "other";
 /// Past this, a count takes the plural form of its last two digits.
 const HUNDRED: usize = 100;
 /// Last two digits below this keep the whole count, whose form past a hundred is the plain plural.

@@ -10,7 +10,8 @@ use crate::i18n::keys::{
     VOICE_OFF, VOICE_ON, VOICE_OPTION, VOICE_PLUS, VOICE_SECONDS, VOICE_TEXTS, VOICE_TIMES,
     VOICE_WORD, VOICE_WORDS,
 };
-use kx_module_api::ports::{Ends, OptionRow, OptionUnit, OptionValue, VoiceTab};
+use kx_module_api::MS_PER_S;
+use kx_module_api::ports::{Ends, OptionRow, OptionUnit, OptionValue, S_PER_MIN, VoiceTab};
 use serde::Serialize;
 
 /// A row's kind: a switch, a number with minus and plus, a choice with chevrons, two chips, or a hint line; a hint's
@@ -20,10 +21,6 @@ const NUMBER: &str = "number";
 const CHOICE: &str = "choice";
 const PAIR: &str = "pair";
 const HINT: &str = "hint";
-/// Seconds in a minute: a duration reads in minutes from one.
-const SECS_PER_MIN: u32 = 60;
-/// Milliseconds in a second.
-const MS_PER_S: u32 = 1000;
 /// What a setting key writes for an underscore, and what a choice's text puts before its name.
 const KEY_SEPARATOR: char = '_';
 const TEXT_SEPARATOR: &str = "-";
@@ -137,6 +134,8 @@ fn steps(t: &I18n, label: &str, ends: Ends) -> Steps {
 /// Number `value` in `unit`; 0 with an `auto` value reads as Auto with it, or Auto alone while that is 0.
 fn number(t: &I18n, unit: OptionUnit, value: u32, auto: Option<u32>) -> String {
     let n = |v: u32| usize::try_from(v).unwrap_or(usize::MAX);
+    // A duration reads in minutes from one.
+    let per_min = u32::try_from(S_PER_MIN).unwrap_or(u32::MAX);
     match auto.filter(|_| value == 0) {
         Some(0) => return t.text(VOICE_AUTO),
         Some(real) => return t.counted(VOICE_AUTO_N, n(real)),
@@ -150,12 +149,10 @@ fn number(t: &I18n, unit: OptionUnit, value: u32, auto: Option<u32>) -> String {
             t.counted(VOICE_SECONDS, n(value / MS_PER_S))
         }
         OptionUnit::MsAsSeconds => t.voice_secs(value),
-        OptionUnit::SecondsOrMinutes
-            if value < SECS_PER_MIN || !value.is_multiple_of(SECS_PER_MIN) =>
-        {
+        OptionUnit::SecondsOrMinutes if value < per_min || !value.is_multiple_of(per_min) => {
             t.counted(VOICE_SECONDS, n(value))
         }
-        OptionUnit::SecondsOrMinutes => t.counted(VOICE_MINUTES, n(value / SECS_PER_MIN)),
+        OptionUnit::SecondsOrMinutes => t.counted(VOICE_MINUTES, n(value / per_min)),
         OptionUnit::Minutes => t.counted(VOICE_MINUTES, n(value)),
         OptionUnit::Ms => t.counted(VOICE_MS, n(value)),
         OptionUnit::Mb => t.voice_room(u64::from(value)),

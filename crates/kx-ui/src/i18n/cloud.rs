@@ -3,7 +3,7 @@
 //! lays it out apart in the UI's order, as ADR-0022 asks in place of bidi marks.
 
 use super::I18n;
-use super::compose::{clean, form};
+use super::compose::{FRACTION_FORM, clean, form};
 use super::keys::vars::{DATE, HTTPS, LANG};
 use super::keys::{
     VOICE_KEY, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
@@ -33,9 +33,6 @@ const OPEN: char = '\u{1}';
 const SHUT: char = '\u{2}';
 /// Money's decimals, shown only when it has cents.
 const CENTS: u32 = 2;
-/// CLDR's plural form for an Arabic fraction, by name, set for every language though only Arabic's money selects on it:
-/// `intl_pluralrules` 7.0.2 reads a fraction's few and many by its whole part, so 7.20 would take the plural.
-const FRACTION_FORM: &str = "other";
 
 /// A sentence in parts: `own` parts are names from a service's pages, laid out apart; `text` is the whole.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
