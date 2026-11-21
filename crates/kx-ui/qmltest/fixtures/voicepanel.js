@@ -270,7 +270,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -406,7 +406,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -549,7 +549,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -692,7 +692,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -831,7 +831,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -978,7 +978,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1121,7 +1121,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1268,7 +1268,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1411,7 +1411,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1554,7 +1554,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1701,7 +1701,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1844,7 +1844,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1980,7 +1980,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2123,7 +2123,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2280,7 +2280,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2433,7 +2433,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2590,7 +2590,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2733,7 +2733,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2876,7 +2876,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3019,7 +3019,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3162,7 +3162,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3305,7 +3305,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4100,6 +4100,496 @@ var views = {
       },
       "place": "above",
       "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudLongOff-1": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "Groq",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            },
+            {
+              "line": "مجانًا: لا شيء",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "OpenAI",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء، وأول شراء 15 دولارًا على الأقل",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: الشهر الأول",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "Lemonfox",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudLongOff-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك",
+              "marks": [
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "عنوان مخصّص",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            },
+            {
+              "line": "مجانًا: حصة صغيرة للحسابات الجديدة",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: نحو 30 دقيقة شهريًا",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "ElevenLabs",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: دون الحاجة إلى بطاقة دفع",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب ضمن الحصة المجانية"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "Gemini",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudLongOff-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "مجانًا: رصيد دائم بقيمة 50 دولارًا، دون بطاقة دفع",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -8716,7 +9206,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 59,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8852,7 +9342,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 49,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8995,7 +9485,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 53,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9138,7 +9628,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 55,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9277,7 +9767,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 57,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9424,7 +9914,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 39,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9567,7 +10057,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 47,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9714,7 +10204,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 43,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9857,7 +10347,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 41,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10000,7 +10490,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 51,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10147,7 +10637,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 45,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10290,7 +10780,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 60,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10426,7 +10916,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 50,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10569,7 +11059,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 54,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10726,7 +11216,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 56,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10879,7 +11369,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 58,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11036,7 +11526,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 40,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11179,7 +11669,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 48,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11322,7 +11812,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 44,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11465,7 +11955,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 42,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11608,7 +12098,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 52,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11751,7 +12241,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 46,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12546,6 +13036,496 @@ var views = {
       },
       "place": "above",
       "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudLongOff-1": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Free: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Untested",
+              "tick": true
+            },
+            {
+              "line": "Free: None",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "OpenAI",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None; first purchase at least $15",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: The first month",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Lemonfox",
+              "tag": "Untested",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudLongOff-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "An HTTPS address, a model and a key you type",
+              "marks": [
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Custom address",
+              "tag": "Untested",
+              "tick": true
+            },
+            {
+              "line": "Free: A small allowance for new accounts",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: About 30 minutes a month",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "ElevenLabs",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: No card needed",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains on the free allowance"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "Gemini",
+              "tag": "Untested",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudLongOff-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Free: $50 of credit that never expires, no card needed",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "Untested",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -17162,7 +18142,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17298,7 +18278,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17441,7 +18421,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17584,7 +18564,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17723,7 +18703,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17870,7 +18850,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18013,7 +18993,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18160,7 +19140,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18303,7 +19283,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18446,7 +19426,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18593,7 +19573,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18736,7 +19716,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18872,7 +19852,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19015,7 +19995,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19172,7 +20152,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19325,7 +20305,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19482,7 +20462,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19625,7 +20605,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19768,7 +20748,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -19911,7 +20891,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -20054,7 +21034,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -20197,7 +21177,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -20992,6 +21972,496 @@ var views = {
       },
       "place": "above",
       "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudLongOff-1": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Non testé",
+              "tick": true
+            },
+            {
+              "line": "Gratuit : Aucun",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "OpenAI",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun ; premier achat d’au moins 15 $",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Le premier mois",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Lemonfox",
+              "tag": "Non testé",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudLongOff-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Une adresse HTTPS, un modèle et une clé à saisir",
+              "marks": [
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Adresse personnalisée",
+              "tag": "Non testé",
+              "tick": true
+            },
+            {
+              "line": "Gratuit : Un petit quota pour les nouveaux comptes",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Environ 30 minutes par mois",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "ElevenLabs",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Sans carte bancaire",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement avec le quota gratuit"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "Gemini",
+              "tag": "Non testé",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudLongOff-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Gratuit : 50 $ de crédit sans expiration, sans carte",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "Non testé",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copié",
