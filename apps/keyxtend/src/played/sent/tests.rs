@@ -36,11 +36,6 @@ fn custom() -> &'static Service {
     table().unwrap().rows().iter().find(|r| typed(r)).unwrap()
 }
 
-/// A row kept in the table but not offered, whose address Custom may still be pointed at.
-fn hidden() -> &'static Service {
-    table().unwrap().rows().iter().find(|r| !r.offered).unwrap()
-}
-
 /// The test's own key.
 fn key_text() -> String {
     KEY_WORDS.join("-")
@@ -174,10 +169,16 @@ fn a_fixed_rows_own_ask_is_that_row_and_custom_at_its_address_is_custom() {
 
 #[test]
 fn custom_at_a_listed_rows_address_is_named_custom_even_a_hidden_rows() {
-    assert!(!hidden().offered, "a hidden row is still in the table");
     let (custom, rows) = (custom(), table().unwrap().rows().iter());
     let mine = Some(custom.id.as_str());
-    for r in rows.filter(|r| matches!(r.address, Address::Fixed(_))) {
+    let listed: Vec<_> = rows
+        .filter(|r| matches!(r.address, Address::Fixed(_)))
+        .collect();
+    assert!(
+        listed.iter().any(|r| !r.offered),
+        "a hidden row's address too"
+    );
+    for r in listed {
         let mut a = ask_as(custom, r.url("").unwrap().expose(), None, false);
         assert_eq!(service_of(&a), mine, "at {}'s address", r.id);
         a.model = r.models.first().map(|m| Redacted::new(m.id.clone()));
