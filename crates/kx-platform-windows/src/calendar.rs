@@ -1,5 +1,5 @@
-//! The local calendar on Windows: the system clock's moment and the time zone's offset now, summer time included.
-//! The tick sums are pure and tested everywhere; only `WinCalendar` calls Windows.
+//! The local calendar on Windows: the system clock's moment and the time zone's offset at a moment, summer time
+//! included. The tick sums are pure and tested everywhere; only `WinCalendar` calls Windows.
 #![cfg_attr(
     not(windows),
     allow(
