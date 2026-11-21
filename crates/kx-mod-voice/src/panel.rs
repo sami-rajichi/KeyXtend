@@ -69,6 +69,8 @@ pub(crate) enum Key {
     Dir(PathBuf),
     /// A service on the Cloud page, by its id.
     Service(String),
+    /// A service on the Cloud page while cloud is off: it takes no tick, only its own Remove key.
+    Dimmed(String),
     /// A cloud model, by its service's id and the id a pick names, redacted as a typed Other id is the user's.
     Cloud {
         service: String,
@@ -184,24 +186,26 @@ impl Panel {
         self.rounds.1 = page.round;
     }
 
-    /// True when `round` lies between the drawn rows' last change and the latest view, wrapping.
-    fn fresh(&self, round: u32) -> bool {
-        let (since, latest) = self.rounds;
-        latest.wrapping_sub(round) <= latest.wrapping_sub(since)
-    }
-
-    /// A click on the panel, or the bar's Stop or Cancel that the flow gave Compare (`Out::Lent`). A click on a row of
-    /// a view whose rows changed since is dropped.
-    pub fn click(&mut self, act: &VoiceAct, facts: &Facts<'_>) -> Vec<Do> {
-        let row = |r: &u8| usize::from(*r);
+    /// True for a click on a row of a view whose rows changed since: its round lies outside the drawn rows' last change
+    /// and the latest view, wrapping.
+    fn stale(&self, act: &VoiceAct) -> bool {
         let at_row = matches!(
             act.click,
             VoiceClick::Row(_)
                 | VoiceClick::Fetch { .. }
                 | VoiceClick::Flip(_)
                 | VoiceClick::Step { .. }
+                | VoiceClick::RemoveKey(_)
         );
-        if at_row && !self.fresh(act.round) {
+        let (since, latest) = self.rounds;
+        at_row && latest.wrapping_sub(act.round) > latest.wrapping_sub(since)
+    }
+
+    /// A click on the panel, or the bar's Stop or Cancel that the flow gave Compare (`Out::Lent`). A click on a row of
+    /// a view whose rows changed since is dropped.
+    pub fn click(&mut self, act: &VoiceAct, facts: &Facts<'_>) -> Vec<Do> {
+        let row = |r: &u8| usize::from(*r);
+        if self.stale(act) {
             return Vec::new();
         }
         match &act.click {
@@ -209,6 +213,7 @@ impl Panel {
             VoiceClick::Open(VoiceTab::Cloud)
             | VoiceClick::Cloud(_)
             | VoiceClick::Service(_)
+            | VoiceClick::RemoveKey(_)
             | VoiceClick::SetKey(_)
             | VoiceClick::SetAddress(_)
             | VoiceClick::SetModel(_)

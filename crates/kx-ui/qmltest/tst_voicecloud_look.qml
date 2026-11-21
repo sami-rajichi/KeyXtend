@@ -1,6 +1,7 @@
-// The cloud pages as the approved mock-up draws them (design/voice-cloud.css): rows dimmed while cloud services are off,
-// the switch band's hover tint, Untested as an outlined tag beside a service's name, Key works as a lit mark, a refused
-// answer or line as a warning band, and Models' side chips in their places in Arabic too (ADR-0020).
+// The cloud pages as the approved mock-up draws them (design/voice-cloud.css): rows dimmed while cloud services are off
+// but for a sealed key's Remove key, the switch band's hover tint, Untested as an outlined tag beside a service's name,
+// Key works as a lit mark, a refused answer or line as a warning band, and Models' side chips in their places in Arabic
+// too (ADR-0020).
 import QtQuick
 import QtTest
 import "../qml"
@@ -34,10 +35,17 @@ Item {
         }
         function test_cloud_rows_dim_while_cloud_services_are_off(d) {
             const off = make("cloudOff", d.t);
-            for (const r of rows(off))
-                fuzzyCompare(r.opacity, off.pn.off_share, 0.001, r.Accessible.name + " is dimmed while off");
+            const s = off.view.sheet;
+            rows(off).forEach((r, i) => {
+                fuzzyCompare(r.fade, off.pn.off_share, 0.001, r.Accessible.name + " is dimmed while off");
+                marks(r).forEach(m => fuzzyCompare(m.opacity, off.pn.off_share, 0.001, "its marks dim too"));
+                const keys = buttons(r);
+                compare(keys.map(b => b.Accessible.name), s.rows[i].remove ? [s.rows[i].remove.label] : [], "a sealed key's Remove key");
+                verify(keys.every(b => b.opacity === 1 && r.opacity === 1), "Remove key keeps its full strength, as it still acts");
+            });
+            verify(s.rows.some(r => !!r.remove), "the fixture seals a key");
             const on = make("cloud", d.t);
-            verify(rows(on).every(r => r.opacity === 1), "the rows show whole while on");
+            verify(rows(on).every(r => r.fade === 1 && r.opacity === 1), "the rows show whole while on");
             off.visible = on.visible = false;
         }
 

@@ -8,7 +8,7 @@ use kx_module_api::ports::{
     PanelButton, ServiceMark, ServiceName, ServiceRow, VoiceBar, VoiceClick, VoiceHome, VoiceSheet,
     VoiceTab,
 };
-use kx_ui::voice_acts::{CLOUD, KEEP, LOCAL, SERVICE, SIDE};
+use kx_ui::voice_acts::{CLOUD, KEEP, LOCAL, REMOVE, SERVICE, SIDE};
 use serde_json::Value;
 
 mod card;
@@ -57,7 +57,8 @@ pub fn daily() -> Fact {
     fact("daily", vec![count("hours", 8), count("per_min", 20)])
 }
 
-/// The Cloud page, `on` or off, with Groq ready and ticked and the Custom row off with the training warning.
+/// The Cloud page, `on` or off, with Groq ready and ticked, the Custom row off with the training warning, and an Off
+/// row with its own Remove key.
 fn cloud(on: bool, acts: &[CloudButton]) -> VoiceSheet {
     let groq = ServiceRow {
         name: groq(),
@@ -65,6 +66,7 @@ fn cloud(on: bool, acts: &[CloudButton]) -> VoiceSheet {
         untested: true,
         free: Some(daily()),
         warn: None,
+        remove: false,
         tick: true,
     };
     let custom = ServiceRow {
@@ -73,11 +75,17 @@ fn cloud(on: bool, acts: &[CloudButton]) -> VoiceSheet {
         untested: false,
         free: None,
         warn: Some("trains".to_owned()),
+        remove: false,
         tick: false,
+    };
+    let sealed = ServiceRow {
+        name: ServiceName::Named("ElevenLabs".to_owned()),
+        remove: true,
+        ..custom.clone()
     };
     VoiceSheet::Cloud(CloudSheet {
         on,
-        rows: vec![groq, custom],
+        rows: vec![groq, custom, sealed],
         acts: acts.to_vec(),
     })
 }
@@ -113,6 +121,7 @@ fn each_cloud_click_sends_its_click() {
         (SIDE, "cloud", 0, VoiceClick::Side(ModelSide::Cloud)),
         (SIDE, "local", 0, VoiceClick::Side(ModelSide::Local)),
         (LOCAL, "local", 0, VoiceClick::Local),
+        (REMOVE, "", 1, VoiceClick::RemoveKey(1)),
     ];
     let ids = [
         "on", "off", "facts", "lines", "paste", "test", "remove", "link",
@@ -125,7 +134,12 @@ fn each_cloud_click_sends_its_click() {
         let sent: Vec<VoiceClick> = heard.sent.acts().into_iter().map(|a| a.click).collect();
         assert_eq!(sent, [click], "{kind} {id}");
     }
-    for (kind, id, arg) in [(SERVICE, "nope", 0), (SIDE, "", 0), (KEEP, "", 2)] {
+    for (kind, id, arg) in [
+        (SERVICE, "nope", 0),
+        (SIDE, "", 0),
+        (KEEP, "", 2),
+        (REMOVE, "", -1),
+    ] {
         rig.hub.voice_act(kind, id, arg, i64::from(ROUND));
         assert!(heard.sent.acts().is_empty(), "{kind} {id} {arg}");
     }
@@ -177,6 +191,7 @@ fn the_cloud_page_lists_each_service_with_its_free_allowance_and_marks() {
     assert_eq!(groq["tag"], "Untested");
     assert_eq!(marks(&groq["marks"]), pairs(&[("on", "Ready")]));
     assert_eq!(groq["tick"], true);
+    assert_eq!(groq["remove"], Value::Null, "its key page has Remove key");
     let custom = &sheet["rows"][1];
     assert_eq!(custom["name"], "Custom address");
     assert_eq!(
@@ -241,5 +256,22 @@ fn the_home_lists_its_shown_pages_and_cloud_says_off_or_how_many_are_ready() {
         assert_eq!(tabs, ["models", "cloud"]);
         assert_eq!(rows[1]["label"], "Cloud services");
         assert_eq!(rows[1]["value"], value);
+    }
+}
+
+#[test]
+fn a_row_the_module_gives_a_remove_key_shows_it_in_its_off_marks_place() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    for on in [true, false] {
+        let p = panel_json(&rig, &heard, panel(cloud(on, &[])));
+        let sealed = &p["sheet"]["rows"][2];
+        let remove = button(REMOVE, "remove", "Remove key", true, "plain");
+        let shown = buttons(&Value::Array(vec![sealed["remove"].clone()]));
+        assert_eq!(shown, [remove]);
+        assert_eq!(sealed["remove"]["arg"], 2, "its place on the page");
+        let warn = pairs(&[("warn", "Trains by default")]);
+        assert_eq!(marks(&sealed["marks"]), warn, "no Off mark beside it");
+        assert_eq!(p["sheet"]["rows"][1]["remove"], Value::Null);
     }
 }

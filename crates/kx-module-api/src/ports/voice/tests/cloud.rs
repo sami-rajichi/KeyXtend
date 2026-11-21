@@ -120,6 +120,7 @@ fn the_switches_buttons_and_the_local_model_are_plain_clicks() {
         VoiceClick::Cloud(true),
         VoiceClick::KeepNothing(false),
         VoiceClick::Service(CloudButton::Test),
+        VoiceClick::RemoveKey(2),
         VoiceClick::Local,
         VoiceClick::Confirm(true),
     ];
@@ -128,6 +129,7 @@ fn the_switches_buttons_and_the_local_model_are_plain_clicks() {
         "Cloud(true)",
         "KeepNothing(false)",
         "Service(Test)",
+        "RemoveKey(2)",
         "Local",
         "Confirm(true)",
     ];
@@ -142,6 +144,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
         untested: warn,
         free: Some(free()),
         warn: warn.then(|| "trains".to_owned()),
+        remove: warn,
         tick: false,
     };
     let rows = vec![
@@ -167,6 +170,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
         "Ready",
         "untested: true",
         "warn: Some(\"trains\")",
+        "remove: true",
         "Custom",
         "Count(8)",
         "free: None",

@@ -4,6 +4,7 @@
 //! dictation to it listens.
 //! The gear shows in every state but `hidden`, before the last button.
 
+use super::acts::LOCAL;
 use super::cloud::{self, CloudMark};
 use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
@@ -13,7 +14,8 @@ use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
     FACT_WARN, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_JOIN, VOICE_LISTENING,
-    VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
+    VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, VOICE_USE_LOCAL,
+    WINDOW_VOICE,
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
@@ -36,6 +38,8 @@ pub(super) struct View {
 
 /// Qt's marks for the timer's minutes and seconds, which QML fills with `arg`.
 const TIMER_MARKS: [&str; 2] = ["%1", "%2"];
+/// The id of "Use the local model", which picks its icon.
+const LOCAL_ID: &str = "local";
 
 /// The words outside the buttons: the window's and bar's names, the gear's, Copy's once it copied, and the timer
 /// with `TIMER_MARKS` in its language's order.
@@ -225,14 +229,13 @@ fn action(b: BarButton, hint: &BarHint, t: &I18n) -> Button {
 
 /// "Use the local model", dimmed unless one is ready, then Download when none is (edge 20).
 fn use_local(t: &I18n, local: LocalUse) -> Vec<Button> {
+    let ready = local == LocalUse::Ready;
     let fetch = match local {
         LocalUse::Download { bytes } => Some(sized(t, Button::bar(t, BarButton::Download), bytes)),
         LocalUse::Ready | LocalUse::Dimmed => None,
     };
-    [Some(cloud::use_local(t, local)), fetch]
-        .into_iter()
-        .flatten()
-        .collect()
+    let local = Button::new(LOCAL, LOCAL_ID, 0, t.text(VOICE_USE_LOCAL)).on(ready);
+    [Some(local), fetch].into_iter().flatten().collect()
 }
 
 /// Download `button` naming the size of the `bytes` it fetches.

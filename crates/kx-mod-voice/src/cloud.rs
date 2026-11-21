@@ -89,10 +89,20 @@ impl<'a> Cloud<'a> {
         s.cloud && !self.hidden
     }
 
-    /// The services the Cloud page shows, in order, Groq first (edge 24); none while cloud is off (edges 11 and 21).
+    /// The services cloud offers, in order, Groq first (edge 24); none while cloud is off (edges 11 and 21).
     #[must_use]
     pub fn offered(&self, s: &VoiceSettings) -> Vec<&'a Service> {
         if !self.on(s) {
+            return Vec::new();
+        }
+        self.listed()
+    }
+
+    /// The rows the Cloud page lists: the offered ones, also while cloud is off, when they show dimmed with only their
+    /// own Remove key; none in a hidden run, which reads no key.
+    #[must_use]
+    pub fn listed(&self) -> Vec<&'a Service> {
+        if self.hidden {
             return Vec::new();
         }
         self.table.offered().collect()

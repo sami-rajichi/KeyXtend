@@ -77,7 +77,10 @@ Item {
             verify(all.every(r => !r.Accessible.checkable), "no tick while off");
             mouseClick(all[0]);
             mouseClick(one(box, "voice.cloud"));
-            compare(acts(box), ["act cloud  1 " + box.round]);
+            const at = s.rows.findIndex(r => !!r.remove);
+            verify(at >= 0, "a row with a sealed key");
+            mouseClick(one(box, "voice.remove-" + at));
+            compare(acts(box), ["act cloud  1 " + box.round, "act remove remove " + at + " " + box.round], "its Remove key acts");
             box.visible = false;
         }
 

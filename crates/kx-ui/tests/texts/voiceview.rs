@@ -39,7 +39,7 @@ fn kinds() -> Value {
         "plus": acts::PLUS, "minus": acts::MINUS, "button": acts::BUTTON, "compare": acts::COMPARE,
         "confirm": acts::CONFIRM, "cloud": acts::CLOUD, "service": acts::SERVICE, "keep": acts::KEEP,
         "side": acts::SIDE, "local": acts::LOCAL, "save": acts::SAVE, "caret": acts::CARET,
-        "pick": acts::PICK,
+        "pick": acts::PICK, "remove": acts::REMOVE,
     })
 }
 

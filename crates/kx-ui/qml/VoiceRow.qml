@@ -21,6 +21,8 @@ Item {
     property bool takes: true
     // A tag after its name, such as a Cloud row's Untested (empty for none).
     property string tag: ""
+    // The share its tick, tile, name and line show at, below 1 on a dimmed row; the parts at its end set their own.
+    property real fade: 1
     // A hint row (mock-up .pr.hint): its tile a bare muted icon, its name a muted line that wraps as a flat question does.
     property bool quiet: false
     // The parts at the row's end, and what shows under its line.
@@ -122,6 +124,7 @@ Item {
         }
         Row {
             id: lead
+            opacity: r.fade
             anchors.left: parent.left
             anchors.leftMargin: r.pn.row_px[2] * r.s
             anchors.verticalCenter: parent.verticalCenter
@@ -156,6 +159,7 @@ Item {
             }
         }
         Column {
+            opacity: r.fade
             anchors.left: lead.width > 0 ? lead.right : parent.left
             anchors.leftMargin: lead.width > 0 ? r.gap : r.pn.row_px[2] * r.s
             anchors.right: ends.left

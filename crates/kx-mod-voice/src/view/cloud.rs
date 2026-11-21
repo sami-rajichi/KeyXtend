@@ -1,6 +1,6 @@
 //! The Cloud page and a service's card (ADR-0047): the `cloud` switch, then the services offered, Groq first, each with
-//! its mark, free allowance and warning (edge 24); none while cloud is off (edge 21). A card shows its facts with the
-//! day read, old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
+//! its mark, free allowance, warning and sealed key (edge 24), dimmed while cloud is off (edge 21). A card shows its facts with
+//! the day read, old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
 
 use kx_module_api::ports::{
     CardPart, CloudButton, CloudSheet, Pages, ServiceMark, ServiceRow, VoiceSheet, VoiceTab,
@@ -11,18 +11,25 @@ use crate::panel::{Key, Page, Panel};
 use crate::services::Service;
 
 impl Panel {
-    /// The Cloud page's shown services.
+    /// The Cloud page's shown services; while cloud is off they show dimmed, untickable, each sealed key still removable.
     pub(super) fn cloud_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let on = facts.cloud.is_some_and(|c| c.on(facts.settings));
         let ticks = self.ticks.clone();
-        let list = Self::services(facts).into_iter().map(|(row, mark)| {
-            let key = Key::Service(row.id.clone());
+        let rows = facts.cloud.map(|c| c.listed()).unwrap_or_default();
+        let list = marked(facts, rows).into_iter().map(|(row, mark)| {
+            let id = row.id.clone();
+            let key = if on {
+                Key::Service(id)
+            } else {
+                Key::Dimmed(id)
+            };
             let shown = ServiceRow {
                 name: row.shown(),
                 mark,
                 untested: row.untested,
                 free: row.name.is_some().then(|| row.facts.free.clone()),
                 warn: row.facts.warn.as_ref().map(|f| f.id.clone()),
+                remove: removable(facts, row),
                 tick: ticks.contains(&key),
             };
             (key, shown)
@@ -93,12 +100,8 @@ impl Panel {
 
     /// The services the Cloud page offers, in order, each with its mark.
     pub(crate) fn services<'a>(facts: &Facts<'a>) -> Vec<(&'a Service, ServiceMark)> {
-        let Some(cloud) = facts.cloud else {
-            return Vec::new();
-        };
-        let s = facts.settings;
-        let mark = |row: &'a Service| (row, cloud.mark(s, row, facts.keyed.contains(&row.id)));
-        cloud.offered(s).into_iter().map(mark).collect()
+        let rows = facts.cloud.map(|c| c.offered(facts.settings));
+        marked(facts, rows.unwrap_or_default())
     }
 
     /// The row of the service the card or key page shows, while cloud offers it.
@@ -110,4 +113,22 @@ impl Panel {
             .into_iter()
             .find(|r| r.id == id)
     }
+}
+
+/// Each of `rows` with its mark, Off for every row while cloud is off.
+fn marked<'a>(facts: &Facts<'a>, rows: Vec<&'a Service>) -> Vec<(&'a Service, ServiceMark)> {
+    let Some(cloud) = facts.cloud else {
+        return Vec::new();
+    };
+    let s = facts.settings;
+    let mark = |row: &'a Service| (row, cloud.mark(s, row, facts.keyed.contains(&row.id)));
+    rows.into_iter().map(mark).collect()
+}
+
+/// True when `row` has its own Remove key: a key is sealed while its key page is out of reach, as cloud services or the
+/// service are off (owner, 2026-11-20).
+pub(crate) fn removable(facts: &Facts<'_>, row: &Service) -> bool {
+    let keyed = facts.keyed.contains(&row.id);
+    let mark = facts.cloud.map(|c| c.mark(facts.settings, row, keyed));
+    keyed && mark == Some(ServiceMark::Off)
 }

@@ -45,6 +45,8 @@ pub const CONFIRM: &str = "confirm";
 pub const CLOUD: &str = "cloud";
 /// The cloud button `id`.
 pub const SERVICE: &str = "service";
+/// Remove the sealed key of the Cloud page's row at the argument's place, even while its service is off.
+pub const REMOVE: &str = "remove";
 /// The keep-nothing switch: 1 asks only for hosts that keep nothing, 0 not.
 pub const KEEP: &str = "keep";
 /// Show the Models page's side `id`.
@@ -106,6 +108,7 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         CONFIRM => VoiceClick::Confirm(switch(arg)?),
         CLOUD => VoiceClick::Cloud(switch(arg)?),
         SERVICE => VoiceClick::Service(by_id(CloudButton::ALL, cloud_button_id, id)?),
+        REMOVE => VoiceClick::RemoveKey(place(arg)?),
         KEEP => VoiceClick::KeepNothing(switch(arg)?),
         SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
         LOCAL => VoiceClick::Local,

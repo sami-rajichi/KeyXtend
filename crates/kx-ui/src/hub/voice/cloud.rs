@@ -1,7 +1,7 @@
 //! The cloud pages as QML reads them (ADR-0047): the Cloud page with its switch and services, a service's card with
 //! its facts, the day they were read and its link, and the parts the key page, Models, Compare and the bar share.
 
-use super::acts::{CLOUD, CONFIRM, LOCAL, OPEN, SERVICE};
+use super::acts::{CLOUD, CONFIRM, OPEN, REMOVE, SERVICE};
 use super::panel::{Cx, Page, Sheet};
 use super::parts::{Button, Hint, Tone, word};
 use super::sheets::{mark, mark_key, tab_id};
@@ -13,12 +13,12 @@ use crate::i18n::keys::{
     VOICE_CARD_CUSTOM, VOICE_CARD_HOURS, VOICE_CARD_LINK, VOICE_CARD_OLD, VOICE_CARD_ON,
     VOICE_CARD_READ_ON, VOICE_CARD_SUB, VOICE_CARD_UNTESTED, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL,
     VOICE_CLOUD_OFF, VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE,
-    VOICE_JOIN, VOICE_OFF, VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL,
-    VoiceMark, cloud_button_id, cloud_button_key, panel_button_id, service_mark, warn_mark_key,
+    VOICE_JOIN, VOICE_OFF, VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VoiceMark,
+    cloud_button_id, cloud_button_key, panel_button_id, service_mark, warn_mark_key,
 };
 use crate::i18n::{Said, clean};
 use kx_module_api::ports::{
-    CardPart, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, Fact, LocalUse,
+    CardPart, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, Fact,
     PanelButton, ServiceMark, ServiceName, ServiceRow, UsePrice, VoiceTab,
 };
 use serde::Serialize;
@@ -29,8 +29,6 @@ pub(super) const CARD: &str = "card";
 const MARK_CLOUD: &str = "cloud";
 /// The id of a row's warning mark, which takes the warning tone; its word is its warning fact's own.
 const MARK_WARN: &str = "warn";
-/// The id of "Use the local model", which picks its icon.
-const LOCAL_ID: &str = "local";
 
 /// A switch's row: its label, its value's word and its state; a click sends `kind` with the other state.
 #[derive(Serialize)]
@@ -68,13 +66,14 @@ impl Lead {
     }
 }
 
-/// A service's row on the Cloud page: its name, its line, the Untested tag and its marks.
+/// A service's row on the Cloud page: its name, its line, the Untested tag, its marks and a sealed key's Remove key.
 #[derive(Serialize)]
 pub(super) struct ServiceView {
     name: String,
     line: String,
     tag: Option<String>,
     marks: Vec<Hint>,
+    remove: Option<Button>,
     tick: bool,
 }
 
@@ -137,7 +136,12 @@ pub(super) fn page(cx: &Cx<'_>, c: &CloudSheet) -> Page {
     let sheet = Sheet::Cloud {
         switch: Switch::new(t, CLOUD, t.text(VOICE_CLOUD_SWITCH), c.on),
         off: (!c.on).then(|| t.text(VOICE_CLOUD_OFF)),
-        rows: c.rows.iter().map(|r| row(t, r)).collect(),
+        rows: c
+            .rows
+            .iter()
+            .zip(0..)
+            .map(|(r, at)| row(t, r, at))
+            .collect(),
     };
     let tab = VoiceTab::Cloud;
     let mut page = Page::new(tab_id(tab), cx.tab(tab), t.text(VOICE_CLOUD_SUB), sheet);
@@ -151,8 +155,9 @@ pub(super) fn page(cx: &Cx<'_>, c: &CloudSheet) -> Page {
     page
 }
 
-/// Service row `r`: its free allowance, or what the Custom row asks for, its warning fact's own mark before its state.
-fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
+/// Service row `r` at place `at`: its free allowance, or what the Custom row asks for, its warning fact's own mark
+/// before its state, or its own Remove key in the Off mark's place.
+fn row(t: &I18n, r: &ServiceRow, at: i32) -> ServiceView {
     let line = r.free.as_ref().map_or_else(
         || t.text(VOICE_CUSTOM_LINE),
         |f| {
@@ -164,14 +169,16 @@ fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
         .warn
         .as_ref()
         .map(|id| Hint::new(MARK_WARN, t.text(&warn_mark_key(id))));
+    let state = (!r.remove).then(|| mark(t, service_mark(r.mark)));
     ServiceView {
         name: service(t, &r.name),
         line,
         tag: r.untested.then(|| t.text(&mark_key(VoiceMark::Untested))),
-        marks: warn
-            .into_iter()
-            .chain([mark(t, service_mark(r.mark))])
-            .collect(),
+        marks: warn.into_iter().chain(state).collect(),
+        remove: r.remove.then(|| {
+            let b = CloudButton::Remove;
+            Button::new(REMOVE, cloud_button_id(b), at, t.text(cloud_button_key(b)))
+        }),
         tick: r.tick,
     }
 }
@@ -290,10 +297,4 @@ pub(super) fn cloud_mark(t: &I18n, name: &ServiceName) -> CloudMark {
     let name = service(t, name);
     let said = t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, name.clone())]);
     CloudMark { name, said }
-}
-
-/// "Use the local model" on a cloud note, acting only while a local model is ready.
-pub(super) fn use_local(t: &I18n, local: LocalUse) -> Button {
-    let on = local == LocalUse::Ready;
-    Button::new(LOCAL, LOCAL_ID, 0, t.text(VOICE_USE_LOCAL)).on(on)
 }

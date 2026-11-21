@@ -4,8 +4,8 @@
 
 use kx_module_api::ports::{
     CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, Date, ModelSide, PanelButton,
-    ServiceMark, ServiceName, ServiceSheet, Unavailable, VoiceClick, VoiceHome, VoiceSheet,
-    VoiceTab,
+    ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, VoiceClick, VoiceHome,
+    VoiceSheet, VoiceTab,
 };
 
 use super::super::rig::Rig;
@@ -19,6 +19,7 @@ mod answers;
 mod lines;
 mod offered;
 mod parts;
+mod remove;
 mod rows;
 mod settle;
 mod trial;
@@ -94,12 +95,13 @@ pub(super) fn act(rig: &mut Rig, name: &ServiceName, button: CloudButton) -> Vec
 fn cloud_off_offers_no_service_on_the_page_on_models_or_at_home() {
     let mut rig = Rig::new();
     rig.click(&VoiceClick::Open(VoiceTab::Cloud));
-    let off = CloudSheet {
-        on: false,
-        rows: Vec::new(),
-        acts: Vec::new(),
-    };
-    assert_eq!(cloud_sheet(&mut rig), off);
+    let sheet = cloud_sheet(&mut rig);
+    assert!(!sheet.on && sheet.acts.is_empty(), "{sheet:?}");
+    let dimmed = |r: &ServiceRow| r.mark == ServiceMark::Off && !r.tick;
+    assert!(
+        sheet.rows.iter().all(dimmed),
+        "only listed, dimmed: {sheet:?}"
+    );
     assert_eq!(home(&mut rig).cloud, None);
     rig.click(&VoiceClick::Open(VoiceTab::Models));
     rig.click(&VoiceClick::Side(ModelSide::Cloud));

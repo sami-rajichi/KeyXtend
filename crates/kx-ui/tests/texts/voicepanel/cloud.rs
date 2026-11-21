@@ -59,17 +59,23 @@ fn service(name: ServiceName, mark: ServiceMark, warn: bool, tick: bool) -> Serv
         untested: mark == ServiceMark::Ready,
         free: (!custom).then(daily),
         warn: warn.then(|| TRAINS.to_owned()),
+        remove: false,
         tick,
     }
 }
 
-/// The Cloud page, `on` or off, Groq ticked.
+/// The Cloud page, `on` or off, Groq ticked, and a fifth row Off with its key sealed and its own Remove key.
 fn cloud(on: bool) -> VoiceSheet {
+    let sealed = ServiceRow {
+        remove: true,
+        ..service(named("ElevenLabs"), ServiceMark::Off, true, false)
+    };
     let rows = vec![
         service(named("Groq"), ServiceMark::Ready, false, on),
         service(named("DeepInfra"), ServiceMark::NeedsKey, false, false),
         service(named("OpenRouter"), ServiceMark::Off, true, false),
         service(ServiceName::Custom, ServiceMark::NeedsAddress, false, false),
+        sealed,
     ];
     let acts = if on {
         vec![CloudButton::Facts, CloudButton::Lines, CloudButton::Off]

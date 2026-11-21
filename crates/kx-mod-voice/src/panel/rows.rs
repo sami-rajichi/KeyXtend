@@ -28,7 +28,7 @@ impl Panel {
             self.page == Some(Page::Tab(VoiceTab::Compare)) && self.compare.results().is_empty();
         match key {
             Key::Dir(dir) => return self.open_dir(dir),
-            Key::Opt(_) | Key::Plain => {}
+            Key::Opt(_) | Key::Plain | Key::Dimmed(_) => {}
             // History's texts, and the cloud models Compare sends the recording to.
             Key::Text(_) => self.tick_many(key),
             Key::Cloud { .. } if many => self.tick_many(key),

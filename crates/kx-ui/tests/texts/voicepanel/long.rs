@@ -1,7 +1,7 @@
 //! The cloud panels with their longest content, which the fit test measures: each Cloud page of the services table's
-//! rows, page by page, the Models page's Cloud side, each part of each table service's card with every line on, each
-//! part of a key page with every line and the longest answer in each language, and Compare with each table service's
-//! cloud models.
+//! rows, page by page, then with each row Off and its own Remove key, the Models page's Cloud side, each part of each
+//! table service's card with every line on, each part of a key page with every line and the longest answer in each
+//! language, and Compare with each table service's cloud models.
 
 use super::cloud::{TRAINS, card, lines, named};
 use super::{Shown, paged, shown};
@@ -19,8 +19,9 @@ use kx_module_api::ports::{
 };
 use kx_ui::UiSettings;
 
-/// The start of each long Cloud page's name, then its page number from 1.
+/// The start of each long Cloud page's name, then its page number from 1, and of the same with each row Off.
 const CLOUD_LONG: &str = "cloudLong-";
+const CLOUD_LONG_OFF: &str = "cloudLongOff-";
 /// The start of a service's long card's name, then its id: its first part, and its second.
 const CARD_LONG: &str = "cardLong-";
 const PRICE_LONG: &str = "cardLongPrice-";
@@ -45,29 +46,31 @@ fn per() -> usize {
 }
 
 /// Row `s` of the table on the Cloud page, untested, a named one with its warning mark, with the mark its address asks
-/// for; `tick`ed or not.
-fn long_row(s: &Service, tick: bool) -> ServiceRow {
+/// for, or Off with its own Remove key when `off`; `tick`ed or not.
+fn long_row(s: &Service, tick: bool, off: bool) -> ServiceRow {
+    let mark = match (off, &s.address) {
+        (true, _) => ServiceMark::Off,
+        (false, Address::Typed { .. }) => ServiceMark::NeedsAddress,
+        (false, _) => ServiceMark::NeedsKey,
+    };
     ServiceRow {
         name: s.shown(),
-        mark: if matches!(s.address, Address::Typed { .. }) {
-            ServiceMark::NeedsAddress
-        } else {
-            ServiceMark::NeedsKey
-        },
+        mark,
         untested: true,
         free: s.name.is_some().then(|| s.facts.free.clone()),
         warn: warn_id(s),
+        remove: off,
         tick,
     }
 }
 
-/// The Cloud pages with every row of the table, a panel's rows to a page, each page's first row ticked.
-fn cloud_long() -> Vec<Shown> {
+/// The Cloud pages with every row of the table, a panel's rows to a page, each page's first row ticked, all `off`.
+fn cloud_long(off: bool) -> Vec<Shown> {
     let rows = services().rows();
     let count = u16::try_from(rows.len().div_ceil(per())).expect("a few pages");
     let acts = vec![CloudButton::Facts, CloudButton::Lines, CloudButton::Off];
     let page = |(at, part): (u16, &[Service])| {
-        let rows = part.iter().enumerate().map(|(i, s)| long_row(s, i == 0));
+        let rows = part.iter().zip(0..).map(|(s, i)| long_row(s, i == 0, off));
         let sheet = VoiceSheet::Cloud(CloudSheet {
             on: true,
             rows: rows.collect(),
@@ -219,8 +222,10 @@ pub fn panels(tag: &str) -> Vec<(String, Shown)> {
     .into_iter()
     .map(|(name, s)| (name.to_owned(), s))
     .collect::<Vec<_>>();
-    let pages = cloud_long().into_iter().enumerate();
-    out.extend(pages.map(|(i, s)| (format!("{CLOUD_LONG}{}", i + 1), s)));
+    for (start, off) in [(CLOUD_LONG, false), (CLOUD_LONG_OFF, true)] {
+        let pages = cloud_long(off).into_iter().enumerate();
+        out.extend(pages.map(|(i, s)| (format!("{start}{}", i + 1), s)));
+    }
     for s in services().rows() {
         out.push((
             format!("{CARD_LONG}{}", s.id),
@@ -283,12 +288,13 @@ fn a_custom_row_shows_its_own_warning_and_none_without_one() {
         .find(|s| s.name.is_none())
         .expect("Custom")
         .clone();
-    assert_eq!(long_row(&custom, false).warn, None, "no warning of its own");
+    let own = long_row(&custom, false, false).warn;
+    assert_eq!(own, None, "no warning of its own");
     custom.facts.warn = Some(Fact {
         id: "keeps-logs".to_owned(),
         args: Vec::new(),
         warn: true,
     });
-    let warn = long_row(&custom, false).warn;
+    let warn = long_row(&custom, false, false).warn;
     assert_eq!(warn.as_deref(), Some("keeps-logs"));
 }
