@@ -3,9 +3,7 @@
 //! in one request under its 20 MB cap [N6].
 
 use super::*;
-use kx_module_api::ports::{
-    MAX_FIELD_VALUE, MAX_FIXED, MB, SAMPLE_BYTES, SOUND_HZ, SpeechAsk, TAG_LEN,
-};
+use kx_module_api::ports::{MAX_FIELD_VALUE, MAX_FIXED, MB, SOUND_BYTES_PER_S, SpeechAsk, TAG_LEN};
 
 /// A plain PCM WAV header: the RIFF, `fmt ` and `data` chunks' heads.
 const WAV_HEAD: u64 = 44;
@@ -78,7 +76,7 @@ fn the_room_covers_the_wav_header_and_the_largest_forms_other_parts() {
 #[test]
 fn every_shipped_rows_piece_by_size_and_by_time_fits_under_its_cap() {
     let room = room_kb() * 1024;
-    let per_s = u64::try_from(SOUND_HZ * SAMPLE_BYTES).unwrap();
+    let per_s = u64::try_from(SOUND_BYTES_PER_S).unwrap();
     for row in shipped().rows() {
         let cap = cap(&row.id);
         let by_size = sent(row, u64::from(row.limits.max_mb) * MB);
@@ -122,7 +120,7 @@ fn a_cap_in_seconds_bounds_a_pieces_seconds() {
 
 #[test]
 fn a_rows_longest_piece_is_whole_seconds_its_caps_take_within_the_runs_range() {
-    let per_s = SOUND_HZ * SAMPLE_BYTES;
+    let per_s = SOUND_BYTES_PER_S;
     for row in table().unwrap().rows() {
         let secs = piece_s(&row.limits);
         assert!(SpeechAsk::PIECE_S.contains(&secs), "{}", row.id);

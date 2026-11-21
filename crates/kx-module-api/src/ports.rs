@@ -152,8 +152,8 @@ pub use shortcut::{
 pub use speech::{
     CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, FactsAsk, Hundredths,
     JobLimits, LEVEL_FULL, MAX_PERCENT, MAX_SOUND_BYTES, Memory, ModelFacts, SAMPLE_BYTES,
-    SOUND_HZ, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechKey, SpeechModel, SpeechNote,
-    SpeechRun, SpeechStage, TAG_LEN, Verdict,
+    SOUND_BYTES_PER_S, SOUND_HZ, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechKey,
+    SpeechModel, SpeechNote, SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
     AddressFault, BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CardPart, CloudBand,

@@ -18,7 +18,7 @@ fn a_piece_may_hold_whole_samples_within_the_rows_size_and_seconds() {
         ..limits()
     };
     assert_eq!(tight.piece_bytes(), 1 << 20, "a megabyte of whole samples");
-    let by_time = usize::from(short().max_s) * crate::ports::SOUND_HZ * crate::ports::SAMPLE_BYTES;
+    let by_time = usize::from(short().max_s) * crate::ports::SOUND_BYTES_PER_S;
     assert_eq!(short().piece_bytes(), by_time);
 }
 

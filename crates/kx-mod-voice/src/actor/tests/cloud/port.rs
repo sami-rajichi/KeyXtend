@@ -2,7 +2,7 @@
 //! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and `ElevenLabs`,
 //! Gemini and `AssemblyAI` dictations ask in their own shapes with the key under their row's header.
 
-use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
+use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SOUND_BYTES_PER_S, SpeechAsk};
 
 use super::*;
 use crate::services;
@@ -159,7 +159,7 @@ fn with_no_cloud_port_a_cloud_dictation_ends_with_the_fault_note_and_keeps_the_r
 
 #[test]
 fn a_rows_size_cap_cuts_pieces_shorter_than_its_time_cap() {
-    let per_s = SOUND_HZ * SAMPLE_BYTES;
+    let per_s = SOUND_BYTES_PER_S;
     let small = limits(*CloudLimits::MAX_MB.start(), *CloudLimits::MAX_S.end());
     let cut = piece_s(&small);
     assert!(

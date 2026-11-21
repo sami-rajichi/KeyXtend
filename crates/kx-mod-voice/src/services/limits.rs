@@ -2,7 +2,7 @@
 //! `room_kb` for the WAV header and the form's other parts under the service's own cap, grown by a third when the shape
 //! sends Base64.
 
-use kx_module_api::ports::{CloudLimits, MB, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
+use kx_module_api::ports::{CloudLimits, MB, SOUND_BYTES_PER_S, SpeechAsk};
 use serde::Deserialize;
 
 use super::ServiceError;
@@ -54,7 +54,7 @@ pub(super) fn checked(
     }
     let cap = u64::from(raw.cap_mb) * CAP_MB;
     let fits = |bytes: u64| grown(bytes, base64).saturating_add(room) <= cap;
-    let per_s = (SOUND_HZ * SAMPLE_BYTES) as u64;
+    let per_s = SOUND_BYTES_PER_S as u64;
     let by_size = u64::from(raw.max_mb) * MB;
     let by_time = u64::from(raw.max_s) * per_s;
     let timed = raw.cap_s.is_none_or(|s| u32::from(raw.max_s) <= s);
@@ -79,6 +79,6 @@ fn grown(bytes: u64, base64: bool) -> u64 {
 #[must_use]
 pub fn piece_s(limits: &CloudLimits) -> u8 {
     let (low, high) = (*SpeechAsk::PIECE_S.start(), *SpeechAsk::PIECE_S.end());
-    let secs = limits.piece_bytes() / (SOUND_HZ * SAMPLE_BYTES);
+    let secs = limits.piece_bytes() / SOUND_BYTES_PER_S;
     u8::try_from(secs).map_or(high, |s| s.clamp(low, high))
 }
