@@ -1,7 +1,8 @@
 //! Paste at once for another module (owner, 2026-11-17, ADR-0048): the history keeps what the clipboard holds, writes
 //! the text as ours with the presence markers, asks the keyboard for one paste on a round of its own, answers right
-//! after the keyboard does, and puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile.
-//! It answers no, writing nothing, while an insert or a lend runs, past the asker's start, or when `previous` refuses.
+//! after the keyboard does, and puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile;
+//! an entry deleted meanwhile is put back as an empty clipboard. It answers no, writing nothing, while an insert or a
+//! lend runs, past the asker's start, or when `previous` refuses.
 
 use std::mem;
 use std::time::Duration;
@@ -35,6 +36,16 @@ impl Lend {
     /// True when none is under way.
     pub(super) const fn idle(&self) -> bool {
         matches!(self, Self::Idle)
+    }
+
+    /// Entry `id` left the history: a put-back due to write it whole writes an empty clipboard instead.
+    pub(super) fn gone(&mut self, id: u64) {
+        if let Self::Asked { back, .. } | Self::Gap { back, .. } = self
+            && let Some(back) = back.as_mut().filter(|b| b.held == Held::Entry(id))
+        {
+            wipe(mem::take(&mut back.parts));
+            back.held = Held::Empty;
+        }
     }
 }
 

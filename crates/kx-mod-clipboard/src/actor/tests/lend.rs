@@ -16,6 +16,7 @@ use super::rig::Rig;
 use crate::fixture::{files, image, text};
 
 mod back;
+mod gone;
 mod props;
 mod skip;
 mod start;

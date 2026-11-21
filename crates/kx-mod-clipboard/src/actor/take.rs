@@ -1,7 +1,7 @@
 //! Quick-fill's take (ADR-0034, design "Paste"): the clipboard's text, read within the take's cap, goes to Quick-fill,
 //! and the history forgets its newest entry when that entry is this copy and not pinned, else the next copy keeps
-//! nothing if it is that text, as the watch's note can come after the take. Every copy read here is wiped, none is
-//! logged.
+//! nothing if it is that text, as the watch's note can come after the take. Either way Paste at once never puts the
+//! text back. Every copy read here is wiped, none is logged.
 
 use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
 use kx_module_api::{Secret, Zeroizing};
@@ -53,15 +53,24 @@ impl Actor {
         same
     }
 
-    /// Ends the wait for the copy the last take missed: `parts` go on, unless they hold that text, so are wiped.
+    /// Ends the wait for the copy the last take missed: `parts` go on, unless they hold that text, so are wiped and
+    /// never go back.
     pub(super) fn past_take(&mut self, parts: Vec<ClipPart>) -> Option<Vec<ClipPart>> {
         match self.missed.take() {
             Some(text) if holds(&parts, &text) => {
                 wipe(parts);
+                self.board.taken();
                 None
             }
             _ => Some(parts),
         }
+    }
+
+    /// True when `text` is the copy the last take read before its note came, so it never goes back.
+    pub(super) fn was_taken(&self, text: &Secret) -> bool {
+        self.missed
+            .as_ref()
+            .is_some_and(|m| m.expose() == text.expose())
     }
 }
 

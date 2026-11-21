@@ -6,3 +6,6 @@
 # everyone who runs the test benefits from these saved cases.
 cc 74a505197dd613cd4d0842f655e9a9162700ac17236a03081f0ef9718adf0127 # shrinks to steps = [Numbered, Lend, Advance(1000)]
 cc 33736af2e44cf1406efd2052f949044399d3f2f417dee03f03056f9de8db47d3 # shrinks to steps = [Copy, Lend, Lend, Insert, Copy, Advance(1000), Numbered, Lend]
+cc 61ec192d86e8e0bd467a3d533f5e2bc5cd50446fbbca2141806ac46e9cc2665a # shrinks to steps = [Lend, Insert, Lend, Lend, EarlyTake, Late, Lend]
+cc ba9c59df58ca6561ba3677f9ea140a31742979d6ee242240e9fd9612bd016be3 # shrinks to steps = [Copy, Lend, Lend, Delete, Lend]
+cc 3ea09ad6472f0315f62e474b32614812f221fd6d6e296bc4253ec5ba8bca9088 # shrinks to steps = [EarlyTake, Lend, Lend]

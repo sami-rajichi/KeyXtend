@@ -1,6 +1,7 @@
 //! What the clipboard holds, as the watch and our own writes told it, so Paste at once can put an entry back whole
 //! and never put back a skipped app's or a marked copy the watch told (owner, 2026-11-17, ADR-0048); a copy made before
-//! the start is unknown. Our writes' echoes keep the board, and a presence marker is checked live at the read.
+//! the start is unknown. Our writes' echoes keep the board, and a presence marker is checked live at the read. A copy
+//! that left the history, or that a take read, never goes back: the clipboard is left empty (owner's check, 2026-11-21).
 
 use std::mem;
 
@@ -22,6 +23,8 @@ pub(super) enum Held {
     Empty,
     /// Entry `id`'s content.
     Entry(u64),
+    /// The content of an entry the history deleted, or a copy a take read; it never goes back.
+    Gone,
 }
 
 /// What the clipboard holds, how many of our writes the watch has not told back yet, and whether it may hold a
@@ -55,6 +58,18 @@ impl Board {
         self.held = Held::Entry(id);
     }
 
+    /// Entry `id` left the history, so its content never goes back if the board holds it.
+    pub(super) fn gone(&mut self, id: u64) {
+        if self.held == Held::Entry(id) {
+            self.held = Held::Gone;
+        }
+    }
+
+    /// The copy just told is one a take read, so it never goes back.
+    pub(super) fn taken(&mut self) {
+        self.held = Held::Gone;
+    }
+
     /// We wrote what `held` names, so its echo is due and no skipped app's copy is left.
     pub(super) fn wrote(&mut self, held: Held) {
         (self.held, self.skipped) = (held, false);
@@ -81,8 +96,9 @@ enum Found {
 
 impl Actor {
     /// What to put back after a paste: the entry on the board, whole; else the clipboard's unmarked text alone; or
-    /// nothing for an empty clipboard. `None` for a skipped app's or a marked copy, an unreadable clipboard, an entry
-    /// that cannot come back whole, or no text the history can name, as it may be a picture.
+    /// nothing for an empty clipboard or a text that left the history or a take read. `None` for a skipped app's or a
+    /// marked copy, an unreadable clipboard, an entry that cannot come back whole, or no text the history can name, as
+    /// it may be a picture.
     pub(super) fn previous(&mut self) -> Option<Back> {
         if self.board.skipped {
             tracing::info!(
@@ -104,7 +120,15 @@ impl Actor {
                 Found::Moved => {}
             }
         }
+        let gone = held == Held::Gone || text.as_ref().is_some_and(|t| self.was_taken(t));
         let (parts, held) = match (text, held) {
+            // The read text is wiped as it drops, and never written.
+            (Some(_), _) if gone => {
+                tracing::info!(
+                    "a forgotten or taken copy is on the clipboard, so it is emptied after the paste"
+                );
+                (Vec::new(), Held::Empty)
+            }
             (Some(text), _) => (vec![ClipPart::Text(own(text))], Held::Other),
             (None, Held::Empty) => (Vec::new(), held),
             (None, _) => return None,
