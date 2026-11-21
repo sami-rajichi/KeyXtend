@@ -25,8 +25,7 @@ mod borrow;
 /// Bytes standing in for a sealed blob and a wrapped data key; never a real key.
 const BLOB: &[u8] = b"KXSL-a-stand-in-blob";
 const WRAPPED: &[u8] = b"a-stand-in-wrapped-key";
-/// Custom, the row at a typed address whose own behaviour some tests check, and the clip languages.
-const CUSTOM: &str = "custom";
+/// The clip languages.
 const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// A typed Custom address and model on a test host.
 const TYPED: &str = "https://stt.example.test/v1/audio/transcriptions";
@@ -69,6 +68,15 @@ fn listed() -> &'static Service {
         .expect("a listed row")
 }
 
+/// Custom's id: the row at a typed address, whose own behaviour some tests check.
+fn custom_id() -> &'static str {
+    let rows = table().expect("the table").rows();
+    let typed = rows
+        .iter()
+        .find(|r| matches!(r.address, Address::Typed { .. }));
+    typed.expect("a typed row").id.as_str()
+}
+
 /// A row's piece length, as the product cuts its sound, in ms.
 fn piece_ms(row: &Service) -> u32 {
     u32::from(piece_s(&row.limits)) * MS_PER_S
@@ -97,8 +105,9 @@ fn a_typed_model_the_row_refuses_or_a_model_knowing_no_clip_language_is_skipped_
         t.model = Redacted::new(BAD_MODEL_ID.to_owned());
         Some(t)
     };
-    let got = plans(|id| id == CUSTOM, bad);
-    assert_eq!(skipped(&got, CUSTOM), Some(cloudset::BAD_MODEL));
+    let custom = custom_id();
+    let got = plans(|id| id == custom, bad);
+    assert_eq!(skipped(&got, custom), Some(cloudset::BAD_MODEL));
     let (services, row) = (table().expect("the table"), listed().id.as_str());
     let none = cloudset::plan(services, |id| id == row, &[NO_SUCH_LANG], |_| None);
     assert_eq!(skipped(&none, row), Some(cloudset::NO_LANG));
@@ -131,22 +140,23 @@ fn a_listed_row_runs_its_first_model_on_the_clip_languages_it_knows() {
 
 #[test]
 fn custom_runs_only_with_the_daily_address_and_model() {
-    let custom = |got: &[Plan]| {
+    let custom = custom_id();
+    let runs = |got: &[Plan]| {
         got.iter()
-            .find(|p| p.id() == CUSTOM)
+            .find(|p| p.id() == custom)
             .map(|p| p.run().is_some())
     };
-    assert_eq!(custom(&plans(|id| id == CUSTOM, |_| None)), Some(false));
+    assert_eq!(runs(&plans(|id| id == custom, |_| None)), Some(false));
     let plain = plans(
-        |id| id == CUSTOM,
+        |id| id == custom,
         |_| Some(typed("http://stt.example.test/v1")),
     );
-    assert_eq!(custom(&plain), Some(false), "not https");
-    let good = plans(|id| id == CUSTOM, |_| Some(typed(TYPED)));
+    assert_eq!(runs(&plain), Some(false), "not https");
+    let good = plans(|id| id == custom, |_| Some(typed(TYPED)));
     let p = good.iter().find_map(Plan::run).expect("custom runs");
     assert_eq!(
         (p.row.id.as_str(), p.model.expose().as_str()),
-        (CUSTOM, TYPED_MODEL)
+        (custom, TYPED_MODEL)
     );
     assert_eq!(p.langs, LANGS, "a typed id takes each code as it is");
 }
@@ -191,14 +201,15 @@ fn the_copys_settings_hold_one_service_confirmed_with_its_reminder_seen_as_the_p
 
 #[test]
 fn only_a_typed_rows_two_lines_are_read_from_the_daily_settings() {
-    let d = daily(&[CUSTOM]);
-    assert!(daily_typed(d.path())(CUSTOM).is_none(), "no service entry");
-    let got = plans(|id| id == CUSTOM, |_| Some(typed(TYPED)));
+    let custom = custom_id();
+    let d = daily(&[custom]);
+    assert!(daily_typed(d.path())(custom).is_none(), "no service entry");
+    let got = plans(|id| id == custom, |_| Some(typed(TYPED)));
     let (s, _) = written(got.iter().find_map(Plan::run).expect("custom runs"));
     let file = table_of(&s, &load().expect("the settings load").g22_product).expect("a table");
     fs::write(Files::new(d.path()).settings, file.to_string()).expect("the daily settings");
     let read = daily_typed(d.path());
-    let t = read(CUSTOM).expect("both lines");
+    let t = read(custom).expect("both lines");
     let lines = (t.address.expose().as_str(), t.model.expose().as_str());
     assert_eq!(lines, (TYPED, TYPED_MODEL));
     assert!(read(listed().id.as_str()).is_none(), "a row not on");
@@ -218,7 +229,8 @@ fn a_clip_within_a_piece_is_one_request_and_a_longer_one_more_as_the_product_cut
 
 #[test]
 fn the_heads_up_counts_each_runs_requests_for_the_clips_it_dictates() {
-    let alone = plans(|id| id == CUSTOM, |_| Some(typed(TYPED)));
+    let custom = custom_id();
+    let alone = plans(|id| id == custom, |_| Some(typed(TYPED)));
     let piece = piece_ms(alone.iter().find_map(Plan::run).expect("custom runs").row);
     let clips = [
         ("en", piece),
@@ -230,7 +242,7 @@ fn the_heads_up_counts_each_runs_requests_for_the_clips_it_dictates() {
     assert_eq!(mine, 1 + 1 + 2, "no clip in German is planned");
     let other = listed().id.as_str();
     let theirs = cloudset::requests(&plans(|id| id == other, |_| None), &clips);
-    let both = plans(|id| id == CUSTOM || id == other, |_| Some(typed(TYPED)));
+    let both = plans(|id| id == custom || id == other, |_| Some(typed(TYPED)));
     assert_eq!(
         cloudset::requests(&both, &clips),
         mine + theirs,
