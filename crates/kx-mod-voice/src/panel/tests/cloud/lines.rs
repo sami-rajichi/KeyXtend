@@ -3,15 +3,16 @@
 //! address (edge 23), and a typed address is kept or refused with why: no https, no host name, a bad path or query,
 //! outside the domain or too long (edges 13 and 22, carries 6, 10 and 11).
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, PanelButton, ServiceMark,
     ServiceName, VoiceClick,
 };
-use kx_module_api::{Redacted, Secret, Zeroizing};
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::{act, apply, lines_sheet, named, on_cloud, put};
+use crate::compare::tests::secret;
 use crate::services::tests::DOMAIN;
 use crate::services::tests::shipped::{entry, first};
 use crate::settings::{PICKS, SERVICES};
@@ -19,10 +20,6 @@ use crate::settings::{PICKS, SERVICES};
 /// A key-like text, built as the test runs so no key sits in the source.
 fn made_key() -> String {
     ["kx", "made", &"7".repeat(24)].join("-")
-}
-
-fn secret(text: &str) -> Secret {
-    Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
 /// Groq, the first offered row, on and keyed, on its key page.

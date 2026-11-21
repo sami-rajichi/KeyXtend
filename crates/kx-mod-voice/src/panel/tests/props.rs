@@ -6,6 +6,7 @@ use super::super::options;
 use super::super::rig::{Rig, card, row};
 use super::*;
 use crate::compare::Act;
+use crate::compare::tests::SET;
 use crate::flow::Lend;
 use crate::settings::MODELS_DIR;
 use kx_module_api::ports::{
@@ -16,8 +17,6 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 use proptest::sample::select;
 
-/// The set text Compare's runs read.
-const SET: &str = "The evening train leaves at a quarter past seven.";
 /// History's texts, more than a page holds.
 const TEXTS: u32 = 7;
 /// A card's free memory, roomy enough for a check.

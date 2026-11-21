@@ -1,15 +1,14 @@
 //! The Device page through the panel: Automatic, the processor and the cards; Use writes `device` and checks a card
 //! not checked for the model in use; the check's warm-up shows on its row and its verdict is kept.
 
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarHint, CardCheck, CardId, CheckDone, DeviceItem, DeviceSheet, PanelButton, SpeechError,
     Verdict, VoiceClick, VoiceSheet, VoiceTab,
 };
-use kx_module_api::{Secret, Zeroizing};
 
 use super::super::rig::{Rig, card, row};
 use super::{Check, Do, Panel};
+use crate::compare::tests::secret;
 use crate::settings::DEVICE;
 
 pub(super) mod clips;
@@ -41,10 +40,6 @@ fn check_card(rig: &mut Rig) -> Check {
         panic!("{out:?}");
     };
     (**check).clone()
-}
-
-fn secret(text: &str) -> Secret {
-    Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
 #[test]

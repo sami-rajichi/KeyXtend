@@ -16,7 +16,7 @@ mod ends;
 mod props;
 
 /// The set text the tests read, nine words.
-const SET: &str = "The evening train leaves at a quarter past seven.";
+pub(crate) const SET: &str = "The evening train leaves at a quarter past seven.";
 /// When a cloud model's note comes on the wall clock: noon UTC.
 const WALL_MS: i64 = 1_794_657_600_000;
 
@@ -29,7 +29,7 @@ fn settings() -> VoiceSettings {
     VoiceSettings::from_defaults().unwrap()
 }
 
-fn secret(text: &str) -> Secret {
+pub(crate) fn secret(text: &str) -> Secret {
     Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
@@ -87,7 +87,7 @@ fn plan(set: &str, models: Vec<Entrant>) -> Plan {
 }
 
 /// A model's end, `wait_ms` after Stop, at `mb`.
-fn done(wait_ms: u32, mb: u32) -> SpeechNote {
+pub(crate) fn done(wait_ms: u32, mb: u32) -> SpeechNote {
     SpeechNote::Done(SpeechDone {
         pieces: 1,
         sound_ms: 4_000,

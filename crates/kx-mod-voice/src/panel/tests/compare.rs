@@ -3,7 +3,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, CompareSheet, DeviceLabel, DeviceName, PanelButton, RunStep, SpeechDone, SpeechNote,
+    BarButton, CompareSheet, DeviceLabel, DeviceName, PanelButton, RunStep, SpeechNote,
     SpeechStage, VoiceClick, VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Secret, Zeroizing};
@@ -11,10 +11,8 @@ use kx_module_api::{Secret, Zeroizing};
 use super::super::rig::{Rig, row};
 use super::Do;
 use crate::compare::Act;
+use crate::compare::tests::{SET, done};
 use crate::flow::RunCall;
-
-/// The set text, nine words.
-const SET: &str = "The evening train leaves at a quarter past seven.";
 
 /// The Compare page as shown.
 fn sheet(rig: &mut Rig) -> CompareSheet {
@@ -34,17 +32,6 @@ fn on_compare() -> Rig {
 
 fn set() -> Redacted<String> {
     Redacted::new(SET.to_owned())
-}
-
-fn done(wait_ms: u32) -> SpeechNote {
-    SpeechNote::Done(SpeechDone {
-        pieces: 1,
-        sound_ms: 4_000,
-        wait_ms,
-        load_ms: 0,
-        memory_mb: 800,
-        card: false,
-    })
 }
 
 fn piece(text: &str) -> SpeechNote {
@@ -107,7 +94,7 @@ fn the_compare_page_names_the_ready_models_and_where_they_run() {
 fn each_model_writes_in_turn_then_one_result_is_used() {
     let mut rig = on_compare();
     let take = recorded(&mut rig);
-    let first = rig.panel.compare_note(take, done(0));
+    let first = rig.panel.compare_note(take, done(0, 800));
     assert!(matches!(
         &first[..],
         [Do::Compare(Act::Run {
@@ -123,12 +110,12 @@ fn each_model_writes_in_turn_then_one_result_is_used() {
         (1, 2, RunStep::Writing, RunStep::Waiting)
     );
     rig.panel.compare_note(take, piece(SET));
-    rig.panel.compare_note(take, done(1_000));
+    rig.panel.compare_note(take, done(1_000, 800));
     rig.panel.compare_note(
         take,
         piece("The evening rain leaves at quarter past seven."),
     );
-    let last = rig.panel.compare_note(take, done(2_000));
+    let last = rig.panel.compare_note(take, done(2_000, 800));
     assert!(last.iter().any(|d| matches!(d, Do::Compare(Act::Save(_)))));
     used_second(&mut rig);
 }
@@ -137,7 +124,7 @@ fn each_model_writes_in_turn_then_one_result_is_used() {
 fn a_model_that_failed_shows_failed_while_the_next_writes() {
     let mut rig = on_compare();
     let take = recorded(&mut rig);
-    rig.panel.compare_note(take, done(0));
+    rig.panel.compare_note(take, done(0, 800));
     let fault = SpeechNote::Fault(kx_module_api::ports::SpeechError::BadFile);
     rig.panel.compare_note(take, fault);
     let CompareSheet::Running { at, rows, .. } = sheet(&mut rig) else {

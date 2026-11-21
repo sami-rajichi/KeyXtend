@@ -5,13 +5,14 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, CloudFault, CloudNote, CompareCloud, CompareSheet, PanelButton, ServiceName,
-    SpeechDone, SpeechNote, VoiceClick, VoiceSheet, VoiceTab,
+    SpeechNote, VoiceClick, VoiceSheet, VoiceTab,
 };
 use std::time::Duration;
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::{apply, put};
+use crate::compare::tests::done;
 use crate::compare::{Act, Remote};
 use crate::flow::net_why;
 use crate::services::tests::shipped::{entry, first, model, pick};
@@ -42,18 +43,6 @@ fn start(rig: &mut Rig) -> u32 {
         [Do::Compare(Act::Open { take, .. })] => take,
         _ => panic!("no start: {out:?}"),
     }
-}
-
-/// The recording's end, `wait_ms` after Stop.
-fn done(wait_ms: u32) -> SpeechNote {
-    SpeechNote::Done(SpeechDone {
-        pieces: 1,
-        sound_ms: 4_000,
-        wait_ms,
-        load_ms: 0,
-        memory_mb: 0,
-        card: false,
-    })
 }
 
 /// The first offered row's first model as Compare sends to it.
@@ -105,7 +94,7 @@ fn a_cloud_result_is_named_by_its_service_and_use_picks_it() {
     let take = start(&mut rig);
     rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
     rig.click(&VoiceClick::Bar(BarButton::Stop));
-    let sent = rig.with(|p, _| p.compare_note(take, done(0)));
+    let sent = rig.with(|p, _| p.compare_note(take, done(0, 0)));
     assert!(matches!(&sent[..], [Do::Compare(Act::Send { to, .. })] if *to == [turbo()]));
     let text = Redacted::new(kx_module_api::Zeroizing::new("hello world".into()));
     rig.with(|p, f| p.compare_net(take, 0, CloudNote::Piece { index: 0, text }, 0, f.now));
@@ -168,7 +157,7 @@ fn the_running_header_names_the_first_cloud_model_still_writing() {
     let take = start(&mut rig);
     rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
     rig.click(&VoiceClick::Bar(BarButton::Stop));
-    rig.with(|p, _| p.compare_note(take, done(0)));
+    rig.with(|p, _| p.compare_note(take, done(0, 0)));
     assert_eq!(header(&mut rig), (1, 2, model(first(), 0).name.clone()));
     rig.with(|p, f| p.compare_net(take, 0, CloudNote::Done, 700, f.now));
     assert_eq!(header(&mut rig), (2, 2, model(first(), 1).name.clone()));
@@ -190,7 +179,7 @@ fn a_typed_model_id_never_prints_in_the_ticks_the_plan_or_the_send() {
     assert_eq!(rig.panel.compare.plan().unwrap().clouds.len(), 1);
     rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
     rig.click(&VoiceClick::Bar(BarButton::Stop));
-    let sent = rig.with(|p, _| p.compare_note(take, done(0)));
+    let sent = rig.with(|p, _| p.compare_note(take, done(0, 0)));
     let shown = format!("{:?}{sent:?}", rig.panel);
     assert!(!shown.contains(&typed), "{shown}");
 }
@@ -225,7 +214,7 @@ fn a_failed_cloud_models_reason_on_compare_is_the_bars_for_every_fault() {
         let take = start(&mut rig);
         rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
         rig.click(&VoiceClick::Bar(BarButton::Stop));
-        rig.with(|p, _| p.compare_note(take, done(0)));
+        rig.with(|p, _| p.compare_note(take, done(0, 0)));
         rig.with(|p, f| p.compare_net(take, 0, CloudNote::Fault(fault), 0, f.now));
         let view = rig.view().unwrap();
         let VoiceSheet::Compare(CompareSheet::Running { rows, .. }) = view.sheet else {
