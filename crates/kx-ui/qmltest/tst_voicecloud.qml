@@ -218,6 +218,20 @@ Item {
             box.visible = false;
         }
 
+        function test_a_row_with_no_test_call_shows_no_test_data() {
+            return langs_data();
+        }
+        // The owner's rule (2026-11-21): the first dictation tests such a key, so its page shows only that note, and
+        // Paste and Save keep their order at the line's end.
+        function test_a_row_with_no_test_call_shows_no_test(d) {
+            const box = make("serviceAssembly", d.t);
+            compare(heard(box.contentItem, box.view.sheet.check.text).length, 1, "the note stays");
+            compare(Board.all(box.contentItem, o => o.visible && o.Accessible.id === "voice.test").length, 0, "no Test");
+            const [paste, save] = [one(box, "voice.paste"), one(box, "voice.save-key")];
+            verify(paste.mapToItem(null, 0, 0).x < save.mapToItem(null, 0, 0).x, "Paste, then Save");
+            box.visible = false;
+        }
+
         function test_refused_lines_say_why_and_keep_nothing_switches_data() {
             return langs_data();
         }

@@ -45,6 +45,7 @@ impl Panel {
             model_refused: self.cloud.refused_model.is_some(),
             keep: row.keep.as_ref().map(|_| entry.is_some_and(|e| e.keep)),
             site: row.keys.as_ref().map(|url| url.host().to_owned()),
+            tests: row.test != KeyTest::None,
             acts: self.cloud_acts(facts),
             part,
             typing,

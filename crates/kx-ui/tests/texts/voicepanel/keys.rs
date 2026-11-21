@@ -41,6 +41,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         model_refused: false,
         keep: None,
         site: Some("console.groq.com".to_owned()),
+        tests: true,
         acts: CloudButton::ALL.to_vec(),
         part: None,
         typing: CloudLine::Key,
@@ -52,15 +53,11 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         (s.model, s.model_na, s.keep) = (text("mistralai/voxtral-small"), true, Some(true));
         s.saves.push(CloudLine::Model);
     } else if which == "custom" {
-        (s.service, s.mark, s.key, s.check) = (
-            ServiceName::Custom,
-            ServiceMark::NeedsKey,
-            Redacted::new(0),
-            KeyCheck::Untested,
-        );
+        (s.service, s.mark) = (ServiceName::Custom, ServiceMark::NeedsKey);
+        (s.key, s.check) = (Redacted::new(0), KeyCheck::Untested);
         (s.address, s.address_fault) =
             (Some(text("http://lan.example")), Some(AddressFault::Https));
-        (s.model, s.model_refused, s.site) = (text("no such/model"), true, None);
+        (s.model, s.model_refused, s.site, s.tests) = (text("no such/model"), true, None, false);
         s.acts = vec![CloudButton::Paste, CloudButton::Facts, CloudButton::Off];
         (s.typing, s.caret) = (CloudLine::Address, Redacted::new(7));
         s.saves = vec![CloudLine::Address, CloudLine::Model];
@@ -114,7 +111,7 @@ pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
         (s.typed, s.caret, s.saves) = (Redacted::new(20), Redacted::new(12), vec![CloudLine::Key]);
     });
     let assembly = groq(|s| {
-        (s.service, s.check) = (named("AssemblyAI"), KeyCheck::NoTest);
+        (s.service, s.check, s.tests) = (named("AssemblyAI"), KeyCheck::NoTest, false);
         s.site = Some("www.assemblyai.com".to_owned());
     });
     let mut out = vec![

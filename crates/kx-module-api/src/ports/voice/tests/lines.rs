@@ -92,6 +92,7 @@ fn the_key_page_hides_the_typed_key_and_its_caret_and_names_the_lines_that_save(
         model_refused: false,
         keep: None,
         site: None,
+        tests: false,
         acts: vec![CloudButton::Paste],
         part: None,
         typing: CloudLine::Key,

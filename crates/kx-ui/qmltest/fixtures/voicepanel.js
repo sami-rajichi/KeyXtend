@@ -8449,14 +8449,6 @@ var views = {
                 "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "اختبار",
-                "on": true,
-                "tone": "plain"
               }
             ],
             "caption": "المفتاح",
@@ -8628,14 +8620,6 @@ var views = {
                 "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "اختبار",
-                "on": false,
-                "tone": "plain"
               }
             ],
             "caption": "المفتاح",
@@ -8778,14 +8762,6 @@ var views = {
                 "kind": "save",
                 "label": "حفظ",
                 "name": "حفظ المفتاح",
-                "on": false,
-                "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "اختبار",
                 "on": false,
                 "tone": "plain"
               }
@@ -18068,14 +18044,6 @@ var views = {
                 "name": "Save the key",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Test",
-                "on": true,
-                "tone": "plain"
               }
             ],
             "caption": "Key",
@@ -18247,14 +18215,6 @@ var views = {
                 "name": "Save the key",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Test",
-                "on": false,
-                "tone": "plain"
               }
             ],
             "caption": "Key",
@@ -18397,14 +18357,6 @@ var views = {
                 "kind": "save",
                 "label": "Save",
                 "name": "Save the key",
-                "on": false,
-                "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Test",
                 "on": false,
                 "tone": "plain"
               }
@@ -27687,14 +27639,6 @@ var views = {
                 "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Tester",
-                "on": true,
-                "tone": "plain"
               }
             ],
             "caption": "Clé",
@@ -27866,14 +27810,6 @@ var views = {
                 "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Tester",
-                "on": false,
-                "tone": "plain"
               }
             ],
             "caption": "Clé",
@@ -28016,14 +27952,6 @@ var views = {
                 "kind": "save",
                 "label": "Enregistrer",
                 "name": "Enregistrer la clé",
-                "on": false,
-                "tone": "plain"
-              },
-              {
-                "arg": 0,
-                "id": "test",
-                "kind": "service",
-                "label": "Tester",
                 "on": false,
                 "tone": "plain"
               }

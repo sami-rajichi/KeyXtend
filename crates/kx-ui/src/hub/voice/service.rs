@@ -158,7 +158,7 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
 }
 
 /// The key line: the sealed key's dots and the typed key's, never its text, the mask `PanelLine` draws them from, and
-/// Paste, Save and Test.
+/// Paste, Save and Test, which a row whose first dictation tests the key does not show.
 fn key(t: &I18n, s: &ServiceSheet) -> LineView {
     let b = |x| cloud::button(t, x, &s.acts);
     let words = (VOICE_KEY_LINE, t.text(VOICE_KEY_HINT));
@@ -166,7 +166,7 @@ fn key(t: &I18n, s: &ServiceSheet) -> LineView {
     (line.dots, line.typed) = (*s.key.expose(), *s.typed.expose());
     line.mask = Some(t.text(VOICE_MASK));
     line.buttons.insert(0, b(CloudButton::Paste));
-    line.buttons.push(b(CloudButton::Test));
+    line.buttons.extend(s.tests.then(|| b(CloudButton::Test)));
     line
 }
 

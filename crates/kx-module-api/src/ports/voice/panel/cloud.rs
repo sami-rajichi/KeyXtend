@@ -257,6 +257,8 @@ pub struct ServiceSheet {
     pub keep: Option<bool>,
     /// The host where keys are made, which the link names; `None` for the Custom row.
     pub site: Option<String>,
+    /// The row has a test call, so the key line shows Test; a row whose first dictation tests the key shows none.
+    pub tests: bool,
     /// The page's buttons that act now; the others stay in their place dimmed.
     pub acts: Vec<CloudButton>,
     /// The lines the shown page holds; `None` while one page holds them all.

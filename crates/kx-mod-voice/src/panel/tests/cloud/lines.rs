@@ -153,6 +153,20 @@ fn with_a_sealed_key_and_nothing_typed_the_caret_waits_after_its_dots() {
 }
 
 #[test]
+fn a_row_with_no_test_call_shows_no_test_and_its_note_while_keyed() {
+    let mut rig = on_cloud("");
+    let lemon = table().unwrap().get("lemonfox").unwrap();
+    put(&mut rig, "services", &entry(lemon, ""));
+    rig.keyed.insert(lemon.id.clone());
+    act(&mut rig, &lemon.shown(), CloudButton::Lines);
+    let sheet = lines_sheet(&mut rig);
+    let test = (sheet.tests, sheet.acts.contains(&CloudButton::Test));
+    assert_eq!(test, (false, false), "no Test at all");
+    assert_eq!(sheet.check, KeyCheck::NoTest, "its note");
+    assert!(lines_sheet(&mut on_groq_lines()).tests, "Groq has a test");
+}
+
+#[test]
 fn remove_drops_the_key_and_its_dots() {
     let mut rig = on_groq_lines();
     rig.with(|p, _| p.dots("groq", 12));

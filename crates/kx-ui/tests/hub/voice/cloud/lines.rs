@@ -30,6 +30,7 @@ pub(super) fn groq_lines() -> ServiceSheet {
         model_refused: false,
         keep: None,
         site: Some("console.groq.com".to_owned()),
+        tests: true,
         acts: CloudButton::ALL.to_vec(),
         part: None,
         typing: CloudLine::Key,
@@ -105,6 +106,17 @@ fn the_key_page_shows_the_key_as_dots_with_paste_and_test() {
     );
     assert_eq!(model["mask"], Value::Null, "only the key hides");
     assert_eq!(p["sheet"]["keep"], Value::Null);
+}
+
+#[test]
+fn a_row_with_no_test_call_shows_paste_and_save_with_no_test() {
+    let mut lines = groq_lines();
+    (lines.tests, lines.check) = (false, KeyCheck::NoTest);
+    let p = lines_json(lines);
+    let ids: Vec<_> = (p["sheet"]["key"]["buttons"].as_array().unwrap().iter())
+        .map(|b| b["id"].as_str().unwrap_or_default().to_owned())
+        .collect();
+    assert_eq!(ids, ["paste", "key"], "Paste, then Save");
 }
 
 #[test]

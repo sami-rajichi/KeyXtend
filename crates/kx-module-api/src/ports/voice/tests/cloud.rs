@@ -244,6 +244,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         model_refused: true,
         keep: Some(true),
         site: None,
+        tests: true,
         acts: vec![CloudButton::Paste, CloudButton::Test],
         part: Some(LinesPart::Model),
         typing: CloudLine::Address,

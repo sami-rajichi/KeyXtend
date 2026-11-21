@@ -165,7 +165,8 @@ function svcPage() {
   const s = byId(S.cur), v = S.svc[s.id], addr = S.typed.addr[s.id] || '', typed = S.typed.model[s.id] || '';
   const lrow = inner => '<div class="lrow">' + inner + '</div>';
   const na = s.keep0 && v.keep0 && typed ? '<div class="res' + A + '">' + mark(l.mNa, 'x', 'out') + '<span' + D + '>' + l.noKeep + '</span></div>' : '';
-  const lines = lrow(pline('key', l.keyCap, v.key, l.keyHint, true) + btn('paste', 'clipboard-paste', l.paste) + btn('test', 'activity', l.test, '', !v.key || !s.test || v.test === 'testing')) +
+  // A row with no test call shows no Test, as its first dictation tests the key (owner, 2026-11-21).
+  const lines = lrow(pline('key', l.keyCap, v.key, l.keyHint, true) + btn('paste', 'clipboard-paste', l.paste) + (s.test ? btn('test', 'activity', l.test, '', !v.key || v.test === 'testing') : '')) +
     keyResult(s, v) +
     (s.addr ? lrow(pline('addr', l.addrCap, addr, t(l.addrHint, {ex:bdi('https://example.com/v1/audio/transcriptions')}))) : '') +
     (addr && !addr.startsWith('https://') ? '<div class="res bad' + A + '">' + ic('triangle-alert') + '<span' + D + '>' + t(l.addrBad, {ex:bdi('https://example.com')}) + '</span></div>' : '') +
