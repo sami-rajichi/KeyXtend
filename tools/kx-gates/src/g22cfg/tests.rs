@@ -15,8 +15,6 @@ const VOICE_NAMES: &str = include_str!("../../../../crates/kx-ui/qml/VoiceNames.
 const BAR_IDS: &str = include_str!("../../../../crates/kx-ui/src/i18n/keys/voice/ids.rs");
 /// The app's run, which logs the voice gate build's warning.
 const APP_RUN: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
-/// The voice gate build's speech, which logs each written dictation's device.
-const APP_TOLD: &str = include_str!("../../../../apps/keyxtend/src/played/told.rs");
 /// The voice gate build's stage lines.
 const APP_STAGE: &str = include_str!("../../../../apps/keyxtend/src/played/stage.rs");
 /// The voice module's typing, which logs each text sent to the keyboard.
@@ -56,9 +54,8 @@ fn a_plain_name_is_one_folder_name_and_a_clip_must_be_one() {
 fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
-    let bad: [fn(&mut G22Product); 24] = [
+    let bad: [fn(&mut G22Product); 22] = [
         |g| g.card_wait_ms = 0,
-        |g| g.wrote_line = " ".into(),
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
         |g| g.program = "../../target/gate-input/release/keyxtend.exe".into(),
         |g| drop(g.layouts.pop_first()),
@@ -78,7 +75,6 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
         |g| g.log_level = "loud".into(),
         |g| g.why_marks.clear(),
         |g| g.why_marks.push(" ".into()),
-        |g| g.stage_line = " ".into(),
         |g| g.typed_line.clear(),
         |g| g.log_level = "info".into(),
     ];
@@ -108,17 +104,12 @@ fn the_product_runs_names_are_kx_uis_and_the_apps() {
         APP_RUN.contains(&format!("\"{}\"", g.warn_line)),
         "the app's warning"
     );
-    assert!(
-        APP_TOLD.contains(&format!("\"{}\"", g.wrote_line)),
-        "the app's written-dictation line"
-    );
 }
 
 #[test]
 fn the_timing_lines_are_the_apps_and_the_voice_modules_at_the_level_the_run_keeps() {
     let g = shipped().g22_product;
     let level = G22Product::LINES_LEVEL;
-    assert!(APP_STAGE.contains(&format!("\"{}\"", g.stage_line)));
     assert!(APP_STAGE.contains(&format!("tracing::{level}!({{ STAGE }}")));
     let typed = format!("tracing::{level}!(\"{}\")", g.typed_line);
     assert!(MOD_TYPING.contains(&typed), "{typed}");

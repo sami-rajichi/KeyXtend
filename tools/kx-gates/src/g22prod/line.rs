@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::time::Duration;
 
+use kx_ipc::gate::STAGE_LINE;
 use kx_mod_voice::VoiceSettings;
 use serde_json::{Value, json};
 
@@ -117,13 +118,12 @@ fn dictate(
     line: &Line,
 ) -> (Value, Option<Ended>) {
     let g = &ctx.cfg.g22_product;
-    eprintln!("g22 {NAME}: {}", case.lang);
+    eprintln!("{} {NAME}: {}", g22::GATE, case.lang);
     let (args, since) = ([g22::sound_flag(), case.path.clone()], now_us());
     let drive = |pid| one(ctx, pid, case, &line.waits);
     let (got, ended) = fresh.with_args(&args, g.ready_ms, Some(&g.warn_line), drive);
     let log = fresh.log();
-    let read =
-        (log.as_ref().map_err(Clone::clone)).and_then(|l| wrote::read(l, since, &g.wrote_line));
+    let read = (log.as_ref().map_err(Clone::clone)).and_then(|l| wrote::read(l, since));
     let (writer, fit) = wrote::judge(&read, &line.want);
     let mut out = got.map_or_else(
         |e| json!({ "lang": case.lang, "error": e, "pass": false }),
@@ -147,7 +147,7 @@ fn tell(ctx: &Ctx, out: &mut Value, (log, since): (&str, i64), line: &Line) {
     let g = &ctx.cfg.g22_product;
     if out["pass"] == true {
         let lines = Lines {
-            stage: &g.stage_line,
+            stage: STAGE_LINE,
             typed: &g.typed_line,
         };
         let timing = stages::read(log, since, &lines);
@@ -156,7 +156,7 @@ fn tell(ctx: &Ctx, out: &mut Value, (log, since): (&str, i64), line: &Line) {
     }
     out["log"] = json!(why::marked(log, since, &g.why_marks));
     if matches!(line.want, Writer::Service(_)) {
-        out["faults"] = json!(wrote::faults(log, since, &ctx.cfg.g22_cloud.failed_line));
+        out["faults"] = json!(wrote::faults(log, since));
     }
 }
 

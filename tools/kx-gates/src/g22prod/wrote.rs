@@ -1,7 +1,7 @@
 //! Who wrote a language's text: the voice gate build logs each written dictation's device by id, or a cloud
 //! dictation's service by its row's id, and the run reads those lines back from the copy's log, never any text.
 
-use kx_ipc::gate::{DEVICE, FAULT, SERVICE};
+use kx_ipc::gate::{DEVICE, FAILED_LINE, FAULT, SERVICE, WROTE_LINE};
 use kx_mod_voice::keys::KEY_UNREAD;
 use kx_module_api::ports::{BlobName, CloudFault, DevicePick};
 use serde_json::{Value, json};
@@ -26,7 +26,7 @@ impl Writer {
         }
     }
 
-    /// The fields its line's values go under: its id's and its match's.
+    /// The fields its line's values go under: its id's, its match's and its error's.
     fn keys(&self) -> (&'static str, &'static str, &'static str) {
         match self {
             Self::Device(_) => (DEVICE, "device_match", "device_error"),
@@ -41,21 +41,22 @@ impl Writer {
     }
 }
 
-/// The writers of `log`'s lines holding `marker` stamped at or after `since_us`, oldest first; an error for such a line
-/// with no device or service id, or with both.
-pub(super) fn read(log: &str, since_us: i64, marker: &str) -> Result<Vec<Writer>, String> {
-    read_since(log, since_us, |l| writer_of(l, marker))
+/// The writers of `log`'s written-dictation lines stamped at or after `since_us`, oldest first; an error for such a
+/// line with no device or service id, or with both.
+pub(super) fn read(log: &str, since_us: i64) -> Result<Vec<Writer>, String> {
+    read_since(log, since_us, writer_of)
 }
 
-/// The writer of `line` when it holds `marker`; an error that never repeats the value when it has no single id.
-fn writer_of(line: &str, marker: &str) -> Result<Option<Writer>, String> {
-    if !line.contains(marker) {
+/// The writer of `line` when it is a written-dictation line; an error that never repeats the value when it has no
+/// single id.
+fn writer_of(line: &str) -> Result<Option<Writer>, String> {
+    if !line.contains(WROTE_LINE) {
         return Ok(None);
     }
-    let none = || format!("{marker}: no single {DEVICE} or {SERVICE} id");
+    let none = || format!("{WROTE_LINE}: no single {DEVICE} or {SERVICE} id");
     match (value_of(line, DEVICE), value_of(line, SERVICE)) {
         (Some(id), None) => match DevicePick::parse(id) {
-            Some(DevicePick::Auto) | None => Err(format!("{marker}: {DEVICE} is no device id")),
+            Some(DevicePick::Auto) | None => Err(format!("{WROTE_LINE}: {DEVICE} is no device id")),
             Some(device) => Ok(Some(Writer::Device(device))),
         },
         (None, Some(id)) if BlobName::new(id).is_ok() => Ok(Some(Writer::Service(id.to_owned()))),
@@ -77,15 +78,18 @@ pub(super) fn judge(read: &Result<Vec<Writer>, String>, want: &Writer) -> (Value
     (v, fit)
 }
 
-/// The fault kinds of `log`'s lines stamped at or after `since_us`, oldest first: those holding `marker`, and the voice
-/// module's key-read warning as a key fault. A value that is no plain kind name is left out, so nothing else prints.
-pub(super) fn faults(log: &str, since_us: i64, marker: &str) -> Vec<String> {
+/// The fault kinds of `log`'s lines stamped at or after `since_us`, oldest first: the failed-dictation lines, and
+/// the voice module's key-read warning as a key fault. A value that is no plain kind name is left out.
+pub(super) fn faults(log: &str, since_us: i64) -> Vec<String> {
     let plain = |k: &&str| !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric());
     let kind = |l: &str| {
         if l.contains(KEY_UNREAD) {
             return Ok(Some(CloudFault::Key.kind().to_owned()));
         }
-        let value = l.contains(marker).then(|| value_of(l, FAULT)).flatten();
+        let value = l
+            .contains(FAILED_LINE)
+            .then(|| value_of(l, FAULT))
+            .flatten();
         Ok(value.filter(plain).map(str::to_owned))
     };
     read_since(log, since_us, kind).unwrap_or_default()

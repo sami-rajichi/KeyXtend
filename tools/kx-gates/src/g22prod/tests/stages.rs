@@ -1,15 +1,17 @@
 //! Where a passing language's time went, read from the copy's stage and typed lines by their stamps, numbers only.
 
-use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS};
+use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE, START, STOP, TOOK_MS};
 
 use super::super::stages::{self, Lines, Piece, Timing};
 use crate::budget::stamp_us;
 use crate::config::load;
 
-/// The shipped stage and typed lines.
-fn names() -> (String, String) {
-    let g = load().expect("the settings load").g22_product;
-    (g.stage_line, g.typed_line)
+/// The stage line and the shipped typed line.
+fn names() -> (&'static str, String) {
+    (
+        STAGE_LINE,
+        load().expect("the settings load").g22_product.typed_line,
+    )
 }
 
 /// A line stamped `ms` past 10:00:00 that holds `rest`.
@@ -29,7 +31,7 @@ fn read(lines: &[String]) -> Result<Timing, String> {
     let (stage, typed) = names();
     let since = stamp_us("2026-11-20T10:00:00.000000Z").expect("a stamp");
     let names = Lines {
-        stage: &stage,
+        stage,
         typed: &typed,
     };
     stages::read(&lines.join("\n"), since, &names)

@@ -40,7 +40,6 @@ fn the_line_holds_the_device_id_as_one_word_at_the_default_level() {
     assert_eq!(devices(&text), ["Vulkan0"], "{text}");
 }
 
-#[cfg(feature = "mod-voice")]
 mod runs {
     use super::*;
     use kx_module_api::ports::{CardUse, SpeechModel, SpeechStage};

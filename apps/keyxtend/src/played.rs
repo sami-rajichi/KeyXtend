@@ -1,5 +1,6 @@
 //! The voice gate build only: the gate worker started with its clip after the voice job's words, so it plays the clip in
-//! place of the microphone (G22). No shipped build holds it, and the stage refuses a program holding its flag.
+//! place of the microphone (G22), and cloud speech that logs each cloud dictation's service. No shipped build holds it,
+//! and the stage refuses a program holding its flag.
 
 #[cfg(test)]
 mod logged;

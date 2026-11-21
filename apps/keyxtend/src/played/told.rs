@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use kx_ipc::gate::DEVICE;
+use kx_ipc::gate::{DEVICE, WROTE_LINE};
 use kx_module_api::SecretBytes;
 use kx_module_api::ports::{
     CardId, CheckAsk, CheckDone, Device, DevicePick, FactsAsk, JobLimits, ModelFacts, Speech,
@@ -12,9 +12,6 @@ use kx_module_api::ports::{
 };
 
 use super::stage;
-
-/// The message of the line logged as each dictation is written; kx-gates reads it back.
-pub const WROTE_LINE: &str = "voice gate build: a dictation was written";
 
 /// What a run's latest ask named, which its notes read.
 #[derive(Clone)]

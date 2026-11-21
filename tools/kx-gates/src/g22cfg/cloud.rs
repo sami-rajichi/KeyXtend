@@ -1,5 +1,5 @@
-//! G22's cloud line (`[g22_cloud]`): the owner's daily data folder, which only this PC's local file sets, the copy's
-//! listening and text waits, and the gate build's failed-dictation line.
+//! G22's cloud line (`[g22_cloud]`): the owner's daily data folder, which only this PC's local file sets, and the
+//! copy's listening and text waits.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -10,6 +10,9 @@ use kx_module_api::ports::path_ok;
 use serde::Deserialize;
 
 use crate::cfgfile::{FILE, LOCAL_FILE};
+
+/// The key of the owner's daily data folder, as the help and the errors name it.
+pub const DAILY: &str = "g22_cloud.daily_dir";
 
 /// G22's cloud line on the product.
 #[derive(Debug, Clone, Deserialize)]
@@ -22,8 +25,6 @@ pub struct G22Cloud {
     pub open_ms: u64,
     /// The longest wait for a cloud dictation's text after Stop, in ms; at most `[voice] net_wait_s`.
     pub text_wait_ms: u64,
-    /// The line the voice gate build logs with the service and fault kind of each cloud dictation that failed.
-    pub failed_line: String,
 }
 
 impl G22Cloud {
@@ -38,23 +39,20 @@ impl G22Cloud {
         allow(dead_code, reason = "Only the voice gates call it.")
     )]
     pub fn unset() -> String {
-        format!("set g22_cloud.daily_dir to the daily data folder in {LOCAL_FILE} beside {FILE}")
+        format!("set {DAILY} to the daily data folder in {LOCAL_FILE} beside {FILE}")
     }
 
     /// Refuses settings the cloud line could not run or judge by, naming the first bad key but never the folder.
     pub fn check(&self) -> Result<(), String> {
         let s = VoiceSettings::from_defaults().map_err(|e| format!("[voice] defaults: {e}"))?;
         if self.daily().is_some_and(|d| !path_ok(d)) {
-            return Err("g22_cloud.daily_dir must be an absolute drive path".into());
+            return Err(format!("{DAILY} must be an absolute drive path"));
         }
         let most = u64::from(s.net_wait_s) * u64::from(MS_PER_S);
         if self.open_ms == 0 || self.text_wait_ms == 0 || self.text_wait_ms > most {
             return Err(
                 "g22_cloud's waits must be above 0, text_wait_ms within [voice] net_wait_s".into(),
             );
-        }
-        if self.failed_line.trim().is_empty() {
-            return Err("g22_cloud needs a failed_line".into());
         }
         Ok(())
     }

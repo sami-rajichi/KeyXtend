@@ -10,29 +10,45 @@ use kx_platform_fake::{CloudAnswer, FakeCloud};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-/// The rows the tests send to: one at its own address, and Custom at a typed one.
-const GROQ: &str = "groq";
-const CUSTOM: &str = "custom";
-/// A row kept in the table but not offered, whose address Custom may still be pointed at.
-const HIDDEN: &str = "openai";
-/// A typed Custom address on a test host of its own, and a typed model id.
+/// A made-up typed Custom address on a test host of its own, and a made-up typed model id.
 const TYPED: &str = "https://stt.example.test/v1/audio/transcriptions";
 const TYPED_MODEL: &str = "whisper-test";
-/// The test's own key, made here, and what the service answers; no line may hold either.
-const KEY: &str = "test-key-made-here";
+/// The words of the test's own key, joined as it runs so no key-like text sits here, and what the service answers;
+/// no line may hold either.
+const KEY_WORDS: [&str; 3] = ["kx", "sent", "test"];
 const SAID: &str = "Sfax by the sea";
 /// The piece's length, and the level the stage lines take.
 const PIECE_MS: u32 = 1000;
 const DEBUG: Option<&str> = Some("debug");
 
-/// The row `id` names.
-fn row(id: &str) -> &'static Service {
-    table().unwrap().get(id).unwrap()
+/// True when `row` takes a typed address, as Custom does.
+fn typed(row: &Service) -> bool {
+    matches!(row.address, Address::Typed { .. })
+}
+
+/// The first offered row at its own fixed address, as the shipped table orders them.
+fn fixed() -> &'static Service {
+    table().unwrap().offered().find(|r| !typed(r)).unwrap()
+}
+
+/// The row at a typed address: Custom.
+fn custom() -> &'static Service {
+    table().unwrap().rows().iter().find(|r| typed(r)).unwrap()
+}
+
+/// A row kept in the table but not offered, whose address Custom may still be pointed at.
+fn hidden() -> &'static Service {
+    table().unwrap().rows().iter().find(|r| !r.offered).unwrap()
+}
+
+/// The test's own key.
+fn key_text() -> String {
+    KEY_WORDS.join("-")
 }
 
 /// The test's key as the port takes it.
 fn key() -> kx_module_api::Secret {
-    Redacted::new(Zeroizing::new(KEY.to_owned()))
+    Redacted::new(Zeroizing::new(key_text()))
 }
 
 /// An English ask from `row` at its own address or at `typed`, with one piece of `PIECE_MS`, as the actor builds one
@@ -43,8 +59,7 @@ fn ask_as(row: &Service, typed: &str, listed: Option<&Model>, keep: bool) -> Clo
         .map_or(Chosen::Typed(TYPED_MODEL), Chosen::Listed)
         .sent();
     let lang = listed.and_then(|m| m.code("en")).unwrap_or("en");
-    let per_s = SOUND_HZ * SAMPLE_BYTES;
-    let bytes = per_s * usize::try_from(PIECE_MS / MS_PER_S).unwrap();
+    let bytes = SOUND_BYTES_PER_S * usize::try_from(PIECE_MS / MS_PER_S).unwrap();
     CloudAsk {
         job: s.job(),
         shape: row.shape_for(listed, keep),
@@ -67,11 +82,7 @@ fn ask(row: &Service, typed: &str) -> CloudAsk {
 
 /// Each row's address: its own, or `TYPED` for a typed row.
 fn address(row: &Service) -> &'static str {
-    if matches!(row.address, Address::Typed { .. }) {
-        TYPED
-    } else {
-        ""
-    }
+    if typed(row) { TYPED } else { "" }
 }
 
 #[test]
@@ -83,12 +94,16 @@ fn a_written_cloud_dictation_names_its_service_and_never_its_text_key_or_address
         count.fetch_add(1, Ordering::SeqCst);
     });
     let sent = cloud(Arc::new(fake));
-    let groq = row(GROQ);
-    let text = logged::at(None, || drop(sent.send(ask(groq, ""), tell).unwrap()));
-    assert_eq!(logged::values(&text, WROTE_LINE, SERVICE), [GROQ], "{text}");
+    let row = fixed();
+    let text = logged::at(None, || drop(sent.send(ask(row, ""), tell).unwrap()));
+    assert_eq!(
+        logged::values(&text, WROTE_LINE, SERVICE),
+        [row.id.as_str()],
+        "{text}"
+    );
     assert!(!text.contains(FAILED_LINE), "{text}");
-    let host = groq.url("").unwrap().host().to_owned();
-    for secret in [SAID, KEY, host.as_str()] {
+    let host = row.url("").unwrap().host().to_owned();
+    for secret in [SAID, key_text().as_str(), host.as_str()] {
         assert!(!text.contains(secret), "{secret} leaked: {text}");
     }
     assert_eq!(
@@ -102,21 +117,24 @@ fn a_written_cloud_dictation_names_its_service_and_never_its_text_key_or_address
 fn a_failed_cloud_dictation_names_its_service_and_its_faults_kind_alone() {
     let fake = FakeCloud::new();
     let sent = Sent(Arc::new(fake.clone()));
-    let groq = row(GROQ);
+    let row = fixed();
     let renews_in = Some(Duration::from_secs(3600));
     let text = logged::at(None, || {
         fake.fail(CloudFault::Gone);
-        assert!(sent.send(ask(groq, ""), Box::new(|_| {})).is_err());
+        assert!(sent.send(ask(row, ""), Box::new(|_| {})).is_err());
         fake.script(vec![CloudAnswer::Fault(CloudFault::Allowance {
             renews_in,
         })]);
-        drop(sent.send(ask(groq, ""), Box::new(|_| {})).unwrap());
+        drop(sent.send(ask(row, ""), Box::new(|_| {})).unwrap());
     });
     assert_eq!(
         logged::values(&text, FAILED_LINE, FAULT),
         ["Gone", "Allowance"]
     );
-    assert_eq!(logged::values(&text, FAILED_LINE, SERVICE), [GROQ, GROQ]);
+    assert_eq!(
+        logged::values(&text, FAILED_LINE, SERVICE),
+        [row.id.as_str(), row.id.as_str()]
+    );
     assert!(!text.contains(WROTE_LINE), "nothing was written: {text}");
     assert!(!text.contains("3600"), "never a value it holds: {text}");
 }
@@ -135,32 +153,35 @@ fn each_rows_own_ask_names_that_row_with_any_of_its_models_and_either_switch() {
 }
 
 #[test]
-fn groqs_own_ask_is_groq_and_custom_at_groqs_address_is_custom() {
-    let (groq, custom) = (row(GROQ), row(CUSTOM));
-    let at = groq.url("").unwrap();
-    for model in groq.models.iter().map(Some).chain([None]) {
-        assert_eq!(service_of(&ask_as(groq, "", model, false)), Some(GROQ));
+fn a_fixed_rows_own_ask_is_that_row_and_custom_at_its_address_is_custom() {
+    let (row, custom) = (fixed(), custom());
+    let (at, mine) = (row.url("").unwrap(), Some(custom.id.as_str()));
+    for model in row.models.iter().map(Some).chain([None]) {
+        assert_eq!(
+            service_of(&ask_as(row, "", model, false)),
+            Some(row.id.as_str())
+        );
     }
     let mut a = ask_as(custom, at.expose(), None, false);
     assert_eq!(
         service_of(&a),
-        Some(CUSTOM),
-        "Custom's own model at Groq's address"
+        mine,
+        "Custom's own model at the row's address"
     );
-    a.model = groq.models.first().map(|m| Redacted::new(m.id.clone()));
-    assert_eq!(service_of(&a), Some(CUSTOM), "even with Groq's model");
+    a.model = row.models.first().map(|m| Redacted::new(m.id.clone()));
+    assert_eq!(service_of(&a), mine, "even with the row's model");
 }
 
 #[test]
 fn custom_at_a_listed_rows_address_is_named_custom_even_a_hidden_rows() {
-    assert!(!row(HIDDEN).offered, "{HIDDEN} is a hidden row");
-    let custom = row(CUSTOM);
-    let fixed = table().unwrap().rows().iter();
-    for r in fixed.filter(|r| matches!(r.address, Address::Fixed(_))) {
+    assert!(!hidden().offered, "a hidden row is still in the table");
+    let (custom, rows) = (custom(), table().unwrap().rows().iter());
+    let mine = Some(custom.id.as_str());
+    for r in rows.filter(|r| matches!(r.address, Address::Fixed(_))) {
         let mut a = ask_as(custom, r.url("").unwrap().expose(), None, false);
-        assert_eq!(service_of(&a), Some(CUSTOM), "at {}'s address", r.id);
+        assert_eq!(service_of(&a), mine, "at {}'s address", r.id);
         a.model = r.models.first().map(|m| Redacted::new(m.id.clone()));
-        assert_eq!(service_of(&a), Some(CUSTOM), "with {}'s model", r.id);
+        assert_eq!(service_of(&a), mine, "with {}'s model", r.id);
     }
 }
 
@@ -169,7 +190,7 @@ fn the_send_and_each_piece_log_a_debug_stage_with_the_pieces_length() {
     let fake = FakeCloud::new();
     fake.script(vec![CloudAnswer::text(SAID)]);
     let sent = Sent(Arc::new(fake));
-    let custom = row(CUSTOM);
+    let custom = custom();
     let text = logged::at(DEBUG, || {
         drop(sent.send(ask(custom, TYPED), Box::new(|_| {})).unwrap());
     });
@@ -178,7 +199,10 @@ fn the_send_and_each_piece_log_a_debug_stage_with_the_pieces_length() {
     assert_eq!(logged::values(&text, STAGE_LINE, INDEX), ["0"]);
     let length = logged::values(&text, STAGE_LINE, SOUND_MS);
     assert_eq!(length, [PIECE_MS.to_string()]);
-    assert_eq!(logged::values(&text, WROTE_LINE, SERVICE), [CUSTOM]);
+    assert_eq!(
+        logged::values(&text, WROTE_LINE, SERVICE),
+        [custom.id.as_str()]
+    );
     assert!(!text.contains(TYPED_MODEL), "never a typed id: {text}");
 }
 
@@ -186,13 +210,13 @@ fn the_send_and_each_piece_log_a_debug_stage_with_the_pieces_length() {
 fn a_key_test_goes_through_as_it_is() {
     let fake = FakeCloud::new();
     fake.script_test(Err(CloudFault::Key));
-    let (sent, groq) = (Sent(Arc::new(fake)), row(GROQ));
+    let (sent, row) = (Sent(Arc::new(fake)), fixed());
     let s = VoiceSettings::from_defaults().unwrap();
     let test = CloudTest {
         job: s.job(),
-        shape: groq.shape.clone(),
-        url: groq.test_url("").unwrap(),
-        header: groq.header.clone(),
+        shape: row.shape.clone(),
+        url: row.test_url("").unwrap(),
+        header: row.header.clone(),
         key: key(),
         wait_s: s.net_wait_s,
     };

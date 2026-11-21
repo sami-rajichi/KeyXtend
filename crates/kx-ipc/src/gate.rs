@@ -1,4 +1,5 @@
-//! Gate builds only: the field and stage names the voice gate build logs and kx-gates reads back, one copy for both.
+//! Gate builds only: the line, field and stage names the voice gate build logs and kx-gates reads back, one copy for
+//! both.
 //! Like `SOUND_FLAG`, only the app's `gate-voice` and kx-gates' `voice` features reach them.
 
 /// The field naming a dictation's stage.
@@ -28,3 +29,10 @@ pub const LOAD: &str = "load";
 pub const PIECE: &str = "piece";
 /// A cloud dictation's pieces went to its service.
 pub const SEND: &str = "send";
+
+/// The message of each stage's line.
+pub const STAGE_LINE: &str = "voice gate build: a stage";
+/// The message of the line logged as each dictation is written, with its device or service.
+pub const WROTE_LINE: &str = "voice gate build: a dictation was written";
+/// The message of the line logged as a cloud dictation fails, with its service and fault kind.
+pub const FAILED_LINE: &str = "voice gate build: a cloud dictation failed";

@@ -91,9 +91,6 @@ open_ms = 15000
 settle_ms = 3000
 # The line the voice gate build logs at start with its clip (apps/keyxtend/src/run.rs).
 warn_line = "played sound in place of the microphone: a gate build, never for daily use"
-# The line it logs with the device or service id of each dictation it writes, which each language's line prints
-# (apps/keyxtend/src/played/told.rs, sent.rs).
-wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"
 stop = "stop"
@@ -103,10 +100,6 @@ log_level = "debug"
 # What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
 # which holds text.
 why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
-# The line the voice gate build logs for each stage of a dictation: its start, the microphone open, the model's load,
-# each piece, Stop and a cloud dictation's send (apps/keyxtend/src/played/stage.rs). Each passing language prints the
-# time between them in ms.
-stage_line = "voice gate build: a stage"
 # The voice module's line as a text goes to the keyboard, which ends Stop to text (kx-mod-voice actor/typing.rs).
 typed_line = "a text went to the keyboard"
 
@@ -123,9 +116,6 @@ open_ms = 2000
 # Longest wait for a cloud dictation's text after Stop, in ms: at most [voice] net_wait_s, the product's own wait for one
 # request's answer (checked).
 text_wait_ms = 60000
-# The line the voice gate build logs with the service and the fault's kind of each cloud dictation that failed
-# (apps/keyxtend/src/played/sent.rs).
-failed_line = "voice gate build: a cloud dictation failed"
 
 # The staged worker's edges (`g22 staged`), on a copy of what `cargo xtask stage` wrote, with no screen and no mouse.
 # Edge 28: without the card part the worker starts and offers no card. Edge 29: with only the plainest processor part,

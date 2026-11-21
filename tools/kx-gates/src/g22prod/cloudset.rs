@@ -11,8 +11,8 @@ use kx_module_api::{MS_PER_S, Redacted};
 const NO_KEY: &str = "no sealed key in the daily data folder";
 const NO_LINES: &str = "the daily settings hold no typed address and model for it";
 const BAD_ADDRESS: &str = "the daily typed address is not one the row takes";
-const BAD_MODEL: &str = "the daily typed model is not one the row takes";
-const NO_LANG: &str = "its model knows none of the clip languages";
+pub(super) const BAD_MODEL: &str = "the daily typed model is not one the row takes";
+pub(super) const NO_LANG: &str = "its model knows none of the clip languages";
 
 /// A typed row's address and model, as the daily settings hold them; never shown.
 #[derive(Clone, Debug)]

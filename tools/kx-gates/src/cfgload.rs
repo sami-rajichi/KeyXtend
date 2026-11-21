@@ -7,10 +7,24 @@ use std::path::Path;
 
 use crate::cfgfile::{LOCAL_FILE, LOCAL_KEYS, OWN};
 
-/// The settings file at `path`, parsed.
+/// The settings file at `path`, parsed; a broken local file is named with its line and column alone, as its text
+/// may hold the owner's folder.
 fn read_table(path: &Path) -> Result<toml::Table, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    text.parse().map_err(|e| format!("{}: {e}", path.display()))
+    let local = path.file_name().is_some_and(|n| n == LOCAL_FILE);
+    text.parse().map_err(|e: toml::de::Error| match e.span() {
+        Some(span) if local => format!("{LOCAL_FILE}: no TOML at {}", place(&text, span.start)),
+        None if local => format!("{LOCAL_FILE}: no TOML"),
+        _ => format!("{}: {e}", path.display()),
+    })
+}
+
+/// The line and column of byte `at` in `text`, counted from 1.
+fn place(text: &str, at: usize) -> String {
+    let before = text.get(..at).unwrap_or(text);
+    let line = before.matches('\n').count() + 1;
+    let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count()) + 1;
+    format!("line {line}, column {column}")
 }
 
 /// The sections of each named file's table, as one table; a section in two files is refused, naming both.
@@ -65,6 +79,8 @@ fn add_local(all: &mut toml::Table, local: toml::Table) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    use kx_test_support::tempdir::TempDir;
+
     use super::*;
     use crate::cfgfile::{FILE, LOCAL_FILE, P3_FILE, P4_FILE};
 
@@ -143,13 +159,29 @@ mod tests {
         assert!(twice.is_err(), "a key a tracked file sets");
     }
 
-    #[test]
-    fn the_local_file_is_read_only_from_the_settings_folder() {
-        let dir = kx_test_support::tempdir::TempDir::new("kx-gates-local").expect("a folder");
+    /// A folder holding a copy of the tracked settings files.
+    fn copied() -> TempDir {
+        let dir = TempDir::new("kx-gates-local").expect("a folder");
         let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         for name in OWN {
             std::fs::copy(crate_dir.join(name), dir.path().join(name)).expect("a copy");
         }
+        dir
+    }
+
+    #[test]
+    fn a_broken_local_file_names_its_line_and_column_never_its_text() {
+        let (dir, folder) = (copied(), r"E:\Users\someone\daily");
+        let broken = format!("[g22_cloud]\ndaily_dir = '{folder}\n");
+        std::fs::write(dir.path().join(LOCAL_FILE), broken).expect("written");
+        let e = read(dir.path()).expect_err("broken");
+        assert!(e.contains(LOCAL_FILE) && e.contains("line 2"), "{e}");
+        assert!(!e.contains("someone") && !e.contains("daily_dir"), "{e}");
+    }
+
+    #[test]
+    fn the_local_file_is_read_only_from_the_settings_folder() {
+        let dir = copied();
         let before = read(dir.path()).expect("reads");
         assert!(
             before["g22_bench"].get("models_dir").is_none(),

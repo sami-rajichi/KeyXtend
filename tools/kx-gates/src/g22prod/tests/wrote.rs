@@ -1,22 +1,16 @@
 //! The device or service that wrote each language's text, read back from the copy's log by id, never any text.
 
-use kx_ipc::gate::{DEVICE, FAULT, SERVICE};
+use kx_ipc::gate::{DEVICE, FAILED_LINE, FAULT, SERVICE, WROTE_LINE};
 use kx_mod_voice::keys::KEY_UNREAD;
 use kx_module_api::ports::{CardId, CloudFault, DevicePick};
 use serde_json::{Value, json};
 
 use super::super::wrote::{self, Writer};
 use crate::budget::stamp_us;
-use crate::config::load;
 
 /// Two service ids as the table writes them.
 const GROQ: &str = "groq";
 const CUSTOM: &str = "custom";
-
-/// The written-dictation line the shipped settings name.
-fn marker() -> String {
-    load().expect("the settings load").g22_product.wrote_line
-}
 
 fn card(id: &str) -> Writer {
     Writer::Device(DevicePick::Card(CardId::new(id).expect("an id")))
@@ -43,7 +37,7 @@ fn fits(read: &[&Writer], want: &Writer) -> bool {
 
 #[test]
 fn the_copys_written_lines_since_its_start_give_each_device_or_service_by_id() {
-    let m = marker();
+    let m = WROTE_LINE;
     let log = [
         logged(0, &format!("{m} device=Vulkan9")),
         logged(2, "another line device=Vulkan8"),
@@ -53,14 +47,14 @@ fn the_copys_written_lines_since_its_start_give_each_device_or_service_by_id() {
     ]
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:01.000000Z").expect("a stamp");
-    let got = wrote::read(&log, since, &m);
+    let got = wrote::read(&log, since);
     assert_eq!(got, Ok(vec![cpu(), card("Vulkan0"), service(GROQ)]));
-    assert_eq!(wrote::read("", since, &m), Ok(Vec::new()), "none written");
+    assert_eq!(wrote::read("", since), Ok(Vec::new()), "none written");
 }
 
 #[test]
 fn a_written_line_without_one_id_is_refused_and_its_value_never_printed() {
-    let m = marker();
+    let m = WROTE_LINE;
     for bad in [
         "device=auto",
         "device=a/b",
@@ -72,7 +66,7 @@ fn a_written_line_without_one_id_is_refused_and_its_value_never_printed() {
         "device=cpu service=groq",
     ] {
         let log = logged(3, &format!("{m} {bad}"));
-        let e = wrote::read(&log, 0, &m).expect_err(bad);
+        let e = wrote::read(&log, 0).expect_err(bad);
         assert!(e.contains(DEVICE), "{e}");
         assert!(bad.is_empty() || !e.contains(bad), "{e}");
     }
@@ -145,7 +139,7 @@ fn a_languages_fields_are_the_writers_id_and_numbers_never_text() {
 
 #[test]
 fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
-    let failed = load().expect("the settings load").g22_cloud.failed_line;
+    let failed = FAILED_LINE;
     let log = [
         logged(0, &format!("{failed} {FAULT}=Rate {SERVICE}={GROQ}")),
         logged(2, &format!("{failed} {FAULT}=Key {SERVICE}={GROQ}")),
@@ -155,12 +149,12 @@ fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
     ]
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:01.000000Z").expect("a stamp");
-    assert_eq!(wrote::faults(&log, since, &failed), ["Key"]);
+    assert_eq!(wrote::faults(&log, since), ["Key"]);
 }
 
 #[test]
 fn a_key_that_could_not_be_read_before_the_send_gives_the_key_kind_and_nothing_of_its_line() {
-    let failed = load().expect("the settings load").g22_cloud.failed_line;
+    let failed = FAILED_LINE;
     let path = r"C:\daily\voice\keys\groq.sealed";
     let log = [
         logged(1, &format!("{KEY_UNREAD} error={path}")),
@@ -169,7 +163,7 @@ fn a_key_that_could_not_be_read_before_the_send_gives_the_key_kind_and_nothing_o
     ]
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:00.000000Z").expect("a stamp");
-    let got = wrote::faults(&log, since, &failed);
+    let got = wrote::faults(&log, since);
     assert_eq!(got, [CloudFault::Key.kind(), CloudFault::Rate.kind()]);
     assert!(!got.concat().contains("daily"), "never its value: {got:?}");
 }

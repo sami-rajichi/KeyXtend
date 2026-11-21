@@ -73,17 +73,29 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
             continue;
         }
         let value = it.next().ok_or_else(|| format!("{flag} needs a value"))?;
-        match flag.as_str() {
-            f if Some(f) == count_flag => out.count = Some(number(value)?),
-            "--seed" if SEEDED.contains(&gate.as_str()) => out.seed = Some(number(value)?),
-            "--pause" if g1 => out.pause_ms = Some(number(value)?),
-            f if f == g22::DEVICE_FLAG && g22::takes_device(gate, name) => {
-                out.device = Some(g22::device_arg(value)?);
-            }
-            _ => return Err(format!("unknown option {flag}\n{}", usage())),
-        }
+        option(&mut out, (flag, value), (count_flag, g1))?;
     }
     Ok(out)
+}
+
+/// Sets option `flag` to `value` on `out`, given the gate's count option and whether it is G1; an unknown one is
+/// refused.
+fn option(
+    out: &mut Args,
+    (flag, value): (&str, &str),
+    (count_flag, g1): (Option<&str>, bool),
+) -> Result<(), String> {
+    let gate = out.gate.as_str();
+    match flag {
+        f if Some(f) == count_flag => out.count = Some(number(value)?),
+        "--seed" if SEEDED.contains(&gate) => out.seed = Some(number(value)?),
+        "--pause" if g1 => out.pause_ms = Some(number(value)?),
+        f if f == g22::DEVICE_FLAG && g22::takes_device(gate, &out.name) => {
+            out.device = Some(g22::device_arg(value)?);
+        }
+        _ => return Err(format!("unknown option {flag}\n{}", usage())),
+    }
+    Ok(())
 }
 
 /// A gate run that takes only a name.

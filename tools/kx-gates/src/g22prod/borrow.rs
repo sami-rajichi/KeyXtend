@@ -1,6 +1,6 @@
 //! The cloud line's borrowed key: a service's sealed blob and the wrapped data key, copied byte for byte from the
 //! owner's daily data folder into the copy's, at the same places. It never opens, prints or logs them or their paths,
-//! copies nothing else, and the copy's data folder goes at the end with them.
+//! copies nothing else, and the copy lends them, so they go at the end even while the copy may still run.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,6 +9,9 @@ use kx_crypto::{KEY_FILE, SEALED_EXT};
 use kx_mod_voice::keys::KEYS;
 use kx_module_api::ports::BlobName;
 use kx_platform::VOICE_DIR;
+use kx_settings::Files;
+
+use crate::g22cfg::DAILY;
 
 /// The wrapped data key under data folder `data`.
 fn key_file(data: &Path) -> PathBuf {
@@ -27,20 +30,28 @@ pub(super) fn has(daily: &Path, id: &str) -> bool {
     blob(daily, id).is_some_and(|b| b.is_file()) && key_file(daily).is_file()
 }
 
+/// True when `daily` reads as a data folder: it holds the settings file or the voice data key, so a mistyped
+/// `daily_dir` is told apart from a folder whose services have no key.
+pub(super) fn is_data(daily: &Path) -> bool {
+    Files::new(daily).settings.is_file() || key_file(daily).is_file()
+}
+
 /// Copies service `id`'s sealed key and the data key from `daily` into the copy's data folder `data`, only when both
-/// are there; an error names the fault's kind, never a path.
-pub(super) fn copy(daily: &Path, data: &Path, id: &str) -> Result<(), String> {
+/// are there: the files it made there; an error names the fault's kind, never a path.
+pub(super) fn copy(daily: &Path, data: &Path, id: &str) -> Result<[PathBuf; 2], String> {
     let (Some(from), Some(to)) = (blob(daily, id), blob(data, id)) else {
         return Err("a borrowed key's service names no blob".into());
     };
     if same(daily, data) {
-        return Err("g22_cloud.daily_dir is the copy's own data folder".into());
+        return Err(format!("{DAILY} is the copy's own data folder"));
     }
     if !has(daily, id) {
         return Err("a borrowed key or its data key is missing, so nothing was copied".into());
     }
-    one(&key_file(daily), &key_file(data))?;
-    one(&from, &to)
+    let key = key_file(data);
+    one(&key_file(daily), &key)?;
+    one(&from, &to)?;
+    Ok([key, to])
 }
 
 /// True when `a` and `b` are one folder.

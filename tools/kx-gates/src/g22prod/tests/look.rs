@@ -1,7 +1,6 @@
 //! The bar's look, the foreground's count, the typed text's settling and each language's verdict: numbers, and the
 //! class of a window over the bar.
 
-use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
 use kx_mod_voice::score::Wrong;
@@ -55,48 +54,48 @@ fn the_bar_must_be_no_activate_topmost_uncovered_above_the_keyboard_and_beside_i
     );
 }
 
+/// The target window, by a made-up key.
+const TARGET: isize = 5;
+/// The bar, by a made-up key.
+const BAR: isize = 8;
+/// The samples each made-up foreground count took.
+const SAMPLES: u32 = 4;
+
+/// The foregrounds that sampled `keys`, each named by a made-up class.
+fn fronts(keys: &[isize]) -> Fronts {
+    let seen = keys.iter().map(|&k| (k, format!("[C{k}] of p.exe")));
+    Fronts {
+        samples: SAMPLES,
+        seen: seen.collect(),
+    }
+}
+
 #[test]
-fn the_target_keeps_the_foreground_only_when_no_other_window_ever_took_it() {
-    let (target, bar) = (5, 8);
-    let seen = |keys: &[isize]| {
-        keys.iter()
-            .map(|&k| (k, format!("[C{k}] of p.exe")))
-            .collect()
+fn the_target_keeps_the_foreground_when_no_other_window_took_it_but_never_unsampled() {
+    let kept = fronts(&[]);
+    let want = FrontCount {
+        samples: SAMPLES,
+        away: 0,
+        bar: false,
     };
-    let kept = Fronts {
-        samples: 4,
-        seen: BTreeMap::new(),
-    };
-    assert_eq!(
-        kept.count(target, bar),
-        FrontCount {
-            samples: 4,
-            away: 0,
-            bar: false
-        }
-    );
-    assert!(kept.count(target, bar).kept());
-    let lost = Fronts {
-        samples: 4,
-        seen: seen(&[bar, 2]),
-    };
-    let n = lost.count(target, bar);
-    assert_eq!((n.away, n.bar, n.kept()), (2, true, false));
-    assert_eq!(
-        lost.away(target),
-        ["[C2] of p.exe", "[C8] of p.exe"],
-        "each named"
-    );
-    let own = Fronts {
-        samples: 4,
-        seen: seen(&[target]),
-    };
-    assert!(own.count(target, bar).kept(), "the target itself");
-    assert!(own.away(target).is_empty());
+    assert_eq!(kept.count(TARGET, BAR), want);
+    assert!(kept.count(TARGET, BAR).kept());
     assert!(
-        !Fronts::default().count(target, bar).kept(),
+        !Fronts::default().count(TARGET, BAR).kept(),
         "never sampled"
     );
+}
+
+#[test]
+fn the_target_loses_the_foreground_to_any_other_window_each_named() {
+    let lost = fronts(&[BAR, 2]);
+    let n = lost.count(TARGET, BAR);
+    assert_eq!((n.away, n.bar, n.kept()), (2, true, false));
+    let named = ["[C2] of p.exe", "[C8] of p.exe"];
+    assert_eq!(lost.away(TARGET), named, "each named");
+    let own = fronts(&[TARGET]);
+    assert!(own.count(TARGET, BAR).kept(), "the target itself");
+    assert!(own.away(TARGET).is_empty());
 }
 
 #[test]

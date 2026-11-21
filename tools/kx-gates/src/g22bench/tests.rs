@@ -1,7 +1,8 @@
-//! Tests of G22's bench: the clip's length, the gate worker's command line and parts, the end watch and one take on the
-//! fake speech service; the table's are in `table`. None starts a worker or sleeps.
+//! Tests of G22's bench: the clip's length, the gate worker's command line, the end watch and one take on the fake
+//! speech service; the table's are in `table` and the weak folder's in `weak`. None starts a worker or sleeps.
 
 mod table;
+mod weak;
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -16,7 +17,7 @@ use kx_platform::worker::Launch;
 use kx_platform_fake::{FakeSpeech, SpeechCall};
 
 use super::clip::length_ms;
-use super::spawn::{Alive, args, only};
+use super::spawn::{Alive, args};
 use super::take::{Script, take};
 
 /// A WAV header's fields as these tests write them: 16 kHz mono 32-bit float, as the shipped clips are.
@@ -103,35 +104,6 @@ fn the_sound_file_follows_the_voice_jobs_own_words() {
     let got = args(&launch, &extra);
     assert_eq!(got.args, ["voice", "--sound", r"C:\clips\a.wav"]);
     assert_eq!(got.memory_mb, 7, "the host's own cap");
-}
-
-#[test]
-fn a_weak_workers_folder_holds_only_the_plain_parts() {
-    let names = |list: &[&str]| list.iter().map(|n| (*n).to_owned()).collect::<Vec<_>>();
-    let weak = names(&["part-x64.dll", "part-sse42.dll"]);
-    let plain = names(&["keyxtend-worker.exe", "engine.dll", "PART-SSE42.DLL"]);
-    assert_eq!(only(&plain, "part-", &weak, CARD), Ok(()));
-    let fast = names(&["keyxtend-worker.exe", "part-x64.dll", "part-haswell.dll"]);
-    assert!(
-        only(&fast, "part-", &weak, CARD).is_err(),
-        "a part with AVX"
-    );
-    let none = names(&["keyxtend-worker.exe", "engine.dll"]);
-    assert!(only(&none, "part-", &weak, CARD).is_err(), "no part at all");
-}
-
-/// A card part's name, which no processor part shares.
-const CARD: &str = "engine-card.dll";
-
-#[test]
-fn a_weak_workers_folder_made_from_the_card_build_leaves_the_card_part_out() {
-    let names = |list: &[&str]| list.iter().map(|n| (*n).to_owned()).collect::<Vec<_>>();
-    let weak = names(&["part-x64.dll"]);
-    let carded = names(&["keyxtend-worker.exe", "part-x64.dll", "ENGINE-CARD.DLL"]);
-    let e = only(&carded, "part-", &weak, CARD).expect_err("the card part");
-    assert!(e.contains(CARD), "{e}");
-    let left_out = names(&["keyxtend-worker.exe", "part-x64.dll"]);
-    assert_eq!(only(&left_out, "part-", &weak, CARD), Ok(()));
 }
 
 #[test]

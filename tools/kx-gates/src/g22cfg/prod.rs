@@ -39,8 +39,6 @@ pub struct G22Product {
     pub settle_ms: u64,
     /// The line the voice gate build logs at start with its clip; without it the copy may hear the microphone.
     pub warn_line: String,
-    /// The line the voice gate build logs with the device or service id of each dictation it writes.
-    pub wrote_line: String,
     /// The bar's gate-id group (kx-ui `VoiceNames.group`).
     pub group: String,
     /// Stop's id on the bar (kx-ui `bar_button_id`).
@@ -49,8 +47,6 @@ pub struct G22Product {
     pub log_level: String,
     /// What marks the copy's log lines a failed language prints, each found as written.
     pub why_marks: Vec<String>,
-    /// The line the voice gate build logs for each stage of a dictation, which the timing lines read.
-    pub stage_line: String,
     /// The voice module's line as a text goes to the keyboard, which ends Stop to text.
     pub typed_line: String,
 }
@@ -121,16 +117,16 @@ impl G22Product {
         if waits.contains(&0) || self.settle_ms == 0 {
             return Err("g22_product's waits must be above 0".into());
         }
-        let named = [&self.warn_line, &self.wrote_line, &self.group, &self.stop];
+        let named = [&self.warn_line, &self.group, &self.stop];
         if named.iter().any(|t| t.trim().is_empty()) || self.group.contains(SEP) {
             return Err(format!(
-                "g22_product needs a warn_line, a wrote_line, a group without {SEP:?} and stop"
+                "g22_product needs a warn_line, a group without {SEP:?} and stop"
             ));
         }
         self.check_marks()
     }
 
-    /// Refuses a log level that drops the timing lines, or a blank stage or typed line.
+    /// Refuses a log level that drops the timing lines, or a blank typed line.
     fn check_lines(&self) -> Result<(), String> {
         let level = kx_kernel::log::level(&self.log_level);
         if level.is_none() || level < kx_kernel::log::level(Self::LINES_LEVEL) {
@@ -139,8 +135,8 @@ impl G22Product {
                 Self::LINES_LEVEL
             ));
         }
-        if self.stage_line.trim().is_empty() || self.typed_line.trim().is_empty() {
-            return Err("g22_product needs a stage_line and a typed_line".into());
+        if self.typed_line.trim().is_empty() {
+            return Err("g22_product needs a typed_line".into());
         }
         Ok(())
     }

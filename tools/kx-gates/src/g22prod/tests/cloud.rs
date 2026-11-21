@@ -1,8 +1,7 @@
-//! The cloud line's pure parts: a borrowed key copied byte for byte and nothing else, the plan of services, the copy's
-//! settings with one service on as the product's own rules read them, the requests it sends, and a hidden copy.
+//! The cloud line's pure parts: the plan of services, the copy's settings with one service on as the product's own
+//! rules read them, the requests it sends, and a hidden copy; the borrowed key's tests are in `borrow`.
 
 use std::fs;
-use std::path::Path;
 
 use kx_crypto::{KEY_FILE, SEALED_EXT};
 use kx_mod_voice::cloud::{Cloud, pick_text};
@@ -18,8 +17,10 @@ use kx_test_support::tempdir::TempDir;
 
 use super::super::cloud::{hidden_why, typed as daily_typed};
 use super::super::cloudset::{self, Plan, Planned, Typed};
-use super::super::{borrow, table_of};
+use super::super::table_of;
 use crate::config::load;
+
+mod borrow;
 
 /// Bytes standing in for a sealed blob and a wrapped data key; never a real key.
 const BLOB: &[u8] = b"KXSL-a-stand-in-blob";
@@ -32,6 +33,10 @@ const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// A typed Custom address and model on a test host.
 const TYPED: &str = "https://stt.example.test/v1/audio/transcriptions";
 const TYPED_MODEL: &str = "whisper-test";
+/// A made-up typed model id the frames refuse, as it holds a space.
+const BAD_MODEL_ID: &str = "whisper test";
+/// A made-up clip language no model knows.
+const NO_SUCH_LANG: &str = "zz";
 
 /// A daily folder holding the stand-in data key, a stand-in sealed key for each of `ids`, and files that must stay.
 fn daily(ids: &[&str]) -> TempDir {
@@ -44,72 +49,8 @@ fn daily(ids: &[&str]) -> TempDir {
     }
     fs::create_dir_all(voice.join("texts")).expect("history");
     fs::write(voice.join("texts").join("t.sealed"), b"history").expect("a text");
-    fs::write(dir.path().join("settings.toml"), b"[voice]\n").expect("settings");
+    fs::write(Files::new(dir.path()).settings, b"[voice]\n").expect("settings");
     dir
-}
-
-/// How many files lie under `dir`.
-fn files(dir: &Path) -> usize {
-    let entries = fs::read_dir(dir)
-        .expect("a folder")
-        .map(|e| e.expect("an entry").path());
-    entries
-        .map(|p| if p.is_dir() { files(&p) } else { 1 })
-        .sum()
-}
-
-#[test]
-fn a_key_is_there_only_with_its_blob_and_the_data_key_by_their_names() {
-    let d = daily(&[GROQ]);
-    assert!(borrow::has(d.path(), GROQ));
-    assert!(!borrow::has(d.path(), "lemonfox"), "no blob");
-    assert!(!borrow::has(d.path(), "a/b"), "no blob name");
-    fs::remove_file(d.path().join(VOICE_DIR).join(KEY_FILE)).expect("removed");
-    assert!(!borrow::has(d.path(), GROQ), "no data key");
-}
-
-#[test]
-fn a_borrow_copies_that_blob_and_the_data_key_byte_for_byte_and_nothing_else() {
-    let d = daily(&[GROQ, "lemonfox"]);
-    let copy = TempDir::new("g22-copy").expect("a folder");
-    assert_eq!(borrow::copy(d.path(), copy.path(), GROQ), Ok(()));
-    let voice = copy.path().join(VOICE_DIR);
-    assert_eq!(fs::read(voice.join(KEY_FILE)).expect("copied"), WRAPPED);
-    let blob = voice.join(KEYS).join(format!("{GROQ}.{SEALED_EXT}"));
-    assert_eq!(fs::read(blob).expect("copied"), BLOB);
-    assert_eq!(files(copy.path()), 2, "only those two");
-}
-
-#[test]
-fn a_failed_borrow_names_no_path_and_no_folder_is_copied_onto_itself() {
-    let d = daily(&[GROQ]);
-    let copy = TempDir::new("g22-copy").expect("a folder");
-    let e = borrow::copy(d.path(), copy.path(), "lemonfox").expect_err("no blob");
-    for path in [d.path(), copy.path()] {
-        assert!(!e.contains(&path.display().to_string()), "{e}");
-    }
-    assert!(
-        borrow::copy(d.path(), d.path(), GROQ).is_err(),
-        "its own folder"
-    );
-    assert_eq!(files(d.path()), 4, "the daily folder is as it was");
-}
-
-#[test]
-fn a_borrow_missing_either_file_copies_nothing() {
-    let d = daily(&[GROQ]);
-    let copy = TempDir::new("g22-copy").expect("a folder");
-    assert!(
-        borrow::copy(d.path(), copy.path(), "lemonfox").is_err(),
-        "no blob"
-    );
-    assert_eq!(files(copy.path()), 0, "not even the data key");
-    fs::remove_file(d.path().join(VOICE_DIR).join(KEY_FILE)).expect("removed");
-    assert!(
-        borrow::copy(d.path(), copy.path(), GROQ).is_err(),
-        "no data key"
-    );
-    assert_eq!(files(copy.path()), 0, "not even the blob");
 }
 
 /// The plans of every offered row with `has` keys, for the clip languages, with `typed` lines.
@@ -123,6 +64,28 @@ fn typed(address: &str) -> Typed {
         address: Redacted::new(address.to_owned()),
         model: Redacted::new(TYPED_MODEL.to_owned()),
     }
+}
+
+/// Why `id` is skipped in `got`; none when it runs or is not planned.
+fn skipped(got: &[Plan], id: &str) -> Option<&'static str> {
+    got.iter().find_map(|p| match p {
+        Plan::Skip { id: of, why } if *of == id => Some(*why),
+        _ => None,
+    })
+}
+
+#[test]
+fn a_typed_model_the_row_refuses_or_a_model_knowing_no_clip_language_is_skipped_with_why() {
+    let bad = |_: &str| {
+        let mut t = typed(TYPED);
+        t.model = Redacted::new(BAD_MODEL_ID.to_owned());
+        Some(t)
+    };
+    let got = plans(|id| id == CUSTOM, bad);
+    assert_eq!(skipped(&got, CUSTOM), Some(cloudset::BAD_MODEL));
+    let services = table().expect("the table");
+    let none = cloudset::plan(services, |id| id == GROQ, &[NO_SUCH_LANG], |_| None);
+    assert_eq!(skipped(&none, GROQ), Some(cloudset::NO_LANG));
 }
 
 #[test]

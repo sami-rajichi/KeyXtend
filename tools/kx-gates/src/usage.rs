@@ -5,6 +5,8 @@ use kx_module_api::ports::DevicePick;
 use spike_core::config::FACE;
 
 use crate::apps::AppKind;
+use crate::cfgfile::LOCAL_FILE;
+use crate::g22cfg::DAILY;
 use crate::product::NAME;
 use crate::{
     capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
@@ -56,7 +58,7 @@ fn face_lines() -> String {
 /// The help lines of P11's voice gates.
 fn voice_lines() -> String {
     let (bench, staged, build) = (g22::BENCH, g22::STAGED, g22::worker_build());
-    let (app, device) = (g22::app_build(), g22::DEVICE_FLAG);
+    let (app, device, voice) = (g22::app_build(), g22::DEVICE_FLAG, g22::voice_build());
     let (cpu, auto) = (DevicePick::CPU, DevicePick::AUTO);
     format!(
         "g22 {NAME} starts the build with {app} beside the gate worker on a data folder it makes, so \
@@ -64,12 +66,14 @@ fn voice_lines() -> String {
          the id of the device that wrote each text.
 g22 {NAME} {device} with {cpu}, {auto} or a card's id runs the copy on that device in place of [g22_product] device, \
          so a card run edits no file.
+g22 {NAME} with {DAILY} set in {LOCAL_FILE} then borrows each offered service's sealed key from that daily data \
+         folder and dictates the clips its model knows to every service with a key, which uses that account's allowance.
 g22 {bench} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
          the worker built with {build}, normal then weak, and it prints a table of numbers.
 g22 {staged} starts no screen and moves nothing: it copies the worker cargo xtask stage wrote, checks edges 28, 29 \
          and 39 on it, then deletes every copy.
-g22 {NAME} and g22 {bench} pass the sound flag, so they run only from kx-gates built with --features voice, never \
-         the signed one."
+g22 {NAME} and g22 {bench} pass the sound flag, so they run only from kx-gates built with {voice}, never the \
+         signed one."
     )
 }
 

@@ -11,7 +11,7 @@ mod staged;
 #[cfg(feature = "voice")]
 pub use bench::fewest;
 pub use bench::{Clip, G22Bench, is_part};
-pub use cloud::G22Cloud;
+pub use cloud::{DAILY, G22Cloud};
 pub use prod::G22Product;
 pub use staged::G22Staged;
 

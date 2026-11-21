@@ -1,6 +1,7 @@
 //! G22's cloud line: each offered service with a sealed key in the owner's daily data folder dictates the clips its
 //! model knows on a copy of its own, with that key borrowed still sealed and only that service on. A service without a
-//! key is skipped, and the line is skipped while `[g22_cloud] daily_dir` is unset.
+//! key is skipped, the line is skipped while `[g22_cloud] daily_dir` is unset, and it fails when that names no data
+//! folder.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -19,7 +20,8 @@ use super::line::{self, Line};
 use super::{Case, GATE, borrow, say, table_of};
 use crate::apps::Ctx;
 use crate::freshcopy::Fresh;
-use crate::g22cfg::G22Cloud;
+use crate::g22;
+use crate::g22cfg::{DAILY, G22Cloud};
 use crate::product::NAME;
 
 /// The cloud line of the gate build at `program` on `cases`, judged as the local line by `s`: its fields, with `pass`
@@ -30,6 +32,13 @@ pub(super) fn run(ctx: &Ctx, program: &Path, cases: &[Case], s: &VoiceSettings) 
         say!("{GATE} {NAME} cloud: skipped, {why}");
         return json!({ "skipped": why });
     };
+    if !borrow::is_data(daily) {
+        let why = format!(
+            "{DAILY} holds no settings file and no voice data key, so it is no data folder"
+        );
+        say!("{GATE} {NAME} cloud: {why}");
+        return json!({ "error": why, "pass": false });
+    }
     let services = match table() {
         Ok(t) => t,
         Err(e) => return json!({ "error": e.to_string(), "pass": false }),
@@ -77,12 +86,14 @@ fn service(
     daily: &Path,
 ) -> Value {
     let id = p.row.id.as_str();
-    eprintln!("g22 {NAME} cloud: {id}");
+    eprintln!("{} {NAME} cloud: {id}", g22::GATE);
     let mine: Vec<&Case> = cases.iter().filter(|c| p.langs.contains(&c.lang)).collect();
     let line = Line::cloud(ctx, id);
     let ready = |f: &Fresh| {
         hidden_why(&WinHidden::new().probe(f.data()))?;
-        borrow::copy(daily, f.data(), id)?;
+        for file in borrow::copy(daily, f.data(), id)? {
+            f.lend(file)?;
+        }
         let voice = cloudset::voice(p, WinCalendar.now().date)?;
         f.write(&table_of(&voice, &ctx.cfg.g22_product)?)
     };

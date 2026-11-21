@@ -13,7 +13,7 @@ use crate::product::NAME;
 use crate::{g22bench, g22prod};
 
 /// The gate's name on the command line.
-const GATE: &str = "g22";
+pub const GATE: &str = "g22";
 /// Name that runs the bench.
 pub const BENCH: &str = "bench";
 /// Name that runs the staged worker's edges.
@@ -41,6 +41,11 @@ pub fn app_build() -> String {
     format!("--features {APP_FEATURES}")
 }
 
+/// How the kx-gates that holds the voiced gates is built.
+pub fn voice_build() -> String {
+    format!("--features {VOICE_FEATURE}")
+}
+
 /// Whether `gate` run on `name` takes `DEVICE_FLAG`: only G22 on the product does.
 pub fn takes_device(gate: &str, name: &str) -> bool {
     gate == GATE && name == NAME
@@ -58,9 +63,8 @@ pub fn device_arg(value: &str) -> Result<DevicePick, String> {
 pub fn unvoiced(gate: &str, name: &str) -> Option<String> {
     let needs = gate == GATE && VOICED.contains(&name);
     (needs && !cfg!(feature = "voice")).then(|| {
-        format!(
-            "{GATE} {name} passes the sound flag: build kx-gates with --features {VOICE_FEATURE}"
-        )
+        let build = voice_build();
+        format!("{GATE} {name} passes the sound flag: build kx-gates with {build}")
     })
 }
 
@@ -182,5 +186,20 @@ mod tests {
             default.iter().all(|f| f.as_str() != Some(VOICE_FEATURE)),
             "off by default"
         );
+    }
+
+    #[test]
+    fn only_the_voice_feature_brings_the_gate_flag_and_the_sealed_file_names() {
+        let manifest: toml::Table = include_str!("../Cargo.toml").parse().expect("TOML");
+        let deps = &manifest["target"]["cfg(windows)"]["dependencies"];
+        let voice = manifest["features"][VOICE_FEATURE]
+            .as_array()
+            .expect("voice");
+        for dep in ["kx-ipc", "kx-crypto"] {
+            let optional = deps[dep].get("optional").and_then(toml::Value::as_bool);
+            assert_eq!(optional, Some(true), "{dep}");
+            let named = toml::Value::from(format!("dep:{dep}"));
+            assert!(voice.contains(&named), "{dep}");
+        }
     }
 }

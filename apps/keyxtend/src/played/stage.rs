@@ -1,10 +1,9 @@
 //! The voice gate build only: one debug line per stage of a dictation, by name, so G22 reads where its time goes from
 //! the copy's log. A piece's line holds its index and, when known, its sound's length; never text, sound or a key.
 
-pub use kx_ipc::gate::{INDEX, LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS};
-
-/// The message of each stage's line; kx-gates reads it back.
-pub const STAGE_LINE: &str = "voice gate build: a stage";
+pub use kx_ipc::gate::{
+    INDEX, LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE, START, STOP, TOOK_MS,
+};
 
 /// Logs that a dictation reached `name`; its Display form keeps the name one bare word on the line.
 pub fn stage(name: &str) {

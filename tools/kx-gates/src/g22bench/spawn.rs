@@ -43,7 +43,7 @@ impl Alive {
 }
 
 /// Refuses a weak worker whose folder holds a processor part beyond `weak`, none of them, or the `card` part, as the
-/// engine loads the best part it finds beside the worker.
+/// engine loads the best part it finds beside the worker; an error never names the folder.
 pub(super) fn plain_parts(
     worker: &Path,
     prefix: &str,
@@ -51,12 +51,13 @@ pub(super) fn plain_parts(
     card: &str,
 ) -> Result<(), String> {
     let dir = worker.parent().ok_or("the weak worker has no folder")?;
-    let list = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let unread = |e: std::io::Error| format!("the weak worker's folder: {:?}", e.kind());
+    let list = std::fs::read_dir(dir).map_err(unread)?;
     let names: Vec<String> = list
         .filter_map(Result::ok)
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .collect();
-    only(&names, prefix, weak, card).map_err(|e| format!("{} holds {e}", dir.display()))
+    only(&names, prefix, weak, card).map_err(|e| format!("the weak worker's folder holds {e}"))
 }
 
 /// Refuses `names` unless their processor parts, those that start with `prefix`, are some of `weak` alone, with no

@@ -4,19 +4,15 @@
 
 use std::sync::Arc;
 
-use kx_ipc::gate::{FAULT, SERVICE};
+use kx_ipc::gate::{FAILED_LINE, FAULT, SERVICE, WROTE_LINE};
 use kx_mod_voice::cloud::Chosen;
 use kx_mod_voice::services::{Address, Service, table};
 use kx_module_api::MS_PER_S;
 use kx_module_api::ports::{
-    CloudAsk, CloudFault, CloudNote, CloudRun, CloudSpeech, CloudTest, SAMPLE_BYTES, SOUND_HZ,
+    CloudAsk, CloudFault, CloudNote, CloudRun, CloudSpeech, CloudTest, SOUND_BYTES_PER_S,
 };
 
 use super::stage;
-use super::told::WROTE_LINE;
-
-/// The message of the line logged as a cloud dictation fails; kx-gates reads it back.
-pub const FAILED_LINE: &str = "voice gate build: a cloud dictation failed";
 
 /// What a run's notes are told to.
 type Tell = Box<dyn Fn(CloudNote) + Send>;
@@ -89,7 +85,7 @@ fn made(row: &Service, ask: &CloudAsk) -> bool {
 /// The length in ms of `bytes` of hand-over sound.
 fn sound_ms(bytes: usize) -> u32 {
     let ms = bytes.saturating_mul(usize::try_from(MS_PER_S).unwrap_or(usize::MAX));
-    u32::try_from(ms / (SOUND_HZ * SAMPLE_BYTES)).unwrap_or(u32::MAX)
+    u32::try_from(ms / SOUND_BYTES_PER_S).unwrap_or(u32::MAX)
 }
 
 #[cfg(test)]
