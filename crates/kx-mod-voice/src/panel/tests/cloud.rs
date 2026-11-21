@@ -16,6 +16,7 @@ use crate::settings::{PICKS, SERVICES};
 use rows::{named, row_of, tick};
 
 mod answers;
+mod cleared;
 mod lines;
 mod offered;
 mod parts;

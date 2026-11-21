@@ -1,5 +1,5 @@
 //! Typing on the key page's lines (ADR-0049, edge 22): letters, Space, Backspace, Delete and the arrows work the line at
-//! its caret, a click places it, Enter and Save set it through the page's own acts, an empty line saves nothing, and the
+//! its caret, a click places it, Enter and Save set it through the page's own acts, an empty key saves nothing, and the
 //! key typed is wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
 
 use kx_module_api::Redacted;
@@ -20,7 +20,7 @@ fn made_key() -> String {
 }
 
 /// A key from our keyboard, on the view the ui would have drawn now.
-fn key(rig: &mut Rig, key: &PanelKey) -> Vec<Do> {
+pub(super) fn key(rig: &mut Rig, key: &PanelKey) -> Vec<Do> {
     rig.view();
     rig.with(|p, f| p.line_key(key, f))
 }
@@ -44,7 +44,7 @@ fn typing(sheet: &ServiceSheet) -> (u32, CloudLine, u32) {
 }
 
 /// Custom on with `extra` in its entry, on its key page's second part: the address and model lines.
-fn on_custom_model(extra: &str) -> Rig {
+pub(super) fn on_custom_model(extra: &str) -> Rig {
     let mut rig = on_cloud("");
     let entry = format!("custom = {{ on = 2026-11-01, terms = 1{extra} }}");
     put(&mut rig, "services", &entry);

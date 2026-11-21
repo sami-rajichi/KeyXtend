@@ -50,7 +50,7 @@ impl Panel {
             typing,
             caret: Redacted::new(self.line_caret(typing, facts)),
             saves: (lines.iter().copied())
-                .filter(|&l| !self.line_empty(l, facts))
+                .filter(|&l| self.line_saves(l, facts))
                 .collect(),
         };
         (VoiceSheet::Service(sheet), pages)

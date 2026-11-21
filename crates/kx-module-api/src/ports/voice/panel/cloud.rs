@@ -266,6 +266,6 @@ pub struct ServiceSheet {
     pub typing: CloudLine,
     /// That line's caret: UTF-16 units of the text it draws, or dots on the key line; it may tell a secret's length.
     pub caret: Redacted<u32>,
-    /// The shown lines whose Save acts now, as each holds text.
+    /// The shown lines whose Save acts now: a key typed, or an address or model holding text or emptied to clear it.
     pub saves: Vec<CloudLine>,
 }

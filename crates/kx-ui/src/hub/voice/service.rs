@@ -46,7 +46,7 @@ pub(super) struct LineView {
 
 impl LineView {
     /// Line `line` of `s` with `words`, its caption's key and its hint, and `text`; its caret while it takes the letters,
-    /// and its Save, which dims while it is empty and names its line for readers.
+    /// and its Save, which dims while it has nothing to save and names its line for readers.
     fn new(
         t: &I18n,
         s: &ServiceSheet,

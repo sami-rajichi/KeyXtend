@@ -137,8 +137,8 @@ impl Panel {
         }
     }
 
-    /// Saves `line` through the key page's own acts, as Enter on it does; an empty line saves nothing. The key typed is
-    /// wiped; an address or model kept shows as kept again, and a refused one stays on its line to be put right.
+    /// Saves `line` through the key page's own acts, as Enter does: an empty key saves nothing, an emptied address or
+    /// model clears it. The key typed is wiped; a refused address or model stays on its line to be put right.
     pub(super) fn save(&mut self, line: CloudLine, facts: &Facts<'_>) -> Vec<Do> {
         if !self.shows_line(line, facts) {
             return Vec::new();
@@ -148,9 +148,6 @@ impl Panel {
             return key.map_or_else(Vec::new, |k| self.set_key(&k.into_secret()));
         }
         let text = Redacted::new(self.line_text(line, facts));
-        if text.expose().is_empty() {
-            return Vec::new();
-        }
         let (out, refused) = if line == CloudLine::Address {
             let out = self.type_address(&text, facts);
             (out, self.cloud.refused.is_some())
@@ -183,30 +180,29 @@ impl Panel {
 
     /// What `line` shows: its text as edited, else the one just refused, else the one kept; never the key.
     pub(crate) fn line_text(&self, line: CloudLine, facts: &Facts<'_>) -> String {
-        if let Some(draft) = self
-            .cloud
-            .typed
-            .draft(line)
-            .filter(|_| line != CloudLine::Key)
-        {
+        if line == CloudLine::Key {
+            return String::new();
+        }
+        if let Some(draft) = self.cloud.typed.draft(line) {
             return draft.text().to_owned();
         }
+        let refused = match line {
+            CloudLine::Address => self.cloud.refused.as_ref().map(|(text, _)| text),
+            _ => self.cloud.refused_model.as_ref(),
+        };
+        refused.map_or_else(|| self.kept(line, facts), |t| t.expose().clone())
+    }
+
+    /// The address or model `line` keeps in `services`; none for the key, which is never read back.
+    fn kept(&self, line: CloudLine, facts: &Facts<'_>) -> String {
         let id = self.cloud.shown.as_ref();
         let entry = id.and_then(|id| facts.settings.services.get(id));
-        let refused = match line {
-            CloudLine::Key => return String::new(),
-            CloudLine::Address => self.cloud.refused.as_ref().map(|(text, _)| text),
-            CloudLine::Model => self.cloud.refused_model.as_ref(),
-        };
         let kept = entry.map(|e| match line {
-            CloudLine::Address => &e.address,
-            _ => &e.model,
+            CloudLine::Key => "",
+            CloudLine::Address => e.address.as_str(),
+            CloudLine::Model => e.model.as_str(),
         });
-        refused
-            .map(Redacted::expose)
-            .or(kept)
-            .cloned()
-            .unwrap_or_default()
+        kept.unwrap_or_default().to_owned()
     }
 
     /// `line`'s caret in what it draws: a line not yet edited waits at its text's end.
@@ -218,11 +214,11 @@ impl Panel {
         caret::units(&text, text.len())
     }
 
-    /// True while `line` holds no text, so its Save dims.
-    pub(crate) fn line_empty(&self, line: CloudLine, facts: &Facts<'_>) -> bool {
+    /// True while Save on `line` acts: a key typed, or an address or model holding text or emptied over a kept one.
+    pub(crate) fn line_saves(&self, line: CloudLine, facts: &Facts<'_>) -> bool {
         match line {
-            CloudLine::Key => self.cloud.typed.key_dots() == 0,
-            _ => self.line_text(line, facts).is_empty(),
+            CloudLine::Key => self.cloud.typed.key_dots() > 0,
+            _ => !self.line_text(line, facts).is_empty() || !self.kept(line, facts).is_empty(),
         }
     }
 
