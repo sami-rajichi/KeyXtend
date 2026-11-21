@@ -8,7 +8,7 @@ var texts = {
         "bubble_corner",
         "erase_gap_ms"
       ],
-      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner و erase_gap_ms و3 إعدادات أخرى."
+      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner وerase_gap_ms و3 إعدادات أخرى."
     },
     "runs": [
       {

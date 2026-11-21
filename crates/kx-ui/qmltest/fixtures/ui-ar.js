@@ -140,7 +140,7 @@ var texts = {
   "list.and": " و",
   "list.and-join": " و",
   "list.count": "{$more} إعداد",
-  "list.join": " و ",
+  "list.join": " و",
   "list.more": "{$list} و{$more} إعداد آخر",
   "mark.damma": "ضمّة",
   "mark.dammatan": "تنوين الضمّ",

@@ -124,8 +124,24 @@ fn each_language_joins_a_list_its_own_way() {
     let three = items(&["a", "b", "c"]);
     assert_eq!(lang("en").list(&three, 0), "a, b, c");
     assert_eq!(lang("fr").list(&three, 0), "a, b, c");
-    // A Latin name next to the Arabic "و" keeps its place in the Arabic order; after "،" it would not (owner).
-    assert_eq!(lang("ar").list(&three, 0), "a و b و c");
+    // A Latin name after the Arabic "و" keeps its place in the Arabic order; after "،" it would not (ADR-0053).
+    assert_eq!(lang("ar").list(&three, 0), "a وb وc");
+}
+
+#[test]
+fn arabic_attaches_wa_to_each_setting_name_and_to_the_count() {
+    let ar = lang("ar");
+    let names = items(&["bubble_corner", "erase_gap_ms"]);
+    assert_eq!(
+        ar.text(LIST_JOIN),
+        " \u{648}",
+        "a space, then و joined to the next word"
+    );
+    assert_eq!(ar.list(&names, 0), "bubble_corner وerase_gap_ms");
+    assert_eq!(
+        ar.list(&names, 3),
+        "bubble_corner وerase_gap_ms و3 إعدادات أخرى"
+    );
 }
 
 #[test]
