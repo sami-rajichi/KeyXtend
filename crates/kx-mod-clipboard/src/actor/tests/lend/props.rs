@@ -1,11 +1,11 @@
 //! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private, numbered and
 //! skipped copies, clears, echoes, failed reads and inserts never run a lend beside an insert, answer each ask once,
 //! never write a private, skipped or numbered text, and always end with the clipboard put back, unless the watch told a
-//! change since. A numbered copy is one marked by number markers alone; it may come back only when an echo was due.
+//! change since. A numbered copy is one marked by number markers alone; it may come back only when taken as our echo.
 
 use std::time::Duration;
 
-use kx_module_api::ports::{AppRef, ClipAct, ClipError, ClipNote, PasteText, Pasted};
+use kx_module_api::ports::{AppRef, ClipAct, ClipError, ClipNote, ClipPart, PasteText, Pasted};
 use kx_module_api::{Clock, Redacted, Zeroizing};
 use proptest::prelude::*;
 
@@ -15,6 +15,7 @@ use super::super::ears::Heard;
 use super::super::rig::Rig;
 use super::skip::{VAULT, skipping};
 use super::{SAID, WAIT_MS};
+use crate::entry::text_of;
 use crate::fixture::{app, text};
 use crate::settings::ClipSettings;
 
@@ -85,16 +86,22 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
+/// Whether the clipboard holds a numbered copy taken as our echo, and whether the lend's text was written over one.
+#[derive(Default)]
+struct Numbered {
+    echoed: bool,
+    kept: bool,
+}
+
 /// A rig, the asks made so far, whether the watch told a change since the text was last written, whether a skipped
-/// app's copy came after every other change, our writes whose echo is due, and whether a numbered copy ever came while
-/// one was, so it was taken as our echo.
+/// app's copy came after every other change, our writes whose echo is due, and the numbered copy's flags.
 struct Run {
     rig: Rig,
     asks: u32,
     told: bool,
     vault: bool,
     due: u32,
-    echoed: bool,
+    numbered: Numbered,
 }
 
 impl Run {
@@ -165,8 +172,9 @@ impl Run {
         rounds
     }
 
-    /// Notes what `step` changed, given the writes before it and whether its mark was taken as our echo.
-    fn note(&mut self, step: &Step, writes: usize, echo: bool) {
+    /// Notes what `step` changed, given the writes before it and whether its mark was taken as our echo; a note not
+    /// ours drops the echoes due, and only an echoed numbered copy or our echo keeps `echoed`.
+    fn note(&mut self, step: &Step, writes: usize, echo: bool) -> Result<(), TestCaseError> {
         let moved = matches!(
             step,
             Step::Copy
@@ -179,13 +187,43 @@ impl Run {
         self.told |= moved;
         self.vault = matches!(step, Step::Skipped)
             || (self.vault && !moved && !matches!(step, Step::Insert));
+        let echoed = &mut self.numbered.echoed;
+        *echoed = match step {
+            Step::Numbered => echo,
+            Step::Marked => *echoed && echo,
+            _ => *echoed && !moved,
+        };
         let now = self.rig.fakes.writer.writes();
         let wrote = u32::try_from(now.len() - writes).unwrap();
+        if moved && !echo {
+            self.due = 0;
+        }
         self.due = self.due - u32::from(echo) + wrote;
-        self.echoed |= echo && matches!(step, Step::Numbered);
         if wrote > 0 && now.last() == Some(&vec![text(SAID)]) {
             self.told = false;
         }
+        self.wrote(&now[writes..])
+    }
+
+    /// Follows this step's writes, each then on the clipboard: the lend's text keeps whether it was written over an
+    /// echoed numbered copy, and only such a copy may come back.
+    fn wrote(&mut self, new: &[Vec<ClipPart>]) -> Result<(), TestCaseError> {
+        let (flags, clip) = (&mut self.numbered, &self.rig.fakes.clip);
+        for parts in new {
+            if *parts == [text(SAID)] {
+                (flags.kept, flags.echoed) = (flags.echoed, false);
+                clip.set_marked(Some(SAID));
+                continue;
+            }
+            let numbered = *parts == [text(NUMBERED)];
+            prop_assert!(
+                !numbered || flags.kept,
+                "a numbered copy is put back only when it was taken as our echo"
+            );
+            flags.echoed = numbered;
+            clip.set_text(text_of(parts));
+        }
+        Ok(())
     }
 
     /// Does `step`, noting a change the watch told, then checks no private, skipped or numbered text was written, no
@@ -195,7 +233,7 @@ impl Run {
         let marks = matches!(step, Step::Private | Step::Numbered | Step::Marked);
         let echo = marks && self.due > 0;
         self.apply(step);
-        self.note(step, writes, echo);
+        self.note(step, writes, echo)?;
         let now = self.rig.fakes.writer.writes();
         prop_assert!(
             !now.contains(&vec![text(PRIVATE)]),
@@ -205,10 +243,6 @@ impl Run {
         prop_assert!(
             !(self.vault && vaulted),
             "a skipped app's text is never put back"
-        );
-        prop_assert!(
-            self.echoed || !now.contains(&vec![text(NUMBERED)]),
-            "a numbered copy is put back only when it was taken as our echo"
         );
         let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
@@ -223,9 +257,12 @@ impl Run {
     /// Waits until nothing is under way; then every ask was answered, and the text pasted is not left.
     fn drain(&mut self) -> Result<(), TestCaseError> {
         let wait = self.rig.settings.paste_wait();
+        let writes = self.rig.fakes.writer.writes().len();
         for _ in 0..DRAIN {
             self.rig.advance(wait);
         }
+        let now = self.rig.fakes.writer.writes();
+        self.wrote(&now[writes..])?;
         prop_assert!(self.rig.actor.lent.idle(), "a lend always ends");
         prop_assert_eq!(
             self.answers(),
@@ -249,7 +286,9 @@ proptest! {
     fn random_lends_run_alone_answer_once_and_always_put_the_clipboard_back(
         steps in prop::collection::vec(step(), 0..MAX_STEPS),
     ) {
-        let mut run = Run { rig: skipping(), asks: 0, told: false, vault: false, due: 0, echoed: false };
+        let mut run = Run {
+            rig: skipping(), asks: 0, told: false, vault: false, due: 0, numbered: Numbered::default(),
+        };
         for step in &steps {
             run.step(step)?;
         }

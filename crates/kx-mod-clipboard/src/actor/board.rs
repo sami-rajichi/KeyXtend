@@ -35,8 +35,8 @@ pub(super) struct Board {
 
 impl Board {
     /// The watch told `note`, from a skipped app or unread when `skipped`; true for our own write's echo, which keeps
-    /// the board. A mark that is not our echo holds like a skipped app's note, as number markers alone may mark a
-    /// password, and only another app's copy, a clear or our own write lets either go.
+    /// the board. Any other note drops the echoes still due, and a mark among them holds like a skipped app's note, as
+    /// number markers alone may mark a password; only another app's copy, a clear or our own write lets either go.
     pub(super) fn heard(&mut self, note: &ClipNote, skipped: bool) -> bool {
         let cleared = matches!(note, ClipNote::Cleared { .. });
         let marked = matches!(note, ClipNote::Marked { .. });
@@ -44,6 +44,7 @@ impl Board {
             self.echoes -= 1;
             return true;
         }
+        self.echoes = 0;
         self.skipped = (skipped || marked) && !cleared;
         self.held = if cleared { Held::Empty } else { Held::Other };
         false

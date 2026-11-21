@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 74a505197dd613cd4d0842f655e9a9162700ac17236a03081f0ef9718adf0127 # shrinks to steps = [Numbered, Lend, Advance(1000)]
+cc 33736af2e44cf1406efd2052f949044399d3f2f417dee03f03056f9de8db47d3 # shrinks to steps = [Copy, Lend, Lend, Insert, Copy, Advance(1000), Numbered, Lend]

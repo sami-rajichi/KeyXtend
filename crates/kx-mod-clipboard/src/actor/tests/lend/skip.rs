@@ -1,6 +1,7 @@
 //! A skipped app's copy is never put back (ADR-0048 decision 5): a password manager's clear timer could fire during
 //! the gap and leave its password there. A note from a skipped app, or a change the watch could not read, refuses
-//! until another app's copy or a clear, even with our echoes still due; so does a mark that is not our echo.
+//! until another app's copy or a clear, even with our echoes still due; so does a mark that is not our echo, and a
+//! change not ours drops the echoes still due.
 
 use kx_module_api::ports::ClipNote;
 use toml::Value;
@@ -76,4 +77,32 @@ fn a_mark_that_is_not_our_echo_refuses_until_another_copy_or_a_clear() {
     rig.fakes.clip.set_text(None);
     rig.push(ClipNote::Cleared { app: None });
     assert!(round_trip(&mut rig).is_empty(), "a clear");
+}
+
+#[test]
+fn a_change_not_ours_drops_the_echoes_due_so_a_later_mark_still_refuses() {
+    let mut rig = Rig::new();
+    let changes = [
+        ClipNote::Copied {
+            parts: vec![text("other")],
+            app: None,
+        },
+        ClipNote::TooBig {
+            app: None,
+            bytes: u64::MAX,
+        },
+        ClipNote::Cleared { app: None },
+    ];
+    for change in changes {
+        let why = format!("{change:?}");
+        rig.fakes.clip.set_text(Some("mine"));
+        rig.text("mine");
+        assert_eq!(round_trip(&mut rig), [text("mine")], "two echoes still due");
+        rig.push(change);
+        rig.fakes.clip.set_text(Some("hunter2"));
+        rig.push(ClipNote::Marked {
+            app: Some(app(KEEPER)),
+        });
+        refused(&mut rig, &why);
+    }
 }
