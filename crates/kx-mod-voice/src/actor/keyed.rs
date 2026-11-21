@@ -40,12 +40,13 @@ impl Actor {
         Keys::new(Arc::clone(&self.ports.shelf), self.held.hidden)
     }
 
-    /// Reads which services have a key, from the blobs' names alone, as the panel opens.
+    /// Reads which services have a key, from the blobs' names alone, as the panel opens; a failed listing keeps the
+    /// last good one, so a passing fault never reads as a missing key.
     pub(super) fn read_keyed(&mut self) {
-        let listed = self.keys().listed();
-        let listed = listed
-            .inspect_err(|error| tracing::warn!(%error, "the cloud keys could not be listed"));
-        self.held.keyed = listed.unwrap_or_default();
+        match self.keys().listed() {
+            Ok(listed) => self.held.keyed = listed,
+            Err(error) => tracing::warn!(%error, "the cloud keys could not be listed"),
+        }
     }
 
     /// Deletes the keys of rows no longer offered, as an update hid them; none in a hidden run or with no table.

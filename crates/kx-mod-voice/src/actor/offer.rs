@@ -5,7 +5,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::ServiceMark;
 
 use crate::VoiceSettings;
-use crate::cloud::{Chosen, Cloud, pick_text};
+use crate::cloud::{Cloud, pick_text};
 use crate::flow::{Lack, Net, Ready, Supply};
 use crate::folder::Stock;
 use crate::keys::Keys;
@@ -31,19 +31,16 @@ impl Supply for Offer<'_> {
     fn cloud(&self, iso: &str) -> Option<Net> {
         let choice = self.cloud?.choice(self.settings, iso)?;
         let row = choice.service;
-        let model = match choice.model {
-            Chosen::Listed(model) => model.id.as_str(),
-            Chosen::Typed(id) => id,
-        };
         let has = self.keys.has(&row.id);
         let has =
             has.inspect_err(|error| tracing::warn!(%error, "the cloud keys could not be listed"));
         Some(Net {
             service: row.id.clone(),
             name: row.shown(),
-            model: Redacted::new(pick_text(&row.id, model)),
+            model: Redacted::new(pick_text(&row.id, choice.model.id())),
             piece_s: piece_s(&row.limits),
-            key: has.unwrap_or(false),
+            // A failed listing is no missing key: the key read just before `send` tells.
+            key: has.unwrap_or(true),
             terms: choice.ask,
             unavailable: choice.unavailable,
             warn: choice.warn,

@@ -111,3 +111,19 @@ fn a_hidden_run_offers_no_service_and_reads_no_key() {
     assert!(rig.fake.cloud.calls().runs.is_empty());
     assert_eq!(reads(&rig), before, "no key was listed or read");
 }
+
+#[test]
+fn a_failed_key_listing_is_no_missing_key_so_the_dictation_goes_on() {
+    let mut rig = Rig::build(groq);
+    rig.fake.shelf.fail(ShelfCall::Names, SealedError::Io);
+    rig.fake
+        .cloud
+        .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);
+    rig.dictate();
+    assert_ne!(
+        rig.bar(),
+        cloud_note(CloudWhy::Key),
+        "a listing fault is no missing key"
+    );
+    assert_eq!(rig.typed_texts(), ["hello world"]);
+}
