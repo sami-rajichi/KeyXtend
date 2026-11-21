@@ -50,11 +50,15 @@ impl Actor {
         self.type_text(Source::Erase, erase);
     }
 
-    /// The typer erased, or not: the text waiting is pasted, else its asker hears nothing went in.
+    /// The typer erased, or not: the text waiting is pasted, or typed into a password box met meanwhile, else its asker
+    /// hears nothing went in.
     pub(super) fn erased(&mut self, ok: bool) {
         let Some((source, ask)) = self.pasting.erasing.take() else {
             return;
         };
+        if ok && self.flow.password() {
+            return self.type_text(source, ask);
+        }
         if ok {
             return self.ask_paste(source, ask);
         }

@@ -1,8 +1,13 @@
 //! Paste at once through the actor (owner, 2026-11-17; edge 28): the text goes to the clipboard history, never the
 //! typer; a pasted text counts as typed in full, so Undo erases exactly it; a refusal, or no answer within `paste_ms`,
-//! types it once and drops a late answer; a password box is typed; Try again erases first; History pastes once.
+//! types it once and drops a late answer; a password box is typed, also one met during an erase; Try again erases
+//! first, and a failed erase pastes nothing; History pastes once.
 
-use kx_module_api::ports::{BarButton, FieldKind, PanelButton, VoiceBar, VoiceClick, VoiceTab};
+use kx_module_api::ports::{
+    BarButton, BarHint, FieldKind, PanelButton, SpeechNote, TextDone, VoiceBar, VoiceClick,
+    VoiceTab,
+};
+use kx_module_api::{Redacted, Zeroizing};
 
 use super::Msg;
 use super::rig::Rig;
@@ -86,18 +91,23 @@ fn a_password_box_is_typed_and_never_pasted() {
     assert_eq!(rig.asks().len(), 1);
 }
 
-#[test]
-fn try_again_erases_the_pasted_text_by_typing_then_pastes_the_new_one() {
-    let mut rig = pasting();
+/// Speaks "hello", pasted, then Try again writes `text`, whose erase of "hello " the typer is asked first.
+fn again(rig: &mut Rig, text: &str) {
     rig.speak("hello");
     rig.pasted(true);
     rig.act(VoiceClick::Button(PanelButton::Again));
-    rig.tell(kx_module_api::ports::SpeechNote::Piece {
+    rig.tell(SpeechNote::Piece {
         index: 0,
-        text: kx_module_api::Redacted::new(kx_module_api::Zeroizing::new("howdy".to_owned())),
+        text: Redacted::new(Zeroizing::new(text.to_owned())),
     });
-    rig.tell(kx_module_api::ports::SpeechNote::Done(super::rig::done(1)));
+    rig.tell(SpeechNote::Done(super::rig::done(1)));
     assert_eq!(texts(&rig.asks()), [(6, String::new())], "the erase first");
+}
+
+#[test]
+fn try_again_erases_the_pasted_text_by_typing_then_pastes_the_new_one() {
+    let mut rig = pasting();
+    again(&mut rig, "howdy");
     assert_eq!(rig.pastes().len(), 1, "no paste before the erase");
     rig.typed();
     let pastes = rig.pastes();
@@ -106,6 +116,34 @@ fn try_again_erases_the_pasted_text_by_typing_then_pastes_the_new_one() {
     rig.pasted(true);
     rig.act(VoiceClick::Bar(BarButton::Undo));
     assert_eq!(texts(&rig.asks()).last(), Some(&(6, String::new())));
+}
+
+#[test]
+fn a_password_box_met_while_the_erase_is_typed_gets_the_new_text_typed() {
+    let mut rig = pasting();
+    again(&mut rig, "howdy");
+    rig.fake.field.focus(FieldKind::Password);
+    rig.pump();
+    rig.typed();
+    assert_eq!(rig.pastes().len(), 1, "never pasted");
+    assert_eq!(texts(&rig.asks()).last(), Some(&(0, "howdy ".to_owned())));
+}
+
+#[test]
+fn a_failed_erase_pastes_nothing_and_says_the_text_did_not_go_in() {
+    let mut rig = pasting();
+    again(&mut rig, "howdy");
+    let round = rig.asks().last().unwrap().round;
+    rig.send(Msg::Typed(TextDone {
+        round,
+        count: 0,
+        ok: false,
+    }));
+    assert_eq!(rig.pastes().len(), 1, "nothing pasted");
+    let VoiceBar::Text(shown) = rig.bar() else {
+        panic!("no Text bar: {:?}", rig.bar());
+    };
+    assert_eq!((shown.hint, shown.undo), (Some(BarHint::NoField), false));
 }
 
 #[test]
