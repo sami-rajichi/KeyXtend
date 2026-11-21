@@ -76,6 +76,14 @@ impl Clouds {
         (self.take, self.unkept) = (None, None);
         self.round
     }
+
+    /// Forgets the closed panel's cloud pages but keeps counting rounds, so an answer from before the close is dropped.
+    pub(crate) fn reset(&mut self) {
+        *self = Self {
+            round: self.round,
+            ..Self::default()
+        };
+    }
 }
 
 impl Panel {

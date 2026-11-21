@@ -4,14 +4,15 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceSheet, VoiceClick,
+    ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceSheet, VoiceClick, VoiceTab,
 };
 use std::time::Duration;
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::lines::on_groq_lines;
-use super::{apply, cloud_sheet, lines_sheet};
+use super::rows::named;
+use super::{act, apply, cloud_sheet, lines_sheet};
 
 #[test]
 fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
@@ -153,4 +154,21 @@ fn reopen(rig: &mut Rig) {
         rig.click(&VoiceClick::Row(0));
     }
     rig.click(&VoiceClick::Service(CloudButton::Lines));
+}
+
+#[test]
+fn a_paste_answer_from_before_a_close_never_lands_on_the_key_page_opened_again() {
+    let mut rig = on_groq_lines();
+    let paste = |rig: &mut Rig| match rig.click(&VoiceClick::Service(CloudButton::Paste))[..] {
+        [Do::Take(round)] => round,
+        ref out => panic!("no take: {out:?}"),
+    };
+    let old = paste(&mut rig);
+    rig.panel.close();
+    rig.panel.open();
+    rig.click(&VoiceClick::Open(VoiceTab::Cloud));
+    act(&mut rig, &named("Groq"), CloudButton::Lines);
+    assert_ne!(paste(&mut rig), old, "the round goes on across the close");
+    assert!(rig.with(|p, _| p.pasted(old, ClipText::Busy)).is_empty());
+    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Untested);
 }

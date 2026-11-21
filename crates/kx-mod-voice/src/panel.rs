@@ -260,7 +260,7 @@ impl Panel {
         let mut out = wrap(self.compare.cancel());
         self.compare.reset();
         (self.page, self.offer, self.asked) = (None, None, None);
-        self.cloud = Clouds::default();
+        self.cloud.reset();
         out.push(Do::Close);
         out
     }
