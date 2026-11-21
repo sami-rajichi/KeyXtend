@@ -13,14 +13,14 @@ use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
-    FACT_WARN, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_JOIN, VOICE_LISTENING,
-    VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, VOICE_USE_LOCAL,
-    WINDOW_VOICE,
+    FACT_WARN, SERVICE_KEY_ICON, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_JOIN,
+    VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING,
+    VOICE_USE_LOCAL, WINDOW_VOICE,
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, LocalUse, VoiceBar, VoicePage,
-    VoiceText,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, VoiceBar,
+    VoicePage, VoiceText,
 };
 use serde::Serialize;
 
@@ -198,14 +198,17 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
 /// puts them under its line with Open service, as the Windows 11 info bar does, and keeps Close (owner, 2026-11-20).
 fn note_bar(note: &BarNote, t: &I18n) -> Bar {
     let act = note.act.map(|b| action(b, &note.hint, t));
-    let (local, opens) = match &note.hint {
-        BarHint::Cloud { local, why } => (use_local(t, *local), why.opens()),
-        _ => (Vec::new(), false),
+    let (local, open) = match &note.hint {
+        BarHint::Cloud { local, why } => (
+            use_local(t, *local),
+            why.opens().then(|| open_service(t, why)),
+        ),
+        _ => (Vec::new(), None),
     };
     let close = Button::bar(t, BarButton::Close);
     let mut acts: Vec<Button> = act.into_iter().chain(local).collect();
-    let buttons = if opens {
-        acts.push(Button::bar(t, BarButton::Service));
+    let buttons = if let Some(open) = open {
+        acts.push(open);
         vec![close]
     } else {
         acts.drain(..).chain([close]).collect()
@@ -215,6 +218,15 @@ fn note_bar(note: &BarNote, t: &I18n) -> Bar {
         mic: note.mic,
         buttons,
         acts,
+    }
+}
+
+/// Open service, wearing a key on the key note as it opens the key page (design/voice-cloud.js `noteBar`).
+fn open_service(t: &I18n, why: &CloudWhy) -> Button {
+    let open = Button::bar(t, BarButton::Service);
+    match why {
+        CloudWhy::Key => open.icon(SERVICE_KEY_ICON),
+        _ => open,
     }
 }
 

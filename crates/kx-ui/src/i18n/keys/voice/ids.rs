@@ -142,6 +142,9 @@ pub const fn bar_button_id(button: BarButton) -> &'static str {
     }
 }
 
+/// The bar icon Open service wears on the key note, as it opens the key page; on any other note it wears its id's.
+pub const SERVICE_KEY_ICON: &str = "service_key";
+
 /// A panel button's id, which QML sends back on a click.
 #[must_use]
 pub const fn panel_button_id(button: PanelButton) -> &'static str {

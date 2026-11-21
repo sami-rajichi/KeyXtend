@@ -28,6 +28,9 @@ pub(super) struct Button {
     name: Option<String>,
     on: bool,
     tone: Tone,
+    /// The bar icon it wears in place of its id's, by its name in the theme's `[voice]` icons.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon: Option<&'static str>,
 }
 
 impl Button {
@@ -41,6 +44,7 @@ impl Button {
             name: None,
             on: true,
             tone: Tone::Plain,
+            icon: None,
         }
     }
 
@@ -75,6 +79,12 @@ impl Button {
     /// This button heard by readers as `name`, its label still shown.
     pub(super) fn named(mut self, name: String) -> Self {
         self.name = Some(name);
+        self
+    }
+
+    /// This button wearing bar icon `icon` in place of its id's.
+    pub(super) const fn icon(mut self, icon: &'static str) -> Self {
+        self.icon = Some(icon);
         self
     }
 

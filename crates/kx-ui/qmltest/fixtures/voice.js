@@ -120,6 +120,7 @@ var views = {
           },
           {
             "arg": 0,
+            "icon": "service_key",
             "id": "service",
             "kind": "bar",
             "label": "فتح الخدمة",
@@ -1114,6 +1115,7 @@ var views = {
           },
           {
             "arg": 0,
+            "icon": "service_key",
             "id": "service",
             "kind": "bar",
             "label": "Open service",
@@ -2108,6 +2110,7 @@ var views = {
           },
           {
             "arg": 0,
+            "icon": "service_key",
             "id": "service",
             "kind": "bar",
             "label": "Ouvrir le service",

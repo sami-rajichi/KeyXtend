@@ -128,6 +128,15 @@ Item {
             ready.visible = none.visible = false;
         }
 
+        // Open service wears a key on the key note, as it opens the key page, and its own page icon on the others.
+        function test_open_service_wears_a_key_on_the_key_note_and_a_page_on_the_others() {
+            const open = name => buttons(make(name, "en")).find(b => b.Accessible.id === "voice.service");
+            const icons = N.lk.icons.voice;
+            compare(open("cloudKey").icon, icons.service_key, "the key page");
+            compare(open("cloudOff").icon, icons.service, "the card");
+            verify(icons.service_key !== "" && icons.service_key !== icons.service, "two icons");
+        }
+
         function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line_data() {
             return langs_data();
         }

@@ -1225,6 +1225,7 @@ var lk = {
       "listen": "mic",
       "download": "download",
       "service": "file",
+      "service_key": "key-round",
       "local": "cpu",
       "cloud": "cloud",
       "transcribing": "audio-lines",

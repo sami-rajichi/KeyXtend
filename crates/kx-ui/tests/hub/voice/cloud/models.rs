@@ -1,7 +1,7 @@
 //! Cloud models and the bar through the hub: the Models page's Local | Cloud chips and band (edge 29), a cloud model's
 //! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
 //! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4), with
-//! Open service under the line of a note the service's pages settle (final review m5).
+//! Open service under the line of a note the service's pages settle, a key on the key note's (final review m5).
 
 use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
 use super::{groq, marks, pairs};
@@ -12,6 +12,7 @@ use kx_module_api::ports::{
     CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState, ModelsSheet,
     RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
 };
+use kx_ui::i18n::keys::SERVICE_KEY_ICON;
 use kx_ui::voice_acts::{BAR, LOCAL, OPEN, SIDE};
 use serde_json::{Value, json};
 
@@ -175,6 +176,12 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
 /// The bar's two rows for a cloud note on `why` with `local`, and Try again when `again`: its buttons, then the acts
 /// under its line.
 fn note_rows(why: CloudWhy, local: LocalUse, again: bool) -> [Vec<[String; 5]>; 2] {
+    let bar = note_bar(why, local, again);
+    [buttons(&bar["buttons"]), buttons(&bar["acts"])]
+}
+
+/// The bar QML reads for a cloud note on `why` with `local`, and Try again when `again`.
+fn note_bar(why: CloudWhy, local: LocalUse, again: bool) -> Value {
     let rig = Rig::new();
     let heard = heard(&rig);
     let note = BarNote {
@@ -185,7 +192,7 @@ fn note_rows(why: CloudWhy, local: LocalUse, again: bool) -> [Vec<[String; 5]>; 
     heard.view(page(1, VoiceBar::Note(note), None));
     let bar = json(&rig)["bar"].clone();
     assert_eq!(bar["state"], "note");
-    [buttons(&bar["buttons"]), buttons(&bar["acts"])]
+    bar
 }
 
 /// The bar's buttons for a cloud note no service page settles, all on one row.
@@ -242,4 +249,17 @@ fn a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_lin
     }
     let net = note_buttons(&CloudWhy::Net, LocalUse::Ready, true);
     assert!(!net.contains(&open), "a network fault opens nothing");
+}
+
+#[test]
+fn the_key_notes_open_service_wears_a_key_and_the_other_notes_its_own_icon() {
+    let icon = |why| note_bar(why, LocalUse::Ready, true)["acts"][2]["icon"].clone();
+    assert_eq!(
+        icon(CloudWhy::Key),
+        SERVICE_KEY_ICON,
+        "it opens the key page"
+    );
+    for why in [CloudWhy::Terms, CloudWhy::Account, CloudWhy::Off] {
+        assert_eq!(icon(why.clone()), Value::Null, "{why:?}: its id's own");
+    }
 }
