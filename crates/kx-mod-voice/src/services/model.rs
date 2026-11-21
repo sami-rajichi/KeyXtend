@@ -10,7 +10,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use super::{LangCodes, Rules, ServiceError, form};
-use crate::models::one_line;
+use crate::plain::one_line;
 
 /// Why a model was refused, naming the rule it breaks.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]

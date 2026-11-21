@@ -20,6 +20,7 @@ mod manifest;
 pub mod models;
 mod module;
 pub mod panel;
+mod plain;
 pub mod score;
 pub mod services;
 mod settings;

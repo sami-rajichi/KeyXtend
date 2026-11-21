@@ -4,15 +4,16 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CardId, CardUse, FetchAsk, Fingerprint, JobLimits, LINK_SCHEME, Link, SpeechModel, TAG_LEN,
     fits_iso, host_ok, link_named,
 };
-use kx_module_api::{Redacted, is_hidden};
 use serde::Deserialize;
 use thiserror::Error;
 
 use super::{Rules, file_ok};
+use crate::plain::one_line;
 
 /// Why a row was refused, in the order the rules are checked.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
@@ -264,11 +265,6 @@ impl RawRow {
 /// The fingerprint `sha256` spells, only in the lower-case hex the table writes.
 fn print_of(sha256: &str) -> Option<Fingerprint> {
     Fingerprint::from_hex(sha256).filter(|p| p.hex() == sha256)
-}
-
-/// True for text that is not empty and holds no hidden mark.
-pub(crate) fn one_line(text: &str) -> bool {
-    !text.is_empty() && !text.chars().any(is_hidden)
 }
 
 /// True for a tag the frames carry: within `TAG_LEN`, visible ASCII only.

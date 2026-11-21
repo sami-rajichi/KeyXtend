@@ -8,7 +8,7 @@ use thiserror::Error;
 use super::{
     Address, Facts, KeyTest, Model, ModelError, Rules, address, facts, form, limits, model,
 };
-use crate::models::one_line;
+use crate::plain::one_line;
 use crate::services::FactError;
 
 /// The table's word for the `Authorization: Bearer` header.

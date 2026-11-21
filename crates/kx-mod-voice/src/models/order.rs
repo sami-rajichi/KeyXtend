@@ -10,6 +10,7 @@ use thiserror::Error;
 use toml::value::Datetime;
 
 use super::{Row, Table, TableError};
+use crate::plain::day;
 
 /// Why an order was refused.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
@@ -205,12 +206,4 @@ fn places(ids: &[String], rows: &[Row], lang: Option<&str>) -> Result<Vec<usize>
         return Err(OrderError::Lead);
     }
     Ok(at)
-}
-
-/// The plain day `when` names; `None` for a time or an offset, or a day that does not exist.
-pub(crate) fn day(when: &Datetime) -> Option<Date> {
-    let date = when
-        .date
-        .filter(|_| when.time.is_none() && when.offset.is_none())?;
-    Date::new(date.year, date.month, date.day)
 }

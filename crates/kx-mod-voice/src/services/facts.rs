@@ -10,7 +10,7 @@ use thiserror::Error;
 use toml::value::Datetime;
 
 use super::ServiceError;
-use crate::models::{day, one_line};
+use crate::plain::{day, one_line};
 
 /// How far a written amount may sit from a whole hundredth, for the float's own error.
 const SLACK: f64 = 1e-6;

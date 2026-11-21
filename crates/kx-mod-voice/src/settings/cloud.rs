@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use toml::value::Datetime;
 
 use super::{SERVICES, VoiceSettings};
-use crate::models::day;
+use crate::plain::day;
 
 /// Days after which a card's facts show as old.
 pub const FACTS_DAYS: RangeInclusive<u16> = 30..=730;
