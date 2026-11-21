@@ -1,4 +1,4 @@
-//! Groq's row as its pages read 2026-11-17 give it (research file `[G…]` lines): its facts as numbers and flags with
+//! Groq's row as its pages read 2026-11-21 give it (research file `[G…]` lines): its facts as numbers and flags with
 //! their day and source, models that know English, French and Arabic, no training, its one host and its least bill.
 
 use super::*;
@@ -7,7 +7,7 @@ use super::*;
 fn groqs_facts_are_numbers_and_flags_with_their_day_and_source() {
     let groq = shipped().get("groq").unwrap();
     let facts = &groq.facts;
-    assert_eq!(facts.read, Date::new(2026, 11, 17).unwrap());
+    assert_eq!(facts.read, Date::new(2026, 11, 21).unwrap());
     let spoken = groq
         .models
         .iter()

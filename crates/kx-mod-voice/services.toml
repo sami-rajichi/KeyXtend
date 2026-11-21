@@ -49,7 +49,7 @@ plain = ["json", "text"]
 timings = ["timestamp_granularities", "timestamps_granularity"]
 untimed = ["none"]
 
-# Groq: console.groq.com docs read 2026-11-17 (speech-to-text, rate-limits, models, billing-faqs, your-data, and the
+# Groq: console.groq.com docs read 2026-11-21 (speech-to-text, rate-limits, models, billing-faqs, your-data, and the
 # services agreement section 4.2). The free plan's 20 requests a minute and 28,800 audio seconds a day; 25 MB a file.
 [[services]]
 id = "groq"
@@ -79,7 +79,7 @@ name = "Whisper Large v3"
 langs = "whisper"
 
 [services.facts]
-read = 2026-11-17
+read = 2026-11-21
 source = "https://console.groq.com/docs/your-data"
 currency = "USD"
 place = { id = "us" }
@@ -209,7 +209,7 @@ free = { id = "first-buy", money = { least = 15 } }
 light = { id = "plain", money = { price = 1.35 } }
 heavy = { id = "plain", money = { price = 5.40 } }
 
-# Lemonfox: lemonfox.ai read 2026-11-17 (home, speech-to-text API, Whisper API, terms). Whisper large-v3 with no model
+# Lemonfox: lemonfox.ai read 2026-11-21 (home, speech-to-text API, Whisper API, terms). Whisper large-v3 with no model
 # field and the language as an English name; 100 MB an upload, fair use and no key test.
 [[services]]
 id = "lemonfox"
@@ -233,7 +233,7 @@ langs = "whisper-names"
 unnamed = true
 
 [services.facts]
-read = 2026-11-17
+read = 2026-11-21
 source = "https://www.lemonfox.ai/"
 currency = "USD"
 place = { id = "unstated" }

@@ -3,8 +3,9 @@
 # upload-form rows as one table and checked by the same rules; the table-wide values and the notes on every key are in
 # `services.toml`.
 
-# ElevenLabs: elevenlabs.io read 2026-11-17 (API pricing, pricing, the speech-to-text reference, models, privacy policy,
-# errors, the subscription endpoint). Scribe in its own form with `xi-api-key`; trained on by default, so its card warns.
+# ElevenLabs: elevenlabs.io read 2026-11-21 (API pricing, pricing, speech-to-text and its reference, models, privacy
+# policy, errors, the help centre, the subscription endpoint). Scribe in its own form with `xi-api-key`; trained on by
+# default, so its card warns.
 [[services]]
 id = "elevenlabs"
 name = "ElevenLabs"
@@ -16,9 +17,9 @@ address = "https://api.elevenlabs.io/v1/speech-to-text"
 test = "https://api.elevenlabs.io/v1/user/subscription"
 header = "xi-api-key"
 keys = "https://elevenlabs.io/app/settings/api-keys"
-# A file may reach 5 GB [E3]; the free plan takes 2 requests at once [E8].
-# `max_mb`, `max_s` and `per_min` are untested guesses, checked at task 24.
-limits = { cap_mb = 5000, max_mb = 23, max_s = 600, per_min = 60, at_once = 2 }
+# A file may reach 5 GB [E3] and 15 hours (its speech-to-text page); the free plan takes 8 batch requests at once
+# (its help centre). `max_mb`, `max_s` and `per_min` are untested guesses, checked at task 24.
+limits = { cap_mb = 5000, cap_s = 54000, max_mb = 23, max_s = 600, per_min = 60, at_once = 8 }
 terms = 1
 offered = true
 untested = true
@@ -36,7 +37,7 @@ langs = "en-fr-ar"
 # The free allowance shows the lower of its pages' figures: about 30 min [E2], not 4 h 30 min [E1].
 # Light and heavy use take the cheapest plans [E1]: Starter, $6 a month with 30 h, and Creator, $22 with 110 h.
 [services.facts]
-read = 2026-11-17
+read = 2026-11-21
 source = "https://elevenlabs.io/privacy-policy"
 currency = "USD"
 place = { id = "us" }
@@ -66,6 +67,9 @@ terms = 1
 offered = true
 untested = true
 
+# Read again 2026-11-21: the free tier may ask for a phone check (403 `FREE_TIER_VERIFICATION_REQUIRED`, already the
+# `PAY` fault), and the model's table names Arabic only as `ar-EG` and Spanish as `es-419` or `es-US`; the hands-on
+# check tries `ar-SA` and `es-ES`.
 [[services.models]]
 id = "models/gemini-3.5-transcribe"
 name = "Gemini 3.5 Transcribe"
@@ -87,7 +91,7 @@ heavy = { id = "paid-plain", money = { price = 18.00 } }
 warn = { id = "free-allowance" }
 rule = { id = "eea-paid-18" }
 
-# AssemblyAI: assemblyai.com read 2026-11-19 (the Sync API reference, short files, pricing, billing, data retention and
+# AssemblyAI: assemblyai.com read 2026-11-21 (the Sync API reference, short files, pricing, billing, data retention and
 # training, the STT-3.7 note, models). Universal-3.6 Pro through the Sync API on the European servers: one request a
 # piece, its `config` part first, the key in `Authorization` and the model in its own header; no call tests a key.
 [[services]]
@@ -103,7 +107,7 @@ keys = "https://www.assemblyai.com/dashboard/api-keys"
 # A request takes 256 MB and 20 minutes, but one past its 30-second server deadline fails [A2], so a piece keeps to
 # the live limit's 2 minutes [A1], 3.84 MB raw. `per_min`, `at_once` and the keys page are guesses, checked at task 24.
 limits = { cap_mb = 256, cap_s = 1200, max_mb = 4, max_s = 120, per_min = 20, at_once = 2 }
-terms = 1
+terms = 2
 offered = true
 untested = true
 
@@ -112,15 +116,16 @@ id = "universal-3-6-pro"
 name = "Universal-3.6 Pro"
 langs = "assemblyai"
 
-# Nothing sent to its European servers trains its models [A5], so no warning; the Sync API's keeping is not stated.
-# New accounts get $50 of credit with no card, which never expires [A3][A4]; light and heavy use at $0.30 an hour [A3].
+# Nothing sent to its European servers trains its models and the Sync API keeps no audio or transcript [A5], so no
+# warning. New accounts get $50 of credit with no card, which never expires [A3][A4]; light and heavy use at $0.30 an
+# hour [A3].
 [services.facts]
-read = 2026-11-19
+read = 2026-11-21
 source = "https://www.assemblyai.com/pricing"
 currency = "USD"
 place = { id = "eu" }
 trains = { id = "never" }
-keeps = { id = "unstated" }
+keeps = { id = "none" }
 free = { id = "credit", money = { credit = 50.00 } }
 light = { id = "plain", money = { price = 4.50 } }
 heavy = { id = "plain", money = { price = 18.00 } }

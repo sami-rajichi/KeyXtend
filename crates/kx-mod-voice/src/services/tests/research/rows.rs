@@ -1,6 +1,6 @@
-//! The shipped upload-form rows as the services' pages read 2026-11-17 give them (research file `[X]` lines): the
-//! offered ones with Groq first, each row's address, key test, form and paywall, its models with the code each wants
-//! for English, French and Arabic, and its prices for light and heavy use; a row not offered is tested all the same.
+//! The shipped upload-form rows as their pages read 2026-11-17 give them, some again 2026-11-21 (research file `[X]`
+//! lines): the offered ones with Groq first, each row's address, key test, form and paywall, its models with the code
+//! each wants for English, French and Arabic, and its prices for light and heavy use; rows not offered are tested too.
 
 use super::*;
 use kx_module_api::ports::{Fact, KeyHeader};

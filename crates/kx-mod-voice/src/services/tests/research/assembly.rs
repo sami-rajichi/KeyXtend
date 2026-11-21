@@ -1,7 +1,7 @@
-//! `AssemblyAI`'s row as its pages read 2026-11-19 give it (research file `[A…]` lines): its Sync request to the
+//! `AssemblyAI`'s row as its pages read 2026-11-21 give it (research file `[A…]` lines): its Sync request to the
 //! European servers with the key in `Authorization` and the model in its own header, no key test, Universal-3.6 Pro
 //! with the Sync API's 32 language codes, a two-minute piece far under its request cap, and its card: the EU, no
-//! training there and no warning, a keeping its pages do not state, $50 of credit and the plain hourly price.
+//! training there and no warning, nothing kept, its terms raised for that, $50 of credit and the plain hourly price.
 
 use super::*;
 use crate::services::KeyTest;
@@ -78,11 +78,16 @@ fn its_pieces_last_two_minutes_under_its_cap_and_its_rates_are_guesses() {
 #[test]
 fn its_card_is_the_eu_with_no_training_or_warning_its_credit_and_plain_price() {
     let facts = &assemblyai().facts;
-    assert_eq!(facts.read, Date::new(2026, 11, 19).unwrap());
+    assert_eq!(facts.read, Date::new(2026, 11, 21).unwrap());
     let host = facts.source.as_ref().map(HttpsUrl::host);
     assert_eq!(host, Some("www.assemblyai.com"), "its pricing page [A3]");
     let ids = [&facts.place, &facts.trains, &facts.keeps].map(|f| f.id.as_str());
-    assert_eq!(ids, ["eu", "never", "unstated"], "[A5]");
+    assert_eq!(ids, ["eu", "never", "none"], "[A5]: Sync keeps nothing");
+    let terms = assemblyai().terms;
+    assert_eq!(
+        terms, 2,
+        "raised as its keeping changed (ADR-0047 decision 8)"
+    );
     assert!(
         !facts.trains.warn && facts.warn.is_none(),
         "nothing to warn of"

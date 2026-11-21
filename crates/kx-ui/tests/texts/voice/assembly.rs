@@ -1,6 +1,6 @@
-//! `AssemblyAI`'s card in each language (research [A3] to [A5]), read from its own row: the EU, no training, a keeping
-//! its pages do not state in the other unstated facts' words, $50 of credit that never expires with no card, with
-//! Arabic's dollars agreeing with their number after "بقيمة", and the plain price of light and heavy use.
+//! `AssemblyAI`'s card in each language (research [A3] to [A5]), read from its own row: the EU, no training, nothing
+//! kept, while an unstated keeping takes the other unstated facts' words, $50 of credit that never expires with no
+//! card, with Arabic's dollars agreeing with their number after "بقيمة", and the plain price of light and heavy use.
 
 use crate::lang;
 use kx_mod_voice::services::{Facts, table};
@@ -24,14 +24,7 @@ const CARD: [(&str, [&str; 3]); 6] = [
             "لا يُستخدم للتدريب",
         ],
     ),
-    (
-        FACT_KEEPS,
-        [
-            "Not stated on its pages",
-            "Non précisé sur ses pages",
-            "غير مذكور في صفحات الخدمة",
-        ],
-    ),
+    (FACT_KEEPS, ["Nothing", "Rien", "لا شيء"]),
     (
         FACT_FREE,
         [

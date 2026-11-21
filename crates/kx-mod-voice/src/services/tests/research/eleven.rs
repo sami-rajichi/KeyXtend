@@ -1,11 +1,14 @@
-//! `ElevenLabs`' row as its pages read 2026-11-17 give it (research file `[E…]` lines): its own form, asking for no
+//! `ElevenLabs`' row as its pages read 2026-11-21 give it (research file `[E…]` lines): its own form, asking for no
 //! sound tags, at its own address with the key in `xi-api-key`, its key test on the subscription, Scribe v3 and v2 but
-//! never the deprecated v1, two requests at once, and its card: the US, training by default with its switch named
-//! last, history kept, the lower free allowance, its cheapest plans for light and heavy use, and the free plan's rule.
+//! never the deprecated v1, eight requests at once and 15 hours a file, and its card: the US, training by default with
+//! its switch named last, history kept, the lower free allowance, its cheapest plans for light and heavy use, and the
+//! free plan's rule.
 
 use super::*;
-use kx_module_api::ports::{FactArg, FormField, KeyHeader, OwnFields};
+use kx_module_api::ports::{FactArg, FormField, KeyHeader, MIN_PER_HOUR, OwnFields, S_PER_MIN};
 
+/// The longest file it takes, in hours (its speech-to-text page, read 2026-11-21).
+const FILE_HOURS: i64 = 15;
 /// The cheapest plans for light and heavy use [E1]: Starter and Creator, each its price in cents a month and the hours
 /// of sound it includes.
 const PLANS: [(u32, u16); 2] = [(600, 30), (2200, 110)];
@@ -79,10 +82,18 @@ fn it_offers_scribe_v3_then_v2_never_the_deprecated_v1() {
 }
 
 #[test]
-fn it_sends_two_requests_at_once() {
+fn it_sends_eight_requests_at_once_and_a_file_lasts_15_hours_at_most() {
     let limits = eleven().limits;
-    assert_eq!(limits.at_once, 2, "the free plan's concurrency [E8]");
+    assert_eq!(
+        limits.at_once, 8,
+        "the free plan's batch limit, help centre"
+    );
     assert_eq!((limits.max_mb, limits.max_s), (23, 600));
+    let cap_s: i64 = field_of(row_line(OWN, "elevenlabs", "limits"), "cap_s")
+        .parse()
+        .unwrap();
+    let most = FILE_HOURS * MIN_PER_HOUR * S_PER_MIN;
+    assert_eq!(cap_s, most, "15 hours a file, its speech-to-text page");
 }
 
 #[test]
@@ -106,7 +117,7 @@ fn its_card_warns_that_it_trains_by_default_and_names_its_switch_last() {
 #[test]
 fn its_facts_are_its_pages_with_the_lower_free_allowance_and_the_free_plans_rule() {
     let facts = &eleven().facts;
-    assert_eq!(facts.read, Date::new(2026, 11, 17).unwrap());
+    assert_eq!(facts.read, Date::new(2026, 11, 21).unwrap());
     assert_eq!(
         facts.source.as_ref().map(HttpsUrl::host),
         Some("elevenlabs.io")
