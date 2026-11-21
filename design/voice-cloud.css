@@ -35,11 +35,9 @@
 .pr.hint>.i{font-size:calc(var(--clip-button-px-4) * var(--u)); color:var(--pop-muted)}
 .pr.hint .tx>div{white-space:normal; margin-top:0}
 
-/* The Cloud page: the master switch band, rows dimmed while it is off, and marks or bands in the warning colours. */
+/* The Cloud page: the master switch band, and marks or bands in the warning colours. */
 .pn.swb{cursor:pointer}
 .pn.swb:hover{box-shadow:inset 0 0 0 999px var(--hover)}
-/* A dimmed row's Remove key keeps its full strength, as it still acts. */
-.pr.off>:not(.rk){opacity:var(--panel-off-share)}
 /* The Untested tag beside a service's name: a small outlined chip in the muted ink. */
 .tag{display:inline-block; margin-inline-start:calc(var(--chip-gap-px) * var(--u)); padding:0 calc(var(--chip-gap-px) * var(--u)); border:var(--line-px) solid var(--pop-line); border-radius:999px;
   color:var(--pop-muted); font:var(--chip-weight) calc(var(--panel-hint-px-0) * var(--u))/1.4 var(--latin-fonts); vertical-align:middle}

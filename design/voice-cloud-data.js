@@ -170,7 +170,7 @@ const CM = {'gq-turbo':['Whisper Large v3 Turbo', 'groq'], 'gq-large':['Whisper 
 Object.keys(CM).forEach(id => { M[id] = [CM[id][0], 0]; });
 
 // Sample state: the user already switched on Groq (tested), Lemonfox (a key; it has no test call) and OpenRouter (no key).
-// ElevenLabs is Off but keeps its sealed key, as after declined newer terms, so its row offers Remove key.
+// ElevenLabs is Off but keeps its sealed key, as after declined newer terms, so ticking its row offers Remove key.
 S.cloud = true;
 S.svc = Object.fromEntries(SVC.map(s => [s.id, {st:'off', key:0, test:'', will:'ok', on:'', keep0:true}]));
 Object.assign(S.svc.groq, {st:'ready', key:KEY_LEN, test:'ok', on:READ});

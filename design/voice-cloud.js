@@ -110,20 +110,20 @@ function cloudModels() {
 }
 const slowBand = () => '<div class="pn' + A + '">' + ic('cpu') + '<span class="x"' + D + '>' + t(l.slow, {lang:(l.langIn || l.langs)[S.lang]}) + '</span>' + btn('go:cloud', 'cloud', l.cloud) + '</div>';
 
-// The Cloud page: the master switch, then the services, five a page; a ticked row's acts in the footer. A row whose key
-// is sealed has its own Remove key, as a download row its Pause, even while it or the master switch is off (owner, 2026-11-20).
+// The Cloud page: the master switch, then the services, five a page; a ticked row's acts in the footer. Remove key acts on
+// the ticked row whenever its key is sealed, on or off (owner, 2026-11-21). With the master switch off it lists none.
 function cloudPage() {
   const on = S.cloud, s = S.tick.length ? SVC[S.tick[0]] : null, st = s ? S.svc[s.id].st : '', live = on && !!s;
-  const rows = SVC.map((v, i) => {
+  const rows = on ? SVC.map((v, i) => {
     const sub = v.id === 'custom' ? l.customSub : t(l.freeLine, {v:freeText(v)});
-    const rk = S.svc[v.id].key ? '<span class="rk">' + btn('rmrow:' + i, 'trash-2', l.remove) + '</span>' : '', cols = [CK, '1fr', 'auto'].concat(rk ? ['auto'] : []);
-    const inner = tickBox(i, true) + cell(svcName(v) + untestedTag(v), sub) + '<div class="marks">' + (v.warn ? mark(l[WARN_MARK[v.warn]], 'triangle-alert', 'warn') : '') + stateMark(v.id) + '</div>' + rk;
-    return on ? tickRow(cols, inner, i) : row(cols, inner, '', 'flat off');
-  });
+    const inner = tickBox(i, true) + cell(svcName(v) + untestedTag(v), sub) + '<div class="marks">' + (v.warn ? mark(l[WARN_MARK[v.warn]], 'triangle-alert', 'warn') : '') + stateMark(v.id) + '</div>';
+    return tickRow([CK, '1fr', 'auto'], inner, i);
+  }) : [];
   const band = '<div class="pn swb' + A + '" data-a="cloudsw" role="switch" aria-checked="' + on + '" tabindex="0">' + ic('cloud') + '<span class="x"' + D + '>' + l.master + '</span>' +
     '<span class="onoff' + A + '"' + D + '>' + (on ? l.on : l.off) + '</span><span class="sw' + (on ? ' on' : '') + '"></span></div>';
   return {icon:'cloud', title:l.cloud, sub:l.cloudSub, top:band + (on ? '' : note('power', l.masterOff)), body:list(rows),
-    foot:btn('facts', 'file', l.facts, '', !live) + btn('svc', 'key', l.keyModel, '', !live || st === 'off') + btn('svcoff', 'power', l.swOff, '', !live || st === 'off') + gap +
+    foot:btn('facts', 'file', l.facts, '', !live) + btn('svc', 'key', l.keyModel, '', !live || st === 'off') + btn('rmsvc', 'trash-2', l.remove, 'danger', !live || !S.svc[s.id].key) +
+      btn('svcoff', 'power', l.swOff, '', !live || st === 'off') + gap +
       btn('swon', 'power', l.swOn, 'enter', !live || st !== 'off')};
 }
 
@@ -213,7 +213,7 @@ Object.assign(ACT, {
     ctimer = setTimeout(() => { const ok = v.will === 'ok'; Object.assign(v, {test:ok ? 'ok' : 'bad', st:ok ? 'ready' : 'key'}); fallback(); render(); }, PACE.test);
   },
   rmkey:() => { Object.assign(S.svc[S.cur], {key:0, test:'', st:'key'}); fallback(); },
-  rmrow:x => { const v = S.svc[SVC[+x].id]; Object.assign(v, {key:0, test:'', st:v.st === 'off' ? 'off' : 'key'}); fallback(); },
+  rmsvc:() => { const v = S.svc[tickedSvc().id]; Object.assign(v, {key:0, test:'', st:v.st === 'off' ? 'off' : 'key'}); fallback(); },
   uselocal:transcribe,
   opensvc:() => { const id = noteSvc(), k = NOTE[S.bar]; if (k === 'key') { openSvc(id); go('svcpage'); } else { openCard(id, ['terms','off'].includes(k), 'cloud'); go('svccard'); } },
   side:x => go(x === 'cloud' ? 'mcloud' : S.weak ? 'slow' : 'models'),
@@ -249,4 +249,4 @@ Object.assign(SAY, {
   naccount:'<strong>Cloud note: a step on the service’s site.</strong> Open service opens the card, with the link to the service’s page.',
   nallow:'<strong>Cloud note: the free allowance is used.</strong> It says the clock time it renews at, never a wait that goes stale; Open service opens the card.',
   noff:'<strong>Cloud note: the service is off.</strong> Nothing was sent; Open service opens the card, where Confirm switches it on again.'});
-SAY.cloud += ' A row whose key is saved has its own Remove key, even while the service is off (ElevenLabs here) or cloud services are off.';
+SAY.cloud += ' Tick a row whose key is saved and Remove key in the footer deletes it, even while the service is off (ElevenLabs here); with cloud services off the page lists none.';
