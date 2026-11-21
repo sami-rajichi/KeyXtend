@@ -181,10 +181,9 @@ fn a_card_shows_the_day_its_facts_were_read_and_turns_old_past_facts_days() {
     assert!(matches!(card, VoiceSheet::Card(c) if !c.old));
 }
 
-#[test]
-fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_keeps_its_key() {
-    let newer = ROUTER.replace("terms = 1", "terms = 2");
-    let mut rig = on_cloud(&newer);
+/// Router Test's row at newer terms 2, still on at terms 1, picked for English and keyed.
+fn router_at_newer_terms() -> Rig {
+    let mut rig = on_cloud(&ROUTER.replace("terms = 1", "terms = 2"));
     let on = r#""router-test" = { on = 2026-11-01, terms = 1 }"#;
     put(&mut rig, "services", on);
     put(
@@ -193,6 +192,12 @@ fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_ke
         r#"en = "router-test:openai/whisper-large-v3-turbo""#,
     );
     rig.keyed.insert("router-test".into());
+    rig
+}
+
+#[test]
+fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_keeps_its_key() {
+    let mut rig = router_at_newer_terms();
     let router = named("Router Test");
     tick(&mut rig, &router);
     let acts = [
