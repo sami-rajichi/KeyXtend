@@ -103,7 +103,7 @@ pub struct VoiceSettings {
     pub cloud: bool,
     /// The services the user switched on, by row id.
     pub services: BTreeMap<String, ServiceOn>,
-    /// The longest wait for one cloud request's answer, in seconds.
+    /// The longest silence a cloud request may keep, in seconds; a piece may take several of these.
     pub net_wait_s: u16,
     /// Tries per piece before a cloud note.
     pub net_tries: u8,

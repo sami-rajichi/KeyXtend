@@ -91,7 +91,7 @@ cloud = false
 # The services the user switched on, by id: the day and terms number confirmed, any typed address or model, and the
 # terms number at which the first dictation showed the card's warning.
 services = {}
-# The longest wait for one cloud request's answer, in seconds.
+# The longest silence a cloud request may keep, in seconds; a piece may take several of these.
 net_wait_s = 60
 # Tries per piece before a cloud note.
 net_tries = 2
