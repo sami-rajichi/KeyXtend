@@ -1,7 +1,7 @@
 // The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service
 // takes the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's
 // Try again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with
-// Open service for a note the service's pages settle, the longest line whole; the card's warning in full under the row
+// Open service for a note the service's pages settle, the longest lines whole; the card's warning in full under the row
 // on the first dictation to its service; and each new state told to readers once, in English, French and Arabic.
 import QtQuick
 import QtTest
@@ -138,7 +138,7 @@ Item {
             verify(icons.service_key !== "" && icons.service_key !== icons.service, "two icons");
         }
 
-        // The Off note with the most acts, and the account note with the longest line over them.
+        // The Off note with the most acts, and the account note with English's and French's longest line over them.
         function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line_data() {
             const notes = [["cloudOff", ["voice.again", "voice.local", "voice.download", "voice.service"]],
                 ["cloudAccount", ["voice.again", "voice.local", "voice.service"]]];
@@ -154,11 +154,9 @@ Item {
             compare(all.filter(b => !under(b)).map(b => b.Accessible.id), ["voice.gear", "voice.close"], "Close stays");
             const acts = all.filter(under);
             compare(acts.map(b => b.Accessible.id), d.acts);
-            const text = bar.view.bar.hint.text;
-            const line = Board.all(bar.contentItem, o => o.visible && o.text === text && o.font !== undefined);
-            compare(line.length, 1, "the note's line shows once");
-            verify(!line[0].truncated, "the note reads whole over its acts");
-            verify(line[0].mapToItem(bar.body, 0, 0).y + line[0].height <= bar.row + 0.5, "the line sits in the row");
+            const line = noteLine(bar);
+            verify(!line.truncated, "the note reads whole over its acts");
+            verify(line.mapToItem(bar.body, 0, 0).y + line.height <= bar.row + 0.5, "the line sits in the row");
             for (const b of acts) {
                 const at = b.mapToItem(bar.body, 0, 0);
                 verify(at.x >= 0 && at.x + b.width <= bar.body.width + 0.5, b.Accessible.id + " inside the bar's width");
@@ -170,6 +168,37 @@ Item {
             mouseClick(acts[acts.length - 1]);
             compare(bar.voice.calls, ["act bar service 0 " + bar.view.round]);
             bar.visible = net.visible = false;
+        }
+
+        // The no-local note, Arabic's longest at 82 characters, has no acts row: it reads whole in the row, clear of Use
+        // the local model, dimmed, the gear and Close, in each language.
+        function test_the_no_local_note_reads_whole_beside_its_buttons_data() {
+            return langs_data();
+        }
+        function test_the_no_local_note_reads_whole_beside_its_buttons(d) {
+            const bar = make("cloudNoLocal", d.t);
+            compare(bar.under, 0, "no acts row");
+            const all = buttons(bar);
+            compare(all.map(b => b.Accessible.id), ["voice.local", "voice.gear", "voice.close"]);
+            verify(!all[0].enabled, "dimmed, as no local model is ready");
+            const line = noteLine(bar);
+            verify(!line.truncated, "the note reads whole");
+            const at = line.mapToItem(bar.body, 0, 0);
+            verify(at.x >= 0 && at.x + line.width <= bar.body.width + 0.5, "inside the bar's width");
+            verify(at.y >= 0 && at.y + line.height <= bar.row + 0.5, "inside the row");
+            for (const b of all) {
+                const [x, w] = [b.mapToItem(bar.body, 0, 0).x, b.width];
+                verify(x >= at.x + line.width - 0.5 || x + w <= at.x + 0.5, b.Accessible.id + " clear of the line");
+            }
+            bar.visible = false;
+        }
+
+        // The note's line in bar `bar`, shown once.
+        function noteLine(bar) {
+            const text = bar.view.bar.hint.text;
+            const line = Board.all(bar.contentItem, o => o.visible && o.text === text && o.font !== undefined);
+            compare(line.length, 1, "the note's line shows once");
+            return line[0];
         }
 
         // While it listens, readers hear the hub's sentence, never the shown word, a cloud dictation's too.
