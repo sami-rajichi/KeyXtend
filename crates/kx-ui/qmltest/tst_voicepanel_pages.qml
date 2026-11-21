@@ -164,6 +164,8 @@ Item {
             compare(line.length, 1, "the hint takes the next row");
             verify(!line[0].nameText.truncated, "the hint reads whole");
             verify(!line[0].takes, "the hint takes no click");
+            const tile = N.lk.icons.voice.panel.hints[hint.key];
+            verify(!!tile && line[0].tile === tile, "the hint's own icon, by its key");
             mouseClick(chips[0]);
             mouseClick(chips[1]);
             mouseClick(line[0]);

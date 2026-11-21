@@ -1288,6 +1288,9 @@ var lk = {
           "switch": "cloud",
           "testing": "activity",
           "untested": "activity"
+        },
+        "hints": {
+          "insert": "clipboard-paste"
         }
       }
     }

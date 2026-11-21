@@ -17,7 +17,7 @@ VoiceRow {
     readonly property string about: (!!below && below.kind === kinds.hint) ? below.label : ""
 
     name: entry ? entry.label : ""
-    tile: hint ? lk.icons.voice.panel.buttons.insert : ""
+    tile: hint ? lk.icons.voice.panel.hints[entry.key] || "" : ""
     quiet: hint
     takes: flips
     Accessible.role: flips ? Accessible.CheckBox : Accessible.ListItem

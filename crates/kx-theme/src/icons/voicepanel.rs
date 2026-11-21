@@ -44,6 +44,8 @@ pub struct VoicePanelIcons {
     /// Each line of the cloud pages by its id: the switch, the off line, the day read, Untested, where keys are made
     /// and a key test's answer.
     pub cloud: BTreeMap<String, String>,
+    /// Each Options hint row's bare icon by its option's key, as Insert the text's Paste at once hint.
+    pub hints: BTreeMap<String, String>,
 }
 
 impl VoicePanelIcons {
@@ -69,6 +71,7 @@ impl VoicePanelIcons {
             ("voice.panel.tops", &self.tops),
             ("voice.panel.kinds", &self.kinds),
             ("voice.panel.cloud", &self.cloud),
+            ("voice.panel.hints", &self.hints),
         ];
         let fixed = fixed.map(|(at, v)| (at.to_owned(), v.as_str()));
         let maps = maps.into_iter().flat_map(|(at, m)| super::by_id(at, m));

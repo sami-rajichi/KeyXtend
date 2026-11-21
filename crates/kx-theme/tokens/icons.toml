@@ -366,3 +366,7 @@ site = "key-round"
 ok = "check"
 testing = "activity"
 no-test = "activity"
+
+# Each Options hint row's bare icon by its option's key (design/voice-bar.js options()): Paste at once's hint.
+[voice.panel.hints]
+insert = "clipboard-paste"

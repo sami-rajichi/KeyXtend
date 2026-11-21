@@ -270,7 +270,7 @@ fn the_voice_panel_shows_the_mock_ups_icons() {
                 marks.untested=activity marks.used=check tops.best=check tops.failed=x tops.kept=check \
                 tops.step=scale kinds.auto=arrow-left-right kinds.built-in=gpu kinds.card=gpu kinds.cpu=cpu \
                 cloud.no-test=activity cloud.off=power cloud.ok=check cloud.read=history cloud.site=key-round \
-                cloud.switch=cloud cloud.testing=activity cloud.untested=activity";
+                cloud.switch=cloud cloud.testing=activity cloud.untested=activity hints.insert=clipboard-paste";
     let got: Vec<_> = (i.voice.panel.named().into_iter())
         .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.panel.")))
         .collect();
