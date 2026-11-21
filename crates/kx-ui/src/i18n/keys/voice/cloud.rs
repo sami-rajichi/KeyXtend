@@ -234,6 +234,7 @@ pub const fn address_fault_id(fault: AddressFault) -> &'static str {
     match fault {
         AddressFault::Https => "https",
         AddressFault::Host => "host",
+        AddressFault::Port => "port",
         AddressFault::Domain => "domain",
         AddressFault::Long => "long",
         AddressFault::Path => "path",

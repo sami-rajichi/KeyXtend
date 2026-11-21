@@ -1,6 +1,6 @@
 //! An address built from any text never panics, starts with `https://`, holds no user name or fragment, and names one
 //! plain host; a typed one gets its scheme and host in lower case, as both ignore case, and one refused for its path
-//! or query still has a host.
+//! or query still has a host, and one refused for its port alone says so.
 
 use super::*;
 use proptest::prelude::*;
@@ -83,5 +83,26 @@ fn a_typed_address_with_a_good_host_and_a_bad_path_still_has_a_host() {
         "https://speech.example.com:0/v1",
     ] {
         assert!(!HttpsUrl::has_host(text), "{text}");
+    }
+}
+
+#[test]
+fn a_bad_port_on_a_good_host_is_told_apart_from_a_bad_host() {
+    for text in [
+        "https://speech.example.com:0/v1",
+        "https://speech.example.com:99999/v1",
+        "https://speech.example.com:x/v1",
+    ] {
+        assert!(HttpsUrl::bad_port(text), "{text}");
+    }
+    for text in [
+        "https://speech.example.com:8443/v1",
+        "https://speech.example.com/v1",
+        "https://10.0.0.1:0/v1",
+        "https://user@speech.example.com:0/v1",
+        "https://[::1]:8443/v1",
+        "http://speech.example.com:0/v1",
+    ] {
+        assert!(!HttpsUrl::bad_port(text), "{text}");
     }
 }

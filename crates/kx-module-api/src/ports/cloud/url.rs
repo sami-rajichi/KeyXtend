@@ -45,6 +45,13 @@ impl HttpsUrl {
         Self::new(https_origin(text)).is_some()
     }
 
+    /// True when `text`'s host makes an address alone but not with its port, such as `:0`, so its port is the fault.
+    #[must_use]
+    pub fn bad_port(text: &str) -> bool {
+        let host = format!("{HTTPS}{}", https_host(text));
+        Self::new(&host).is_some() && !Self::has_host(text)
+    }
+
     /// The host, in lower case, the only one its requests may reach.
     #[must_use]
     pub fn host(&self) -> &str {

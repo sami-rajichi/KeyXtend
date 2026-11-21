@@ -26,6 +26,8 @@ listed! {
         Https,
         /// Its host is no host name, such as a numeric address.
         Host,
+        /// Its host is a host name, but its port is not one from 1 to the largest, such as `:0`.
+        Port,
         /// Its host is not under the domain the service's row names.
         Domain,
         /// It is longer than the frames take (`HttpsUrl::MAX_BYTES`).

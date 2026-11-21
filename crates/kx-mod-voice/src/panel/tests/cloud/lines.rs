@@ -264,6 +264,20 @@ fn a_bad_character_after_a_good_host_says_path_and_a_bad_host_still_says_host() 
 }
 
 #[test]
+fn a_bad_port_on_a_good_host_says_port_and_never_host() {
+    let mut rig = on_custom_lines(r#", model = "whisper-1""#);
+    for text in [
+        "https://speech.example.com:0/v1",
+        "https://speech.example.com:x/v1",
+    ] {
+        let out = rig.click(&VoiceClick::SetAddress(Redacted::new(text.into())));
+        assert!(out.is_empty(), "{text} is refused");
+        let fault = lines_sheet(&mut rig).address_fault;
+        assert_eq!(fault, Some(AddressFault::Port), "{text}");
+    }
+}
+
+#[test]
 fn edge_17_the_other_model_line_says_why_a_kept_models_id_cannot_go_while_keep_nothing_is_on() {
     let mut rig = on_cloud("");
     let kept = r#"openrouter = { on = 2026-11-01, terms = 1, keep = true, model = "mistralai/voxtral-mini-transcribe-3-0" }"#;

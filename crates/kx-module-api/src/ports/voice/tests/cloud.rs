@@ -86,6 +86,7 @@ fn the_marks_and_buttons_are_the_designs() {
     let faults = [
         AddressFault::Https,
         AddressFault::Host,
+        AddressFault::Port,
         AddressFault::Domain,
         AddressFault::Long,
         AddressFault::Path,

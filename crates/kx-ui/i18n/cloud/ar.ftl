@@ -156,6 +156,7 @@ cloud =
     .address-hint-own = عنوان HTTPS لموردك الخاص لدى هذه الخدمة
     .address-https = يجب أن يستخدم العنوان HTTPS، مثل { $https }example.com
     .address-host = يجب أن يحتوي العنوان على اسم مضيف، لا على عنوان IP.
+    .address-port = منفذ العنوان غير صالح.
     .address-domain = يجب أن يكون العنوان ضمن نطاق الخدمة نفسها.
     .address-long = العنوان طويل جدًا.
     .address-path = يحتوي العنوان على حرف غير مسموح به، مثل المسافة.

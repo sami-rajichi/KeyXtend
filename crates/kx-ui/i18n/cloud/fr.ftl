@@ -127,6 +127,7 @@ cloud =
     .address-hint-own = L’adresse HTTPS de votre propre ressource chez ce service
     .address-https = L’adresse doit utiliser HTTPS, par exemple { $https }example.com
     .address-host = L’adresse doit contenir un nom d’hôte, pas une adresse IP.
+    .address-port = Le port de l’adresse n’est pas valide.
     .address-domain = L’adresse doit appartenir au domaine du service.
     .address-long = L’adresse est trop longue.
     .address-path = L’adresse contient un caractère non autorisé, comme un espace.
