@@ -1,4 +1,4 @@
-// The red dot while the microphone listens (design/voice-bar.html .dot): it pulses each `[moves] dot` down to
+// The red dot while the microphone listens (design/voice-bar.css .dot): it pulses each `[moves] dot` down to
 // `pulse_low`; high contrast draws it in Highlight, a system colour (drawn/voice.rs).
 import QtQuick
 

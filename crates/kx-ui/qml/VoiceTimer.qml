@@ -1,4 +1,4 @@
-// How long the bar has listened (design/voice-bar.html .tm): minutes and two-digit seconds in the language's order, as
+// How long the bar has listened (design/voice-bar.css .tm): minutes and two-digit seconds in the language's order, as
 // it counts on from the module's time, ticking at each whole second, in the panel's count style at a steady width.
 import QtQuick
 

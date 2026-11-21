@@ -1,4 +1,4 @@
-// What the bar does while it listens or writes (design/voice-bar.html .st, .lc): the red dot and Listening, or Nothing
+// What the bar does while it listens or writes (design/voice-bar.css .st, .lc): the red dot and Listening, or Nothing
 // heard yet in its place, then the language's chip; or the audio mark and Transcribing; then the cloud mark while a
 // service takes the voice. Words follow the keyboard's language, the chip the language's own script.
 import QtQuick

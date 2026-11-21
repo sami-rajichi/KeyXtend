@@ -1,4 +1,4 @@
-// The bar's middle (design/voice-bar.html .vbar): the wave while it listens, the shimmer while it writes, then the
+// The bar's middle (design/voice-bar.css .vbar): the wave while it listens, the shimmer while it writes, then the
 // text or the note with its line.
 import QtQuick
 
