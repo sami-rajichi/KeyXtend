@@ -1,11 +1,15 @@
 //! The cloud lines as the owner approved them, word for word in each language: a key, address or model refused, an
 //! address that must use HTTPS, speech for a password box, the keep-nothing claim, the training mark, the free
-//! allowance and the least billed. No Latin run ends an Arabic line on a neutral mark, so `https://` never reads
-//! backwards.
+//! allowance and the least billed, and on 2026-11-21 Open service, the bad port, the pick moved and both renewals.
+//! No Latin run ends an Arabic line on a neutral mark, so `https://` never reads backwards.
 
 use crate::files::keys_of;
 use crate::lang;
-use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths, LocalTime, Renewal};
+use kx_module_api::MS_PER_S;
+use kx_module_api::ports::{
+    CloudWhy, Date, Fact, FactArg, FactValue, HOURS_PER_DAY, Hundredths, LocalTime, MIN_PER_HOUR,
+    Renewal, S_PER_MIN,
+};
 use kx_ui::i18n::keys::vars::FREE;
 use kx_ui::i18n::keys::{
     FACT_BILLS, FACT_FREE, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
@@ -16,7 +20,19 @@ use kx_ui::{I18n, LANGS};
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
 /// Each reworded line's key and its words in English, French and Arabic, `$https` filled.
-const LINES: [(&str, [&str; 3]); 11] = [
+const LINES: [(&str, [&str; 3]); 13] = [
+    (
+        "voice.service",
+        ["Open service", "Ouvrir le service", "فتح الخدمة"],
+    ),
+    (
+        "cloud.address-port",
+        [
+            "The port in the address is not valid.",
+            "Le port de l’adresse n’est pas valide.",
+            "منفذ العنوان غير صالح.",
+        ],
+    ),
     (
         "cloud.key-unfit",
         [
@@ -119,6 +135,45 @@ fn the_reworded_cloud_lines_read_as_approved_in_each_language() {
     for (key, words) in LINES {
         for (tag, want) in TAGS.into_iter().zip(words) {
             assert_eq!(lang(tag).voice_https(key), want, "{tag} {key}");
+        }
+    }
+}
+
+/// When the approved renewals below renew: 14:30 on 22 November 2026, in UTC.
+const RENEWS: (u16, u8, u8, i64, i64) = (2026, 11, 22, 14, 30);
+
+/// The pick moved, then a used allowance renewing today and on a later day, in the app's own date (owner, 2026-11-21).
+const NOTES: [[&str; 3]; 3] = [
+    [
+        "The language no longer uses this service, so nothing was sent.",
+        "La langue n’utilise plus ce service\u{a0}; rien n’a été envoyé.",
+        "لم تعد اللغة تستخدم هذه الخدمة، فلم يُرسَل شيء.",
+    ],
+    [
+        "The free allowance is used up. It renews at 14:30.",
+        "Le quota gratuit est épuisé. Il se renouvelle à 14:30.",
+        "نفدت الحصة المجانية، وتتجدد في الساعة 14:30.",
+    ],
+    [
+        "The free allowance is used up. It renews on 22/11/2026 at 14:30.",
+        "Le quota gratuit est épuisé. Il se renouvelle le 22/11/2026 à 14:30.",
+        "نفدت الحصة المجانية، وتتجدد يوم 22/11/2026 في الساعة 14:30.",
+    ],
+];
+
+#[test]
+fn the_moved_and_renewal_notes_read_as_approved_in_each_language() {
+    let (year, month, day, hour, minute) = RENEWS;
+    let days = Date::new(year, month, day).expect("a day").day_number();
+    let min = (days * HOURS_PER_DAY + hour) * MIN_PER_HOUR + minute;
+    let at = LocalTime::at(min * S_PER_MIN * i64::from(MS_PER_S), 0).expect("a time");
+    let renews = |today| CloudWhy::Allowance {
+        renews_at: Some(Renewal { at, today }),
+    };
+    let whys = [CloudWhy::Moved, renews(true), renews(false)];
+    for (why, words) in whys.iter().zip(NOTES) {
+        for (tag, want) in TAGS.into_iter().zip(words) {
+            assert_eq!(lang(tag).voice_cloud(why), want, "{tag} {why:?}");
         }
     }
 }
