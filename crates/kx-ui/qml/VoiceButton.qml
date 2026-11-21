@@ -1,6 +1,6 @@
 // A dictation bar button (design/voice-bar.html .vb, .vt): a round icon (Cancel, the gear, Stop or Close) or a pill
-// with its word (Copy, Undo insert, a note's action). Stop is a dark disc and a note's action takes Enter's colours; one
-// that cannot act shows dimmed in its place, and it acts at let-go (ADR-0024).
+// with its word (Copy, Undo insert, a note's action). Stop is a dark disc and a note's action takes Enter's colours;
+// one that cannot act shows dimmed in its place, and it acts at let-go (ADR-0024).
 import QtQuick
 
 Item {

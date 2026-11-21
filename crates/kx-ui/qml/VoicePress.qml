@@ -5,9 +5,9 @@ import QtQuick
 ClipButton {
     id: b
 
-    // The panel window, whose look, names and fonts it takes; the hub's button (`{kind, id, arg, label, on, tone}`, and
-    // a `name` for readers when its label is not enough), null for none; whether it shows its icon alone; and an icon in
-    // place of its id's.
+    // The panel window, whose look, names and fonts it takes; the hub's button (`{kind, id, arg, label, on, tone}`,
+    // and a `name` for readers when its label is not enough), null for none; whether it shows its icon alone; and an
+    // icon in place of its id's.
     required property var host
     required property var button
     property bool bare: false
@@ -16,8 +16,8 @@ ClipButton {
     readonly property var hub: button || ({ kind: "", id: "", arg: 0, label: "", name: "", on: false, tone: host.names.plain })
     readonly property var names: host.names
 
-    // Its gate id: a question's answer, Compare's Start, a line's Save and a download's button by their meaning, the rest
-    // by id.
+    // Its gate id: a question's answer, Compare's Start, a line's Save and a download's button by their meaning, the
+    // rest by id.
     function uidOf(h) {
         const ids = names.ids;
         if (h.kind === names.acts.confirm)

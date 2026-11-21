@@ -1,5 +1,6 @@
-//! Voice typing's cloud texts and ids (ADR-0047), in their own `cloud.` group and files: the Cloud page, a card's labels
-//! and fact groups, the key page's lines, each cloud button, key test, address fault and cloud reason, and Models' sides.
+//! Voice typing's cloud texts and ids (ADR-0047), in their own `cloud.` group and files: the Cloud page, a card's
+//! labels and fact groups, the key page's lines, each cloud button, key test, address fault and cloud reason, and
+//! Models' sides.
 
 use super::VoiceMark;
 use kx_module_api::ports::{

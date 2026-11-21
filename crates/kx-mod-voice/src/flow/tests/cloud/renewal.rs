@@ -25,10 +25,10 @@ pub(in crate::flow::tests) fn renewed(sent: &Sent) -> Option<Renewal> {
     renewal(&Wall, sent.fault())
 }
 
-/// A calendar fixed at `now` whose offset moves to `later_min` from `switch_ms` on, as the end of summer time does.
+/// A calendar fixed at `now` whose offset moves to `later_min` from `at_ms` on, as the end of summer time does.
 struct Switch {
     now: LocalTime,
-    switch_ms: i64,
+    at_ms: i64,
     later_min: i16,
 }
 
@@ -38,7 +38,7 @@ impl Calendar for Switch {
     }
 
     fn local(&self, unix_ms: i64) -> Option<LocalTime> {
-        let before = unix_ms < self.switch_ms;
+        let before = unix_ms < self.at_ms;
         let offset = if before {
             self.now.offset_min
         } else {
@@ -53,7 +53,7 @@ fn paris() -> Switch {
     let day = Date::new(2026, 10, 25).unwrap();
     Switch {
         now: FakeCalendar::new(day, 0, 30, SUMMER_MIN).now(),
-        switch_ms: FakeCalendar::new(day, 1, 0, 0).now().unix_ms,
+        at_ms: FakeCalendar::new(day, 1, 0, 0).now().unix_ms,
         later_min: WINTER_MIN,
     }
 }

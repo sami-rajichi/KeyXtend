@@ -1,7 +1,7 @@
 //! Cloud models and the bar through the hub: the Models page's Local | Cloud chips and band (edge 29), a cloud model's
 //! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
-//! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4), with
-//! Open service under the line of a note the service's pages settle, a key on the key note's (final review m5).
+//! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4),
+//! with Open service under the line of a note the service's pages settle, a key on the key note's (final review m5).
 
 use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
 use super::{groq, marks, pairs};

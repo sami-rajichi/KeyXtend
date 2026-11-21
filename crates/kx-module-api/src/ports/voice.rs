@@ -142,8 +142,8 @@ impl Event for TextDone {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the keyboard: a key clicked while the Voice panel's line is aimed at, which goes to that line instead of the app
-/// (ADR-0049).
+/// From the keyboard: a key clicked while the Voice panel's line is aimed at, which goes to that line instead of the
+/// app (ADR-0049).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VoiceLineKey(pub PanelKey);
 

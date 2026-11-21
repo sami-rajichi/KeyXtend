@@ -269,7 +269,8 @@ net = "wifi"
 # The Voice panel (design/voice-bar.html PAGE, lines 301-393): the folder line, a stepper's minus and plus, a place's
 # chevrons, a pinned text, the tick where one row is picked, Unpin, the slow-PC and untested lines, a folder row; each
 # page's header icon (also a home row's tile), each button by the hub's id or its kind (Start reading is `compare`),
-# each mark, line above a list and Device kind by id. An id left out shows no icon, as Default and Waiting in the mock-up.
+# each mark, line above a list and Device kind by id. An id left out shows no icon, as Default and Waiting in the
+# mock-up.
 [voice.panel]
 room = "hard-drive"
 minus = "minus"

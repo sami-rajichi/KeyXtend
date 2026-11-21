@@ -25,8 +25,8 @@ pub struct CloudLimits {
 impl CloudLimits {
     /// `max_mb`'s range, the frames' own.
     pub const MAX_MB: RangeInclusive<u32> = kx_ipc::NET_MAX_MB;
-    /// `max_s`' range: from the shortest piece the `voice` job cuts to the longest cloud piece, ten minutes; the frames'
-    /// own.
+    /// `max_s`' range: from the shortest piece the `voice` job cuts to the longest cloud piece, ten minutes; the
+    /// frames' own.
     pub const MAX_S: RangeInclusive<u16> = kx_ipc::NET_MAX_S;
     /// `per_min`'s range, the frames' own.
     pub const PER_MIN: RangeInclusive<u16> = kx_ipc::NET_PER_MIN;

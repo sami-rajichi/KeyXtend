@@ -1,6 +1,6 @@
 //! Voice typing's cloud words (ADR-0047): a card's fact filled with its row's values, money in its currency, and each
-//! reason a cloud note or a Compare row gives. A name from a service's own pages stays a part of its own, so the UI lays
-//! it out apart in the UI's order, as ADR-0022 asks in place of bidi marks.
+//! reason a cloud note or a Compare row gives. A name from a service's own pages stays a part of its own, so the UI
+//! lays it out apart in the UI's order, as ADR-0022 asks in place of bidi marks.
 
 use super::I18n;
 use super::compose::{clean, form};

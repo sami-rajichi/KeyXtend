@@ -1,8 +1,8 @@
-// The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service takes
-// the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's Try
-// again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with Open
-// service for a note the service's pages settle; and the card's warning in full under the row on the first dictation
-// to its service, in English, French and Arabic.
+// The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service
+// takes the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's
+// Try again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with
+// Open service for a note the service's pages settle; and the card's warning in full under the row on the first
+// dictation to its service, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"

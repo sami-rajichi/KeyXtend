@@ -130,7 +130,7 @@ fn a_host_without_cloud_speech_still_starts_and_says_so_in_one_fixed_line() {
         assert!(
             start(&mut module, &mut host).is_ok(),
             "local models dictate"
-        )
+        );
     });
     stop(&mut module, &mut host);
     let warned: Vec<&str> = lines

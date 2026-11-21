@@ -1,6 +1,7 @@
 //! The cloud lines as the owner approved them, word for word in each language: a key, address or model refused, an
-//! address that must use HTTPS, speech for a password box, the keep-nothing claim, the training mark, the free allowance
-//! and the least billed. No Latin run ends an Arabic line on a neutral mark, so `https://` never reads backwards.
+//! address that must use HTTPS, speech for a password box, the keep-nothing claim, the training mark, the free
+//! allowance and the least billed. No Latin run ends an Arabic line on a neutral mark, so `https://` never reads
+//! backwards.
 
 use crate::files::keys_of;
 use crate::lang;

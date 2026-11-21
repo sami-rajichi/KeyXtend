@@ -65,8 +65,8 @@ pub enum PanelKey {
     Enter,
     /// Back out one step: the clipboard closes its question, else the preview, else clears the search, else closes.
     Esc,
-    /// The Space key, sent as this while any panel is open: a line with text, or Quick-fill's lines even when empty, takes
-    /// a space at the caret; the clipboard's empty search ticks or unticks the highlighted row.
+    /// The Space key, sent as this while any panel is open: a line with text, or Quick-fill's lines even when empty,
+    /// takes a space at the caret; the clipboard's empty search ticks or unticks the highlighted row.
     Tick,
     /// The Backspace key: erase the character before the caret, in the search or Quick-fill's highlighted line.
     Erase,

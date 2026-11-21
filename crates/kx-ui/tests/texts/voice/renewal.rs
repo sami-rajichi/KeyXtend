@@ -9,7 +9,7 @@ const RENEWS_MS: i64 = 1_794_647_100_000;
 
 /// The used allowance's note line in language `tag`, renewing at `RENEWS_MS` today or on a later day.
 fn said(tag: &str, today: bool) -> String {
-    let at = LocalTime::at(RENEWS_MS, 0).unwrap();
+    let at = LocalTime::at(RENEWS_MS, 0).expect("a time");
     let renews_at = Some(Renewal { at, today });
     lang(tag).voice_cloud(&CloudWhy::Allowance { renews_at })
 }

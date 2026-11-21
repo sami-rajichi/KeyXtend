@@ -1,6 +1,7 @@
-// One Voice panel row (mock-up .pr): its tick box, tile, name and tag over its line and the parts at its end, on the ticked
-// fill or the hover tint. A padding slot stays blank; a click ticks the row or acts, at let-go (ADR-0024). Arabic reads
-// from the right in its font while each part keeps its place (ADR-0020); a page turn slides the rows in, a tick pops.
+// One Voice panel row (mock-up .pr): its tick box, tile, name and tag over its line and the parts at its end, on the
+// ticked fill or the hover tint. A padding slot stays blank; a click ticks the row or acts, at let-go (ADR-0024).
+// Arabic reads from the right in its font while each part keeps its place (ADR-0020); a page turn slides the rows in,
+// a tick pops.
 import QtQuick
 
 Item {
@@ -21,7 +22,8 @@ Item {
     property bool takes: true
     // A tag after its name, such as a Cloud row's Untested (empty for none).
     property string tag: ""
-    // A hint row (mock-up .pr.hint): its tile a bare muted icon, its name a muted line that wraps as a flat question does.
+    // A hint row (mock-up .pr.hint): its tile a bare muted icon, its name a muted line that wraps as a flat question
+    // does.
     property bool quiet: false
     // The parts at the row's end, and what shows under its line.
     default property alias ends: ends.data

@@ -1,5 +1,6 @@
 //! The cloud parts of part 1's pages (ADR-0047): the Models page's Local | Cloud sides with the Cloud side's band, a
-//! cloud model's row with its service, mark and why it is unavailable, and Compare's cloud models with the send warning.
+//! cloud model's row with its service, mark and why it is unavailable, and Compare's cloud models with the send
+//! warning.
 
 use super::hidden;
 use super::panel::{day, holds, service, shown};

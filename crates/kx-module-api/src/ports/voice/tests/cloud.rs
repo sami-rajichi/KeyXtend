@@ -1,6 +1,6 @@
-//! Cloud services on the bar and the panel (ADR-0047): the cloud page after Models, the marks and buttons, the acts that
-//! carry a key, an address or a model id and never print them, a card's facts as ids, numbers and dates, the key page's
-//! dots and the bar's cloud mark.
+//! Cloud services on the bar and the panel (ADR-0047): the cloud page after Models, the marks and buttons, the acts
+//! that carry a key, an address or a model id and never print them, a card's facts as ids, numbers and dates, the key
+//! page's dots and the bar's cloud mark.
 
 use super::panel::{day, holds, service, shown};
 use super::{hidden, keeps_secrets, page, secret};

@@ -55,7 +55,8 @@ pub const LOCAL: &str = "local";
 pub const SAVE: &str = "save";
 /// A press on the key page's line `id`, which picks it with its caret at the argument and sounds as a key does.
 pub const PICK: &str = "pick";
-/// The place a click puts the caret on the key page's line `id` after its pick, in what the line draws, as the argument.
+/// The place a click puts the caret on the key page's line `id` after its pick, in what the line draws, as the
+/// argument.
 pub const CARET: &str = "caret";
 
 /// True for a click that plays no key sound: the pointer's move, the wheel, and a caret, as the pick before it sounded.
