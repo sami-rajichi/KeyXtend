@@ -11,11 +11,11 @@ use kx_module_api::ports::{
     CardPart, CloudAsk, CloudCard, Date, Fact, ServiceMark, Unavailable, UsePrice, fits_iso,
 };
 
-use crate::services::{Address, Model, Service, Services};
+use crate::services::{self, Address, Model, Service, Services};
 use crate::settings::{ServiceOn, VoiceSettings};
 
-/// What parts a cloud pick's service id from its model's id, as in `groq:whisper-large-v3-turbo`; no row id or model
-/// file name holds it, and a service id never does, so the first one parts them.
+/// What parts a cloud pick's service id from its model's id, as in `groq:whisper-large-v3-turbo`; a service id never
+/// holds it, so the first one parts them when a row id comes before it.
 pub const PICK_MARK: char = ':';
 
 /// The pick that names `service`'s `model`.
@@ -24,10 +24,10 @@ pub fn pick_text(service: &str, model: &str) -> String {
     format!("{service}{PICK_MARK}{model}")
 }
 
-/// The service id and model id a cloud pick names; `None` for a local pick.
+/// The service id and model id a cloud pick names, by the shipped table (`Services::pick`); `None` for a local pick.
 #[must_use]
 pub fn cloud_pick(value: &str) -> Option<(&str, &str)> {
-    value.split_once(PICK_MARK)
+    services::table().ok()?.pick(value)
 }
 
 /// The model a cloud pick names.
@@ -135,7 +135,7 @@ impl<'a> Cloud<'a> {
     where
         'a: 's,
     {
-        let (id, model) = cloud_pick(s.picks.get(lang)?)?;
+        let (id, model) = self.table.pick(s.picks.get(lang)?)?;
         self.resolve(s, lang, id, model)
     }
 

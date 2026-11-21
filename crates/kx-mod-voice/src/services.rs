@@ -22,6 +22,8 @@ use kx_module_api::ports::BlobName;
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::cloud::PICK_MARK;
+
 /// Bytes in the KiB `room_kb` counts in.
 const KIB: u64 = 1 << 10;
 
@@ -165,6 +167,15 @@ impl Services {
     #[must_use]
     pub fn get(&self, id: &str) -> Option<&Service> {
         self.rows.iter().find(|r| r.id == id)
+    }
+
+    /// The service id and model id cloud pick `value` names, parted at the first `PICK_MARK` only when a row id of
+    /// this table comes before it, so a local file whose name holds the mark stays local (P15).
+    #[must_use]
+    pub fn pick<'v>(&self, value: &'v str) -> Option<(&'v str, &'v str)> {
+        value
+            .split_once(PICK_MARK)
+            .filter(|(id, _)| self.get(id).is_some())
     }
 
     /// The rows the Cloud page may show, in order, Groq first (edge 24).

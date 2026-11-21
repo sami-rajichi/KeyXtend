@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 use kx_module_api::ports::{BlobName, fits_iso};
 
 use super::{PICKS, SERVICES, VoiceSettings};
-use crate::cloud::{Cloud, cloud_pick, entry_ok};
+use crate::cloud::{Cloud, entry_ok};
 use crate::models::{self, Table};
 use crate::services::{self, Services};
 
@@ -38,7 +38,7 @@ impl VoiceSettings {
             .picks
             .iter()
             .filter(|(lang, pick)| {
-                let good = match cloud_pick(pick) {
+                let good = match services.pick(pick) {
                     Some(_) => cloud.choice(self, lang).is_some(),
                     None => models.pick(lang, pick).is_some(),
                 };

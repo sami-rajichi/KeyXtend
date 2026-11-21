@@ -4,7 +4,7 @@
 use super::*;
 use crate::models::{self, Pick};
 use crate::services::table;
-use crate::services::tests::{TEXT, parse};
+use crate::services::tests::{ROUTER, TEXT, parse, with_rows};
 use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
 mod assembly;
@@ -226,8 +226,18 @@ fn a_pick_names_its_service_and_model_with_the_mark() {
         cloud_pick("openrouter:openai/whisper-large-v3"),
         Some(("openrouter", "openai/whisper-large-v3"))
     );
-    assert_eq!(cloud_pick("ollama:llama:7b"), Some(("ollama", "llama:7b")));
-    for local in ["canary-v2-q8", "my-model.gguf", ""] {
+    assert_eq!(cloud_pick("custom:llama:7b"), Some(("custom", "llama:7b")));
+    // A local file whose name holds the mark, as Linux and macOS allow, stays local (P15).
+    for local in [
+        "canary-v2-q8",
+        "my-model.gguf",
+        "",
+        "ollama:llama.gguf",
+        ":x",
+    ] {
         assert_eq!(cloud_pick(local), None, "{local}");
     }
+    let test = with_rows(ROUTER);
+    assert_eq!(test.pick("router-test:a:b"), Some(("router-test", "a:b")));
+    assert_eq!(test.pick("groq-ish:a"), None, "only a row id parts a pick");
 }

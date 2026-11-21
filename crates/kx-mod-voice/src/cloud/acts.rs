@@ -4,7 +4,7 @@
 
 use kx_module_api::ports::{CloudAsk, Date};
 
-use super::{Cloud, cloud_pick, entry_ok, pick_text};
+use super::{Cloud, entry_ok, pick_text};
 use crate::services::{Address, Service};
 use crate::settings::{ServiceOn, VoiceSettings, datetime};
 
@@ -17,7 +17,7 @@ impl<'a> Cloud<'a> {
         }
         s.cloud = on;
         if !on {
-            s.picks.retain(|_, pick| cloud_pick(pick).is_none());
+            s.picks.retain(|_, pick| self.table.pick(pick).is_none());
         }
     }
 
@@ -41,7 +41,7 @@ impl<'a> Cloud<'a> {
         entry.terms = row.terms;
         if stale {
             // A stale entry's typed lines go, and with them the picks that needed them.
-            drop_picks(s, |service, _| service == id);
+            self.drop_picks(s, |service, _| service == id);
         }
         true
     }
@@ -49,7 +49,7 @@ impl<'a> Cloud<'a> {
     /// Switches service `id` off and drops its picks, as a declined newer terms number does (edge 16).
     pub fn turn_off(&self, s: &mut VoiceSettings, id: &str) {
         s.services.remove(id);
-        drop_picks(s, |service, _| service == id);
+        self.drop_picks(s, |service, _| service == id);
     }
 
     /// Picks service `id`'s `model` for `lang`, the only act that moves a language to a service; false, changing
@@ -72,7 +72,7 @@ impl<'a> Cloud<'a> {
         };
         let before = std::mem::replace(&mut entry.model, model.to_owned());
         if before != model && row.model(&before).is_none() {
-            drop_picks(s, |service, typed| service == id && typed == before);
+            self.drop_picks(s, |service, typed| service == id && typed == before);
         }
         true
     }
@@ -90,7 +90,7 @@ impl<'a> Cloud<'a> {
         };
         text.clone_into(&mut entry.address);
         if text.is_empty() {
-            drop_picks(s, |service, _| service == id);
+            self.drop_picks(s, |service, _| service == id);
         }
         true
     }
@@ -127,8 +127,14 @@ impl<'a> Cloud<'a> {
     }
 }
 
-/// Drops each cloud pick whose service and model `hit` names.
-fn drop_picks(s: &mut VoiceSettings, hit: impl Fn(&str, &str) -> bool) {
-    s.picks
-        .retain(|_, pick| cloud_pick(pick).is_none_or(|(service, model)| !hit(service, model)));
+impl Cloud<'_> {
+    /// Drops each cloud pick whose service and model `hit` names.
+    fn drop_picks(&self, s: &mut VoiceSettings, hit: impl Fn(&str, &str) -> bool) {
+        let kept = |pick: &String| {
+            self.table
+                .pick(pick)
+                .is_none_or(|(id, model)| !hit(id, model))
+        };
+        s.picks.retain(|_, pick| kept(pick));
+    }
 }
