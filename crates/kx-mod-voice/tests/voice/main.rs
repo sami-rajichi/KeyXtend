@@ -9,6 +9,7 @@
 
 mod clip;
 mod link;
+mod logs;
 mod module;
 mod rig;
 mod settings;

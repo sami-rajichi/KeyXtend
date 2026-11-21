@@ -1,15 +1,18 @@
 //! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick or service entry alone with the
-//! settings notice, fails on a bad section or a missing service, and stops.
+//! settings notice, fails on a bad section or a missing service, starts with a fixed line when cloud speech is missing,
+//! and stops.
 
 use std::sync::{Arc, Mutex};
 
 use kx_mod_voice::{ID, VoiceModule, VoiceSettings};
-use kx_module_api::ports::SpeechKey;
+use kx_module_api::ports::{CloudSpeechKey, SpeechKey};
 use kx_module_api::{
     Host, Module, ModuleCx, Notice, NoticeArg, ServiceKey, Subscription, args, keys,
 };
 use kx_test_support::host::FakeHost;
+use tracing::Level;
 
+use crate::logs::lines_of;
 use crate::rig::{Fakes, start, stop};
 
 /// The notices published on `host`'s bus while the guard lives.
@@ -116,4 +119,24 @@ fn a_hidden_run_starts_on_the_same_services() {
     let mut module = VoiceModule::hidden();
     assert!(start(&mut module, &mut host).is_ok());
     stop(&mut module, &mut host);
+}
+
+#[test]
+fn a_host_without_cloud_speech_still_starts_and_says_so_in_one_fixed_line() {
+    let mut host = Fakes::new().host();
+    host.services.remove(&CloudSpeechKey::ID);
+    let mut module = VoiceModule::new();
+    let lines = lines_of(|| {
+        assert!(
+            start(&mut module, &mut host).is_ok(),
+            "local models dictate"
+        )
+    });
+    stop(&mut module, &mut host);
+    let warned: Vec<&str> = lines
+        .iter()
+        .filter(|(level, _)| *level == Level::WARN)
+        .map(|(_, message)| message.as_str())
+        .collect();
+    assert_eq!(warned, ["cloud speech is not available"]);
 }
