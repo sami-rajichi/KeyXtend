@@ -1,8 +1,9 @@
-//! High-contrast tests over the sample set of system colours.
+//! High-contrast tests over the sample set of system colours, and over Windows' own contrast themes.
 
 use super::sample::HC;
 use super::*;
 use crate::Themes;
+use crate::contrast::{WCAG_SHAPES, contrast};
 
 /// The seven system colours of `s`, in theme colours.
 fn allowed(s: &SysColors) -> [Rgba; 7] {
@@ -66,19 +67,63 @@ fn a_pressed_key_takes_highlight_with_its_text_never_a_tint() {
     }
 }
 
+/// Windows' own contrast themes as Microsoft Learn publishes them ("Contrast themes"), not read from this PC: each
+/// set's `RRGGBB` values in `SysColors`' order, the window and its text, Highlight and its text, a button and its
+/// text, then disabled text.
+const WINDOWS: [(&str, &str); 6] = [
+    (
+        "Aquatic",
+        "202020 FFFFFF 8EE3F0 263B50 202020 FFFFFF A6A6A6",
+    ),
+    ("Desert", "FFFAEF 3D3D3D 903909 FFF5E3 FFFAEF 202020 676767"),
+    ("Dusk", "2D3236 B6F6F0 A1BFDE 212D3B 2D3236 B6F6F0 A6A6A6"),
+    (
+        "Night sky",
+        "000000 FFFFFF D6B4FD 2B2B2B 000000 FFEE32 A6A6A6",
+    ),
+    (
+        "High Contrast White",
+        "FFFFFF 000000 37006E FFFFFF FFFFFF 000000 600000",
+    ),
+    (
+        "High Contrast Black",
+        "000000 FFFFFF 1AEBFF 000000 000000 FFFFFF 3FF23F",
+    ),
+];
+
+/// The system colours written as `hex`, in `WINDOWS`' order.
+fn set(hex: &str) -> SysColors {
+    let rgba = |h: &str| {
+        let [_, r, g, b] = u32::from_str_radix(h, 16).expect("hex").to_be_bytes();
+        [r, g, b, u8::MAX]
+    };
+    let c: Vec<[u8; 4]> = hex.split(' ').map(rgba).collect();
+    SysColors {
+        window: c[0],
+        window_text: c[1],
+        highlight: c[2],
+        highlight_text: c[3],
+        button: c[4],
+        button_text: c[5],
+        gray_text: c[6],
+    }
+}
+
+/// Microsoft's contrast themes never mark a state by colour alone: Preparing keeps a resting key's pair and the key
+/// draws a ring in `ring`, so only Recording fills, and both stand out from the face in each of Windows' themes.
 #[test]
-fn preparing_swaps_a_buttons_pair_so_it_never_looks_like_recording_or_a_resting_key() {
+fn preparing_keeps_a_resting_keys_pair_so_only_recording_fills() {
     let t = themes();
-    let (face, ink) = (Rgba::from(HC.button), Rgba::from(HC.button_text));
-    for base in t.list.iter().flat_map(|t| [&t.light, &t.dark]) {
-        let p = contrast_palette(base, &HC, t.shape.line.px);
-        assert_eq!(
-            (p.prep, p.prep_ink),
-            (ink, face),
-            "a button's pair, swapped"
-        );
-        assert_ne!(p.prep, p.rec, "never Recording's Highlight");
-        assert_ne!(p.prep, p.key, "never a resting key");
+    for (name, hex) in WINDOWS {
+        let s = set(hex);
+        let sel = Rgba::from(s.highlight);
+        for base in t.list.iter().flat_map(|t| [&t.light, &t.dark]) {
+            let p = contrast_palette(base, &s, t.shape.line.px);
+            assert_eq!((p.prep, p.prep_ink), (p.key, p.legend), "{name}");
+            assert_eq!((p.rec, p.ring), (sel, sel), "{name}: Highlight");
+            assert!(contrast(p.rec, p.prep) >= WCAG_SHAPES, "{name}: the fill");
+            assert!(contrast(p.ring, p.prep) >= WCAG_SHAPES, "{name}: the ring");
+        }
     }
 }
 

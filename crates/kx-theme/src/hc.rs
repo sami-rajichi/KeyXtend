@@ -33,7 +33,8 @@ pub fn contrast_palette(base: &Palette, s: &SysColors, edge_px: f32) -> Palette 
     p
 }
 
-/// The plate, every key face and its legends, dimmed keys in `GrayText`, the LED at rest, chips and the hover tint.
+/// The plate, every key face and its legends, the preparing key's too, as its ring marks it, dimmed keys in
+/// `GrayText`, the LED at rest, chips and the hover tint.
 fn keys(p: &mut Palette, s: &SysColors) {
     let (face, ink): (Rgba, Rgba) = (s.button.into(), s.button_text.into());
     p.plate = s.window.into();
@@ -44,6 +45,7 @@ fn keys(p: &mut Palette, s: &SysColors) {
         &mut p.key_act,
         &mut p.danger,
         &mut p.dim,
+        &mut p.prep,
     ] {
         *c = face;
     }
@@ -53,6 +55,7 @@ fn keys(p: &mut Palette, s: &SysColors) {
         &mut p.legend_2,
         &mut p.legend_act,
         &mut p.danger_ink,
+        &mut p.prep_ink,
     ] {
         *c = ink;
     }
@@ -61,13 +64,12 @@ fn keys(p: &mut Palette, s: &SysColors) {
     p.hover = Rgba { a: 0, ..face };
 }
 
-/// Enter, every on, locked or recording key, and a pressed key, in `Highlight` with `HighlightText`; a preparing key
-/// swaps a button's pair, so it never looks like Recording or a resting key.
+/// Enter, every on, locked or recording key, and a pressed key, in `Highlight` with `HighlightText`, and the ring in
+/// `Highlight` that marks a preparing key, so only Recording fills (never colour alone).
 fn states(p: &mut Palette, s: &SysColors) {
     let (sel, sel_ink): (Rgba, Rgba) = (s.highlight.into(), s.highlight_text.into());
     p.press = sel;
     p.press_ink = Some(sel_ink);
-    (p.prep, p.prep_ink) = (s.button_text.into(), s.button.into());
     for c in [
         &mut p.enter,
         &mut p.on,

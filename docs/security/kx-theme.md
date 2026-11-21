@@ -42,7 +42,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 - Done (P3, 7666e09, fe5a6fe, f9bdea4, a918bc4): the tests checked flat token pairs only, so Dolch's sculpted top, the hover and press tints and the lit size letter fell below their minimums. `drawn` now checks what the keyboard really draws, each legend where it sits on its cap on the board's own row, and the nudged tokens are marked in `themes/*.toml`.
 - Done (P3, 302c48b, 658a5a8): the system accent replaced the theme's colours unchecked. `with_accent` keeps it only when every drawn pair still passes on the keyboard's rows, and without a measurable row the theme keeps its own colours.
 - Done (P3, a049b94): high contrast kept the caps' gradient tints and mixed system pairs. It now draws flat caps and only pairs Windows makes readable.
-- Done (P11 part 2, task 23): high contrast drew the Preparing key in Recording's `Highlight`, so a sighted user could not see when the microphone opens. It now swaps a button's pair, `ButtonFace` on `ButtonText`.
+- Done (P11 part 2, task 23): high contrast drew the Preparing key in Recording's `Highlight`, so a sighted user could not see when the microphone opens. It now keeps a resting key's colours with a `Highlight` ring, so only Recording fills and colour is never the only cue.
 ### Should fix (tracked issue)
 - None open.
 - Done (P4 final review, 6b01c28, 9666b52): the WAV reader and the asset readers were public in a crate the uiAccess app links, so ADR-0004 held only by convention. They now build only with `files`, which tidy D7 refuses in the app's normal tree.

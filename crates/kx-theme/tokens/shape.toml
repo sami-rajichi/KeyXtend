@@ -125,7 +125,7 @@ share = 0.4
 
 [hc_outline]
 # In high contrast a key under the pointer gets an inner outline this wide in Highlight, since a tint is not a system
-# colour (mock-up .scroll-target outline, line 83); not scaled.
+# colour (mock-up .scroll-target outline, line 83), and a preparing key a ring as wide just inside it; not scaled.
 px = 2.0
 
 [outline]

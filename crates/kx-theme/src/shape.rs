@@ -257,7 +257,7 @@ pub struct Shape {
     pub badge: BadgeShape,
     /// Keys that come in a later version.
     pub dim: DimShape,
-    /// The hover outline in high contrast, drawn in Highlight inside the key.
+    /// The hover outline in high contrast, drawn in Highlight inside the key, and a preparing key's ring just inside it.
     pub hc_outline: WidthShape,
     /// The outline around the scroll pad's target, drawn inside its box by four thin windows.
     pub outline: WidthShape,

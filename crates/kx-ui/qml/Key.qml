@@ -1,6 +1,6 @@
-// One key: its shadows, cap, inner shading, legends or icon, LED and pointer feedback. Readers hear its name and a note,
-// also in its tip: when a dimmed key, which never presses, comes, that the language key has only one language, or the
-// keys a shortcut sends.
+// One key: its shadows, cap, inner shading, legends or icon, LED, Preparing's ring in high contrast and pointer
+// feedback. Readers hear its name and a note, also in its tip: when a dimmed key, which never presses, comes, that the
+// language key has only one language, or the keys a shortcut sends.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -43,6 +43,9 @@ Item {
     readonly property string light: ks && ks.lit ? ks.lit : "off"
     readonly property bool rec: light === "rec"
     readonly property bool prep: light === "prep"
+    // In high contrast a preparing key keeps a resting key's colours and wears a ring in Highlight, so only Recording
+    // fills (Microsoft: never colour alone).
+    readonly property bool ringed: prep && lk.contrast
     readonly property bool down: area.pressed && !dim
     // The palette tokens for the cap, legend and skirt, which the face picks from the kind and state.
     readonly property var paint: ks ? ks.paint : ({})
@@ -220,11 +223,32 @@ Item {
             icon: key.icon
             label: key.label
         }
-        // The light, made only where it shows: on a lit or recording key, or on every key of a theme with off lights.
+        // The light, made only where it shows: on a lit or recording key, or on every key of a theme with off lights. A
+        // ringed key, whose light is off, wears its ring there instead, so no key holds one more item.
         Loader {
-            active: key.rec || key.ledLit > 0 || key.ledColour.a > 0
-            sourceComponent: Led {
+            active: key.ringed || key.rec || key.ledLit > 0 || key.ledColour.a > 0
+            sourceComponent: key.ringed ? ringC : ledC
+        }
+        Component {
+            id: ledC
+            Led {
                 key: key
+            }
+        }
+        // As wide as the hover outline and just inside it.
+        Component {
+            id: ringC
+            Rectangle {
+                readonly property real px: key.lk.shape.hc_outline.px
+                objectName: "prepRing"
+                x: px
+                y: px
+                width: key.width - 2 * px
+                height: key.height - 2 * px
+                radius: Math.max(0, key.radius - px)
+                color: "transparent"
+                border.width: px
+                border.color: key.p.ring
             }
         }
     }

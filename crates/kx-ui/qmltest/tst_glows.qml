@@ -1,6 +1,6 @@
 // Glows and lights exist only while they show: a lock key's glow and its light's glow come when it lights and go once
 // their fade ends, taking their material along, and only a key that can light, or a theme that shows its off lights,
-// holds a light.
+// holds a light. In high contrast only a preparing key holds a ring.
 import QtQuick
 import QtTest
 import "../qml"
@@ -65,6 +65,10 @@ Item {
         // The light on key `k`, or null.
         function lightOf(k) {
             return all(k, o => type(o) === "Led")[0] || null;
+        }
+        // The ring on preparing key `k` in high contrast, or null.
+        function ringOf(k) {
+            return all(k, o => o.objectName === "prepRing")[0] || null;
         }
 
         function test_an_unlit_key_has_no_glow() {
@@ -159,6 +163,30 @@ Item {
                 k.ks = Face.states.en.keys.mic;
                 verify(!k.glowing, "the glow ends with it");
             }
+        }
+
+        // Microsoft's contrast themes never mark a state by colour alone: a preparing key keeps a resting key's colours
+        // with a Highlight ring just inside the hover outline, so only Recording fills; no other look draws the ring.
+        function test_in_high_contrast_only_a_preparing_key_shows_a_ring() {
+            const mic = Face.states.en.keys.mic;
+            const prep = Object.assign({}, mic, { lit: "prep", paint: { fill: "prep", ink: "prep_ink", skirt: "prep" } });
+            const k = makeKey("mic", H.lk);
+            compare(ringOf(k), null, "none at rest");
+            k.ks = prep;
+            const ring = ringOf(k);
+            verify(ring, "a ring while it prepares");
+            verify(Qt.colorEqual(ring.border.color, H.lk.palette.ring), "in Highlight");
+            const [px, at] = [H.lk.shape.hc_outline.px, ring.mapToItem(k, 0, 0)];
+            fuzzyCompare(at.x, px, 0.01, "just inside the hover outline");
+            fuzzyCompare(at.y, px, 0.01, "just inside the hover outline");
+            compare(ring.border.width, px, "as wide as it");
+            fuzzyCompare(ring.width, k.width - 2 * px, 0.01, "round the whole cap");
+            verify(Qt.colorEqual(H.lk.palette.prep, H.lk.palette.key), "on a resting key's face");
+            k.ks = Object.assign({}, mic, { lit: "rec", paint: { fill: "rec", ink: "rec_ink", skirt: "rec" } });
+            tryVerify(() => ringOf(k) === null, 1000, "Recording fills instead");
+            verify(lightOf(k) && lightOf(k).pulsing, "and its light comes back, pulsing");
+            for (const lk of [N.lk, D.lk])
+                compare(ringOf(makeKey("mic", lk, prep)), null, "no ring outside high contrast");
         }
     }
 }

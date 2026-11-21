@@ -252,7 +252,7 @@ fn the_bubble_the_tray_menu_icons_and_a_hovered_rows_badge_are_checked() {
 }
 
 /// The pairs Windows' contrast themes are made to read: text on its own background, Highlight marks on a window, and
-/// the window's and a button's pairs swapped, as the Preparing key is.
+/// the window's pair swapped.
 fn system_pairs() -> Vec<(Rgba, Rgba)> {
     let c = |x: [u8; 4]| Rgba::from(x);
     vec![
@@ -261,7 +261,6 @@ fn system_pairs() -> Vec<(Rgba, Rgba)> {
         (c(HC.button_text), c(HC.button)),
         (c(HC.highlight_text), c(HC.highlight)),
         (c(HC.window), c(HC.window_text)),
-        (c(HC.button), c(HC.button_text)),
     ]
 }
 
