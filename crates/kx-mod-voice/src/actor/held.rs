@@ -29,7 +29,8 @@ pub(super) struct Held {
     pub counts: Counts,
     /// The run's saves would be hidden, so cloud is off.
     pub hidden: bool,
-    /// The services with a key, read from the blobs' names as the panel opens and kept as keys are set or removed.
+    /// The services with a key, read from the blobs' names as the panel opens and before each panel click, and kept as
+    /// keys change.
     pub keyed: BTreeSet<String>,
     /// The services table the cloud rules read; the compiled-in one, `None` should it fail.
     pub table: Option<&'static Services>,

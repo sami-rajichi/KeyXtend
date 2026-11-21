@@ -65,7 +65,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 
 ## Public API
 
-`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad` and `services_value`), `ServiceOn` and its `SPEC` with the range constants, `PLACES` and `place_name`; the `models`, `services`, `cloud`, `keys`, `line`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
+`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad`, `services_value` and its `SPEC` with the range constants), `ServiceOn`, `Insert`, `INSERTS`, `KEEP_START`, `PLACES` and `place_name`; the `models`, `services`, `cloud`, `keys`, `line`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 

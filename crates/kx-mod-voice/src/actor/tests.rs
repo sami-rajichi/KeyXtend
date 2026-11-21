@@ -1,6 +1,7 @@
 //! The actor over the fakes: the key and the light (`key`), the views and their times (`view`), the faults (`faults`),
-//! the text and Copy (`typing`), the store (`store`), the panel (`panel`), the cards' checks (`cards`, `auto`) and the
-//! logs (`logs`); `rig` drives it without a thread, hearing it through `taps`. Here: the start and the stop.
+//! the text and Copy (`typing`), Paste at once (`paste`), the store (`store`), the panel (`panel`), the cards' checks
+//! (`cards`, `auto`), Compare (`compare`), cloud dictation (`cloud`) and the logs (`logs`); `rig` drives it without a
+//! thread, hearing it through `taps`. Here: the start and the stop.
 
 #![allow(
     clippy::unwrap_used,

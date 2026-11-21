@@ -1,8 +1,6 @@
-# The services table (ADR-0047 decisions 5 to 9): one row per cloud service, in the Cloud page's order, Groq first. A
-# card's sentences are translations filled with a row's facts, read on the service's own pages on the day noted; no
-# price or claim is written anywhere else. Nothing here is a default: a service stays off until the user confirms it.
-# This file holds the table-wide values and the upload-form rows; `services-own.toml` holds the rows of services with
-# their own shape, read after these as one table.
+# The services table (ADR-0047 decisions 5 to 9): one row per cloud service in the Cloud page's order, Groq first, its
+# card filled with facts read on the service's own pages on the day noted and written nowhere else. Nothing here is a
+# default; this file holds the table-wide values and upload-form rows, and `services-own.toml` the rest, read after it.
 #
 # Table-wide:
 # - `light_hours`, `heavy_hours`: the hours of sound a month of light and of heavy use, which the cards' prices cover.
@@ -63,6 +61,7 @@ address = "https://api.groq.com/openai/v1/audio/transcriptions"
 test = "https://api.groq.com/openai/v1/models"
 header = "bearer"
 keys = "https://console.groq.com/keys"
+# `at_once` is not stated on its pages: a guess, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 20, at_once = 4 }
 other = true
 terms = 1
@@ -105,6 +104,7 @@ address = "https://api.openai.com/v1/audio/transcriptions"
 test = "https://api.openai.com/v1/models"
 header = "bearer"
 keys = "https://platform.openai.com/api-keys"
+# Its rates are not listed: `per_min` and `at_once` are guesses, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 50, at_once = 4 }
 other = true
 terms = 1
@@ -142,6 +142,7 @@ address = "https://api.mistral.ai/v1/audio/transcriptions"
 test = "https://api.mistral.ai/v1/models"
 header = "bearer"
 keys = "https://console.mistral.ai/api-keys"
+# Its rates show only in its Admin panel: `per_min` and `at_once` are guesses, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1
@@ -184,6 +185,7 @@ address = "https://api.together.ai/v1/audio/transcriptions"
 test = "https://api.together.ai/v1/models"
 header = "bearer"
 keys = "https://api.together.ai/settings/api-keys"
+# It publishes no rate: `per_min` and `at_once` are guesses, checked at task 24.
 limits = { cap_mb = 80, cap_s = 14400, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1
@@ -218,6 +220,7 @@ host = "api.lemonfox.ai"
 address = "https://api.lemonfox.ai/v1/audio/transcriptions"
 header = "bearer"
 keys = "https://www.lemonfox.ai/apis/keys"
+# It allows fair use only: `per_min` and `at_once` are guesses, checked at task 24.
 limits = { cap_mb = 100, max_mb = 23, max_s = 600, per_min = 20, at_once = 2 }
 terms = 1
 offered = true
@@ -248,6 +251,7 @@ shape = "form"
 form = { lang = "language", list = false, fixed = [] }
 address = "typed"
 header = "bearer"
+# A typed service's rates are unknown: `per_min` and `at_once` are guesses, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 20, at_once = 2 }
 other = true
 terms = 1
@@ -279,6 +283,7 @@ test = "https://openrouter.ai/api/v1/key"
 header = "bearer"
 keys = "https://openrouter.ai/settings/keys"
 # A piece lasts at most the 60 s upstream timeout a request [R1].
+# `per_min` and `at_once` are not on its pages: guesses, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 60, per_min = 60, at_once = 4 }
 other = true
 terms = 1
@@ -335,6 +340,7 @@ host = "api.deepinfra.com"
 address = "https://api.deepinfra.com/v1/audio/transcriptions"
 header = "bearer"
 keys = "https://deepinfra.com/dash/api_keys"
+# `per_min` and `at_once` are not on its pages: guesses, checked at task 24.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1

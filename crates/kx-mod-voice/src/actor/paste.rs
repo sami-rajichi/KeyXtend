@@ -1,7 +1,6 @@
 //! Paste at once (`insert` = "paste", owner 2026-11-17): a text goes to the clipboard history, which pastes it and puts
-//! the clipboard back. A pasted text counts as typed in full; a refusal, or no answer within `paste_ms`, types it and
-//! drops a late answer, so it goes in once. An erase goes to the typer first, as only the keyboard erases. The key
-//! page's Paste waits `take_ms` for the clipboard's text, then shows the busy note and drops a late answer.
+//! the clipboard back, and an erase goes to the typer first. A refusal, or no answer within `paste_ms`, types the text
+//! and drops a late answer, so it goes in once.
 
 use std::collections::VecDeque;
 use std::mem;

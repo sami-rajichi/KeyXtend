@@ -218,7 +218,7 @@ pub struct CloudCard {
     /// The host of the facts' page, which the link names, such as `example.com`; `None` for the Custom row.
     pub site: Option<String>,
     /// The card's warning, for a service that trains by default, with its account switch's name as a `Text`; `None`
-    /// for none.
+    /// for none. It always shows in the warning tone, so its own `warn` flag is never read.
     pub warn: Option<Fact>,
     /// No real key has checked this connection yet.
     pub untested: bool,

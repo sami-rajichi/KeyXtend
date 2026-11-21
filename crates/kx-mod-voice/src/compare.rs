@@ -165,7 +165,7 @@ impl Compare {
         }
     }
 
-    /// The user reads the set text now.
+    /// The recording stage: its run prepares, then the user reads the set text.
     #[must_use]
     pub fn recording(&self) -> bool {
         self.stage == Stage::Recording

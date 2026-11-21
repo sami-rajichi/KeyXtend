@@ -2,7 +2,8 @@
 on = true
 # The models folder, an absolute drive path; empty until the first download asks for it.
 models_dir = ""
-# The user's model per keyboard language, by row id or file name; a language left out, or a bad pick, takes the table's default.
+# The user's model per keyboard language, by row id, file name or `<service>:<model>` for a cloud one; a language left
+# out, or a bad pick, takes the table's default.
 picks = {}
 # Where models run: "auto", "cpu" or a card's id; Automatic uses the processor until a card passes its check.
 device = "auto"
@@ -88,8 +89,8 @@ copy_ms = 250
 copy_poll_ms = 10
 # Cloud services may be switched on; off, none is offered and every language uses its local model.
 cloud = false
-# The services the user switched on, by id: the day and terms number confirmed, any typed address or model, and the
-# terms number at which the first dictation showed the card's warning.
+# The services the user switched on, by id: the day and terms number confirmed, any typed address or model, the
+# keep-nothing switch, and the terms number at which the first dictation showed the card's warning.
 services = {}
 # The longest silence a cloud request may keep, in seconds; a piece may take several of these.
 net_wait_s = 60

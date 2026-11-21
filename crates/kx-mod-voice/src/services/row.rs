@@ -14,7 +14,7 @@ use crate::services::FactError;
 /// The table's word for the `Authorization: Bearer` header.
 const BEARER: &str = "bearer";
 
-/// Why a row was refused, in the order the rules are checked.
+/// Why a row was refused, naming the rule it breaks.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ServiceError {
     /// The name is empty or holds a hidden mark, or is missing on a row other than the one Custom row.

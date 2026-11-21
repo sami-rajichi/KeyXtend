@@ -1,6 +1,6 @@
 //! A row's models (design "Connections and services"): at most the table's count, each with its id, shown name and the
 //! code it wants per keyboard language (its own list or a table's set), maybe its own form (`OpenAI`'s `languages[]`
-//! beside `whisper-1`'s `language`, ruling 2026-11-17), whether the request names it, and whether every host of it
+//! beside a typed id's `language`, ruling 2026-11-17), whether the request names it, and whether every host of it
 //! keeps the voice.
 
 use std::collections::BTreeMap;
@@ -12,7 +12,7 @@ use thiserror::Error;
 use super::{LangCodes, Rules, ServiceError, form};
 use crate::models::one_line;
 
-/// Why a model was refused, in the order the rules are checked.
+/// Why a model was refused, naming the rule it breaks.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum ModelError {
     /// The id is not one the frames take.
