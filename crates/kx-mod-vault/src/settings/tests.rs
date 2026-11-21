@@ -134,7 +134,10 @@ fn the_plans_ranges_hold() {
         (WORKER_IDLE_S, RESTART_MS, RESTART_MAX_MS),
         (5..=3600, 100..=30_000, 1000..=600_000)
     );
-    assert_eq!((PASTE_WAIT_MS, PLACE_CHECK_S), (2500..=10_000, 10..=3600));
+    assert_eq!(
+        (PASTE_WAIT_MS, PLACE_CHECK_S),
+        (CLIP_ANSWER_MIN_MS..=10_000, 10..=3600)
+    );
     assert_eq!(LATER_H, 1..=168);
 }
 
