@@ -5,10 +5,6 @@
 use super::*;
 use kx_module_api::ports::{CloudShape, FormField};
 
-/// `OpenRouter`'s Voxtral: Mistral keeps nothing only on request [M11], so no host of it keeps nothing.
-const KEPT: &str = "mistralai/voxtral-mini-transcribe-3-0";
-/// `OpenRouter`'s Whisper turbo, which `DeepInfra` and Groq host [R8].
-const ROUTED: &str = "openai/whisper-large-v3-turbo";
 /// A model id the user types, which the row does not list.
 const TYPED: &str = "qwen/qwen3-asr-1.7b";
 
@@ -32,13 +28,13 @@ fn edge_17_the_keep_nothing_switch_rules_out_a_kept_model_with_its_reason_and_mo
     let mut s = router_on();
     let router = row("openrouter");
     assert!(s.services["openrouter"].keep, "on to start");
-    let kept = Chosen::Listed(router.model(KEPT).unwrap());
+    let kept = Chosen::Listed(router.model(router_model(true)).unwrap());
     let reason = rules().unavailable(&s, router, kept);
     assert_eq!(reason, Some(Unavailable::KeepNothing));
-    assert!(!rules().pick(&mut s, "fr", "openrouter", KEPT));
-    assert!(rules().pick(&mut s, "en", "openrouter", ROUTED));
+    assert!(!rules().pick(&mut s, "fr", "openrouter", router_model(true)));
+    assert!(rules().pick(&mut s, "en", "openrouter", router_model(false)));
     assert!(rules().keep(&mut s, "openrouter", false));
-    assert!(rules().pick(&mut s, "fr", "openrouter", KEPT));
+    assert!(rules().pick(&mut s, "fr", "openrouter", router_model(true)));
     assert!(rules().keep(&mut s, "openrouter", true));
     let c = rules().choice(&s, "fr").expect("the pick still resolves");
     assert_eq!(c.unavailable, Some(Unavailable::KeepNothing));
@@ -49,7 +45,7 @@ fn edge_17_the_keep_nothing_switch_rules_out_a_kept_model_with_its_reason_and_mo
 
 #[test]
 fn openrouters_request_carries_its_keep_nothing_field_only_while_its_switch_is_on() {
-    let routed = row("openrouter").model(ROUTED);
+    let routed = row("openrouter").model(router_model(false));
     let zdr = FormField {
         name: "provider".into(),
         value: r#"{"zdr":true}"#.into(),
@@ -74,8 +70,11 @@ fn a_typed_id_of_a_model_no_host_of_which_keeps_nothing_is_ruled_out_too() {
     let mut s = router_on();
     let router = row("openrouter");
     let typed = |id| rules().unavailable(&s, router, Chosen::Typed(id));
-    assert_eq!(typed(KEPT), Some(Unavailable::KeepNothing));
+    assert_eq!(typed(router_model(true)), Some(Unavailable::KeepNothing));
     assert_eq!(typed(TYPED), None, "its hosts are checked when it is sent");
     assert!(rules().keep(&mut s, "openrouter", false));
-    assert_eq!(rules().unavailable(&s, router, Chosen::Typed(KEPT)), None);
+    assert_eq!(
+        rules().unavailable(&s, router, Chosen::Typed(router_model(true))),
+        None
+    );
 }

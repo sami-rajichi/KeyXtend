@@ -5,19 +5,21 @@
 use super::*;
 use kx_module_api::ports::CloudShape;
 
-/// The model the tests pick [A1][A6].
-const UNIVERSAL: &str = "universal-3-6-pro";
+/// The model the tests pick: the row's first.
+fn universal() -> &'static str {
+    first_model("assemblyai")
+}
 
 #[test]
 fn its_card_has_no_warning_or_rule_and_asks_to_switch_it_on() {
     let card = rules().card(&on(), row("assemblyai"), today());
-    assert_eq!(card.service, ServiceName::Named("AssemblyAI".into()));
+    assert_eq!(card.service, row("assemblyai").shown());
     assert!(
         card.warn.is_none() && !card.trains.warn,
         "no training on its EU servers [A5]"
     );
     assert!(card.rule.is_none() && card.bills.is_none());
-    assert_eq!(card.site.as_deref(), Some("www.assemblyai.com"));
+    assert_eq!(card.site.as_deref(), site("assemblyai"));
     assert!(card.untested && card.on.is_none(), "asks to switch it on");
 }
 
@@ -27,7 +29,7 @@ fn a_pick_sends_the_keyboard_languages_own_code_in_its_own_shape_with_no_reminde
     assert!(rules().confirm(&mut s, "assemblyai", today()));
     for lang in ["en", "fr", "ar"] {
         assert!(
-            rules().pick(&mut s, lang, "assemblyai", UNIVERSAL),
+            rules().pick(&mut s, lang, "assemblyai", universal()),
             "{lang}"
         );
         let choice = rules().choice(&s, lang).unwrap();
@@ -35,7 +37,7 @@ fn a_pick_sends_the_keyboard_languages_own_code_in_its_own_shape_with_no_reminde
         let Chosen::Listed(model) = choice.model else {
             panic!("{lang}: a listed model")
         };
-        assert_eq!(model.id, UNIVERSAL);
+        assert_eq!(model.id, universal());
         let shape = choice.service.shape_for(Some(model), true);
         assert!(
             matches!(shape, CloudShape::Assembly { .. }),
@@ -44,7 +46,7 @@ fn a_pick_sends_the_keyboard_languages_own_code_in_its_own_shape_with_no_reminde
         assert!(choice.warn.is_none(), "{lang}: nothing to remind");
     }
     assert!(
-        !rules().pick(&mut s, "pl", "assemblyai", UNIVERSAL),
+        !rules().pick(&mut s, "pl", "assemblyai", universal()),
         "a code its pages do not name"
     );
 }

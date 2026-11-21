@@ -4,7 +4,7 @@
 //! last, history kept, the lower free allowance, its cheapest plans for light and heavy use, and the free plan's rule.
 
 use super::*;
-use kx_module_api::ports::{Fact, FactArg, FormField, KeyHeader, OwnFields};
+use kx_module_api::ports::{FactArg, FormField, KeyHeader, OwnFields};
 
 /// The cheapest plans for light and heavy use [E1]: Starter and Creator, each its price in cents a month and the hours
 /// of sound it includes.
@@ -27,20 +27,6 @@ fn own_form() -> CloudShape {
 /// The shipped row.
 fn eleven() -> &'static Service {
     shipped().get("elevenlabs").unwrap()
-}
-
-/// `fact`'s text id and its values by name.
-fn values(fact: &Fact) -> (&str, Vec<(&str, &FactValue)>) {
-    let args = fact.args.iter().map(|a| (a.name.as_str(), &a.value));
-    (fact.id.as_str(), args.collect())
-}
-
-/// An amount of dollars in hundredths.
-fn usd(cents: u32) -> FactValue {
-    FactValue::Money {
-        amount: Hundredths(cents),
-        currency: "USD".into(),
-    }
 }
 
 #[test]

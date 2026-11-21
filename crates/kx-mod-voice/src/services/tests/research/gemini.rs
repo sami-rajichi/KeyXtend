@@ -4,10 +4,10 @@
 //! with its warning, the paid price per minute for light and heavy use, and its rule for the EEA and for age.
 
 use super::*;
-use kx_module_api::ports::{Fact, KeyHeader};
+use kx_module_api::ports::KeyHeader;
 
 /// Its warning's id, which says what the free allowance gives Google [N3][N4].
-pub(crate) const FREE_USE: &str = "free-allowance";
+const FREE_USE: &str = "free-allowance";
 /// The model it offers [N2].
 const TRANSCRIBE: &str = "models/gemini-3.5-transcribe";
 /// The codes it gets for the owner's three languages: Modern Standard Arabic's usual locale, then French and English.
@@ -20,12 +20,6 @@ const PRICES: [u32; 2] = [450, 1800];
 /// The shipped row.
 fn gemini() -> &'static Service {
     shipped().get("gemini").unwrap()
-}
-
-/// `fact`'s text id and its values by name.
-fn values(fact: &Fact) -> (&str, Vec<(&str, &FactValue)>) {
-    let args = fact.args.iter().map(|a| (a.name.as_str(), &a.value));
-    (fact.id.as_str(), args.collect())
 }
 
 #[test]

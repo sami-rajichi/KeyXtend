@@ -51,7 +51,7 @@ fn a_stale_entry_starts_afresh_when_confirmed_and_the_picks_that_named_it_go() {
     stale.terms = 5;
     stale.address = ADDRESS.into();
     s.services.insert("groq".into(), stale);
-    s.picks.insert("fr".into(), pick_text("groq", TURBO));
+    s.picks.insert("fr".into(), pick_text("groq", turbo()));
     s.picks.insert("nl".into(), "canary-v2-q8".into());
     assert!(
         rules().choice(&s, "fr").is_none(),
@@ -83,7 +83,7 @@ fn a_language_may_pick_each_switched_on_services_models_that_know_it() {
     };
     let fr = ids(&s, "fr");
     let want = [
-        ("groq", TURBO),
+        ("groq", turbo()),
         ("groq", "whisper-large-v3"),
         ("custom", "my-model"),
     ];

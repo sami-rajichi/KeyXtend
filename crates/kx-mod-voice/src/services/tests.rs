@@ -6,15 +6,12 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
-mod assembly;
-mod eleven;
-pub(crate) mod gemini;
 mod langs;
 mod parts;
 mod refuse;
 mod request;
+mod research;
 mod room;
-mod rows;
 pub(crate) mod shipped;
 mod split;
 

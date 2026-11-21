@@ -15,16 +15,20 @@ const LANGS: [&str; 4] = ["en", "fr", "ar", "tlh"];
 /// The services a step names: `openrouter` has the keep-nothing switch, `openai` is offered only in a later table,
 /// and `ovhcloud` is in no table here.
 const SERVICES: [&str; 5] = ["groq", "custom", "openrouter", "openai", "ovhcloud"];
-/// The models a step names: Groq's two, two typed ids, `OpenRouter`'s Voxtral, which the switch rules out, and
-/// `OpenAI`'s own.
-const MODELS: [&str; 6] = [
-    TURBO,
-    "whisper-large-v3",
-    "my-model",
-    "other-model",
-    "mistralai/voxtral-mini-transcribe-3-0",
-    "gpt-transcribe",
-];
+/// The models a step names, read from the table: Groq's first two, two typed ids, the `OpenRouter` model the switch
+/// rules out, and `OpenAI`'s first.
+fn cloud_models() -> [&'static str; 6] {
+    let (groq, openai) = (&row("groq").models, &row("openai").models);
+    let (two, own) = ((&groq[0].id, &groq[1].id), &openai[0].id);
+    [
+        two.0,
+        two.1,
+        "my-model",
+        "other-model",
+        router_model(true),
+        own,
+    ]
+}
 /// Local rows a step picks.
 const LOCAL: [&str; 2] = ["whisper-turbo-q5km", "canary-v2-q8"];
 /// Addresses a step types: none, one Custom takes, and one no row takes.
@@ -79,7 +83,7 @@ impl Step {
 }
 
 fn step() -> impl Strategy<Value = Step> {
-    let (l, s, m) = (0..LANGS.len(), 0..SERVICES.len(), 0..MODELS.len());
+    let (l, s, m) = (0..LANGS.len(), 0..SERVICES.len(), 0..cloud_models().len());
     prop_oneof![
         1 => mostly_on().prop_map(Step::Switch),
         3 => s.clone().prop_map(Step::Confirm),
@@ -133,8 +137,8 @@ fn seeded(table: &Services) -> VoiceSettings {
     assert!(rules.type_address(&mut s, "custom", ADDRESS));
     assert!(rules.type_model(&mut s, "custom", "my-model"));
     let picks = [
-        ("fr", "groq", TURBO),
-        ("ar", "groq", "whisper-large-v3"),
+        ("fr", "groq", turbo()),
+        ("ar", "groq", cloud_models()[1]),
         ("en", "custom", "my-model"),
     ];
     for (lang, id, model) in picks {
@@ -164,10 +168,10 @@ fn apply(step: &Step, tables: &[Services], at: &mut usize, s: &mut VoiceSettings
             rules.turn_off(s, SERVICES[i]);
             true
         }
-        Step::Pick(l, i, m) => rules.pick(s, LANGS[l], SERVICES[i], MODELS[m]),
+        Step::Pick(l, i, m) => rules.pick(s, LANGS[l], SERVICES[i], cloud_models()[m]),
         Step::Local(l, r) => s.picks.insert(LANGS[l].into(), LOCAL[r].into()).is_some(),
         Step::Unpick(l) => s.picks.remove(LANGS[l]).is_some(),
-        Step::Type(i, m) => rules.type_model(s, SERVICES[i], MODELS[m]),
+        Step::Type(i, m) => rules.type_model(s, SERVICES[i], cloud_models()[m]),
         Step::Address(i, a) => rules.type_address(s, SERVICES[i], ADDRESSES[a]),
         Step::Keep(i, on) => rules.keep(s, SERVICES[i], on),
         Step::Load(t) => {

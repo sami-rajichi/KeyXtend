@@ -3,18 +3,13 @@
 //! does.
 
 use super::*;
-use crate::services::tests::{LANGS, OWN, PROFILE};
-
-/// The `ElevenLabs` model the tests pick.
-const SCRIBE: &str = "scribe_v3";
-/// Groq's facts' last line, which a warning follows in the test that gives it one.
-const GROQ_LAST: &str = "bills = { id = \"least\", count = { seconds = 10 } }";
+use crate::services::tests::{LANGS, OWN};
 
 /// The defaults with cloud on, `ElevenLabs` confirmed under `rules` and picked for English.
 fn eleven_for_english(rules: Cloud<'_>) -> VoiceSettings {
     let mut s = on();
     assert!(rules.confirm(&mut s, "elevenlabs", today()));
-    assert!(rules.pick(&mut s, "en", "elevenlabs", SCRIBE));
+    assert!(rules.pick(&mut s, "en", "elevenlabs", first_model("elevenlabs")));
     s
 }
 
@@ -47,7 +42,10 @@ fn newer_terms_confirmed_bring_the_warning_back() {
     let rules = Cloud::new(&newer, false);
     assert!(rules.choice(&s, "en").is_some_and(|c| c.ask), "asks first");
     assert!(rules.confirm(&mut s, "elevenlabs", today()));
-    assert_eq!(warns(rules, &s, "en").as_deref(), Some(PROFILE));
+    assert_eq!(
+        warns(rules, &s, "en").as_deref(),
+        Some(warn_id("elevenlabs"))
+    );
     assert!(rules.warned(&mut s, "elevenlabs"));
     assert_eq!(s.services["elevenlabs"].warned, 2);
 }
@@ -57,12 +55,12 @@ fn a_row_without_a_warning_never_carries_one_and_any_row_with_one_does() {
     let s = groq_for_french();
     assert_eq!(warns(rules(), &s, "fr"), None, "Groq has none");
     let warn = "warn = { id = \"trains\", text = { switch = \"Data use\" } }";
-    let text = TEXT.replacen(GROQ_LAST, &format!("{GROQ_LAST}\n{warn}"), 1);
-    let warned = parse(&text).unwrap();
+    let warned = with_rows(&format!("{ROUTER}{warn}\n"));
     let rules = Cloud::new(&warned, false);
-    assert_eq!(
-        warns(rules, &s, "fr").as_deref(),
-        Some("trains"),
-        "from its row alone"
-    );
+    let mut s = on();
+    assert!(rules.confirm(&mut s, "router-test", today()));
+    let model = &warned.get("router-test").unwrap().models[0].id;
+    assert!(rules.pick(&mut s, "fr", "router-test", model));
+    let said = warns(rules, &s, "fr");
+    assert_eq!(said.as_deref(), Some("trains"), "from its row alone");
 }

@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::services::KeyTest;
-use kx_module_api::ports::{Fact, KeyHeader};
+use kx_module_api::ports::KeyHeader;
 
 /// The only Sync model [A1][A6].
 const UNIVERSAL: &str = "universal-3-6-pro";
@@ -23,20 +23,6 @@ const CREDIT: u32 = 5000;
 /// The shipped row.
 fn assemblyai() -> &'static Service {
     shipped().get("assemblyai").unwrap()
-}
-
-/// `fact`'s text id and its values by name.
-fn values(fact: &Fact) -> (&str, Vec<(&str, &FactValue)>) {
-    let args = fact.args.iter().map(|a| (a.name.as_str(), &a.value));
-    (fact.id.as_str(), args.collect())
-}
-
-/// `cents` in dollars, as a fact holds money.
-fn usd(cents: u32) -> FactValue {
-    FactValue::Money {
-        amount: Hundredths(cents),
-        currency: "USD".into(),
-    }
 }
 
 #[test]
