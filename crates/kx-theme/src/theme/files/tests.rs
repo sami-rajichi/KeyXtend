@@ -39,13 +39,64 @@ fn a_reason_names_the_theme_it_starts_with_else_the_shared_colours() {
     assert_eq!(file("unknown field `x`".into()), common.file);
 }
 
+/// `text` kept for the life of the tests, as a part's text is compiled in.
+fn kept(text: String) -> &'static str {
+    Box::leak(text.into_boxed_str())
+}
+
+/// Each theme part with its text changed by `change`, and that part.
+fn each_theme(change: impl Fn(&Part) -> String) -> impl Iterator<Item = (Part, Vec<Part>, String)> {
+    let themes = THEME_PARTS.iter().enumerate().skip(1);
+    themes.map(move |(at, p)| {
+        let (parts, joined) = with(at, kept(change(p)));
+        (*p, parts, joined)
+    })
+}
+
 #[test]
-fn a_theme_written_twice_names_its_file() {
-    let (parts, mut joined) = with(THEME_PARTS.len(), "");
-    let twice = &THEME_PARTS[1];
-    joined.push_str(twice.text);
+fn a_stray_key_or_table_in_a_theme_part_names_that_part_at_its_own_line() {
+    for (part, parts, joined) in each_theme(|p| format!("extra = 1\n{}", p.text)) {
+        let e = load(&parts, &joined).expect_err("a stray key");
+        assert_eq!(e.file, part.file, "{}", e.why);
+        assert!(e.why.contains("line 1,"), "{}", e.why);
+    }
+    for (part, parts, joined) in each_theme(|p| format!("{}\n[common]\n", p.text)) {
+        let e = load(&parts, &joined).expect_err("another part's table");
+        assert_eq!(e.file, part.file, "{}", e.why);
+    }
+}
+
+#[test]
+fn a_misspelt_or_missing_id_names_its_part() {
+    let id = |p: &Part| format!("id = \"{}\"\n", p.name);
+    let misspelt = each_theme(|p| p.text.replace(&id(p), "id = \"x\"\n"));
+    for (part, parts, joined) in misspelt.chain(each_theme(|p| p.text.replace(&id(p), ""))) {
+        let e = load(&parts, &joined).expect_err("not its id");
+        assert_eq!(e.file, part.file, "{}", e.why);
+    }
+}
+
+#[test]
+fn a_theme_in_the_shared_colours_names_their_part() {
+    let (parts, joined) = with(
+        0,
+        kept(format!("{}{}", THEME_PARTS[0].text, THEME_PARTS[1].text)),
+    );
+    let e = load(&parts, &joined).expect_err("a theme in common");
+    assert_eq!(e.file, THEME_PARTS[0].file, "{}", e.why);
+}
+
+#[test]
+fn a_theme_written_twice_names_the_later_part() {
+    let (mut parts, _) = with(THEME_PARTS.len(), "");
+    let copy = Part {
+        file: "themes/copy.toml",
+        ..THEME_PARTS[1]
+    };
+    parts.push(copy);
+    let joined: String = parts.iter().map(|p| p.text).collect();
     let e = load(&parts, &joined).expect_err("twice");
-    assert_eq!(e.file, twice.file, "{}", e.why);
+    assert_eq!(e.file, copy.file, "{}", e.why);
 }
 
 #[test]
