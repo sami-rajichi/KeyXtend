@@ -1,8 +1,11 @@
 //! A cloud dictation's count (ADR-0047): kept under its service and listed model, on no device of this PC; a typed
-//! model's id is never kept, and a pick of a service the table lacks counts as any other model.
+//! model's id is never kept, a pick of a service the table lacks counts as any other model, and the run's table names
+//! its own rows.
 
 use super::*;
+use crate::cloud::pick_text;
 use crate::services::tests::shipped::{first, model as listed, pick};
+use crate::services::tests::{ROUTER, with_rows};
 
 /// The counts' one bucket after one dictation by `pick` on day 14.
 fn only(pick: &str) -> (Bucket, Counts) {
@@ -39,4 +42,23 @@ fn a_typed_models_id_is_never_kept() {
 fn a_service_the_table_lacks_counts_as_any_other_model() {
     let (bucket, _) = only("nowhere:whisper");
     assert_eq!(bucket, self::bucket(14, Model::Other, Device::Cpu));
+}
+
+#[test]
+fn a_service_only_the_runs_table_knows_counts_under_it() {
+    let held = with_rows(ROUTER);
+    let picked = pick_text("router-test", "openai/whisper-large-v3-turbo");
+    let mut counts = Counts::default();
+    counts.add_in(day(14), &count(&picked, 1_000, 100, None), Some(&held));
+    let bucket = counts.rows().keys().next().unwrap();
+    let model = Model::Cloud {
+        service: "router-test".into(),
+        model: Some("openai/whisper-large-v3-turbo".into()),
+    };
+    assert_eq!(*bucket, self::bucket(14, model, Device::Cloud));
+    assert_eq!(
+        Model::of(&picked, None),
+        Model::Other,
+        "no table names no service"
+    );
 }

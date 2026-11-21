@@ -12,9 +12,9 @@ use std::collections::BTreeMap;
 
 use kx_module_api::ports::{CardId, Date};
 
-use crate::cloud::pick_row;
 use crate::flow::Count;
 use crate::models::table;
+use crate::services::{self, Services};
 
 /// The model a count is for: a models table row by its id, a cloud service's model, or any other file, whose name is
 /// never kept.
@@ -34,10 +34,10 @@ pub enum Model {
 }
 
 impl Model {
-    /// The model `name` names: a row's id, a cloud pick of a service in the table, else any other file.
+    /// The model `name` names: a row's id, a cloud pick of a service in `services`, else any other file.
     #[must_use]
-    pub fn of(name: &str) -> Self {
-        if let Some((row, _, listed)) = pick_row(name) {
+    pub fn of(name: &str, services: Option<&Services>) -> Self {
+        if let Some((row, _, listed)) = services.and_then(|t| t.pick_row(name)) {
             let model = listed.map(|m| m.id.clone());
             return Self::Cloud {
                 service: row.id.clone(),
@@ -99,9 +99,14 @@ impl Counts {
         &self.0
     }
 
-    /// Counts `count`, a dictation written on local day `date`; each number stops at its top rather than wrap.
+    /// Counts `count`, a dictation written on local day `date`, its cloud pick named by the shipped table.
     pub fn add(&mut self, date: Date, count: &Count) {
-        let model = Model::of(count.model.expose());
+        self.add_in(date, count, services::table().ok());
+    }
+
+    /// `add`, its cloud pick named by `services`, the run's table; each number stops at its top rather than wrap.
+    pub fn add_in(&mut self, date: Date, count: &Count, services: Option<&Services>) {
+        let model = Model::of(count.model.expose(), services);
         let device = match (&model, count.card.clone()) {
             (Model::Cloud { .. }, _) => Device::Cloud,
             (_, card) => card.map_or(Device::Cpu, Device::Card),

@@ -1,6 +1,6 @@
 //! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home list
 //! names the model, the device, the last Compare and the counts; Try again acts as the flow allows; History names a
-//! cloud text's model and service.
+//! cloud text's model and service, as the run's table names them.
 
 use kx_module_api::ports::{
     DeviceLabel, DeviceName, Pages, PanelButton, ServiceName, VoiceClick, VoiceHome, VoiceSheet,
@@ -9,9 +9,12 @@ use kx_module_api::ports::{
 
 use kx_module_api::{Redacted, Zeroizing};
 
+use super::{service_of, shown_name};
+use crate::cloud::pick_text;
 use crate::counts::Board;
 use crate::panel::rig::{ROWS, Rig, cpu, row};
 use crate::services::tests::shipped::{first, model, pick};
+use crate::services::tests::{ROUTER, with_rows};
 
 /// The rig on `tab`.
 fn on(tab: VoiceTab) -> Rig {
@@ -210,4 +213,16 @@ fn the_home_list_pages_its_six_pages_five_to_a_page_with_options_on_the_second()
         panic!("not Home");
     };
     assert_eq!(home.tabs, [VoiceTab::Options]);
+}
+
+#[test]
+fn a_cloud_picks_model_and_service_are_named_by_the_runs_table() {
+    let held = with_rows(ROUTER);
+    let picked = Redacted::new(pick_text("router-test", "openai/whisper-large-v3-turbo"));
+    let named = shown_name(&picked, Some(&held));
+    assert_eq!(named.expose(), "Whisper Large v3 Turbo");
+    let service = service_of(&picked, Some(&held));
+    assert_eq!(service, Some(ServiceName::Named("Router Test".into())));
+    assert_eq!(shown_name(&picked, None), picked, "no table names no model");
+    assert_eq!(service_of(&picked, None), None, "nor a service");
 }

@@ -36,10 +36,7 @@ pub fn cloud_pick(value: &str) -> Option<(&str, &str)> {
 /// The shipped row, the model id and, when the row lists it, the listed model that cloud pick `value` names.
 #[must_use]
 pub fn pick_row(value: &str) -> Option<(&'static Service, &str, Option<&'static Model>)> {
-    let table = services::table().ok()?;
-    let (id, model) = table.pick(value)?;
-    let row = table.get(id)?;
-    Some((row, model, row.model(model)))
+    services::table().ok()?.pick_row(value)
 }
 
 /// The model a cloud pick names.
@@ -112,6 +109,12 @@ impl<'a> Cloud<'a> {
     #[must_use]
     pub fn new(table: &'a Services, hidden: bool) -> Self {
         Self { table, hidden }
+    }
+
+    /// The services table these rules read, which the views and the counts read too.
+    #[must_use]
+    pub fn table(&self) -> &'a Services {
+        self.table
     }
 
     /// True when cloud services may be used: `cloud` on, in a run that is not hidden.

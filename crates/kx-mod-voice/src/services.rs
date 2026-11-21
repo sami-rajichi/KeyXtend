@@ -178,6 +178,14 @@ impl Services {
             .filter(|(id, _)| self.get(id).is_some())
     }
 
+    /// The row, the model id and, when the row lists it, the listed model that cloud pick `value` names.
+    #[must_use]
+    pub fn pick_row<'v>(&self, value: &'v str) -> Option<(&Service, &'v str, Option<&Model>)> {
+        let (id, model) = self.pick(value)?;
+        let row = self.get(id)?;
+        Some((row, model, row.model(model)))
+    }
+
     /// The rows the Cloud page may show, in order, Groq first (edge 24).
     pub fn offered(&self) -> impl Iterator<Item = &Service> {
         self.rows.iter().filter(|r| r.offered)

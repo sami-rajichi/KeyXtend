@@ -183,11 +183,15 @@ Window {
     }
     // Screen readers hear each new state and line, since the bar never takes focus; Listening's sentence is the hub's.
     function tell() {
-        const h = shown.hint;
-        const line = !h ? "" : (h.text || h);
-        const said = listens ? shown.said : writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
+        const said = spoken();
         if (said)
             body.Accessible.announce(said);
+    }
+    // What readers hear of the shown bar: Listening's sentence, else its line, else its word or its text.
+    function spoken() {
+        const h = shown.hint;
+        const line = !h ? "" : (h.text || h);
+        return listens ? shown.said : writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
     }
 
     Rectangle {

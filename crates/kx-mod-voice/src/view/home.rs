@@ -18,7 +18,11 @@ pub(super) fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> Voi
     let named = cloud.map(|c| Redacted::new(Offered::from(&c).name().to_owned()));
     let compared = facts.scores.get(facts.iso()).map(|b| b.day);
     VoiceHome {
-        model: named.or_else(|| ready.as_ref().map(|r| shown_name(&r.name))),
+        model: named.or_else(|| {
+            ready
+                .as_ref()
+                .map(|r| shown_name(&r.name, facts.services()))
+        }),
         device: device::label(facts, ready.as_ref()),
         compared,
         history: u32::try_from(facts.history.len()).unwrap_or(u32::MAX),

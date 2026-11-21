@@ -1,7 +1,8 @@
 // The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service takes
-// the voice, which readers hear as a sentence, and a cloud note's Try again, Use the local model dimmed unless one is
-// ready, and Download when none is (edge 20), under the line with Open service for a note the service's pages settle;
-// and the card's warning in full under the row on the first dictation to its service, in English, French and Arabic.
+// the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's Try
+// again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with Open
+// service for a note the service's pages settle; and the card's warning in full under the row on the first dictation
+// to its service, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -158,6 +159,20 @@ Item {
             mouseClick(acts[acts.length - 1]);
             compare(bar.voice.calls, ["act bar service 0 " + bar.view.round]);
             bar.visible = net.visible = false;
+        }
+
+        // While it listens, readers hear the hub's sentence, never the shown word, a cloud dictation's too.
+        function test_while_it_listens_readers_hear_the_hubs_sentence_data() {
+            return langs_data();
+        }
+        function test_while_it_listens_readers_hear_the_hubs_sentence(d) {
+            const nothing = Voice.views[d.t].nothing.bar;
+            verify(nothing.said !== nothing.word, "a sentence apart from the word");
+            for (const name of ["listening", "cloudListening", "nothing"]) {
+                const bar = make(name, d.t);
+                compare(bar.spoken(), Voice.views[d.t][name].bar.said, name);
+                bar.visible = false;
+            }
         }
     }
 }

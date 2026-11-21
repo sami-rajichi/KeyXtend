@@ -20,10 +20,11 @@ use kx_module_api::ports::{
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
-use crate::cloud::{Choice, Cloud, pick_row};
+use crate::cloud::{Choice, Cloud};
 use crate::counts::{Checks, Scores};
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
+use crate::services::Services;
 
 /// What the view and the clicks need beyond the panel; the actor holds it.
 #[derive(Copy, Clone, Debug)]
@@ -86,6 +87,12 @@ impl<'a> Facts<'a> {
     #[must_use]
     pub fn cloud_choice(&self) -> Option<Choice<'a>> {
         self.cloud?.choice(self.settings, &self.front.iso)
+    }
+
+    /// The run's services table, which names a cloud pick's service and model; `None` when it does not load.
+    #[must_use]
+    pub fn services(&self) -> Option<&'a Services> {
+        self.cloud.map(|c| c.table())
     }
 }
 
@@ -225,9 +232,10 @@ impl Panel {
     }
 }
 
-/// A model's shown name: its row's name, else its file's name; a cloud pick's listed model name, else its typed id.
-pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
-    if let Some((_, model, listed)) = pick_row(name.expose()) {
+/// A model's shown name: its row's name, else its file's name; a cloud pick's listed model name in `table`, else its
+/// typed id.
+pub(crate) fn shown_name(name: &Redacted<String>, table: Option<&Services>) -> Redacted<String> {
+    if let Some((_, model, listed)) = table.and_then(|t| t.pick_row(name.expose())) {
         return Redacted::new(listed.map_or(model, |m| m.name.as_str()).to_owned());
     }
     let row = crate::models::table()
@@ -236,9 +244,9 @@ pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
     row.map_or_else(|| name.clone(), |r| Redacted::new(r.name.clone()))
 }
 
-/// A cloud pick's service, as its row names it; `None` for a model on this PC.
-pub(crate) fn service_of(name: &Redacted<String>) -> Option<ServiceName> {
-    pick_row(name.expose()).map(|(row, ..)| row.shown())
+/// A cloud pick's service, as its row in `table` names it; `None` for a model on this PC.
+pub(crate) fn service_of(name: &Redacted<String>, table: Option<&Services>) -> Option<ServiceName> {
+    table?.pick_row(name.expose()).map(|(row, ..)| row.shown())
 }
 
 /// `n` as a count the view holds, or the largest one.

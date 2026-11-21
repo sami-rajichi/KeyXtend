@@ -286,4 +286,17 @@ fn a_picks_row_and_listed_model_are_found_once_for_every_reader() {
         ("custom", "llama:7b", None)
     );
     assert!(pick_row("canary-v2-q8").is_none(), "a local pick");
+    let router = pick_text("router-test", "openai/whisper-large-v3-turbo");
+    assert!(pick_row(&router).is_none(), "a row the shipped table lacks");
+    let held = with_rows(ROUTER);
+    let (row, model, listed) = held.pick_row(&router).unwrap();
+    let listed = listed.map(|m| m.name.as_str());
+    assert_eq!(
+        (row.id.as_str(), model, listed),
+        (
+            "router-test",
+            "openai/whisper-large-v3-turbo",
+            Some("Whisper Large v3 Turbo")
+        )
+    );
 }
