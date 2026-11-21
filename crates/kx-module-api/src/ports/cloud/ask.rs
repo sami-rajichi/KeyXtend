@@ -2,7 +2,7 @@
 //! pieces, each refused outside its range. The `[voice]` settings and the services table check against these ranges.
 
 use super::{CloudFault, CloudShape, HttpsUrl, KeyHeader};
-use crate::ports::{JobLimits, TAG_LEN};
+use crate::ports::{JobLimits, TAG_LEN, first_odd};
 use crate::{Redacted, Secret, SecretBytes};
 pub use kx_ipc::MAX_KEY_BYTES;
 use kx_ipc::rules::cloud_piece;
@@ -180,13 +180,6 @@ fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'st
 /// True for a code within `TAG_LEN` that passes `rule`, as the frames take a model's id, a language code or a name.
 pub(super) fn fits(text: &str, rule: fn(&str) -> Result<(), kx_ipc::IpcError>) -> bool {
     TAG_LEN.contains(&text.len()) && rule(text).is_ok()
-}
-
-/// The name of the first rule that does not hold, if any.
-fn first_odd<const N: usize>(rules: [(bool, &'static str); N]) -> Option<&'static str> {
-    rules
-        .into_iter()
-        .find_map(|(fits, name)| (!fits).then_some(name))
 }
 
 /// `Range` naming `bad`, or fine when there is none.

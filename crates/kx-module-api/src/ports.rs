@@ -20,10 +20,15 @@ macro_rules! listed {
 /// written once.
 macro_rules! first_bad {
     ($value:expr, $($field:ident: $range:expr),+ $(,)?) => {
-        [$(($range.contains(&$value.$field), stringify!($field))),+]
-            .into_iter()
-            .find_map(|(fits, name)| (!fits).then_some(name))
+        $crate::ports::first_odd([$(($range.contains(&$value.$field), stringify!($field))),+])
     };
+}
+
+/// The name of the first rule that does not hold, if any; `first_bad!` hands it its fields' ranges.
+fn first_odd<const N: usize>(rules: [(bool, &'static str); N]) -> Option<&'static str> {
+    rules
+        .into_iter()
+        .find_map(|(fits, name)| (!fits).then_some(name))
 }
 
 mod assist;
