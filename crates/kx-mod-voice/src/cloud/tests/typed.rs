@@ -84,3 +84,27 @@ fn a_listed_model_sends_its_id_unless_its_request_names_none_and_a_typed_id_goes
     );
     assert_eq!(Chosen::Typed("my-model").sent(), Some("my-model"));
 }
+
+#[test]
+fn a_typed_id_a_listed_model_has_adds_no_second_row_where_it_knows_the_language_nor_a_dead_one_where_not()
+ {
+    let mut s = on();
+    assert!(rules().confirm(&mut s, "groq", today()));
+    let groq = table().unwrap().get("groq").unwrap();
+    let listed = &groq.models[0];
+    assert!(rules().type_model(&mut s, "groq", &listed.id));
+    let (knows, lacks) = ("en", "tlh");
+    assert!(listed.code(knows).is_some() && listed.code(lacks).is_none());
+    let ids = |lang| {
+        let all = rules().models(&s, lang);
+        let groq = all.iter().filter(|o| o.service.id == "groq");
+        groq.map(|o| o.id().to_owned()).collect::<Vec<_>>()
+    };
+    let shown: Vec<String> = groq.models.iter().map(|m| m.id.clone()).collect();
+    assert_eq!(ids(knows), shown, "the listed rows alone");
+    assert_eq!(
+        ids(lacks),
+        Vec::<String>::new(),
+        "no row that cannot be picked"
+    );
+}

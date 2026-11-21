@@ -211,9 +211,11 @@ impl<'a> Cloud<'a> {
     }
 }
 
-/// True when `model` is `entry`'s typed Other id on a row with that line, and `lang` goes as it is.
+/// True when `model` is `entry`'s typed Other id on a row with that line, no listed model's, so it never shows twice,
+/// and `lang` goes as it is.
 fn typed(service: &Service, entry: &ServiceOn, model: &str, lang: &str) -> bool {
-    service.other && !entry.model.is_empty() && entry.model == model && CloudAsk::lang_fits(lang)
+    let own = !entry.model.is_empty() && entry.model == model && service.model(model).is_none();
+    service.other && own && CloudAsk::lang_fits(lang)
 }
 
 /// True when `service`'s pieces have somewhere to go: its own address, or one typed for a typed row (edge 13).
