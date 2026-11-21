@@ -1,6 +1,6 @@
-//! Remove key in the Cloud page's footer (owner, 2026-11-21): it acts on the ticked service whenever its key is sealed,
-//! On, Off or with newer terms declined, and the row keeps its mark. With cloud off the page lists nothing; switching
-//! it on sends nothing, so a key stays removable. Off alone never deletes a key.
+//! Remove key in the Cloud page's footer (owner, 2026-11-21) acts on the ticked service whenever its key is sealed,
+//! On, Off or with newer terms declined, and the row keeps its mark. With cloud off the page lists nothing and
+//! switching it on sends nothing, so a key stays removable, and Off alone never deletes one.
 
 use kx_module_api::ports::{CloudButton, CloudSheet, ServiceMark, ServiceName, VoiceClick};
 

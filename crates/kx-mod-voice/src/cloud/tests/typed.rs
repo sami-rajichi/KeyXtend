@@ -1,4 +1,4 @@
-//! A typed row's lines: the Other model id and the address (edge 13). A typed row is neither ready nor picked until its
+//! A typed row's lines, the Other model id and the address (edge 13): the row is neither ready nor picked until its
 //! address is typed, and a typed line's change drops the picks that named it, so none comes back by itself. Its Other
 //! id never prints.
 
