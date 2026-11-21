@@ -1,14 +1,16 @@
 //! Compare's cloud models through the actor (edge 12): the recording goes only to the ticked services, through the
 //! same port and with the key read in the job; an unticked ready service gets nothing; Cancel or leaving drops the
-//! runs; and a fault shows on that model alone.
+//! runs, before `send` too; and a fault shows on that model alone.
 
 use kx_module_api::ports::{
     CompareSheet, PanelButton, RunStep, SpeechNote, SpeechStage, VoiceClick, VoiceSheet, VoiceTab,
 };
 use kx_platform_fake::SpeechCall;
 
+use super::window::to_send;
 use super::*;
 use crate::actor::Msg;
+use crate::actor::tests::taps::{held, release};
 use crate::panel::rig::ROWS;
 
 /// Custom with its typed address and model, as a second ready service.
@@ -118,4 +120,26 @@ fn a_key_removed_before_the_hand_over_sends_nothing_and_that_model_fails() {
     hand(&mut rig);
     assert!(rig.fake.cloud.calls().runs.is_empty(), "no key, no request");
     assert_eq!(steps(&rig).last(), Some(&RunStep::Failed));
+}
+
+#[test]
+fn a_cancel_while_a_models_job_waits_for_send_sends_nothing_and_a_late_run_is_cancelled() {
+    let mut waits = ticked(&[0]);
+    waits.actor.ports.spawn = held;
+    hand(&mut waits);
+    to_send(&mut waits);
+    waits.act(VoiceClick::Button(PanelButton::Cancel));
+    release();
+    waits.pump();
+    assert!(
+        waits.fake.cloud.calls().runs.is_empty(),
+        "the stopped job sends nothing"
+    );
+    let mut late = ticked(&[0]);
+    late.actor.ports.spawn = held;
+    hand(&mut late);
+    to_send(&mut late);
+    release();
+    late.act(VoiceClick::Button(PanelButton::Cancel));
+    assert_eq!(late.fake.cloud.calls().runs[0].state, CloudState::Dropped);
 }
