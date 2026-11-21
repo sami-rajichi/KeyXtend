@@ -54,6 +54,28 @@ fn a_body_that_is_not_one_json_object_says_nothing() {
 }
 
 #[test]
+fn kept_texts_come_from_inside_the_coded_object_at_any_depth_and_odd_items_lose_only_themselves() {
+    let outside = r#""reason":"out","message":{"reason":"out"}"#;
+    let inside = r#""details":["odd",null,{"reason":"In","list":null},{"x":{"reason":"deep"}}]"#;
+    let body = format!(r#"{{{outside},"error":{{{inside}}}}}"#);
+    let reason = Reason::keeping(body.as_bytes(), &ERROR, SAYING, &["reason"]);
+    assert_eq!(reason.kept("reason").collect::<Vec<_>>(), ["In", "deep"]);
+    assert_eq!(reason.kept("other").count(), 0);
+    assert_eq!(
+        form(&body).kept("reason").count(),
+        0,
+        "kept only when asked"
+    );
+    let worded = br#"{"detail":[{"msg":"out"}],"error":{"x":{"msg":"in"}}}"#;
+    let reason = Reason::keeping(worded, &ERROR, SAYING, &["msg"]);
+    assert_eq!(
+        reason.kept("msg").collect::<Vec<_>>(),
+        ["in"],
+        "a word's name too"
+    );
+}
+
+#[test]
 fn other_values_are_skipped_however_large_and_words_alone_need_no_code() {
     let junk = "1,".repeat(100_000);
     let body = format!(r#"{{"junk":[{junk}1],"title":"Payment method required"}}"#);

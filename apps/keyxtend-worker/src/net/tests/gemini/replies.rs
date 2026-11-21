@@ -11,6 +11,8 @@ use super::*;
 use kx_ipc::NetFault::{Account, Key, Language, Network, Region, Strange};
 use proptest::prelude::*;
 
+mod odd;
+
 /// What the text fixtures say.
 pub(super) const SAID: &str = "Bonjour tout le monde.";
 /// The transcript under `output_text`, as its SDK reads it [N1].

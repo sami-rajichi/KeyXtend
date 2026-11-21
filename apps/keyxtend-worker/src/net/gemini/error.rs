@@ -5,11 +5,8 @@ use super::super::reason::Reason;
 use super::super::reply::{self, Coded, SAYING};
 use super::super::shape::Verdict;
 use super::super::status::{self, LANGUAGE, RETRY, Row, Then, row};
-use super::lax::Text;
 use kx_ipc::NetFault;
 use kx_platform_net::Head;
-use serde::Deserialize;
-use std::cell::LazyCell;
 
 /// Google's error object [N7].
 const ERROR: &str = "error";
@@ -32,38 +29,12 @@ const LOCATION: &[&str] = &["location is not supported"];
 const PER_DAY: &str = "PerDay";
 const FREE_TIER: &str = "FreeTier";
 
-/// Google's error reply, read for its details alone [N7]; another shape reads as no detail.
-#[derive(Deserialize)]
-struct Reply {
-    error: Error,
-}
-
-/// Google's error object: its list of details.
-#[derive(Deserialize)]
-struct Error {
-    #[serde(default)]
-    details: Vec<Detail>,
-}
-
-/// One detail: its reason, a `RetryInfo` wait such as `37s`, and a `QuotaFailure`'s quotas run out.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Detail {
-    #[serde(default)]
-    reason: Text,
-    #[serde(default)]
-    retry_delay: Text,
-    #[serde(default)]
-    violations: Vec<Violation>,
-}
-
-/// A quota run out, by its id.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Violation {
-    #[serde(default)]
-    quota_id: Text,
-}
+/// The details' fields read inside the error [N7]: an `ErrorInfo`'s reason, a `RetryInfo`'s wait such as `37s`, and a
+/// `QuotaFailure`'s quota ids run out. A detail of another shape keeps nothing and hides no other.
+const REASON: &str = "reason";
+const DELAY: &str = "retryDelay";
+const QUOTA_ID: &str = "quotaId";
+const KEPT: &[&str] = &[REASON, DELAY, QUOTA_ID];
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]
@@ -102,53 +73,32 @@ const TABLE: &[Row<Says>] = &[
     row(500..=599, Says::Any, Then::Fault(NetFault::Network)),
 ];
 
-/// What an answer that is not done means, by the first table row that takes it.
+/// What an answer that is not done means, by the first table row that takes it; the body is read once.
 pub fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
-    let details = details(body);
-    let reason = LazyCell::new(|| Reason::read(body, &STATUS, SAYING));
+    let reason = Reason::keeping(body, &STATUS, SAYING, KEPT);
     let said = |says: Says| match says {
         Says::Any => true,
-        Says::Reason(reasons) => reasoned(&details, reasons),
+        Says::Reason(reasons) => reasoned(&reason, reasons),
         Says::Status(names) => reason.coded(names),
         Says::Words(words) => reason.says(words),
     };
-    status::judge(TABLE, head, said, |head| busy(head, &details))
-}
-
-/// The details of a Google error [N7], read into these few fields alone; none for any other body.
-fn details(body: &[u8]) -> Vec<Detail> {
-    let reply = reply::opens_object(body).then(|| serde_json::from_slice::<Reply>(body).ok());
-    reply.flatten().map(|r| r.error.details).unwrap_or_default()
-}
-
-/// The text `t` holds, if any.
-fn text(t: &Text) -> Option<&str> {
-    t.0.as_ref().map(|w| w.0.as_str())
+    status::judge(TABLE, head, said, |head| busy(head, &reason))
 }
 
 /// True when a detail gives one of `reasons` exactly, in any case.
-fn reasoned(details: &[Detail], reasons: &[&str]) -> bool {
+fn reasoned(reason: &Reason, reasons: &[&str]) -> bool {
     let is = |r: &str| reasons.iter().any(|c| c.eq_ignore_ascii_case(r));
-    let mut given = details.iter().filter_map(|d| text(&d.reason));
-    given.any(is)
+    reason.kept(REASON).any(is)
 }
 
 /// A 429: the used allowance with no date when the free tier's daily quota ran out, as its delay is no renewal; else
 /// a wait for its `Retry-After`, or for its `RetryInfo` delay.
-fn busy<T>(head: &Head, details: &[Detail]) -> Verdict<T> {
-    if details.iter().any(daily) {
+fn busy<T>(head: &Head, reason: &Reason) -> Verdict<T> {
+    let daily = |id: &str| id.contains(PER_DAY) && id.contains(FREE_TIER);
+    if reason.kept(QUOTA_ID).any(daily) {
         return Verdict::Fault(NetFault::Allowance { renews_s: None });
     }
-    let delay = details
-        .iter()
-        .filter_map(|d| text(&d.retry_delay))
-        .find_map(reply::span_s);
+    let delay = reason.kept(DELAY).find_map(reply::span_s);
     let asked = head.header(RETRY).and_then(reply::seconds);
     Verdict::Busy(asked.or_else(|| delay.and_then(|s| u32::try_from(s).ok())))
-}
-
-/// True when `detail` names the free tier's daily quota among the quotas run out.
-fn daily(detail: &Detail) -> bool {
-    let mut ids = detail.violations.iter().filter_map(|v| text(&v.quota_id));
-    ids.any(|id| id.contains(PER_DAY) && id.contains(FREE_TIER))
 }
