@@ -19,6 +19,7 @@ mod answers;
 mod lines;
 mod offered;
 mod parts;
+mod props;
 mod remove;
 mod rows;
 mod settle;
