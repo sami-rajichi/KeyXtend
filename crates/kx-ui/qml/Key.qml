@@ -55,12 +55,14 @@ Item {
     property color skirt: p.skirt ? p.skirt[paint.skirt] : p[paint.fill]
     // Legends and icons on a pressed key: high contrast's press text at once, else each keeps its colour.
     readonly property var pressInk: down ? p.press_ink : null
-    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1.
+    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1. High
+    // contrast keeps the system colours, so its cap never brightens.
     readonly property alias sink: cap.sink
     property real lift: 0
+    readonly property bool lifted: lift > 0 && !lk.contrast
     readonly property real glowBy: 1 + (lk.motion.amount.glow_lift - 1) * lift
-    readonly property color capColour: lift > 0 ? Qt.lighter(fillColour, glowBy) : fillColour
-    readonly property color capSkirt: lift > 0 ? Qt.lighter(skirt, glowBy) : skirt
+    readonly property color capColour: lifted ? Qt.lighter(fillColour, glowBy) : fillColour
+    readonly property color capSkirt: lifted ? Qt.lighter(skirt, glowBy) : skirt
     readonly property real radius: look.key_radius_px
     readonly property color onColour: p.on
     // The icon file the theme gives this key; without one the key shows its label.

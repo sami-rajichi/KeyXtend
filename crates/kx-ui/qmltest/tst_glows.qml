@@ -1,6 +1,6 @@
 // Glows and lights exist only while they show: a lock key's glow and its light's glow come when it lights and go once
 // their fade ends, taking their material along, and only a key that can light, or a theme that shows its off lights,
-// holds a light. In high contrast only a preparing key holds a ring.
+// holds a light. In high contrast only a preparing key holds a ring, and no glow brightens a cap.
 import QtQuick
 import QtTest
 import "../qml"
@@ -163,6 +163,18 @@ Item {
                 k.ks = Face.states.en.keys.mic;
                 verify(!k.glowing, "the glow ends with it");
             }
+        }
+
+        // High contrast keeps the seven system colours, so a lifted cap's glow never brightens its face or skirt there;
+        // other looks brighten both.
+        function test_in_high_contrast_a_lifted_key_keeps_its_colours() {
+            const k = makeKey("c-0x0002", H.lk);
+            k.lift = 1;
+            verify(Qt.colorEqual(k.capColour, k.fillColour), "the face");
+            verify(Qt.colorEqual(k.capSkirt, k.skirt), "the skirt");
+            const d = makeKey("c-0x0002", D.lk);
+            d.lift = 1;
+            verify(!Qt.colorEqual(d.capColour, d.fillColour) && !Qt.colorEqual(d.capSkirt, d.skirt), "Dolch brightens");
         }
 
         // Microsoft's contrast themes never mark a state by colour alone: a preparing key keeps a resting key's colours
