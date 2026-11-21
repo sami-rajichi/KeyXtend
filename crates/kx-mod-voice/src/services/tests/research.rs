@@ -6,6 +6,7 @@ use super::*;
 use kx_module_api::ports::Fact;
 
 mod assembly;
+mod codes;
 mod eleven;
 mod gemini;
 mod groq;

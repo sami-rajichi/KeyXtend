@@ -71,8 +71,11 @@ fn a_model_takes_a_named_language_set_that_must_exist() {
         groq.models.iter().all(|m| m.langs == *whisper),
         "one set, written once"
     );
-    let codes = ["en", "fr", "ar", "fil"].map(|l| whisper.get(l).map(String::as_str));
-    assert_eq!(codes, [Some("en"), Some("fr"), Some("ar"), Some("tl")]);
+    let sets: BTreeMap<String, LangCodes> = toml::from_str(LANGS).unwrap();
+    assert_eq!(
+        *whisper, sets["whisper"],
+        "the set as its own file writes it"
+    );
     let turbo = Some((groq.models[0].id.clone(), M::Set));
     let typo = edits(&[("langs = \"whisper\"", "langs = \"whispr\"")]);
     let typo = match typo {
