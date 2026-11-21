@@ -91,9 +91,16 @@ fn a_saved_pick_of_a_row_not_offered_dictates_locally_reads_no_key_and_sends_not
 }
 
 #[test]
-fn a_hidden_run_offers_no_service_and_reads_no_key() {
+fn a_hidden_run_offers_no_service_and_touches_no_key() {
     let mut rig = Rig::hidden_with(groq);
-    let reads = |rig: &Rig| [ShelfCall::Load, ShelfCall::Names].map(|c| rig.fake.shelf.calls(c));
+    let calls = [
+        ShelfCall::Load,
+        ShelfCall::Names,
+        ShelfCall::Save,
+        ShelfCall::Remove,
+        ShelfCall::DropFolder,
+    ];
+    let reads = |rig: &Rig| calls.map(|c| rig.fake.shelf.calls(c));
     let before = reads(&rig);
     rig.talk();
     assert!(
@@ -109,7 +116,11 @@ fn a_hidden_run_offers_no_service_and_reads_no_key() {
     rig.tell(SpeechNote::Done(done(1)));
     assert_eq!(rig.typed_texts(), ["hello"]);
     assert!(rig.fake.cloud.calls().runs.is_empty());
-    assert_eq!(reads(&rig), before, "no key was listed or read");
+    assert_eq!(
+        reads(&rig),
+        before,
+        "no key was listed, read, saved or removed"
+    );
 }
 
 #[test]

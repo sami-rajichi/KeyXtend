@@ -123,6 +123,10 @@ fn nothing_leaves_before_stop_then_the_speech_goes_and_its_text_is_typed() {
         "listen-only, cut by the row"
     );
     assert_eq!(rig.mark(), Some(first().shown()));
+    assert!(
+        rig.fake.cloud.calls().runs.is_empty(),
+        "nothing leaves while it listens"
+    );
     rig.key();
     assert!(
         rig.fake.cloud.calls().runs.is_empty(),
