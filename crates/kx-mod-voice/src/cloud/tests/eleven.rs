@@ -45,7 +45,12 @@ fn a_pick_of_scribe_sends_the_keyboard_languages_code_in_its_own_shape() {
         assert!(matches!(shape, CloudShape::Eleven(_)));
     }
     assert!(
-        !rules().pick(&mut s, "de", "elevenlabs", scribe()),
+        !rules().pick(
+            &mut s,
+            lacked("elevenlabs", scribe()),
+            "elevenlabs",
+            scribe()
+        ),
         "not in its set yet"
     );
 }

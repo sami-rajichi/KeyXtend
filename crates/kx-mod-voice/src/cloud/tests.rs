@@ -4,6 +4,7 @@
 use super::*;
 use crate::models::{self, Pick};
 use crate::services::table;
+use crate::services::tests::shipped::warn_id;
 use crate::services::tests::{ROUTER, TEXT, parse, with_rows};
 use kx_module_api::ports::{HttpsUrl, ServiceName, Unavailable};
 
@@ -12,6 +13,7 @@ mod eleven;
 mod gemini;
 mod keep;
 mod offered;
+mod picks;
 mod props;
 mod router;
 mod typed;
@@ -57,11 +59,6 @@ fn turbo() -> &'static str {
     first_model("groq")
 }
 
-/// The id of shipped row `id`'s card warning; empty for none.
-fn warn_id(id: &str) -> &'static str {
-    row(id).facts.warn.as_ref().map_or("", |w| w.id.as_str())
-}
-
 /// The id of `fact`, if any.
 fn id_of(fact: Option<&Fact>) -> Option<&str> {
     fact.map(|f| f.id.as_str())
@@ -75,6 +72,15 @@ fn router_model(keeps: bool) -> &'static str {
         .iter()
         .find(|m| m.keeps == keeps)
         .map_or("", |m| m.id.as_str())
+}
+
+/// A language another listed model of the table knows that shipped row `id`'s `model` lacks, so a pick of it there is
+/// refused.
+fn lacked(id: &str, model: &str) -> &'static str {
+    let lacks = row(id).model(model).unwrap();
+    let all = table().unwrap().rows().iter().flat_map(|r| &r.models);
+    let mut langs = all.flat_map(|m| m.langs.keys()).map(String::as_str);
+    langs.find(|l| lacks.code(l).is_none()).unwrap()
 }
 
 /// The host shipped row `id`'s card links to: its facts page's.
@@ -185,7 +191,8 @@ fn edge_15_facts_past_facts_days_take_the_warning_tone() {
 fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     let mut s = groq_for_french();
     s.picks.insert("nl".into(), "canary-v2-q8".into());
-    assert!(rules().pick(&mut s, "ar", "groq", "whisper-large-v3"));
+    let other = row("groq").models.last().unwrap();
+    assert!(rules().pick(&mut s, "ar", "groq", &other.id));
     let newer = parse(&TEXT.replacen("terms = 1", "terms = 2", 1)).unwrap();
     let rules = Cloud::new(&newer, false);
     let groq = newer.get("groq").unwrap();
@@ -243,60 +250,4 @@ fn the_card_shows_the_least_a_request_bills_where_a_service_rounds_up() {
     assert!(groq.is_some(), "Groq rounds a short request up");
     assert_eq!(groq, row("groq").facts.bills, "the row's own least");
     assert!(rules().card(&on(), row("custom"), today()).bills.is_none());
-}
-
-#[test]
-fn a_pick_names_its_service_and_model_with_the_mark() {
-    assert_eq!(
-        pick_text("groq", turbo()),
-        format!("groq{PICK_MARK}{}", turbo())
-    );
-    assert_eq!(
-        cloud_pick("openrouter:openai/whisper-large-v3"),
-        Some(("openrouter", "openai/whisper-large-v3"))
-    );
-    assert_eq!(cloud_pick("custom:llama:7b"), Some(("custom", "llama:7b")));
-    // A local file whose name holds the mark, as Linux and macOS allow, stays local (P15).
-    for local in [
-        "canary-v2-q8",
-        "my-model.gguf",
-        "",
-        "ollama:llama.gguf",
-        ":x",
-    ] {
-        assert_eq!(cloud_pick(local), None, "{local}");
-    }
-    let test = with_rows(ROUTER);
-    assert_eq!(test.pick("router-test:a:b"), Some(("router-test", "a:b")));
-    assert_eq!(test.pick("groq-ish:a"), None, "only a row id parts a pick");
-}
-
-#[test]
-fn a_picks_row_and_listed_model_are_found_once_for_every_reader() {
-    let text = pick_text("groq", turbo());
-    let (groq, model, listed) = pick_row(&text).unwrap();
-    let listed = listed.map(|m| m.id.as_str());
-    assert_eq!(
-        (groq.id.as_str(), model, listed),
-        ("groq", turbo(), Some(turbo()))
-    );
-    let (custom, model, listed) = pick_row("custom:llama:7b").unwrap();
-    assert_eq!(
-        (custom.id.as_str(), model, listed),
-        ("custom", "llama:7b", None)
-    );
-    assert!(pick_row("canary-v2-q8").is_none(), "a local pick");
-    let router = pick_text("router-test", "openai/whisper-large-v3-turbo");
-    assert!(pick_row(&router).is_none(), "a row the shipped table lacks");
-    let held = with_rows(ROUTER);
-    let (row, model, listed) = held.pick_row(&router).unwrap();
-    let listed = listed.map(|m| m.name.as_str());
-    assert_eq!(
-        (row.id.as_str(), model, listed),
-        (
-            "router-test",
-            "openai/whisper-large-v3-turbo",
-            Some("Whisper Large v3 Turbo")
-        )
-    );
 }

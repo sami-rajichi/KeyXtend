@@ -11,6 +11,8 @@ use kx_module_api::ports::{FactArg, FormField, KeyHeader, OwnFields};
 const PLANS: [(u32, u16); 2] = [(600, 30), (2200, 110)];
 /// The switch that stops training, in its own labels only [E5][E7]; the card's sentence names the profile menu.
 const SWITCH: &str = "Terms and privacy → Data use → Improve the models for everyone";
+/// Its own warning id [E5][E7], whose sentence names its profile menu; the shared `trains` names none.
+const PROFILE: &str = "trains-profile";
 
 /// Its form as the row writes it: its language field, and no sound tags such as "(laughter)" typed into the text.
 fn own_form() -> CloudShape {

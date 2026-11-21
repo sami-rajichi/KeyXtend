@@ -81,18 +81,14 @@ fn a_language_may_pick_each_switched_on_services_models_that_know_it() {
         let pair = |m: &Offered<'_>| (m.service.id.clone(), m.id().to_owned());
         models.iter().map(pair).collect()
     };
-    let fr = ids(&s, "fr");
-    let want = [
-        ("groq", turbo()),
-        ("groq", "whisper-large-v3"),
-        ("custom", "my-model"),
-    ];
-    assert_eq!(fr, want.map(|(a, b)| (a.to_owned(), b.to_owned())));
-    assert_eq!(
-        ids(&s, "tlh"),
-        [("custom".to_owned(), "my-model".to_owned())]
-    );
-    let named = rules().models(&s, "fr")[2];
+    let typed = ("custom".to_owned(), "my-model".to_owned());
+    let groq = row("groq").models.iter().filter(|m| m.code("fr").is_some());
+    let mut want: Vec<_> = groq.map(|m| ("groq".to_owned(), m.id.clone())).collect();
+    assert_eq!(want[0].1, turbo(), "Groq's listed models first, in order");
+    want.push(typed.clone());
+    assert_eq!(ids(&s, "fr"), want);
+    assert_eq!(ids(&s, "tlh"), [typed]);
+    let named = *rules().models(&s, "fr").last().unwrap();
     assert_eq!(
         (named.name(), named.model),
         ("my-model", Chosen::Typed("my-model"))

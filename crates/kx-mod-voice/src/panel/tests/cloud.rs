@@ -16,6 +16,7 @@ use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
 use rows::{named, row_of, tick};
 
+mod address;
 mod answers;
 mod cleared;
 mod lines;

@@ -5,10 +5,9 @@ use kx_module_api::ports::{ServiceName, ServiceRow, VoiceClick};
 
 use super::super::super::rig::Rig;
 use super::{cloud_sheet, on_cloud};
-use crate::services::{
-    self,
-    tests::{PROFILE, ROUTER},
-};
+use crate::services;
+use crate::services::tests::ROUTER;
+use crate::services::tests::shipped::warn_id;
 
 /// A named row's shown name.
 pub(super) fn named(name: &str) -> ServiceName {
@@ -70,7 +69,7 @@ fn a_row_carries_its_cards_warning_fact_id_and_none_without_one() {
     let trains = eleven.and_then(|r| r.warn.as_deref());
     assert_eq!(
         trains,
-        Some(PROFILE),
+        Some(warn_id("elevenlabs")),
         "ElevenLabs trains by default [E5][E7]"
     );
     for row in &rows {

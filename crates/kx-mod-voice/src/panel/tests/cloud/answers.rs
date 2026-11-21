@@ -40,12 +40,12 @@ fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
         (sheet.model.expose().as_str(), sheet.model_refused),
         (bad, true)
     );
-    let out = typed(&mut rig, "whisper-large-v3");
+    let out = typed(&mut rig, "my-model");
     apply(&mut rig, &out);
     let sheet = lines_sheet(&mut rig);
     assert_eq!(
         (sheet.model.expose().as_str(), sheet.model_refused),
-        ("whisper-large-v3", false)
+        ("my-model", false)
     );
     assert!(typed(&mut rig, bad).is_empty());
     reopen(&mut rig);

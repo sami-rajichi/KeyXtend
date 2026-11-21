@@ -54,7 +54,12 @@ fn a_pick_sends_the_keyboard_languages_bcp_47_code_in_its_own_shape() {
         );
     }
     assert!(
-        !rules().pick(&mut s, "de", "gemini", &transcribe().id),
+        !rules().pick(
+            &mut s,
+            lacked("gemini", &transcribe().id),
+            "gemini",
+            &transcribe().id
+        ),
         "a code its pages do not name"
     );
 }

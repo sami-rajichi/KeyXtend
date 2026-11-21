@@ -73,7 +73,7 @@ fn a_model_takes_a_named_language_set_that_must_exist() {
     );
     let codes = ["en", "fr", "ar", "fil"].map(|l| whisper.get(l).map(String::as_str));
     assert_eq!(codes, [Some("en"), Some("fr"), Some("ar"), Some("tl")]);
-    let turbo = Some(("whisper-large-v3-turbo".to_owned(), M::Set));
+    let turbo = Some((groq.models[0].id.clone(), M::Set));
     let typo = edits(&[("langs = \"whisper\"", "langs = \"whispr\"")]);
     let typo = match typo {
         Err(ServicesError::Row {

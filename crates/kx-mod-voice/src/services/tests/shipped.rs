@@ -27,3 +27,9 @@ pub(crate) fn entry(row: &Service, extra: &str) -> String {
     let (id, terms) = (&row.id, row.terms);
     format!(r#""{id}" = {{ on = {ON_DAY}, terms = {terms}{extra} }}"#)
 }
+
+/// The id of shipped row `id`'s own card warning, such as `ElevenLabs`' profile one; empty for none.
+pub(crate) fn warn_id(id: &str) -> &'static str {
+    let warn = table().unwrap().get(id).and_then(|r| r.facts.warn.as_ref());
+    warn.map_or("", |w| w.id.as_str())
+}

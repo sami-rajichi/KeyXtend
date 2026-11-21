@@ -46,7 +46,12 @@ fn a_pick_sends_the_keyboard_languages_own_code_in_its_own_shape_with_no_reminde
         assert!(choice.warn.is_none(), "{lang}: nothing to remind");
     }
     assert!(
-        !rules().pick(&mut s, "pl", "assemblyai", universal()),
+        !rules().pick(
+            &mut s,
+            lacked("assemblyai", universal()),
+            "assemblyai",
+            universal()
+        ),
         "a code its pages do not name"
     );
 }
