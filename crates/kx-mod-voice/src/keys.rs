@@ -99,9 +99,7 @@ impl Keys {
     /// # Errors
     /// As `get`.
     pub fn dots(&self, id: &str) -> Result<u32, KeyError> {
-        let key = self.get(id)?;
-        let count = key.map_or(0, |k| k.expose().chars().count());
-        Ok(u32::try_from(count).unwrap_or(u32::MAX))
+        Ok(self.get(id)?.map_or(0, |k| dots_of(&k)))
     }
 
     /// Seals `key` as service `id`'s, in place of the one before; the key is wiped as this returns.
@@ -127,6 +125,12 @@ impl Keys {
         let sealed = self.shelf.as_ref().ok_or(KeyError::Hidden)?;
         Ok(sealed.remove(&folder()?, &BlobName::new(id)?)?)
     }
+}
+
+/// How many dots `key` shows: its characters, or the largest count.
+#[must_use]
+pub fn dots_of(key: &Secret) -> u32 {
+    u32::try_from(key.expose().chars().count()).unwrap_or(u32::MAX)
 }
 
 /// The keys' folder on the shelf.

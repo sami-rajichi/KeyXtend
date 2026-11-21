@@ -12,7 +12,7 @@ use kx_module_api::ports::{
 
 use super::{Actor, Back, Job, Msg};
 use crate::flow::In;
-use crate::keys::Keys;
+use crate::keys::{Keys, dots_of};
 use crate::panel::Do;
 
 impl Actor {
@@ -68,7 +68,7 @@ impl Actor {
 
     /// Seals `key` as `service`'s; the panel shows its dots, and the flow hears the keys changed.
     fn seal(&mut self, service: &str, key: Secret) {
-        let dots = u32::try_from(key.expose().chars().count()).unwrap_or(u32::MAX);
+        let dots = dots_of(&key);
         let set = self.keys().set(service, key).map(|()| dots);
         if let Err(error) = set {
             tracing::warn!(%error, "a cloud key was not kept");

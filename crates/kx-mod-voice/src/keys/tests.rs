@@ -200,3 +200,9 @@ fn no_key_reaches_a_print_or_an_error() {
     assert!(!shown.contains(&key), "{shown}");
     assert!(shown.contains("Keys"), "{shown}");
 }
+
+#[test]
+fn a_keys_dots_count_its_characters_not_its_bytes() {
+    let key = Redacted::new(Zeroizing::new("kx-\u{e9}-\u{1f511}".to_owned()));
+    assert_eq!(dots_of(&key), 6);
+}
