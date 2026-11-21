@@ -241,3 +241,20 @@ fn a_pick_names_its_service_and_model_with_the_mark() {
     assert_eq!(test.pick("router-test:a:b"), Some(("router-test", "a:b")));
     assert_eq!(test.pick("groq-ish:a"), None, "only a row id parts a pick");
 }
+
+#[test]
+fn a_picks_row_and_listed_model_are_found_once_for_every_reader() {
+    let text = pick_text("groq", TURBO);
+    let (groq, model, listed) = pick_row(&text).unwrap();
+    let listed = listed.map(|m| m.id.as_str());
+    assert_eq!(
+        (groq.id.as_str(), model, listed),
+        ("groq", TURBO, Some(TURBO))
+    );
+    let (custom, model, listed) = pick_row("custom:llama:7b").unwrap();
+    assert_eq!(
+        (custom.id.as_str(), model, listed),
+        ("custom", "llama:7b", None)
+    );
+    assert!(pick_row("canary-v2-q8").is_none(), "a local pick");
+}

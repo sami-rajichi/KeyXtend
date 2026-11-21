@@ -290,5 +290,9 @@ fn back_or_no_on_a_card_opened_from_the_key_page_goes_back_to_that_page() {
     rig.click(&VoiceClick::Service(CloudButton::Facts));
     rig.settings.services.clear();
     rig.click(&VoiceClick::Confirm(false));
-    assert_eq!(rig.panel.page, Some(Page::Lines), "No on a service still off");
+    assert_eq!(
+        rig.panel.page,
+        Some(Page::Lines),
+        "No on a service still off"
+    );
 }

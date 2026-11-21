@@ -12,10 +12,9 @@ use std::collections::BTreeMap;
 
 use kx_module_api::ports::{CardId, Date};
 
-use crate::cloud::cloud_pick;
+use crate::cloud::pick_row;
 use crate::flow::Count;
 use crate::models::table;
-use crate::services;
 
 /// The model a count is for: a models table row by its id, a cloud service's model, or any other file, whose name is
 /// never kept.
@@ -38,20 +37,15 @@ impl Model {
     /// The model `name` names: a row's id, a cloud pick of a service in the table, else any other file.
     #[must_use]
     pub fn of(name: &str) -> Self {
-        if let Some((service, model)) = cloud_pick(name) {
-            return Self::cloud(service, model);
+        if let Some((row, _, listed)) = pick_row(name) {
+            let model = listed.map(|m| m.id.clone());
+            return Self::Cloud {
+                service: row.id.clone(),
+                model,
+            };
         }
         let row = table().ok().and_then(|t| t.get(name));
         row.map_or(Self::Other, |r| Self::Row(r.id.clone()))
-    }
-
-    /// Service `id`'s `model`, kept only when the service lists it.
-    fn cloud(id: &str, model: &str) -> Self {
-        let row = services::table().ok().and_then(|t| t.get(id));
-        row.map_or(Self::Other, |r| Self::Cloud {
-            service: r.id.clone(),
-            model: r.model(model).map(|m| m.id.clone()),
-        })
     }
 }
 

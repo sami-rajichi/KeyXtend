@@ -30,6 +30,15 @@ pub fn cloud_pick(value: &str) -> Option<(&str, &str)> {
     services::table().ok()?.pick(value)
 }
 
+/// The shipped row, the model id and, when the row lists it, the listed model that cloud pick `value` names.
+#[must_use]
+pub fn pick_row(value: &str) -> Option<(&'static Service, &str, Option<&'static Model>)> {
+    let table = services::table().ok()?;
+    let (id, model) = table.pick(value)?;
+    let row = table.get(id)?;
+    Some((row, model, row.model(model)))
+}
+
 /// The model a cloud pick names.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Chosen<'a> {
@@ -40,6 +49,15 @@ pub enum Chosen<'a> {
 }
 
 impl<'a> Chosen<'a> {
+    /// The id a pick names: the listed model's, or the typed one.
+    #[must_use]
+    pub fn id(self) -> &'a str {
+        match self {
+            Self::Listed(m) => &m.id,
+            Self::Typed(id) => id,
+        }
+    }
+
     /// The model id an ask for this model sends: a listed model's own unless its request names none, or the typed id.
     #[must_use]
     pub fn sent(self) -> Option<&'a str> {

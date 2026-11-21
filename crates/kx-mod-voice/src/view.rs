@@ -20,11 +20,10 @@ use kx_module_api::ports::{
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
-use crate::cloud::{Choice, Cloud, cloud_pick};
+use crate::cloud::{Choice, Cloud, pick_row};
 use crate::counts::{Checks, Scores};
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
-use crate::services::{self, Service};
 
 pub(crate) use cloud::removable;
 
@@ -230,10 +229,8 @@ impl Panel {
 
 /// A model's shown name: its row's name, else its file's name; a cloud pick's listed model name, else its typed id.
 pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
-    if let Some((service, model)) = cloud_pick(name.expose()) {
-        let row = services::table().ok().and_then(|t| t.get(service));
-        let listed = row.and_then(|r| r.model(model)).map(|m| m.name.as_str());
-        return Redacted::new(listed.unwrap_or(model).to_owned());
+    if let Some((_, model, listed)) = pick_row(name.expose()) {
+        return Redacted::new(listed.map_or(model, |m| m.name.as_str()).to_owned());
     }
     let row = crate::models::table()
         .ok()
@@ -243,9 +240,7 @@ pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
 
 /// A cloud pick's service, as its row names it; `None` for a model on this PC.
 pub(crate) fn service_of(name: &Redacted<String>) -> Option<ServiceName> {
-    let (service, _) = cloud_pick(name.expose())?;
-    let row = services::table().ok().and_then(|t| t.get(service));
-    Some(row.map_or_else(|| ServiceName::Named(service.to_owned()), Service::shown))
+    pick_row(name.expose()).map(|(row, ..)| row.shown())
 }
 
 /// `n` as a count the view holds, or the largest one.

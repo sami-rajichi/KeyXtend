@@ -20,10 +20,7 @@ impl Offered<'_> {
     /// The id a pick names: the listed model's, or the typed one.
     #[must_use]
     pub fn id(&self) -> &str {
-        match self.model {
-            Chosen::Listed(m) => &m.id,
-            Chosen::Typed(id) => id,
-        }
+        self.model.id()
     }
 
     /// The shown name: the listed model's, or the typed id.
