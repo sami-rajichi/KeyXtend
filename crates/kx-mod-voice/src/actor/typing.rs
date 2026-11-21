@@ -16,6 +16,8 @@ use crate::flow::In;
 
 /// The typer thread's name, as a debugger shows it.
 const TYPER: &str = "kx-voice-type";
+/// The line logged as each text goes to the keyboard, which G22 reads to time Stop to text.
+pub const TYPED_LINE: &str = "a text went to the keyboard";
 
 /// Hands a text to the typer; false once its thread is gone.
 pub(crate) type Typist = Box<dyn Fn(TextAsk) -> bool + Send>;
@@ -64,7 +66,7 @@ impl Actor {
         self.typing.last = round;
         self.typing.asked.push_back((round, source));
         ask.round = round;
-        tracing::debug!("a text went to the keyboard");
+        tracing::debug!("{TYPED_LINE}");
         if !(self.ports.typist)(ask) {
             self.typed(TextDone {
                 round,

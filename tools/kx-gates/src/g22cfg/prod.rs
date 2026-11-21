@@ -47,8 +47,6 @@ pub struct G22Product {
     pub log_level: String,
     /// What marks the copy's log lines a failed language prints, each found as written.
     pub why_marks: Vec<String>,
-    /// The voice module's line as a text goes to the keyboard, which ends Stop to text.
-    pub typed_line: String,
 }
 
 impl G22Product {
@@ -126,7 +124,7 @@ impl G22Product {
         self.check_marks()
     }
 
-    /// Refuses a log level that drops the timing lines, or a blank typed line.
+    /// Refuses a log level that drops the timing lines.
     fn check_lines(&self) -> Result<(), String> {
         let level = kx_kernel::log::level(&self.log_level);
         if level.is_none() || level < kx_kernel::log::level(Self::LINES_LEVEL) {
@@ -134,9 +132,6 @@ impl G22Product {
                 "g22_product.log_level must be a log level name that keeps {} lines",
                 Self::LINES_LEVEL
             ));
-        }
-        if self.typed_line.trim().is_empty() {
-            return Err("g22_product needs a typed_line".into());
         }
         Ok(())
     }

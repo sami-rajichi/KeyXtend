@@ -27,6 +27,7 @@ mod settings;
 pub mod store;
 pub mod view;
 
+pub use actor::TYPED_LINE;
 pub use manifest::{ID, MANIFEST};
 pub use module::VoiceModule;
 pub use settings::{

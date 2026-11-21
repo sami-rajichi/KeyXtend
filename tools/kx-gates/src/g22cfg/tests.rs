@@ -54,7 +54,7 @@ fn a_plain_name_is_one_folder_name_and_a_clip_must_be_one() {
 fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
-    let bad: [fn(&mut G22Product); 22] = [
+    let bad: [fn(&mut G22Product); 21] = [
         |g| g.card_wait_ms = 0,
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
         |g| g.program = "../../target/gate-input/release/keyxtend.exe".into(),
@@ -75,7 +75,6 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
         |g| g.log_level = "loud".into(),
         |g| g.why_marks.clear(),
         |g| g.why_marks.push(" ".into()),
-        |g| g.typed_line.clear(),
         |g| g.log_level = "info".into(),
     ];
     for (i, spoil) in bad.iter().enumerate() {
@@ -111,7 +110,7 @@ fn the_timing_lines_are_the_apps_and_the_voice_modules_at_the_level_the_run_keep
     let g = shipped().g22_product;
     let level = G22Product::LINES_LEVEL;
     assert!(APP_STAGE.contains(&format!("tracing::{level}!({{ STAGE }}")));
-    let typed = format!("tracing::{level}!(\"{}\")", g.typed_line);
+    let typed = format!("tracing::{level}!(\"{{TYPED_LINE}}\")");
     assert!(MOD_TYPING.contains(&typed), "{typed}");
     let mut trace = g;
     trace.log_level = "trace".into();

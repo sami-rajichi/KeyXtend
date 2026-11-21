@@ -2,17 +2,10 @@
 
 use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE, START, STOP, TOOK_MS};
 
-use super::super::stages::{self, Lines, Piece, Timing};
-use crate::budget::stamp_us;
-use crate::config::load;
+use kx_mod_voice::TYPED_LINE;
 
-/// The stage line and the shipped typed line.
-fn names() -> (&'static str, String) {
-    (
-        STAGE_LINE,
-        load().expect("the settings load").g22_product.typed_line,
-    )
-}
+use super::super::stages::{self, Piece, Timing};
+use crate::budget::stamp_us;
 
 /// A line stamped `ms` past 10:00:00 that holds `rest`.
 fn at(ms: u32, rest: &str) -> String {
@@ -22,25 +15,18 @@ fn at(ms: u32, rest: &str) -> String {
 
 /// The stage line for `stage`, with `more` after it.
 fn stage(stage: &str, more: &str) -> String {
-    let (line, _) = names();
-    format!("{line} {STAGE}={stage} {more}")
+    format!("{STAGE_LINE} {STAGE}={stage} {more}")
 }
 
 /// The timing `lines` give, from 10:00:00.
 fn read(lines: &[String]) -> Result<Timing, String> {
-    let (stage, typed) = names();
     let since = stamp_us("2026-11-20T10:00:00.000000Z").expect("a stamp");
-    let names = Lines {
-        stage,
-        typed: &typed,
-    };
-    stages::read(&lines.join("\n"), since, &names)
+    stages::read(&lines.join("\n"), since)
 }
 
 /// The voice module's typed line, stamped `ms`.
 fn typed(ms: u32) -> String {
-    let (_, typed) = names();
-    at(ms, &typed)
+    at(ms, TYPED_LINE)
 }
 
 #[test]

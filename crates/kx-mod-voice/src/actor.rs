@@ -22,6 +22,7 @@ mod typing;
 
 pub(crate) use msg::{Back, Msg};
 pub(crate) use ports::{Job, Ports};
+pub use typing::TYPED_LINE;
 pub(crate) use typing::{Typist, typer};
 
 use std::collections::VecDeque;

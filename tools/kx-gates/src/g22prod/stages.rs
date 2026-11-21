@@ -1,7 +1,8 @@
 //! Where a passing language's time went, from the copy's log: the gate build's stage lines and the voice module's
 //! typed line, by their stamps, give start to microphone open, the model's load, each piece and Stop to text, in ms.
 
-use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS};
+use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE, START, STOP, TOOK_MS};
+use kx_mod_voice::TYPED_LINE;
 use kx_module_api::US_PER_MS;
 use serde::Serialize;
 
@@ -42,32 +43,24 @@ pub(super) struct Timing {
     pub(super) stop_text_ms: Option<u64>,
 }
 
-/// The lines a timing reads, as `[g22_product]` names them.
-pub(super) struct Lines<'a> {
-    /// The gate build's stage line.
-    pub(super) stage: &'a str,
-    /// The voice module's typed line.
-    pub(super) typed: &'a str,
-}
-
 /// The timing of `log`'s lines stamped at or after `since_us`; an error for a stage line this run cannot read.
-pub(super) fn read(log: &str, since_us: i64, lines: &Lines) -> Result<Timing, String> {
-    let marks = read_since(log, since_us, |l| mark_of(l, lines))?;
+pub(super) fn read(log: &str, since_us: i64) -> Result<Timing, String> {
+    let marks = read_since(log, since_us, mark_of)?;
     Ok(timing(&marks))
 }
 
 /// The stamp and mark of `line`; none for another line, and an error that never repeats a value it cannot read.
-fn mark_of(line: &str, lines: &Lines) -> Result<Option<(i64, Mark)>, String> {
+fn mark_of(line: &str) -> Result<Option<(i64, Mark)>, String> {
     let Some(at) = stamp_us(line) else {
         return Ok(None);
     };
-    if line.contains(lines.typed) {
+    if line.contains(TYPED_LINE) {
         return Ok(Some((at, Mark::Typed)));
     }
-    if !line.contains(lines.stage) {
+    if !line.contains(STAGE_LINE) {
         return Ok(None);
     }
-    let odd = |what: &str| format!("{}: {what}", lines.stage);
+    let odd = |what: &str| format!("{STAGE_LINE}: {what}");
     let number = |name: &str| match value_of(line, name) {
         None => Ok(None),
         Some(v) => v

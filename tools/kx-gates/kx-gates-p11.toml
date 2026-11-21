@@ -100,8 +100,6 @@ log_level = "debug"
 # What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
 # which holds text.
 why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
-# The voice module's line as a text goes to the keyboard, which ends Stop to text (kx-mod-voice actor/typing.rs).
-typed_line = "a text went to the keyboard"
 
 # G22's cloud line on the product, after the local line: each offered service whose sealed key is in the owner's daily
 # data folder dictates the clips its row's first model knows (Custom with the daily address and model), on a fresh copy

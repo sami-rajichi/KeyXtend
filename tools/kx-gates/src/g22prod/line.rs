@@ -5,11 +5,10 @@
 use std::path::Path;
 use std::time::Duration;
 
-use kx_ipc::gate::STAGE_LINE;
 use kx_mod_voice::VoiceSettings;
 use serde_json::{Value, json};
 
-use super::stages::{self, Lines};
+use super::stages;
 use super::wrote::{self, Writer};
 use super::{Case, GATE, Said, say, why};
 use crate::apps::Ctx;
@@ -146,11 +145,7 @@ fn dictate(
 fn tell(ctx: &Ctx, out: &mut Value, (log, since): (&str, i64), line: &Line) {
     let g = &ctx.cfg.g22_product;
     if out["pass"] == true {
-        let lines = Lines {
-            stage: STAGE_LINE,
-            typed: &g.typed_line,
-        };
-        let timing = stages::read(log, since, &lines);
+        let timing = stages::read(log, since);
         out["timing"] = timing.map_or_else(|e| json!({ "error": e }), |t| json!(t));
         return;
     }
