@@ -1,7 +1,7 @@
 //! The cloud pages as QML reads them (ADR-0047): the Cloud page with its switch and services, a service's card with
 //! its facts, the day they were read and its link, and the parts the key page, Models, Compare and the bar share.
 
-use super::acts::{CLOUD, CONFIRM, OPEN, REMOVE, SERVICE};
+use super::acts::{CLOUD, CONFIRM, OPEN, SERVICE};
 use super::panel::{Cx, Page, Sheet};
 use super::parts::{Button, Hint, Tone, word};
 use super::sheets::{mark, mark_key, tab_id};
@@ -66,14 +66,13 @@ impl Lead {
     }
 }
 
-/// A service's row on the Cloud page: its name, its line, the Untested tag, its marks and a sealed key's Remove key.
+/// A service's row on the Cloud page: its name, its line, the Untested tag and its marks.
 #[derive(Serialize)]
 pub(super) struct ServiceView {
     name: String,
     line: String,
     tag: Option<String>,
     marks: Vec<Hint>,
-    remove: Option<Button>,
     tick: bool,
 }
 
@@ -129,19 +128,14 @@ pub(super) fn to_cloud(cx: &Cx<'_>) -> Button {
     Button::new(OPEN, tab_id(tab), 0, cx.tab(tab))
 }
 
-/// The Cloud page: the `cloud` switch, the line while off, the services, then Facts, Key and model, Switch off and
-/// Switch on.
+/// The Cloud page: the `cloud` switch, the line while off, the services, then Facts, Key and model, Remove key, Switch
+/// off and Switch on.
 pub(super) fn page(cx: &Cx<'_>, c: &CloudSheet) -> Page {
     let t = cx.t;
     let sheet = Sheet::Cloud {
         switch: Switch::new(t, CLOUD, t.text(VOICE_CLOUD_SWITCH), c.on),
         off: (!c.on).then(|| t.text(VOICE_CLOUD_OFF)),
-        rows: c
-            .rows
-            .iter()
-            .zip(0..)
-            .map(|(r, at)| row(t, r, at))
-            .collect(),
+        rows: c.rows.iter().map(|r| row(t, r)).collect(),
     };
     let tab = VoiceTab::Cloud;
     let mut page = Page::new(tab_id(tab), cx.tab(tab), t.text(VOICE_CLOUD_SUB), sheet);
@@ -149,15 +143,15 @@ pub(super) fn page(cx: &Cx<'_>, c: &CloudSheet) -> Page {
     page.foot = vec![
         b(CloudButton::Facts),
         b(CloudButton::Lines),
+        b(CloudButton::Remove).tone(Tone::Danger),
         b(CloudButton::Off),
         b(CloudButton::On).tone(Tone::Primary),
     ];
     page
 }
 
-/// Service row `r` at place `at`: its free allowance, or what the Custom row asks for, its warning fact's own mark
-/// before its state, or its own Remove key in the Off mark's place.
-fn row(t: &I18n, r: &ServiceRow, at: i32) -> ServiceView {
+/// Service row `r`: its free allowance, or what the Custom row asks for, its warning fact's own mark before its state.
+fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
     let line = r.free.as_ref().map_or_else(
         || t.text(VOICE_CUSTOM_LINE),
         |f| {
@@ -169,16 +163,14 @@ fn row(t: &I18n, r: &ServiceRow, at: i32) -> ServiceView {
         .warn
         .as_ref()
         .map(|id| Hint::new(MARK_WARN, t.text(&warn_mark_key(id))));
-    let state = (!r.remove).then(|| mark(t, service_mark(r.mark)));
     ServiceView {
         name: service(t, &r.name),
         line,
         tag: r.untested.then(|| t.text(&mark_key(VoiceMark::Untested))),
-        marks: warn.into_iter().chain(state).collect(),
-        remove: r.remove.then(|| {
-            let b = CloudButton::Remove;
-            Button::new(REMOVE, cloud_button_id(b), at, t.text(cloud_button_key(b)))
-        }),
+        marks: warn
+            .into_iter()
+            .chain([mark(t, service_mark(r.mark))])
+            .collect(),
         tick: r.tick,
     }
 }

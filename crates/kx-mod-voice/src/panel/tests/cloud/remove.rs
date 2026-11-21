@@ -1,15 +1,15 @@
-//! A Cloud page row's own Remove key (owner, 2026-11-20): it shows while a key is sealed and its key page is out of
-//! reach, as the service or cloud services are off, whose rows show dimmed and take no tick; a hidden run lists none.
-//! Off alone never deletes a key.
+//! Remove key in the Cloud page's footer (owner, 2026-11-21): it acts on the ticked service whenever its key is sealed,
+//! On, Off or with newer terms declined, and the row keeps its mark. With cloud off the page lists nothing; switching
+//! it on sends nothing, so a key stays removable. Off alone never deletes a key.
 
-use kx_module_api::ports::{CloudButton, ServiceMark, ServiceName, VoiceClick};
+use kx_module_api::ports::{CloudButton, CloudSheet, ServiceMark, ServiceName, VoiceClick};
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
-use super::rows::{every_row, named, row_of, tick};
+use super::rows::{named, row_of, tick};
 use super::{act, apply, card, cloud_sheet, lines_sheet, on_cloud, put};
+use crate::services::tests::ROUTER;
 use crate::services::tests::shipped::{entry, first, pick};
-use crate::services::{self, tests::ROUTER};
 
 /// Groq, the first offered row, on with its key sealed, on the Cloud page.
 fn keyed_groq() -> Rig {
@@ -19,26 +19,45 @@ fn keyed_groq() -> Rig {
     rig
 }
 
-/// The Remove key click of row `name`, on the page that lists it, and whether the row showed one.
-fn remove(rig: &mut Rig, name: &ServiceName) -> (bool, Vec<Do>) {
+/// Ticks row `name`, then gives its mark, whether the footer offers Remove key, and what clicking it does.
+fn remove(rig: &mut Rig, name: &ServiceName) -> (ServiceMark, bool, Vec<Do>) {
+    tick(rig, name);
+    let at = usize::from(row_of(rig, name));
+    let sheet = cloud_sheet(rig);
+    let offers = sheet.acts.contains(&CloudButton::Remove);
+    let out = rig.click(&VoiceClick::Service(CloudButton::Remove));
+    (sheet.rows[at].mark, offers, out)
+}
+
+/// Unticks row `name` if it is ticked, so `remove` ticks it once.
+fn untick(rig: &mut Rig, name: &ServiceName) {
     let at = row_of(rig, name);
-    let shown = cloud_sheet(rig).rows[usize::from(at)].remove;
-    (shown, rig.click(&VoiceClick::RemoveKey(at)))
+    if cloud_sheet(rig).rows[usize::from(at)].tick {
+        rig.click(&VoiceClick::Row(at));
+    }
 }
 
 #[test]
-fn switching_a_service_off_leaves_its_row_a_remove_key_that_deletes_it() {
+fn a_ticked_service_on_with_a_sealed_key_offers_remove_key_in_the_footer() {
+    let mut rig = keyed_groq();
+    let removed = vec![Do::RemoveKey(first().id.clone())];
+    let want = (ServiceMark::Ready, true, removed);
+    assert_eq!(remove(&mut rig, &first().shown()), want);
+}
+
+#[test]
+fn switching_a_service_off_keeps_its_off_mark_and_remove_key_in_the_footer() {
     let mut rig = keyed_groq();
     let out = act(&mut rig, &first().shown(), CloudButton::Off);
     apply(&mut rig, &out);
-    let at = usize::from(row_of(&mut rig, &first().shown()));
-    assert_eq!(cloud_sheet(&mut rig).rows[at].mark, ServiceMark::Off);
+    untick(&mut rig, &first().shown());
     let removed = vec![Do::RemoveKey(first().id.clone())];
-    assert_eq!(remove(&mut rig, &first().shown()), (true, removed));
+    let want = (ServiceMark::Off, true, removed);
+    assert_eq!(remove(&mut rig, &first().shown()), want);
 }
 
 #[test]
-fn declining_newer_terms_leaves_the_remove_key_without_agreeing_to_them() {
+fn declining_newer_terms_leaves_remove_key_in_the_footer_without_agreeing_to_them() {
     let mut rig = on_cloud(&ROUTER.replace("terms = 1", "terms = 2"));
     let on = r#""router-test" = { on = 2026-11-01, terms = 1 }"#;
     put(&mut rig, "services", on);
@@ -48,39 +67,43 @@ fn declining_newer_terms_leaves_the_remove_key_without_agreeing_to_them() {
     assert_eq!(card(&mut rig).on, None, "it asks again");
     let out = rig.click(&VoiceClick::Confirm(false));
     apply(&mut rig, &out);
+    untick(&mut rig, &named("Router Test"));
     let removed = vec![Do::RemoveKey("router-test".into())];
-    assert_eq!(remove(&mut rig, &named("Router Test")), (true, removed));
+    let want = (ServiceMark::Off, true, removed);
+    assert_eq!(remove(&mut rig, &named("Router Test")), want);
+    let services = &rig.settings.services;
+    assert!(services.is_empty(), "the newer terms stay unconfirmed");
+}
+
+#[test]
+fn a_ticked_service_with_no_key_offers_no_remove_key() {
+    let mut rig = keyed_groq();
+    rig.keyed.clear();
     assert_eq!(
-        rig.settings.services.len(),
-        0,
-        "the newer terms stay unconfirmed"
+        remove(&mut rig, &first().shown()),
+        (ServiceMark::NeedsKey, false, Vec::new())
     );
 }
 
 #[test]
-fn cloud_off_lists_the_rows_dimmed_untickable_each_sealed_one_with_its_remove_key() {
-    let mut rig = keyed_groq();
+fn cloud_off_lists_nothing_and_switching_it_on_sends_nothing_so_a_key_stays_removable() {
+    let mut rig = on_cloud("");
+    rig.keyed.insert(first().id.clone());
     rig.settings.cloud = false;
-    let rows = every_row(&mut rig);
-    assert!(rows.len() > 1, "{rows:?}");
-    for row in &rows {
-        let groq = row.name == first().shown();
-        assert_eq!(
-            (row.mark, row.remove, row.tick),
-            (ServiceMark::Off, groq, false)
-        );
-    }
-    let at = row_of(&mut rig, &first().shown());
-    rig.click(&VoiceClick::Row(at));
-    let sheet = cloud_sheet(&mut rig);
-    assert!(
-        !sheet.rows[usize::from(at)].tick && sheet.acts.is_empty(),
-        "no tick"
-    );
-    let other = rows.iter().find(|r| r.name != first().shown()).unwrap();
-    assert_eq!(remove(&mut rig, &other.name), (false, Vec::new()));
+    let off = CloudSheet {
+        on: false,
+        rows: Vec::new(),
+        acts: Vec::new(),
+    };
+    assert_eq!(cloud_sheet(&mut rig), off);
+    let none = rig.click(&VoiceClick::Service(CloudButton::Remove));
+    assert_eq!(none, Vec::new(), "nothing to remove from");
+    let out = rig.click(&VoiceClick::Cloud(true));
+    assert!(out.iter().all(|d| matches!(d, Do::Set(..))), "{out:?}");
+    apply(&mut rig, &out);
     let removed = vec![Do::RemoveKey(first().id.clone())];
-    assert_eq!(remove(&mut rig, &first().shown()), (true, removed));
+    let want = (ServiceMark::Off, true, removed);
+    assert_eq!(remove(&mut rig, &first().shown()), want);
 }
 
 #[test]
@@ -88,26 +111,13 @@ fn a_hidden_run_lists_no_row_and_removes_nothing() {
     let mut rig = keyed_groq();
     rig.hidden = true;
     assert_eq!(cloud_sheet(&mut rig).rows, Vec::new());
-    assert_eq!(rig.click(&VoiceClick::RemoveKey(0)), Vec::new());
+    let out = rig.click(&VoiceClick::Service(CloudButton::Remove));
+    assert_eq!(out, Vec::new());
 }
 
 #[test]
-fn a_remove_key_on_rows_that_moved_since_is_dropped() {
+fn the_key_page_keeps_its_own_remove_key() {
     let mut rig = keyed_groq();
-    rig.keyed
-        .extend(services::table().unwrap().offered().map(|s| s.id.clone()));
-    rig.settings.cloud = false;
-    let at = row_of(&mut rig, &first().shown());
-    let seen = rig.round;
-    rig.click(&VoiceClick::Page { back: false });
-    rig.view();
-    assert_eq!(rig.click_at(seen, &VoiceClick::RemoveKey(at)), Vec::new());
-}
-
-#[test]
-fn a_service_on_keeps_remove_key_on_its_key_page_not_on_its_row() {
-    let mut rig = keyed_groq();
-    assert_eq!(remove(&mut rig, &first().shown()), (false, Vec::new()));
     let out = act(&mut rig, &first().shown(), CloudButton::Lines);
     assert!(
         out.iter().all(|d| !matches!(d, Do::RemoveKey(_))),

@@ -113,16 +113,6 @@ impl<'a> Cloud<'a> {
         if !self.on(s) {
             return Vec::new();
         }
-        self.listed()
-    }
-
-    /// The rows the Cloud page lists: the offered ones, also while cloud is off, when they show dimmed with only their
-    /// own Remove key; none in a hidden run, which reads no key.
-    #[must_use]
-    pub fn listed(&self) -> Vec<&'a Service> {
-        if self.hidden {
-            return Vec::new();
-        }
         self.table.offered().collect()
     }
 

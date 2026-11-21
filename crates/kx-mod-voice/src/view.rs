@@ -25,8 +25,6 @@ use crate::counts::{Checks, Scores};
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
 
-pub(crate) use cloud::removable;
-
 /// What the view and the clicks need beyond the panel; the actor holds it.
 #[derive(Copy, Clone, Debug)]
 pub struct Facts<'a> {

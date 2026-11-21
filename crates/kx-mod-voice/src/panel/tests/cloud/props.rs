@@ -48,7 +48,6 @@ fn click() -> impl Strategy<Value = VoiceClick> {
         1 => any::<bool>().prop_map(VoiceClick::Cloud),
         6 => select(CloudButton::ALL.to_vec()).prop_map(VoiceClick::Service),
         3 => (0..MAX_ROW).prop_map(VoiceClick::Row),
-        1 => (0..MAX_ROW).prop_map(VoiceClick::RemoveKey),
         1 => any::<bool>().prop_map(|back| VoiceClick::Page { back }),
         2 => Just(VoiceClick::Button(PanelButton::Back)),
         1 => select(ModelSide::ALL.to_vec()).prop_map(VoiceClick::Side),

@@ -172,9 +172,6 @@ pub struct ServiceRow {
     pub free: Option<Fact>,
     /// Its card's warning fact id, whose own short mark the row shows; `None` without a warning.
     pub warn: Option<String>,
-    /// It has its own Remove key, in its Off mark's place: a key is sealed while its key page is out of reach, as it or
-    /// cloud services are off.
-    pub remove: bool,
     /// It is ticked.
     pub tick: bool,
 }
@@ -182,7 +179,7 @@ pub struct ServiceRow {
 /// The Cloud page: the `cloud` switch, then the services, Groq first, tick then act.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CloudSheet {
-    /// Cloud services are on; while off, none is offered and nothing is sent, and the rows show dimmed.
+    /// Cloud services are on; while off, none is offered and nothing is sent.
     pub on: bool,
     /// The shown page's services.
     pub rows: Vec<ServiceRow>,

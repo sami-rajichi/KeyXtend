@@ -1,6 +1,6 @@
 // A service on the Cloud page (mock-up cloudPage()): one tick, its name with the Untested tag beside it over its free
-// allowance or what the Custom row asks for, then the warning, where it stands and a sealed key's Remove key. While
-// cloud services are off its row only shows, unticked and dimmed but for Remove key, which still acts (mock-up .pr.off).
+// allowance or what the Custom row asks for, then the warning and where it stands, Off among them. Its sealed key's
+// Remove key is in the footer, for the ticked row (owner, 2026-11-21); with cloud services off the page lists none.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -15,7 +15,6 @@ VoiceRow {
     line: entry ? entry.line : ""
     tag: entry && entry.tag ? entry.tag : ""
     takes: live
-    fade: live ? 1 : pn.off_share
     onClicked: host.send(host.names.acts.row, "", place)
 
     Repeater {
@@ -23,19 +22,9 @@ VoiceRow {
         delegate: VoiceMark {
             required property var modelData
             anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-            opacity: row.fade
             host: row.host
             mark: modelData
             lit: row.lit
         }
-    }
-    // Its icon alone, so the free allowance's line keeps its width in French and Arabic; readers hear its label.
-    VoicePress {
-        visible: !!row.entry && !!row.entry.remove
-        bare: true
-        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-        host: row.host
-        button: row.entry ? row.entry.remove : null
-        onClicked: row.host.press(button)
     }
 }

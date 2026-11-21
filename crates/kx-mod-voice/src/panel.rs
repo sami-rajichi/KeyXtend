@@ -69,8 +69,6 @@ pub(crate) enum Key {
     Dir(PathBuf),
     /// A service on the Cloud page, by its id.
     Service(String),
-    /// A service on the Cloud page while cloud is off: it takes no tick, only its own Remove key.
-    Dimmed(String),
     /// A cloud model, by its service's id and the id a pick names, redacted as a typed Other id is the user's.
     Cloud {
         service: String,
@@ -195,7 +193,6 @@ impl Panel {
                 | VoiceClick::Fetch { .. }
                 | VoiceClick::Flip(_)
                 | VoiceClick::Step { .. }
-                | VoiceClick::RemoveKey(_)
         );
         let (since, latest) = self.rounds;
         at_row && latest.wrapping_sub(act.round) > latest.wrapping_sub(since)
@@ -213,7 +210,6 @@ impl Panel {
             VoiceClick::Open(VoiceTab::Cloud)
             | VoiceClick::Cloud(_)
             | VoiceClick::Service(_)
-            | VoiceClick::RemoveKey(_)
             | VoiceClick::SetKey(_)
             | VoiceClick::SetAddress(_)
             | VoiceClick::SetModel(_)

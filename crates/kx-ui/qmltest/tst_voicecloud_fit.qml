@@ -16,11 +16,10 @@ Item {
         name: "voicecloudfit"
         host: root
 
-        // The cloud pages: the Cloud page and each page of the table's rows, also with each row Off and its own Remove key,
-        // the cards with each table service's long one, the key pages, Models with its Local | Cloud chips, and Compare's set
+        // The cloud pages: the Cloud page, also with an Off row ticked, and each page of the table's rows, the cards
+        // with each table service's long one, the key pages, Models with its Local | Cloud chips, and Compare's set
         // text and run with cloud models and the warning.
-        readonly property var cloudPages: ["cloud", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cloudLongOff-"),
-            Kit.named("en", "cardLong"), [
+        readonly property var cloudPages: ["cloud", "cloudSealed", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cardLong"), [
             "service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped", "serviceLong", "serviceLongModel", "models", "modelsSlow",
             "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"])
 

@@ -16,8 +16,8 @@ ClipButton {
     readonly property var hub: button || ({ kind: "", id: "", arg: 0, label: "", name: "", on: false, tone: host.names.plain })
     readonly property var names: host.names
 
-    // Its gate id: a question's answer, Compare's Start, a line's Save, and a download's or a row's Remove key by its row,
-    // the rest by id.
+    // Its gate id: a question's answer, Compare's Start, a line's Save and a download's button by their meaning, the rest
+    // by id.
     function uidOf(h) {
         const ids = names.ids;
         if (h.kind === names.acts.confirm)
@@ -26,8 +26,7 @@ ClipButton {
             return ids.start;
         if (h.kind === names.acts.save)
             return ids.save + h.id;
-        const byRow = h.kind === names.acts.fetch || h.kind === names.acts.remove;
-        return byRow ? h.id + "-" + h.arg : h.id;
+        return h.kind === names.acts.fetch ? h.id + "-" + h.arg : h.id;
     }
 
     // Compare's Start and a line's Save take their kind's icon, as their id names what they act on.

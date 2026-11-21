@@ -96,7 +96,7 @@ listed! {
         Paste,
         /// Test the key.
         Test,
-        /// Remove the key.
+        /// Remove the ticked or shown service's sealed key, also while it is off.
         Remove,
         /// Open the shown page's link in the browser: the facts' page, or where keys are made.
         Link,
@@ -149,8 +149,6 @@ pub enum VoiceClick {
     Cloud(bool),
     /// A button of the cloud pages.
     Service(CloudButton),
-    /// A Cloud page row's own Remove key, by its place: delete that service's sealed key, even while it is off.
-    RemoveKey(u8),
     /// The key line's text, set as the shown service's key.
     SetKey(Secret),
     /// The address line's text, set as the shown service's address.

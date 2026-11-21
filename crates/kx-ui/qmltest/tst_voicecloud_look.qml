@@ -1,7 +1,6 @@
-// The cloud pages as the approved mock-up draws them (design/voice-cloud.css): rows dimmed while cloud services are off
-// but for a sealed key's Remove key, the switch band's hover tint, Untested as an outlined tag beside a service's name,
-// Key works as a lit mark, a refused answer or line as a warning band, and Models' side chips in their places in Arabic
-// too (ADR-0020).
+// The cloud pages as the approved mock-up draws them (design/voice-cloud.css): Remove key in the footer in the danger
+// look, the switch band's hover tint, Untested as an outlined tag beside a service's name, Key works as a lit mark, a
+// refused answer or line as a warning band, and Models' side chips in their places in Arabic too (ADR-0020).
 import QtQuick
 import QtTest
 import "../qml"
@@ -30,23 +29,18 @@ Item {
             return Board.all(box.contentItem, o => o.visible && o.warn === true && o.pieces !== undefined).map(b => b.Accessible.name);
         }
 
-        function test_cloud_rows_dim_while_cloud_services_are_off_data() {
+        function test_remove_key_sits_in_the_footer_in_the_key_pages_danger_look_data() {
             return langs_data();
         }
-        function test_cloud_rows_dim_while_cloud_services_are_off(d) {
-            const off = make("cloudOff", d.t);
-            const s = off.view.sheet;
-            rows(off).forEach((r, i) => {
-                fuzzyCompare(r.fade, off.pn.off_share, 0.001, r.Accessible.name + " is dimmed while off");
-                marks(r).forEach(m => fuzzyCompare(m.opacity, off.pn.off_share, 0.001, "its marks dim too"));
-                const keys = buttons(r);
-                compare(keys.map(b => b.Accessible.name), s.rows[i].remove ? [s.rows[i].remove.label] : [], "a sealed key's Remove key");
-                verify(keys.every(b => b.opacity === 1 && r.opacity === 1), "Remove key keeps its full strength, as it still acts");
-            });
-            verify(s.rows.some(r => !!r.remove), "the fixture seals a key");
-            const on = make("cloud", d.t);
-            verify(rows(on).every(r => r.fade === 1 && r.opacity === 1), "the rows show whole while on");
-            off.visible = on.visible = false;
+        // The ticked row's Remove key (owner, 2026-11-21) looks as the key page's does (mock-up rmkey); no row has one.
+        function test_remove_key_sits_in_the_footer_in_the_key_pages_danger_look(d) {
+            const box = make("cloudSealed", d.t);
+            const remove = one(box, "voice.remove", box.foot);
+            compare([remove.tone, remove.can], ["danger", true]);
+            const key = make("service", d.t);
+            compare(one(key, "voice.remove").icon, remove.icon, "the key page's icon");
+            verify(rows(box).every(r => buttons(r).length === 0), "no button on a row");
+            box.visible = key.visible = false;
         }
 
         function test_the_switch_band_takes_the_hover_tint() {

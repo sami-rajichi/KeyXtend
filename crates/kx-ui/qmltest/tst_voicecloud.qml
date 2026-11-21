@@ -1,8 +1,8 @@
-// The Voice panel's cloud pages over the hub's views (ADR-0047): the Cloud page's switch, services and marks, the
-// warning in its own tone, a card's facts with the day read and its link, an old card's warning, the key page's dots,
-// answers and refused lines, the keep-nothing switch, the Models page's Local | Cloud chips and band, and Compare's
-// cloud models with their warning and why one failed, in English, French and Arabic, each page fitting its height; a page
-// change inside one panel warns nothing.
+// The Voice panel's cloud pages over the hub's views (ADR-0047): the Cloud page's switch, services, marks and Remove
+// key, the warning in its own tone, a card's facts with the day read and its link, an old card's warning, the key
+// page's dots, answers and refused lines, the keep-nothing switch, the Models page's Local | Cloud chips and band, and
+// Compare's cloud models with their warning and why one failed, in English, French and Arabic, each page fitting its
+// height; a page change inside one panel warns nothing.
 import QtQuick
 import QtTest
 import "../qml"
@@ -66,22 +66,47 @@ Item {
             box.visible = false;
         }
 
-        function test_cloud_services_off_say_so_and_their_rows_only_show_data() {
+        function test_cloud_services_off_say_so_and_list_no_service_data() {
             return langs_data();
         }
-        function test_cloud_services_off_say_so_and_their_rows_only_show(d) {
+        function test_cloud_services_off_say_so_and_list_no_service(d) {
             const box = make("cloudOff", d.t);
-            const s = box.view.sheet;
-            compare(heard(box.contentItem, s.off).length, 1, "nothing is offered or sent");
-            const all = rows(box);
-            verify(all.every(r => !r.Accessible.checkable), "no tick while off");
-            mouseClick(all[0]);
+            compare(heard(box.contentItem, box.view.sheet.off).length, 1, "nothing is offered or sent");
+            compare(rows(box).length, 0, "no service while off (edge 21)");
+            const remove = one(box, "voice.remove");
+            verify(!remove.can, "Remove key waits for a ticked service");
+            mouseClick(remove);
             mouseClick(one(box, "voice.cloud"));
-            const at = s.rows.findIndex(r => !!r.remove);
-            verify(at >= 0, "a row with a sealed key");
-            mouseClick(one(box, "voice.remove-" + at));
-            compare(acts(box), ["act cloud  1 " + box.round, "act remove remove " + at + " " + box.round], "its Remove key acts");
+            compare(acts(box), ["act cloud  1 " + box.round], "switching cloud on sends no voice");
             box.visible = false;
+        }
+
+        function test_remove_key_in_the_footer_acts_on_the_ticked_service_on_or_off_data() {
+            return langs_data();
+        }
+        // A click ticks the row, as the module then draws it: Groq on, then ElevenLabs Off with its key kept (owner,
+        // 2026-11-21). The row keeps its marks, Off among them, and the footer's Remove key acts on it.
+        function test_remove_key_in_the_footer_acts_on_the_ticked_service_on_or_off(d) {
+            for (const [from, to] of [["cloudSealed", "cloud"], ["cloud", "cloudSealed"]]) {
+                const box = make(from, d.t);
+                const v = Kit.view(d.t, to);
+                const at = v.panel.sheet.rows.findIndex(r => r.tick);
+                const sent = ["act row  " + at + " " + box.round];
+                mouseClick(rows(box)[at]);
+                box.view = v.panel;
+                box.round = v.round;
+                verify(waitForPolish(box), to + " laid out");
+                const row = rows(box)[at];
+                verify(row.Accessible.checked, "the ticked service");
+                const want = v.panel.sheet.rows[at].marks.map(m => [m.id, m.text]);
+                compare(shown(row), want, "its marks show and readers hear them");
+                compare(shown(row).some(m => m[0] === "off"), to === "cloudSealed", "Off while it is off");
+                const remove = one(box, "voice.remove");
+                verify(remove.can, "Remove key acts");
+                mouseClick(remove);
+                compare(acts(box), sent.concat(["act service remove 0 " + v.round]), to);
+                box.visible = false;
+            }
         }
 
         function test_a_page_change_inside_one_panel_warns_nothing_data() {

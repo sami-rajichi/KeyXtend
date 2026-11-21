@@ -18,7 +18,6 @@ var acts = {
   "page": "page",
   "pick": "pick",
   "plus": "plus",
-  "remove": "remove",
   "row": "row",
   "save": "save",
   "service": "service",

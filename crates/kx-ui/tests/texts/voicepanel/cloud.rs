@@ -1,5 +1,5 @@
-//! The cloud panels the Qt Quick tests draw: the Cloud page on and off, a card asking and an old one with its warning,
-//! two key pages, the Models page's Cloud side, and Compare with its cloud models.
+//! The Qt Quick tests' cloud panels: the Cloud page on, then with an Off row's sealed key ticked, and off, a card
+//! asking and an old one with its warning, two key pages, the Models page's Cloud side, and Compare with cloud models.
 
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
@@ -59,30 +59,40 @@ fn service(name: ServiceName, mark: ServiceMark, warn: bool, tick: bool) -> Serv
         untested: mark == ServiceMark::Ready,
         free: (!custom).then(daily),
         warn: warn.then(|| TRAINS.to_owned()),
-        remove: false,
         tick,
     }
 }
 
-/// The Cloud page, `on` or off, Groq ticked, and a fifth row Off with its key sealed and its own Remove key.
-fn cloud(on: bool) -> VoiceSheet {
-    let sealed = ServiceRow {
-        remove: true,
-        ..service(named("ElevenLabs"), ServiceMark::Off, true, false)
-    };
+/// The Cloud page on, with the ticked row's footer: Groq, ready with its key, or `ElevenLabs` when `sealed`, Off
+/// with its key kept; either offers Remove key.
+fn cloud(sealed: bool) -> VoiceSheet {
     let rows = vec![
-        service(named("Groq"), ServiceMark::Ready, false, on),
+        service(named("Groq"), ServiceMark::Ready, false, !sealed),
         service(named("DeepInfra"), ServiceMark::NeedsKey, false, false),
         service(named("OpenRouter"), ServiceMark::Off, true, false),
         service(ServiceName::Custom, ServiceMark::NeedsAddress, false, false),
-        sealed,
+        service(named("ElevenLabs"), ServiceMark::Off, true, sealed),
     ];
-    let acts = if on {
-        vec![CloudButton::Facts, CloudButton::Lines, CloudButton::Off]
+    let acts = if sealed {
+        vec![CloudButton::Facts, CloudButton::Remove, CloudButton::On]
     } else {
-        Vec::new()
+        let on = [CloudButton::Lines, CloudButton::Remove, CloudButton::Off];
+        [CloudButton::Facts].into_iter().chain(on).collect()
     };
-    VoiceSheet::Cloud(CloudSheet { on, rows, acts })
+    VoiceSheet::Cloud(CloudSheet {
+        on: true,
+        rows,
+        acts,
+    })
+}
+
+/// The Cloud page with cloud services off, which lists no service (edge 21).
+fn cloud_off() -> VoiceSheet {
+    VoiceSheet::Cloud(CloudSheet {
+        on: false,
+        rows: Vec::new(),
+        acts: Vec::new(),
+    })
 }
 
 /// Groq's card, read on `read`, asking or switched on, `old` with its warning band.
@@ -275,8 +285,9 @@ fn comparing() -> VoiceSheet {
 pub fn panels() -> Vec<(&'static str, Shown)> {
     use kx_module_api::ports::PanelButton::{Cancel, Use};
     vec![
-        ("cloud", paged(shown(cloud(true), &[]), 0, 1, 1)),
-        ("cloudOff", shown(cloud(false), &[])),
+        ("cloud", paged(shown(cloud(false), &[]), 0, 1, 1)),
+        ("cloudSealed", paged(shown(cloud(true), &[]), 0, 1, 1)),
+        ("cloudOff", shown(cloud_off(), &[])),
         ("card", shown(card(false), &[])),
         ("cardOld", shown(card(true), &[])),
         ("service", shown(lines("groq"), &[])),

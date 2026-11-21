@@ -12,7 +12,7 @@ use super::typing::Typed;
 use super::{Do, Key, Page, Panel};
 use crate::cloud::Cloud;
 use crate::settings::{CLOUD, PICKS, SERVICES, VoiceSettings};
-use crate::view::{Facts, removable};
+use crate::view::Facts;
 
 /// The cloud pages' state.
 #[derive(Clone, Debug)]
@@ -102,7 +102,6 @@ impl Panel {
             VoiceClick::Service(button) if self.cloud_acts(facts).contains(button) => {
                 self.cloud_button(*button, facts)
             }
-            VoiceClick::RemoveKey(at) => self.remove_row_key(usize::from(*at), facts),
             VoiceClick::SetKey(key) if lines => self.set_key(key),
             VoiceClick::SetAddress(text) => self.type_address(text, facts),
             VoiceClick::SetModel(text) => self.type_model(text, facts),
@@ -147,23 +146,6 @@ impl Panel {
                 self.key_button(&id, button, facts)
             }
         }
-    }
-
-    /// A Cloud page row's own Remove key: it deletes the row's sealed key as the key page's does, while that page is
-    /// out of reach (owner, 2026-11-20).
-    fn remove_row_key(&mut self, at: usize, facts: &Facts<'_>) -> Vec<Do> {
-        let (Some(Page::Tab(VoiceTab::Cloud)), Some(cloud)) = (self.page, facts.cloud) else {
-            return Vec::new();
-        };
-        let id = match self.shown.get(at) {
-            Some(Key::Service(id) | Key::Dimmed(id)) => id.clone(),
-            _ => return Vec::new(),
-        };
-        let row = cloud.listed().into_iter().find(|r| r.id == id);
-        if !row.is_some_and(|r| removable(facts, r)) {
-            return Vec::new();
-        }
-        self.key_button(&id, CloudButton::Remove, facts)
     }
 
     /// Open service on a cloud note: service `id`'s card, or its key page for the key note, with Back to the Cloud
