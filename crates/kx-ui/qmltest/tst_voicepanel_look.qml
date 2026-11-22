@@ -200,8 +200,11 @@ Item {
             tryVerify(() => !!rig.panel && rig.panel.visible && rig.panel.pane.visible, 2000, "the panel and its shadow show");
             const panel = rig.panel;
             Pointer.through([panel.pane]);
-            const a = win.spots.physical(bar.x, bar.y);
-            const box = () => JSON.stringify({ x: a.x, y: a.y, w: bar.width * a.dpr, h: bar.height * a.dpr });
+            // The bar's box where it is now, as the hub moves its top when it grows to keep its bottom edge.
+            const box = () => {
+                const a = win.spots.physical(bar.x, bar.y);
+                return JSON.stringify({ x: a.x, y: a.y, w: bar.width * a.dpr, h: bar.height * a.dpr });
+            };
             tryVerify(() => JSON.stringify(asked(voice).bar) === box(), 2000, "the bar's box, asked again as its text lays out");
             bar.height += 10;
             tryVerify(() => JSON.stringify(asked(voice).bar) === box(), 2000, "asked again as the bar grows, so it never covers the panel");

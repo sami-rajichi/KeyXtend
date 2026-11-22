@@ -175,9 +175,9 @@ Item {
             const ask = bar.voice.asks[bar.voice.asks.length - 1];
             compare(JSON.stringify(ask.over), root.over, "by the keyboard");
             compare([ask.w, ask.h], [bar.width, bar.height], "its own size");
-            compare([bar.x, bar.y], [300, 500], "above it");
+            compare([bar.x, bar.y], [300, 500 - bar.height], "above it, by its bottom edge");
             bar.voice.page = view("listening", { place: "bottom" });
-            compare([bar.x, bar.y], [300, 900], "the bottom centre");
+            compare([bar.x, bar.y], [300, 900 - bar.height], "the bottom centre");
             bar.voice.page = view("listening", { place: "top" });
             compare([bar.x, bar.y], [300, 10], "the top centre");
             bar.voice.page = view("text");
@@ -193,7 +193,7 @@ Item {
             bar.follow();
             verify(bar.visible, "it stays");
             compare(bar.voice.asks[bar.voice.asks.length - 1].over, null, "with no keyboard");
-            compare([bar.x, bar.y], [300, 900], "at the bottom centre");
+            compare([bar.x, bar.y], [300, 900 - bar.height], "at the bottom centre");
             mouseClick(withId(bar, "voice.stop"));
             compare(bar.voice.calls, ["act bar stop 0 " + v.round]);
         }

@@ -44,7 +44,8 @@ Window {
     readonly property bool wide: mode === names.states.text || mode === names.states.note
     // The card's warning while the first dictation to its service listens, and while that service writes it, as the hub
     // words it; it widens the bar and sits under its row.
-    readonly property string warning: listens || writes ? field("warn", "") : ""
+    readonly property string warning: mode === names.states.listening || mode === names.states.transcribing
+        ? field("warn", "") : ""
     readonly property bool warns: warning !== ""
     readonly property var cap: lk.shape.caption
     readonly property var p: lk.palette
@@ -64,19 +65,23 @@ Window {
     // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
     width: rescale.keep(Math.ceil(span))
     height: rescale.keep(Math.ceil(tall))
-    // Transcribing keeps the size its take listened at, so Stop and Cancel never move; a hide, text or note ends it.
-    readonly property real span: writes && held ? Math.max(held.w, fit) : fit
-    readonly property real tall: writes && held ? Math.max(held.h, stack) : stack
+    // Transcribing keeps the width its take listened at and never grows shorter, so Stop and Cancel never move; a hide,
+    // text or note ends it.
+    readonly property real span: kept() ? held.w : fit
+    readonly property real tall: kept() ? Math.max(held.h, stack) : stack
     // The settled Listening view's width and height, or null.
     property var held: null
     onFitChanged: hold()
     onStackChanged: hold()
     // The text's width for a text, a note or a warning; else the narrow one, widened up to it for the wave's least room.
-    readonly property real fit: wide || warns ? broad : Math.min(broad, Math.max(narrow, broad - leadRoom + lead.width))
+    readonly property real fit: wide || warns ? broad : Math.min(broad, Math.max(narrow, lead.width + rest))
     readonly property real narrow: lk.shape.voice.bar_px[0] * s
     readonly property real broad: lk.shape.voice.bar_px[1] * s
-    // The most the lead may take for the wave's least room within the text's width; a model's name on the chip fits it.
-    readonly property real leadRoom: broad - tail.width - lk.shape.voice.wave_room_px * s - 2 * (pad + gap)
+    // What the row needs beside the lead: the tail, the wave's least room and the padding.
+    readonly property real rest: tail.width + lk.shape.voice.wave_room_px * s + 2 * (pad + gap)
+    // The most the lead may take: the text's width, or the take's held width while it writes, less the rest; a model's
+    // name on the chip gives way to it.
+    readonly property real leadRoom: (kept() ? held.w : broad) - rest
     // The row's height: one key row, or its parts with their padding.
     readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)
     // What sits under the row: the warning's lines, or a note's acts with the padding under them.
@@ -125,6 +130,11 @@ Window {
             follow();
         if (fresh || hintOf(was) !== hintOf(view))
             tell();
+    }
+    // True while Transcribing keeps its take's size. It reads `mode` and `held` themselves, as all that sizes the bar
+    // does, never `writes`, so a half-made change of state never sizes it.
+    function kept() {
+        return mode === names.states.transcribing && !!held;
     }
     // Holds a Listening view's size for its Transcribing view, reading the view itself so a half-made change never
     // sticks; any other state lets it go.

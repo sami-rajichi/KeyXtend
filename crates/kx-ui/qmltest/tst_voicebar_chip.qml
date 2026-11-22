@@ -33,19 +33,32 @@ Item {
     // Groq's, then each services row's.
     readonly property var device: ["deviceListening", "deviceNothing", "deviceTranscribing"]
     readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
-    // Each take's Listening views, then its Transcribing one: a model on this PC, Groq, a first dictation that warns,
-    // and that one sent to the model on this PC at Stop, as a password box does, so its warning goes.
+    // Each take's Listening views, then its Transcribing ones: a model on this PC, Groq, a first dictation that warns,
+    // that one handed to the model on this PC as a password box does, with its warned Transcribing view or straight,
+    // and Groq's handed over too, whose chip then names the table's longest model.
     readonly property var takes: ({
-        device: [["deviceListening", "deviceNothing"], "deviceTranscribing"],
-        cloud: [["cloudListening", "cloudNothing"], "cloudTranscribing"],
-        warned: [["cloudWarned"], "cloudWarnedTranscribing"],
-        password: [["cloudWarned"], "deviceTranscribing"]
+        device: [["deviceListening", "deviceNothing"], ["deviceTranscribing"]],
+        cloud: [["cloudListening", "cloudNothing"], ["cloudTranscribing"]],
+        warned: [["cloudWarned"], ["cloudWarnedTranscribing"]],
+        handover: [["cloudWarned"], ["cloudWarnedTranscribing", "deviceTranscribing"]],
+        password: [["cloudWarned"], ["deviceTranscribing"]],
+        unwarned: [["cloudListening", "cloudNothing"], ["deviceTranscribing"]]
     })
     // The bundled fonts, so each bar is measured as the app draws it, whichever suites ran before.
     property var bundled: []
 
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
+    // Every size its bar takes while watched, in whole units, so a change that lasts part of a step shows.
+    Component {
+        id: watchC
+        Connections {
+            property var seen: []
+            function onSpanChanged() { note(); }
+            function onTallChanged() { note(); }
+            function note() { seen = seen.concat([[Math.ceil(target.span), Math.ceil(target.tall)]]); }
+        }
+    }
 
     TestCase {
         name: "voicebar_chip"
@@ -168,20 +181,26 @@ Item {
                 verify(!label.truncated, "a service's name whole, " + label.width + " px of " + label.implicitWidth);
             else if (d.name !== "deviceOwn")
                 verify(!label.truncated || bar.width === broad, "cut only at the text's width, " + label.width + " px");
-            const chip = label.parent.parent;
-            const at = chip.mapToItem(bar.body, 0, 0);
-            verify(at.x >= 0 && at.x + chip.width <= bar.body.width + 0.5, "the chip inside the bar");
-            const room = v.wave_room_px * bar.s;
-            verify(bar.wave.width >= room - 0.5, "the middle keeps " + room + " px, has " + bar.wave.width);
+            inside(bar, d.lk);
             verify(bar.width <= broad, "never past the text's width");
             const narrow = Math.ceil(v.bar_px[0] * bar.s);
+            const room = v.wave_room_px * bar.s;
             verify(bar.width === narrow || bar.wave.width <= room + 1, "widened only for the wave, to " + bar.width);
+            bar.visible = false;
+        }
+        // The chip and each button sit inside `bar` in look `lk`, the buttons clear of the chip, and the wave or the
+        // shimmer keeps its least room.
+        function inside(bar, lk) {
+            const chip = chipName(bar).parent.parent;
+            const at = chip.mapToItem(bar.body, 0, 0);
+            verify(at.x >= 0 && at.x + chip.width <= bar.body.width + 0.5, "the chip inside the bar");
+            const room = lk.shape.voice.wave_room_px * bar.s;
+            verify(bar.wave.width >= room - 0.5, "the middle keeps " + room + " px, has " + bar.wave.width);
             for (const b of buttons(bar)) {
                 const x = b.mapToItem(bar.body, 0, 0).x;
                 verify(x >= 0 && x + b.width <= bar.body.width + 0.5, b.Accessible.id + " inside the bar");
                 verify(x >= at.x + chip.width - 0.5 || x + b.width <= at.x + 0.5, b.Accessible.id + " clear of the chip");
             }
-            bar.visible = false;
         }
 
         // Each look's data row for each take at each of `places`, in English, French and Arabic.
@@ -193,31 +212,40 @@ Item {
                         ["en", "fr", "ar"].forEach(t => all.push({ tag: [tag, take, place, t].join(" "), lk: f.lk, views, place, t }));
             return all;
         }
-        // The bar's size, then each shown button's place in it to two decimals.
+        // Where the hub put the bar's top, its size, then each shown button's place in it to two decimals.
         function spots(bar) {
             const at = b => b.mapToItem(bar.body, 0, 0);
             const r = v => Math.round(v * 100) / 100;
-            return [bar.width, bar.height].concat(buttons(bar).map(b => b.Accessible.id + " " + r(at(b).x) + " " + r(at(b).y)));
+            const place = b => b.Accessible.id + " " + r(at(b).x) + " " + r(at(b).y);
+            return [bar.y, bar.width, bar.height].concat(buttons(bar).map(place));
+        }
+        // The sizes among `all`, each `[w, h]`, that are not `size`.
+        function others(all, size) {
+            return all.filter(s => s[0] !== size[0] || s[1] !== size[1]);
         }
 
         function test_stop_and_cancel_keep_their_place_through_the_whole_take_data() {
             return every_take(["above", "bottom"]);
         }
         // One take holds one size from its first Listening view, with the hint, the warning or neither, to the end of
-        // Transcribing, so the hub, asked only for that size on the way, places the bar where it was and nothing moves.
+        // Transcribing, never another even for a moment, so the hub keeps the bar's bottom edge and nothing moves.
         function test_stop_and_cancel_keep_their_place_through_the_whole_take(d) {
             const [firsts, writes] = d.views;
             for (const first of firsts) {
                 const bar = make(first, d.t, d.lk, d.place);
                 const held = spots(bar);
+                const size = [bar.width, bar.height];
+                const watch = createTemporaryObject(watchC, root, { target: bar });
                 const from = bar.voice.asks.length;
-                for (const name of firsts.concat([writes])) {
+                for (const name of firsts.concat(writes)) {
                     show(bar, name, d.t, d.place);
                     compare(spots(bar), held, first + " to " + name + ": Stop and Cancel stay");
                 }
+                inside(bar, d.lk);
+                compare(others(watch.seen, size), [], "never another size, even part of a step");
                 const asked = bar.voice.asks.slice(from).map(a => [a.w, a.h]);
                 verify(asked.length > 0, "the hub is asked where the bar goes");
-                compare(asked.filter(a => a[0] !== held[0] || a[1] !== held[1]), [], "the hub is asked for one size");
+                compare(others(asked, size), [], "the hub is asked for one size");
                 bar.visible = false;
             }
         }
@@ -229,15 +257,16 @@ Item {
         // size, as a fresh bar on it does.
         function test_a_take_after_a_text_or_a_note_starts_afresh(d) {
             const [firsts, writes] = d.views;
-            const fresh = make(writes, d.t, d.lk);
+            const last = writes[writes.length - 1];
+            const fresh = make(last, d.t, d.lk);
             const want = [fresh.width, fresh.height];
             fresh.visible = false;
             for (const after of ["text", "cloudNet"]) {
                 const bar = make(firsts[0], d.t, d.lk);
-                show(bar, writes, d.t);
+                writes.forEach(name => show(bar, name, d.t));
                 show(bar, after, d.t);
-                show(bar, writes, d.t);
-                compare([bar.width, bar.height], want, after + " then " + writes + ": its own size");
+                show(bar, last, d.t);
+                compare([bar.width, bar.height], want, after + " then " + last + ": its own size");
                 bar.visible = false;
             }
         }
