@@ -157,6 +157,8 @@ Item {
             verify(typed.every(t => over.indexOf(t) >= 0), "each typed id passes its room");
             compare(names.filter(n => n.truncated).map(n => n.text), over, "only a name past its room is shortened");
             compare(picks.filter(o => o.width > p.most + 0.5).map(o => o.entry.name), [], "each chip within its room");
+            const lines = new Set(picks.map(o => Math.round(rect(box, o).y))).size;
+            verify(lines <= Math.ceil(box.per / d.lk.shape.voice.pick_across), "a full page's rows, paired: " + lines);
             compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
             verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
         }

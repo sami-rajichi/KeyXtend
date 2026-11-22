@@ -571,7 +571,8 @@ var lk = {
         0.4,
         0.5
       ],
-      "fact_px": 200.0
+      "fact_px": 200.0,
+      "pick_across": 2
     }
   },
   "motion": {

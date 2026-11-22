@@ -27,14 +27,20 @@ pub struct VoiceShape {
     pub run_share: [f32; 2],
     /// A cloud card's label column.
     pub fact_px: f32,
+    /// Compare's cloud picks to a row once they pair.
+    pub pick_across: u8,
 }
 
 impl VoiceShape {
-    /// Refuses, naming the size: no line, a size of 0 or less, a share outside 0 to 1, a wave gap below 0, a wide bar
-    /// narrower than the other, a wave whose rest is above its full height, or a knob larger than its switch.
+    /// Refuses, naming the size: no line or pick to a row, a size of 0 or less, a share outside 0 to 1, a wave gap below
+    /// 0, a wide bar narrower than the other, a wave whose rest is above its full height, or a knob larger than its switch.
     pub(super) fn check(&self) -> Result<(), String> {
-        if self.text_lines == 0 {
-            return Err("shape: voice.text_lines 0 must be 1 or more".to_owned());
+        let counts = [
+            ("voice.text_lines", self.text_lines),
+            ("voice.pick_across", self.pick_across),
+        ];
+        if let Some((n, _)) = counts.iter().find(|(_, v)| *v == 0) {
+            return Err(format!("shape: {n} 0 must be 1 or more"));
         }
         let [w, gap, rest, full] = self.wave_px;
         let above = self.bar_px.iter().map(|v| ("voice.bar_px", *v));

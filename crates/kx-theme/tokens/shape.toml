@@ -385,3 +385,5 @@ panel_px = 600.0
 run_share = [0.4, 0.5]
 # A cloud card's label column (design/voice-cloud.css .facts, --voice-fact-px).
 fact_px = 200.0
+# Compare's cloud picks, which have no mock-up of their own: how many share a row once they pair, each at that share.
+pick_across = 2
