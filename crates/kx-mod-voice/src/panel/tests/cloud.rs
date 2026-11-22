@@ -198,7 +198,7 @@ fn router_at_newer_terms() -> Rig {
 }
 
 #[test]
-fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_keeps_its_key() {
+fn newer_terms_ask_again_and_a_no_switches_the_service_off_its_picks_waiting_and_keeps_its_key() {
     let mut rig = router_at_newer_terms();
     let router = named("Router Test");
     tick(&mut rig, &router);
@@ -218,7 +218,8 @@ fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_ke
         "only Remove key deletes it"
     );
     apply(&mut rig, &out);
-    assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
+    assert!(rig.settings.services.is_empty(), "the service is Off");
+    assert!(rig.settings.picks.contains_key("en"), "ADR-0054: it waits");
     let at = usize::from(row_of(&mut rig, &router));
     assert_eq!(cloud_sheet(&mut rig).rows[at].mark, ServiceMark::Off);
     let out = act(&mut rig, &router, CloudButton::On);

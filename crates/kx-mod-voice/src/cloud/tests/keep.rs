@@ -45,7 +45,7 @@ fn the_keep_nothing_switch_makes_a_kept_model_unavailable() {
 }
 
 #[test]
-fn a_stale_entry_starts_afresh_when_confirmed_and_the_picks_that_named_it_go() {
+fn a_stale_entry_starts_afresh_when_confirmed_and_its_listed_pick_comes_back() {
     let mut s = on();
     let mut stale = ServiceOn::new(today(), 1);
     stale.terms = 5;
@@ -57,17 +57,15 @@ fn a_stale_entry_starts_afresh_when_confirmed_and_the_picks_that_named_it_go() {
         rules().choice(&s, "fr").is_none(),
         "a stale entry is no entry"
     );
+    assert!(rules().waits(&s, "fr").is_some(), "it waits as for an Off");
     assert!(rules().confirm(&mut s, "groq", after(1)));
     assert_eq!(
         s.services["groq"],
         ServiceOn::new(after(1), row("groq").terms)
     );
     let left: Vec<&str> = s.picks.keys().map(String::as_str).collect();
-    assert_eq!(
-        left,
-        ["nl"],
-        "no hidden pick comes back with the fresh entry"
-    );
+    assert_eq!(left, ["fr", "nl"], "ADR-0054: the listed pick stays");
+    assert!(rules().choice(&s, "fr").is_some(), "back at Confirm");
 }
 
 #[test]

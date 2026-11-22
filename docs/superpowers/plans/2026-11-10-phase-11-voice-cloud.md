@@ -88,12 +88,12 @@
 13. An Azure address typed wrong; a Custom address that is not HTTPS.
 14. A redirect to another host is not followed.
 15. A card shows the date its facts were read; past `facts_days` the date takes the warning tone.
-16. A newer terms number asks again before the next upload; declined, the service goes back to Off and its picks to the local default.
+16. A newer terms number asks again before the next upload; declined, the service goes back to Off and its picks to the local default. Since ADR-0054, the picks wait for its Confirm.
 17. OpenRouter's keep-nothing switch on: a model with no such host is unavailable, with the reason.
 18. A connection with no real-key check shows "untested" on its card.
 19. The field in front becomes a password box before Stop: nothing is uploaded.
 20. "Use the local model" with no local model ready is dimmed and offers Download.
-21. `cloud` off: no service is offered, nothing is sent, and cloud picks fall back to the local default.
+21. `cloud` off: no service is offered, nothing is sent, and cloud picks fall back to the local default. Since ADR-0054, they wait, and Cloud On brings each back.
 22. A Custom address and model, an Azure address and an "Other model" id are typed on the panel line and kept in `services`.
 23. The card's link opens only the row's HTTPS address; Paste puts a key on its line as dots.
 24. Groq is listed first on the Cloud page.

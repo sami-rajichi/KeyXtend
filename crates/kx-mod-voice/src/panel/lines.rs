@@ -156,8 +156,8 @@ impl Panel {
     }
 
     /// The address line's text, its scheme and host lowered: kept in `services` when HTTPS on a host name the row
-    /// takes, else shown with why (edge 13). A changed address keeps the picks, and a cleared one sends them to the
-    /// local default.
+    /// takes, else shown with why (edge 13). A changed address keeps the picks, and clearing it, the owner's own act,
+    /// sends them to the local default.
     pub(super) fn type_address(&mut self, text: &Redacted<String>, facts: &Facts<'_>) -> Vec<Do> {
         let Some(id) = self.lines_id() else {
             return Vec::new();

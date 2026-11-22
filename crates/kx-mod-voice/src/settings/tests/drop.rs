@@ -1,6 +1,6 @@
 //! Each read of `[voice]` drops, alone and named, a service entry the table no longer takes or offers and a cloud pick
-//! that no longer names a service the user switched on with a model for its language, so a later table or switch never
-//! brings one back by itself.
+//! whose row or model the table no longer offers for its language; a pick merely waiting, with cloud or its service
+//! Off, stays (ADR-0054), and nothing moves to a service by itself.
 
 use super::*;
 use crate::cloud::pick_text;
@@ -108,12 +108,11 @@ fn a_cloud_pick_stays_only_while_it_names_a_service_on_and_a_model_for_its_langu
     assert_eq!(s.drop_bad(), named);
     assert_eq!(s.picks.keys().collect::<Vec<_>>(), ["ar", "en", "fr", "nl"]);
     s.cloud = false;
-    let cloud = ["picks.ar", "picks.en", "picks.fr"];
-    assert_eq!(s.drop_bad(), cloud, "edge 21: cloud off drops them");
+    assert!(s.drop_bad().is_empty(), "ADR-0054: cloud off keeps them");
     assert_eq!(
         s.picks.keys().collect::<Vec<_>>(),
-        ["nl"],
-        "a local pick stays"
+        ["ar", "en", "fr", "nl"],
+        "every pick waits for Cloud On"
     );
     assert_eq!(
         s.services.len(),
@@ -162,11 +161,24 @@ fn a_listed_pick_of_a_service_merely_off_stays_unnamed_for_that_services_confirm
     assert!(s.drop_bad().is_empty(), "owner, 2026-11-21: it waits");
     assert!(s.picks.contains_key("fr"));
     s.services.insert("groq".into(), entry(|on| on.terms = 0));
-    let stale = ["picks.fr", "services.groq"];
-    assert_eq!(s.drop_bad(), stale, "a stale entry takes its picks along");
-    s.picks.insert("fr".into(), pick);
+    let stale = ["services.groq"];
+    assert_eq!(s.drop_bad(), stale, "ADR-0054: its listed pick waits");
+    assert_eq!(s.picks.get("fr"), Some(&pick));
     s.cloud = false;
-    assert_eq!(s.drop_bad(), ["picks.fr"], "edge 21: cloud off drops it");
+    assert!(s.drop_bad().is_empty(), "ADR-0054: cloud off keeps it");
+}
+
+#[test]
+fn a_stale_entry_takes_only_the_typed_picks_its_lines_held() {
+    let mut s = on();
+    let typed = |on: &mut ServiceOn| {
+        on.address = "https://stt.example.com/v1/audio/transcriptions".into();
+        on.model = "my-model".into();
+        on.terms = 0;
+    };
+    s.services.insert("custom".into(), entry(typed));
+    s.picks.insert("en".into(), "custom:my-model".into());
+    assert_eq!(s.drop_bad(), ["picks.en", "services.custom"]);
 }
 
 #[test]

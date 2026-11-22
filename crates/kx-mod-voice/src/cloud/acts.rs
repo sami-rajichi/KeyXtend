@@ -1,6 +1,6 @@
-//! The acts that change a language's cloud pick or a service's entry (ADR-0047 decisions 9 and 12): the `cloud` switch,
-//! a card's confirmation, a service Off or its newer terms declined, a pick, the typed lines, and the card's warning
-//! seen. Only `pick` moves a language to a service, and a confirmation brings back the pick waiting for it.
+//! The acts that change a language's cloud pick or a service's entry (ADR-0047 decision 12, ADR-0054): the `cloud`
+//! switch, a card's confirmation, a service Off or its newer terms declined, a pick, the typed lines, and the card's
+//! warning seen. Only `pick` moves a language to a service; Confirm and Cloud On bring back the picks that wait.
 
 use kx_module_api::ports::{CloudAsk, Date};
 
@@ -9,21 +9,18 @@ use crate::services::{Address, Service};
 use crate::settings::{ServiceOn, VoiceSettings, datetime};
 
 impl<'a> Cloud<'a> {
-    /// Turns cloud services on or off; off drops every cloud pick, so each language goes back to its local model and
-    /// turning cloud on again brings none back (edge 21). A hidden run never turns it on.
+    /// Turns cloud services on or off; off keeps every cloud pick waiting while local models serve, and on brings each
+    /// back (ADR-0054). A hidden run never turns it on.
     pub fn switch(&self, s: &mut VoiceSettings, on: bool) {
         if on && self.hidden {
             return;
         }
         s.cloud = on;
-        if !on {
-            s.picks.retain(|_, pick| self.table.pick(pick).is_none());
-        }
     }
 
     /// Switches service `id` on as confirmed on `today` at its row's terms number, keeping its typed lines; false
     /// while cloud is off or for a row not offered. An entry the row no longer takes, as a hand edit leaves, starts
-    /// afresh, and the picks that named its service go, so none comes back with it.
+    /// afresh, so only the typed picks its lines held go.
     pub fn confirm(&self, s: &mut VoiceSettings, id: &str, today: Date) -> bool {
         let Some(row) = self.table.get(id).filter(|row| row.offered && self.on(s)) else {
             return false;
@@ -40,8 +37,10 @@ impl<'a> Cloud<'a> {
         entry.on = datetime(today);
         entry.terms = row.terms;
         if stale {
-            // A stale entry's typed lines go, and with them the picks that needed them.
-            self.drop_picks(s, |service, _| service == id);
+            // A stale entry's typed lines go, and with them the typed picks that needed them.
+            self.drop_picks(s, |service, model| {
+                service == id && row.model(model).is_none()
+            });
         }
         true
     }
@@ -58,10 +57,10 @@ impl<'a> Cloud<'a> {
         s.picks.retain(|l, p| waits.contains(l) || !its(p));
     }
 
-    /// Switches service `id` Off as its newer terms were declined, and drops all its picks (edge 16).
+    /// Switches service `id` Off as its newer terms were declined: as a plain Off, its listed picks wait for its
+    /// Confirm (ADR-0054).
     pub fn decline(&self, s: &mut VoiceSettings, id: &str) {
-        s.services.remove(id);
-        self.drop_picks(s, |service, _| service == id);
+        self.turn_off(s, id);
     }
 
     /// Picks service `id`'s `model` for `lang`, the only act that moves a language to a service; false, changing

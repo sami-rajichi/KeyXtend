@@ -204,7 +204,7 @@ fn edge_15_facts_past_facts_days_take_the_warning_tone() {
 }
 
 #[test]
-fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
+fn edge_16_a_newer_terms_number_asks_again_and_a_no_leaves_its_picks_waiting() {
     let mut s = groq_for_french();
     s.picks.insert("nl".into(), "canary-v2-q8".into());
     let other = row("groq").models.last().unwrap();
@@ -218,9 +218,10 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     assert!(rules.choice(&s, "fr").is_none() && rules.choice(&s, "ar").is_none());
     assert_eq!(
         s.picks.keys().collect::<Vec<_>>(),
-        ["nl"],
-        "only the local pick stays"
+        ["ar", "fr", "nl"],
+        "ADR-0054: every pick stays"
     );
+    assert!(rules.waits(&s, "fr").is_some() && rules.waits(&s, "ar").is_some());
     let local = models::table().unwrap().used("fr", &s.picks);
     assert_eq!(
         local,
@@ -228,20 +229,21 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     );
     assert!(rules.confirm(&mut s, "groq", today()) && !rules.asks(&s, groq));
     assert_eq!(s.services["groq"].terms, groq.terms, "at the newer number");
+    assert!(rules.choice(&s, "fr").is_some() && rules.choice(&s, "ar").is_some());
 }
 
 #[test]
-fn edge_21_cloud_off_offers_nothing_and_its_picks_fall_back_to_local() {
+fn edge_21_cloud_off_offers_nothing_and_its_picks_wait_for_cloud_on() {
     let mut s = groq_for_french();
     s.picks.insert("de".into(), "whisper-turbo-q5km".into());
     rules().switch(&mut s, false);
     assert!(rules().offered(&s).is_empty() && rules().choice(&s, "fr").is_none());
-    assert_eq!(s.picks.keys().collect::<Vec<_>>(), ["de"]);
+    assert_eq!(s.picks.keys().collect::<Vec<_>>(), ["de", "fr"], "ADR-0054");
     assert!(s.services.contains_key("groq"), "the confirmation stays");
     rules().switch(&mut s, true);
     assert!(
-        rules().choice(&s, "fr").is_none(),
-        "turning cloud on brings no pick back"
+        rules().choice(&s, "fr").is_some(),
+        "turning cloud on brings the pick back"
     );
     let mut raw = groq_for_french();
     raw.cloud = false;
@@ -249,7 +251,7 @@ fn edge_21_cloud_off_offers_nothing_and_its_picks_fall_back_to_local() {
         rules().choice(&raw, "fr").is_none(),
         "a cloud = false in the file falls back too"
     );
-    assert_eq!(raw.drop_bad(), ["picks.fr"]);
+    assert!(raw.drop_bad().is_empty(), "ADR-0054: it waits for Cloud On");
 }
 
 #[test]

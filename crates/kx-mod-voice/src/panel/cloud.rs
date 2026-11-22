@@ -188,8 +188,8 @@ impl Panel {
         self.go(page)
     }
 
-    /// Switches service `id` Off: its listed picks wait for its Confirm, or all go to the local default when its newer
-    /// terms were `declined` (edge 16). Its sealed key stays, as only Remove key deletes it.
+    /// Switches service `id` Off, plainly or as its newer terms were `declined`: its listed picks wait for its Confirm
+    /// (ADR-0054). Its sealed key stays, as only Remove key deletes it.
     fn turn_off(&mut self, id: &str, declined: bool, facts: &Facts<'_>) -> Vec<Do> {
         let mut out = edit(facts, |c, s| {
             if declined {

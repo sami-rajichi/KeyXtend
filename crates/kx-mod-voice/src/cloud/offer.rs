@@ -75,8 +75,8 @@ impl<'a> Cloud<'a> {
         out
     }
 
-    /// The listed model `lang`'s pick keeps while its offered service is Off and cloud is on (owner, 2026-11-21); only
-    /// that service's Confirm brings it back into use.
+    /// The listed model `lang`'s pick keeps while its offered service is Off, or its entry stale, and cloud is on
+    /// (owner, 2026-11-21); only that service's Confirm brings it back into use.
     #[must_use]
     pub fn waits<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Offered<'s>>
     where
@@ -86,7 +86,7 @@ impl<'a> Cloud<'a> {
         let service = self.table.get(id).filter(|r| r.offered && self.on(s))?;
         let listed = service.model(model).filter(|m| m.code(lang).is_some())?;
         let model = Chosen::Listed(listed);
-        (!s.services.contains_key(id)).then_some(Offered { service, model })
+        (self.entry(s, service).is_none()).then_some(Offered { service, model })
     }
 
     /// What service `id`'s `model` is for `lang` now, as Compare sends to it; `None` when the rules do not take it.
