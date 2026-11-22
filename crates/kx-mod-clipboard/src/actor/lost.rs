@@ -24,7 +24,8 @@ pub(super) struct Lost {
 }
 
 impl Lost {
-    /// None yet; at most `max_entries` texts of each kind, and `queue_copies` takes due, as no more copies wait.
+    /// None yet; at most `max_entries` texts of each kind and `queue_copies` takes due, a bound on memory alone, so
+    /// more takes within one wait let the oldest one's copy be kept.
     pub(super) fn new(s: &ClipSettings) -> Self {
         Self {
             taken: Ring::new(s.max_entries),

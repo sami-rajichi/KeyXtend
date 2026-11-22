@@ -26,8 +26,6 @@ paste_wait_ms = 1000
 back_chars = 1000000
 # How long an insert waits for its files to be checked, in ms; past it the insert stops.
 check_ms = 5000
-# How long a take waits for the watch to tell the copy it read, in ms; that copy is not kept meanwhile.
-take_wait_ms = 5000
 # The system's clipboard-history shortcut clicked on our keyboard opens our panel.
 history_key = true
 # The characters of each text that search reads.
@@ -58,5 +56,7 @@ open_ms = 250
 poll_ms = 10
 # The most copies that wait for the history to keep them; past it a new copy is dropped.
 queue_copies = 8
+# How long after a take the watch's copies of the taken text are not kept, in ms, as an app may tell one late or twice.
+take_wait_ms = 5000
 # A change is saved this many ms after the first unsaved one, and at stop.
 save_ms = 500

@@ -16,7 +16,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - takes copies from a queue of `queue_copies`, dropping the newest in a flood, keeps each within the limits (asking the shelf only its drive's free bytes, never a walk of its files), moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
 - inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a PNG goes with the DIB the worker makes within `media_ms`, or alone when none comes; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
-- answers a module's `ClipTake` (Quick-fill's, or the voice key page's Paste) with the clipboard's text, read within the take's cap, and only to that module; it forgets the newest entry only when it is an unpinned text of this copy, else the next copy keeps nothing if it is that text, as its note can come after the take; a text too long, a busy clipboard or no text forgets nothing;
+- answers a module's `ClipTake` (Quick-fill's, or the voice key page's Paste) with the clipboard's text, read within the take's cap, and only to that module; it forgets the newest entry only when it is an unpinned text of this copy, with an unpinned entry of that text alone copied within `take_wait_ms` of it, and no copy of that text the watch reads within `take_wait_ms` after the take is kept; a text too long, a busy clipboard or no text forgets nothing;
 - pastes another module's `PasteText` once through the keyboard, its text written with the presence markers so other clipboard tools leave it alone, and puts the clipboard back after `paste_gap_ms`, unless a copy came meanwhile, or leaves it empty when that copy left the history or a take read it; it answers no, writing nothing, when a presence marker is on the clipboard (checked live as it reads, `Clipboard::unmarked_text`), after a skipped app's copy or a mark that is not our echo, when the read fails, or when it cannot put the clipboard back whole (ADR-0048);
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).
 
@@ -49,7 +49,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning; the r
 | Insert | `join_breaks`, `join_rule`, `paste_gap_ms`, `paste_wait_ms`, `back_chars`, `check_ms`, `history_key` |
 | Text | `search_chars`, `title_chars`, `preview_chars` |
 | Pictures | `thumb_px`, `preview_px`, `max_pixels`, `media_ms`, `worker_idle_s`, `worker_mb`, `restart_ms`, `restart_max_ms` |
-| Platform | `open_ms`, `poll_ms`, `queue_copies`, `save_ms`, `take_wait_ms` |
+| Platform | `open_ms`, `poll_ms`, `queue_copies`, `take_wait_ms`, `save_ms` |
 
 ## Public API
 
