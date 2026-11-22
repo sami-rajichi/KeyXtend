@@ -120,6 +120,26 @@ fn compare_short() -> VoiceSheet {
     ready(cloud, every())
 }
 
+/// Compare's last page at the pairing edge (T24 re-review 3): `OpenRouter`'s Whisper Large v3 Turbo and Voxtral picks,
+/// then a typed id, in its order; each is too wide to share a row with the next, so they take a full page's rows paired.
+/// MAI in Whisper's place would share Voxtral's row in Native.
+fn compare_edge() -> VoiceSheet {
+    let router = row("openrouter");
+    let listed = |name: &str| {
+        let m = router.models.iter().find(|m| m.name == name);
+        pick(&m.expect("a listed model").name, router.shown())
+    };
+    let cloud = vec![
+        listed("Whisper Large v3 Turbo"),
+        listed("Voxtral Mini Transcribe 3"),
+        pick(EDGE_ID, router.shown()),
+    ];
+    ready(cloud, every())
+}
+
+/// A typed Other id for `OpenRouter`, as wide as a listed model id can be but well short of `TAG_LEN`.
+const EDGE_ID: &str = "mistralai/voxtral-small-24b-2507";
+
 /// Compare's page at the fewest rows a page may show: that many of the widest offered picks.
 fn compare_few() -> VoiceSheet {
     ready(widest().into_iter().take(fewest()).collect(), every())
@@ -133,6 +153,7 @@ pub fn panels() -> Vec<(String, Shown)> {
         ("compareWide", two(compare_wide())),
         ("compareTyped", two(compare_typed())),
         ("compareShort", paged(shown(compare_short(), &[]), 1, 2, 0)),
+        ("compareEdge", paged(shown(compare_edge(), &[]), 1, 2, 0)),
         ("compareFew", two(compare_few())),
     ]
     .into_iter()
@@ -176,6 +197,21 @@ fn the_typed_compare_page_holds_two_typed_ids_round_the_widest_picks() {
     let ends = [&cloud[0], &cloud[per() - 1]].map(|c| (c.service.clone(), c.name.expose().len()));
     assert_eq!(ends, rows.map(|r| (r.shown(), *TAG_LEN.end())));
     assert_eq!(cloud[1..per() - 1], widest()[..per() - 2]);
+}
+
+/// The edge page holds three picks of `OpenRouter`, a row that takes a typed id, the last one typed.
+#[test]
+fn the_edge_compare_page_holds_three_picks_the_last_typed() {
+    let cloud = picks(compare_edge());
+    assert_eq!(cloud.len(), 3, "two listed picks and a typed id");
+    let router = row("openrouter");
+    assert!(router.offered && router.other, "it takes a typed id");
+    assert!(cloud.iter().all(|c| c.service == router.shown()));
+    let listed = router.models.iter().any(|m| m.id == EDGE_ID);
+    assert!(
+        !listed && EDGE_ID.len() < *TAG_LEN.end(),
+        "typed, and short of the most"
+    );
 }
 
 /// The short page holds fewer picks than a page, the first a typed id of a row that takes one.

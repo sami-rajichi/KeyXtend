@@ -203,6 +203,21 @@ Item {
             uncut(box);
         }
 
+        function test_a_page_at_the_pairing_edge_keeps_every_name_whole_data() {
+            return test_a_short_page_keeps_every_name_whole_data();
+        }
+        // T24 re-review 3, note 3: three picks too wide to share a row take a full page's rows paired, so they do not
+        // pair and every name shows whole.
+        function test_a_page_at_the_pairing_edge_keeps_every_name_whole(d) {
+            const box = make("compareEdge", d.t, d.lk);
+            const p = page(box);
+            const flow = Kit.only(Board.all(p.body, o => o.visible && o.flow !== undefined));
+            compare(p.rows(flow.children), Math.ceil(box.per / p.across), "a full page's rows, paired");
+            verify(!p.pair, "its picks do not pair");
+            keeps(box);
+            uncut(box);
+        }
+
         function test_compare_fits_at_the_fewest_rows_data() {
             return test_a_short_page_keeps_every_name_whole_data();
         }
