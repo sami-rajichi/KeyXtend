@@ -1,5 +1,5 @@
 //! A service Off keeps its entry aside in `parked` (ADR-0054 decision 4): its typed address, typed model, keep-nothing
-//! switch and every pick wait, nothing reads or sends to it, and its Confirm brings it back with the new day and terms.
+//! switch and every pick wait, nothing sends to it or dictates with it, and its Confirm brings it back with the new day.
 
 use super::off::{used, waits};
 use super::*;
@@ -42,6 +42,18 @@ fn off_parks_the_typed_lines_and_their_pick_and_confirm_brings_both_back() {
     assert_eq!(back.day(), Some(after(1)), "the new day");
     assert!(s.parked.is_empty());
     assert_eq!(used(&s, "en").as_deref(), Some("custom"));
+}
+
+#[test]
+fn a_parked_entry_back_at_confirm_shows_the_cards_warning_again() {
+    let mut s = custom_for_english();
+    assert!(rules().warned(&mut s, "custom"));
+    rules().turn_off(&mut s, "custom");
+    assert!(rules().confirm(&mut s, "custom", today()));
+    assert_eq!(
+        s.services["custom"].warned, 0,
+        "spec: again at the first dictation"
+    );
 }
 
 #[test]

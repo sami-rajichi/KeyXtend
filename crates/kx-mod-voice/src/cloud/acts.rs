@@ -20,14 +20,16 @@ impl<'a> Cloud<'a> {
     }
 
     /// Switches service `id` on as confirmed on `today` at its row's terms number, keeping its On entry or bringing
-    /// back its parked one with its typed lines; false while cloud is off or for a row not offered. An entry the row no
-    /// longer takes, as a hand edit leaves, starts afresh, so only the typed picks its lines held go.
+    /// back its parked one with its typed lines, whose card warning shows again (spec, "again at the first dictation");
+    /// false while cloud is off or for a row not offered. An entry the row no longer takes, as a hand edit leaves,
+    /// starts afresh, so only the typed picks its lines held go.
     pub fn confirm(&self, s: &mut VoiceSettings, id: &str, today: Date) -> bool {
         let Some(row) = self.table.get(id).filter(|row| row.offered && self.on(s)) else {
             return false;
         };
         let fresh = ServiceOn::new(today, row.terms);
-        let parked = s.parked.remove(id);
+        let unwarned = |back: ServiceOn| ServiceOn { warned: 0, ..back };
+        let parked = s.parked.remove(id).map(unwarned);
         let entry = s
             .services
             .entry(id.to_owned())
