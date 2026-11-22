@@ -8,9 +8,9 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
-    CalendarKey, ClipAct, ClipError, ClipKey, ClipOpen, ClipPanel, ClipTake, Clipboard,
-    ClipboardKey, ClipboardWriterKey, HistoryAsk, HistoryWanted, PasteText, Pasted, Pictures,
-    PicturesKey, SealedError, SealedShelfKey,
+    Calendar, CalendarKey, ClipAct, ClipError, ClipKey, ClipOpen, ClipPanel, ClipTake, Clipboard,
+    ClipboardKey, ClipboardWriter, ClipboardWriterKey, HistoryAsk, HistoryWanted, PasteText,
+    Pasted, Pictures, PicturesKey, SealedError, SealedShelf, SealedShelfKey,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
@@ -45,6 +45,28 @@ struct Helpers {
     drawing: JoinHandle<()>,
 }
 
+/// The services the module asks the kernel for.
+struct Services {
+    clip: Arc<dyn Clipboard>,
+    writer: Arc<dyn ClipboardWriter>,
+    sealed: Arc<dyn SealedShelf>,
+    pictures: Arc<dyn Pictures>,
+    calendar: Arc<dyn Calendar>,
+}
+
+impl Services {
+    /// Asks for each service in this order; the first one missing fails the start.
+    fn ask(cx: &ModuleCx<'_>) -> Result<Self, ModuleError> {
+        Ok(Self {
+            clip: cx.service::<ClipboardKey>()?,
+            writer: cx.service::<ClipboardWriterKey>()?,
+            sealed: cx.service::<SealedShelfKey>()?,
+            pictures: cx.service::<PicturesKey>()?,
+            calendar: cx.service::<CalendarKey>()?,
+        })
+    }
+}
+
 /// The clipboard history module: it watches copies, keeps them sealed, and runs the panel and insert.
 #[derive(Default)]
 pub struct ClipboardModule {
@@ -59,38 +81,31 @@ impl Module for ClipboardModule {
     fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError> {
         self.halt();
         let settings = cx.settings::<ClipSettings>()?;
-        let clip = cx.service::<ClipboardKey>()?;
-        let writer = cx.service::<ClipboardWriterKey>()?;
-        let sealed = cx.service::<SealedShelfKey>()?;
-        let pictures = cx.service::<PicturesKey>()?;
-        let calendar = cx.service::<CalendarKey>()?;
-        let mut store = Store::new(Arc::clone(&sealed), settings.store_config());
+        let s = Services::ask(cx)?;
+        let mut store = Store::new(Arc::clone(&s.sealed), settings.store_config());
         let loaded = store.load().map_err(refuse)?;
         let ((tx, inbox), clock) = (mpsc::channel(), cx.clock());
-        let (watch, copies) = Watched::start(&*clip, &settings, &tx, &clock).map_err(no_watch)?;
+        let (watch, copies) = Watched::start(&*s.clip, &settings, &tx, &clock).map_err(no_watch)?;
         let Helpers {
             media,
             files,
             drawing,
-        } = helpers(&clip, &*pictures, &settings, &tx)?;
+        } = helpers(&s.clip, &*s.pictures, &settings, &tx)?;
         relays(cx, &tx)?;
         let ports = Ports {
             bus: cx.bus(),
-            clip: Arc::clone(&clip),
+            clip: Arc::clone(&s.clip),
             clock,
-            calendar,
-            shelf: sealed,
-            writer,
+            calendar: s.calendar,
+            shelf: s.sealed,
+            writer: s.writer,
             media,
             files,
             copies,
             watch: Some(watch),
         };
         let (actor, bus) = (Actor::new(ports, &settings, store, loaded), cx.bus());
-        let thread = thread::Builder::new().name(THREAD.to_owned());
-        let actor = thread
-            .spawn(move || run_actor(actor, &inbox, &bus))
-            .map_err(|e| no_thread(&e))?;
+        let actor = spawn_actor(actor, inbox, bus)?;
         self.run = Some(Running {
             tx,
             actor,
@@ -136,6 +151,18 @@ fn run_actor(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
         let _ = bus.publish(&Notice::about(keys::MODULE_FAILED, ID));
         resume_unwind(panic);
     }
+}
+
+/// Starts the actor on `kx-clip`, reading `inbox` and telling `bus`.
+fn spawn_actor(
+    actor: Actor,
+    inbox: Receiver<Msg>,
+    bus: Bus,
+) -> Result<JoinHandle<()>, ModuleError> {
+    let thread = thread::Builder::new().name(THREAD.to_owned());
+    thread
+        .spawn(move || run_actor(actor, &inbox, &bus))
+        .map_err(|e| no_thread(&e))
 }
 
 /// Why a load failed, as the start's error; the kernel tells the user and offers Try again, so the module adds no
