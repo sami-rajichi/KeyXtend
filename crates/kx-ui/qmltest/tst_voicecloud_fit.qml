@@ -195,7 +195,8 @@ Item {
             const least = d.lk.shape.voice.pick_name_px * box.s;
             for (const o of picks) {
                 const name = Kit.only(Board.all(o, n => n.text === o.entry.name));
-                const service = word(o).text, tag = o.entry.name.slice(0, 24) + " " + service;                compare(name.elide, Text.ElideMiddle, "a cut name keeps its end: " + tag);
+                const service = word(o).text, tag = o.entry.name + " " + service;
+                compare(name.elide, Text.ElideMiddle, "a cut name keeps its end: " + tag);
                 verify(name.width >= Math.min(name.implicitWidth, least) - 0.5, "the name keeps its least: " + tag);
                 verify(!word(o).truncated || name.width <= least + 0.5, "the mark is cut only past the name's least: " + tag);
                 verify(o.Accessible.name.indexOf(service) >= 0, "readers hear the mark whole: " + tag);
