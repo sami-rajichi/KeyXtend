@@ -130,7 +130,7 @@ fn cloud_off_offers_no_service_on_the_page_on_models_or_at_home() {
 }
 
 #[test]
-fn groq_is_listed_first_off_with_its_untested_mark_and_custom_names_no_free_allowance() {
+fn groq_is_listed_first_off_with_its_tables_tested_mark_and_custom_names_no_free_allowance() {
     let mut rig = on_cloud("");
     let sheet = cloud_sheet(&mut rig);
     assert!(sheet.on);
