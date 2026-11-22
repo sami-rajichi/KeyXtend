@@ -1,10 +1,11 @@
 //! The Cloud page's rows, a panel's rows to a page: the tests find a row by its shown name, page by page, and a row
-//! carries its card's warning fact id, so the row's mark names that warning, not a fixed one.
+//! carries its card's warning fact id, so the row's mark names that warning, not a fixed one. An untested row shows its
+//! mark there and on its card.
 
-use kx_module_api::ports::{ServiceName, ServiceRow, VoiceClick};
+use kx_module_api::ports::{CloudButton, ServiceName, ServiceRow, VoiceClick};
 
 use super::super::super::rig::Rig;
-use super::{cloud_sheet, on_cloud};
+use super::{act, card, cloud_sheet, on_cloud};
 use crate::services;
 use crate::services::tests::ROUTER;
 use crate::services::tests::shipped::warn_id;
@@ -81,4 +82,20 @@ fn a_row_carries_its_cards_warning_fact_id_and_none_without_one() {
         };
         assert_eq!(row.warn, want, "{:?}", row.name);
     }
+}
+
+/// The untested mark (edge 18): `OpenRouter`, untested in the table, shows it on its row and its card; Groq does not.
+#[test]
+fn an_untested_row_shows_its_mark_on_the_cloud_page_and_its_card() {
+    let table = services::table().unwrap();
+    assert!(table.get("openrouter").unwrap().untested, "still untested");
+    let mut rig = on_cloud("");
+    let rows = every_row(&mut rig);
+    let marks = ["groq", "openrouter"].map(|id| {
+        let row = rows.iter().find(|r| r.name == shown(id)).unwrap();
+        (id, row.untested)
+    });
+    assert_eq!(marks, [("groq", false), ("openrouter", true)]);
+    act(&mut rig, &shown("openrouter"), CloudButton::Facts);
+    assert!(card(&mut rig).untested, "its card says so too");
 }
