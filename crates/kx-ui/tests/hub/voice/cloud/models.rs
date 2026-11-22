@@ -172,12 +172,13 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
     shown.mark = Some(BarMark::Cloud(groq()));
     heard.view(shown.clone());
     let said = "Your voice goes to Groq at Stop";
-    let mark = json!({"kind": "cloud", "name": "Groq", "said": said});
-    assert_eq!(json(&rig)["mark"], mark);
+    let mark = json!({"kind": "cloud", "name": "Groq", "cut": false, "said": said});
+    assert_eq!(json(&rig)["mark"], mark, "a service's name is never cut");
     shown.mark = Some(BarMark::Cloud(ServiceName::Custom));
     heard.view(shown);
     let said = "Your voice goes to the address you type at Stop";
-    let mark = json!({"kind": "cloud", "name": "Custom address", "said": said});
+    let name = "Custom address";
+    let mark = json!({"kind": "cloud", "name": name, "cut": false, "said": said});
     assert_eq!(json(&rig)["mark"], mark, "a sentence names Custom mid-line");
 }
 
@@ -189,8 +190,9 @@ fn the_bar_names_the_model_on_this_pc_and_readers_hear_who_writes() {
     shown.mark = Some(BarMark::Device(Redacted::new("Whisper Turbo".into())));
     heard.view(shown.clone());
     let said = "Whisper Turbo writes what you say";
-    let mark = json!({"kind": "device", "name": "Whisper Turbo", "said": said});
-    assert_eq!(json(&rig)["mark"], mark);
+    let name = "Whisper Turbo";
+    let mark = json!({"kind": "device", "name": name, "cut": true, "said": said});
+    assert_eq!(json(&rig)["mark"], mark, "a model's own name may be cut");
     shown.mark = Some(BarMark::Device(Redacted::new("my\u{202E}model".into())));
     heard.view(shown);
     let mark = &json(&rig)["mark"];

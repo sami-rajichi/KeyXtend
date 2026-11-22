@@ -1,7 +1,7 @@
 // The bar's chip over the hub's views (owner, 2026-11-22): while a model on this PC listens or writes, the processor's
-// picture and the model's short name, which readers hear in a sentence, as the cloud mark names its service; a user's
-// own long file name cut in the middle at the theme's width; and the bar holding the longest short name in all eight
-// looks, in English, French and Arabic.
+// picture and the model's short name, which readers hear in a sentence, as the cloud mark names its service whole; a
+// user's own long file name cut in the middle; the bar holding the longest names in all eight looks, in English, French
+// and Arabic; and one width for the take, so Stop and Cancel stay as the nothing-heard hint comes and goes.
 import QtQuick
 import QtTest
 import "../qml"
@@ -29,8 +29,10 @@ Item {
     readonly property string over: JSON.stringify({ x: 100, y: 600, w: 900, h: 300 })
     readonly property var texts: ({ en: En, fr: Fr, ar: Ar })
     readonly property var looks: ({ "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD })
-    // The views whose chip names the model on this PC with the table's longest short name.
-    readonly property var device: ["deviceListening", "deviceTranscribing"]
+    // The views whose chip names the model on this PC with the table's longest short name, and those naming a service,
+    // Custom's the longest in French.
+    readonly property var device: ["deviceListening", "deviceNothing", "deviceTranscribing"]
+    readonly property var cloud: ["cloudListening", "cloudNothing", "cloudCustom"]
 
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
@@ -97,47 +99,78 @@ Item {
         function test_a_long_own_file_name_is_cut_in_the_middle_data() {
             return langs_data();
         }
-        // Past the theme's width a user's own file name keeps its start and its end, while readers hear it whole.
+        // Past the theme's width, or sooner where the wave needs the room, a user's own file name keeps its start and its
+        // end, while readers hear it whole.
         function test_a_long_own_file_name_is_cut_in_the_middle(d) {
             const bar = make("deviceOwn", d.t);
             const mark = bar.view.mark;
             const label = chipName(bar);
             compare(label.elide, Text.ElideMiddle);
             verify(label.truncated, "cut");
-            fuzzyCompare(label.width, NL.lk.shape.voice.chip_name_px * bar.s, 0.5, "at the theme's width");
+            const status = label.parent.parent.parent;
+            fuzzyCompare(label.width, status.cutAt, 0.5, "where it is cut");
+            verify(status.cutAt <= NL.lk.shape.voice.chip_name_px * bar.s, "at the theme's width or sooner");
             compare(heard(bar, mark.said).length, 1, "readers hear it");
             verify(mark.said.indexOf(mark.name) >= 0, "its whole name in the sentence");
             bar.visible = false;
         }
 
-        function test_the_bar_holds_the_longest_short_name_in_every_look_data() {
+        // Each look's data row for each of `names` in English, French and Arabic.
+        function every_look(names) {
             const all = [];
             for (const [tag, f] of Object.entries(root.looks))
-                for (const name of root.device.concat(["deviceOwn", "cloudListening"]))
+                for (const name of names)
                     ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + name + " " + t, lk: f.lk, name, t }));
             return all;
         }
-        // Every part sits inside the bar, and the wave or the shimmer keeps its least room: the bar widens for it, never
-        // past its text width, while the cloud mark's bar keeps the width it had.
-        function test_the_bar_holds_the_longest_short_name_in_every_look(d) {
+        // The shown buttons on `bar`.
+        function buttons(bar) {
+            return Board.all(bar.contentItem, o => o.visible && o.Accessible.role === Accessible.Button);
+        }
+
+        function test_the_bar_holds_the_longest_names_in_every_look_data() {
+            return every_look(root.device.concat(["deviceOwn"], root.cloud));
+        }
+        // Every part sits inside the bar, and the wave or the shimmer keeps its least room: the narrow bar widens only for
+        // it, never past its text width, where a name is cut further.
+        function test_the_bar_holds_the_longest_names_in_every_look(d) {
             const bar = make(d.name, d.t, d.lk);
             const label = chipName(bar);
+            const v = d.lk.shape.voice;
+            const broad = Math.ceil(v.bar_px[1] * bar.s);
             if (d.name !== "deviceOwn")
-                verify(!label.truncated, "the name whole");
+                verify(!label.truncated || bar.width === broad, "cut only at the text's width, " + label.width + " px");
             const chip = label.parent.parent;
             const at = chip.mapToItem(bar.body, 0, 0);
             verify(at.x >= 0 && at.x + chip.width <= bar.body.width + 0.5, "the chip inside the bar");
-            const v = d.lk.shape.voice;
             const room = v.wave_room_px * bar.s;
             verify(bar.wave.width >= room - 0.5, "the middle keeps " + room + " px, has " + bar.wave.width);
-            verify(bar.width <= Math.ceil(v.bar_px[1] * bar.s), "never past the text's width");
-            if (d.name === "cloudListening")
-                compare(bar.width, Math.ceil(v.bar_px[0] * bar.s), "the cloud mark's bar as before");
-            const shown = Board.all(bar.contentItem, o => o.visible && o.Accessible.role === Accessible.Button);
-            for (const b of shown) {
+            verify(bar.width <= broad, "never past the text's width");
+            const narrow = Math.ceil(v.bar_px[0] * bar.s);
+            verify(bar.width === narrow || bar.wave.width <= room + 1, "widened only for the wave, to " + bar.width);
+            for (const b of buttons(bar)) {
                 const x = b.mapToItem(bar.body, 0, 0).x;
                 verify(x >= 0 && x + b.width <= bar.body.width + 0.5, b.Accessible.id + " inside the bar");
                 verify(x >= at.x + chip.width - 0.5 || x + b.width <= at.x + 0.5, b.Accessible.id + " clear of the chip");
+            }
+            bar.visible = false;
+        }
+
+        function test_stop_and_cancel_keep_their_place_as_the_hint_comes_and_goes_data() {
+            return every_look(["deviceListening", "cloudListening"]);
+        }
+        // One take holds one width, so the hub places the bar where it was and Stop and Cancel never move under the
+        // finger, whether the word or the nothing-heard hint shows.
+        function test_stop_and_cancel_keep_their_place_as_the_hint_comes_and_goes(d) {
+            const bar = make(d.name, d.t, d.lk);
+            const x = b => Math.round(b.mapToItem(bar.body, 0, 0).x * 100) / 100;
+            const spots = () => [bar.width].concat(buttons(bar).map(b => b.Accessible.id + " " + x(b)));
+            const held = spots();
+            for (const name of [d.name.replace("Listening", "Nothing"), d.name]) {
+                bar.voice.page = JSON.parse(JSON.stringify(Voice.views[d.t][name]));
+                waitForRendering(bar.contentItem);
+                compare(spots(), held, name + ": Stop and Cancel stay");
+                compare(bar.voice.asks[bar.voice.asks.length - 1].w, held[0], name + ": the hub places the same width");
             }
             bar.visible = false;
         }

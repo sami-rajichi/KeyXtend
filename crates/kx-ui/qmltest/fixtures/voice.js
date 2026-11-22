@@ -146,13 +146,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudCustom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "quiet": "لم يُسمع شيء بعد",
+        "said": "جارٍ الاستماع…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "عنوان مخصّص",
+        "said": "يُرسَل صوتك إلى العنوان الذي تكتبه عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -209,13 +262,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -252,6 +306,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
@@ -259,6 +314,7 @@ var views = {
         "word": "جارٍ الاستماع…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
@@ -319,13 +375,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -363,13 +420,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "لم يُسمع شيء بعد",
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "quiet": "لم يُسمع شيء بعد",
+        "said": "لم يُسمع شيء بعد",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -433,13 +543,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -476,6 +587,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "جارٍ الاستماع…، تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
@@ -483,13 +595,14 @@ var views = {
         "word": "جارٍ الاستماع…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "ElevenLabs",
         "said": "يُرسَل صوتك إلى ElevenLabs عند الإيقاف"
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -579,6 +692,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
@@ -586,13 +700,66 @@ var views = {
         "word": "جارٍ الاستماع…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "يكتب Whisper Large v3 ما تقوله"
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "deviceNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "لم يُسمع شيء بعد",
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "quiet": "لم يُسمع شيء بعد",
+        "said": "لم يُسمع شيء بعد",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "mark": {
+        "cut": true,
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "يكتب Whisper Large v3 ما تقوله"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -629,6 +796,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
@@ -636,13 +804,14 @@ var views = {
         "word": "جارٍ الاستماع…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
         "said": "يكتب whisper-large-v3-turbo-german-and-french-finetune-q5_k_m ما تقوله"
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -676,13 +845,14 @@ var views = {
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "يكتب Whisper Large v3 ما تقوله"
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -808,6 +978,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
@@ -944,6 +1115,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "quiet": "لم يُسمع شيء بعد",
         "said": "لم يُسمع شيء بعد",
         "state": "listening",
         "warn": null,
@@ -1349,13 +1521,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudCustom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "quiet": "Nothing heard yet",
+        "said": "Listening…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "Custom address",
+        "said": "Your voice goes to the address you type at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1412,13 +1637,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1455,6 +1681,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Listening…",
         "state": "listening",
         "warn": null,
@@ -1462,6 +1689,7 @@ var views = {
         "word": "Listening…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
@@ -1522,13 +1750,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1566,13 +1795,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "Nothing heard yet",
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "quiet": "Nothing heard yet",
+        "said": "Nothing heard yet",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1636,13 +1918,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1679,6 +1962,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Listening…, Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
@@ -1686,13 +1970,14 @@ var views = {
         "word": "Listening…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "ElevenLabs",
         "said": "Your voice goes to ElevenLabs at Stop"
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1782,6 +2067,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Listening…",
         "state": "listening",
         "warn": null,
@@ -1789,13 +2075,66 @@ var views = {
         "word": "Listening…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "Whisper Large v3 writes what you say"
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "deviceNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "Nothing heard yet",
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "quiet": "Nothing heard yet",
+        "said": "Nothing heard yet",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "mark": {
+        "cut": true,
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 writes what you say"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1832,6 +2171,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Listening…",
         "state": "listening",
         "warn": null,
@@ -1839,13 +2179,14 @@ var views = {
         "word": "Listening…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
         "said": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m writes what you say"
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1879,13 +2220,14 @@ var views = {
         "word": "Transcribing…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "Whisper Large v3 writes what you say"
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2011,6 +2353,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Listening…",
         "state": "listening",
         "warn": null,
@@ -2147,6 +2490,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "quiet": "Nothing heard yet",
         "said": "Nothing heard yet",
         "state": "listening",
         "warn": null,
@@ -2552,13 +2896,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudCustom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "quiet": "Rien entendu pour l’instant",
+        "said": "Écoute…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "Adresse personnalisée",
+        "said": "Votre voix partira vers l’adresse que vous saisissez à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2615,13 +3012,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2658,6 +3056,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Écoute…",
         "state": "listening",
         "warn": null,
@@ -2665,6 +3064,7 @@ var views = {
         "word": "Écoute…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
@@ -2725,13 +3125,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2769,13 +3170,66 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "Rien entendu pour l’instant",
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "quiet": "Rien entendu pour l’instant",
+        "said": "Rien entendu pour l’instant",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "mark": {
+        "cut": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Votre voix partira vers Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2839,13 +3293,14 @@ var views = {
         "state": "note"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2882,6 +3337,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Écoute…, Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
@@ -2889,13 +3345,14 @@ var views = {
         "word": "Écoute…"
       },
       "mark": {
+        "cut": false,
         "kind": "cloud",
         "name": "ElevenLabs",
         "said": "Votre voix partira vers ElevenLabs à l’arrêt"
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2985,6 +3442,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Écoute…",
         "state": "listening",
         "warn": null,
@@ -2992,13 +3450,66 @@ var views = {
         "word": "Écoute…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "Whisper Large v3 transcrit ce que vous dites"
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "deviceNothing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": "Rien entendu pour l’instant",
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "quiet": "Rien entendu pour l’instant",
+        "said": "Rien entendu pour l’instant",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "mark": {
+        "cut": true,
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 transcrit ce que vous dites"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -3035,6 +3546,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Écoute…",
         "state": "listening",
         "warn": null,
@@ -3042,13 +3554,14 @@ var views = {
         "word": "Écoute…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
         "said": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m transcrit ce que vous dites"
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -3082,13 +3595,14 @@ var views = {
         "word": "Transcription…"
       },
       "mark": {
+        "cut": true,
         "kind": "device",
         "name": "Whisper Large v3",
         "said": "Whisper Large v3 transcrit ce que vous dites"
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -3214,6 +3728,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Écoute…",
         "state": "listening",
         "warn": null,
@@ -3350,6 +3865,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "quiet": "Rien entendu pour l’instant",
         "said": "Rien entendu pour l’instant",
         "state": "listening",
         "warn": null,

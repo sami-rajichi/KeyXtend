@@ -76,7 +76,7 @@ Item {
             compare(name[0].font.pixelSize, Math.round(N.lk.shape.chip.font_px[ar ? 1 : 0]), "at its size, in whole pixels");
             const icon = Board.all(bar.contentItem, o => o.visible && o.icon === N.lk.icons.voice.cloud && o.tint !== undefined);
             compare(icon.length, 1, "the cloud mark");
-            const local = make("listening", d.t);
+            const local = make("deviceListening", d.t);
             compare(heard(local, mark.said).length, 0, "a local dictation shows no cloud mark");
             bar.visible = local.visible = false;
         }

@@ -61,6 +61,7 @@ enum Bar {
     Listening {
         lang: Lang,
         word: String,
+        quiet: String,
         elapsed_ms: u32,
         wave_ms: u16,
         hint: Option<String>,
@@ -139,10 +140,11 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
 }
 
 /// The Listening state, with the hint while it hears nothing yet and the service's card warning on its first dictation;
-/// readers hear the hint or the word, then the warning.
+/// readers hear the hint or the word, then the warning. `quiet` is the hint's text even while unshown, so the bar holds
+/// one width for the take.
 fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
-    let word = t.text(VOICE_LISTENING);
-    let hint = l.nothing.then(|| t.text(VOICE_NOTHING));
+    let (word, quiet) = (t.text(VOICE_LISTENING), t.text(VOICE_NOTHING));
+    let hint = l.nothing.then(|| quiet.clone());
     let warn = l.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w).text);
     let first = hint.clone().unwrap_or_else(|| word.clone());
     let said = match &warn {
@@ -152,6 +154,7 @@ fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
     Bar::Listening {
         lang: Lang::of(t, &l.lang),
         word,
+        quiet,
         elapsed_ms: l.elapsed_ms,
         wave_ms: l.wave_ms,
         hint,

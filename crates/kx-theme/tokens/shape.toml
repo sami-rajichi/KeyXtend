@@ -389,8 +389,8 @@ fact_px = 200.0
 # and the least a cut name keeps, about 15 characters at the chip's size, before its service's mark is cut too.
 pick_across = 2
 pick_name_px = 96.0
-# The bar's chip naming a cloud service or the model on this PC (owner, 2026-11-22): the widest its name shows, about
-# 20 characters, which holds each table model's short name; a longer own file name is cut in the middle. The least
-# room the wave or the shimmer keeps beside it, about seven bars; past it the bar widens, at most to its text width.
+# The bar's chip naming a cloud service or the model on this PC (owner, 2026-11-22): the widest a model's name shows,
+# about 20 characters, holding each table model's short name. The wave's or shimmer's least room, about seven bars:
+# the bar widens for it up to its text width, then the chip's name is cut in the middle.
 chip_name_px = 128.0
 wave_room_px = 48.0

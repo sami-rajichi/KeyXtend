@@ -45,6 +45,11 @@ fn listening_shows_the_language_and_the_timer_between_cancel_and_stop() {
     assert_eq!(bar["elapsedMs"], 1200);
     assert_eq!(bar["waveMs"], 300);
     assert_eq!(bar["hint"], Value::Null);
+    let quiet = "Nothing heard yet";
+    assert_eq!(
+        bar["quiet"], quiet,
+        "the hint's words, so the bar holds one width"
+    );
     assert_eq!(bar["said"], "Listening…", "what readers hear");
     assert_eq!(ids(&bar), want(&[("cancel", true), ("stop", true)]));
     let [cancel, stop] = [0, 1].map(|i| buttons(&bar["buttons"])[i].clone());

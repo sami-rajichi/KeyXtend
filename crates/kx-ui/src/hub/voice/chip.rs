@@ -14,20 +14,23 @@ const CLOUD: &str = "cloud";
 /// The kind of a model on this PC, also its icon's name under the bar's icons.
 const DEVICE: &str = "device";
 
-/// The bar's chip: its kind, its name, and the line readers hear.
+/// The bar's chip: its kind, its name, whether it is cut past the theme's width, and the line readers hear.
 #[derive(Serialize)]
 pub(super) struct Chip {
     kind: &'static str,
     name: String,
+    cut: bool,
     said: String,
 }
 
-/// The chip for `mark`; a sentence names a service as a sentence does, and a model by its own name.
+/// The chip for `mark`; a sentence names a service as a sentence does, and a model by its own name. Only a model's
+/// name is cut past the theme's width, as a user's own file name can be any length; a service's shows whole.
 pub(super) fn of(t: &I18n, mark: &BarMark) -> Chip {
     match mark {
         BarMark::Cloud(name) => Chip {
             kind: CLOUD,
             name: service(t, name),
+            cut: false,
             said: t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, in_sentence(t, name))]),
         },
         BarMark::Device(name) => {
@@ -35,6 +38,7 @@ pub(super) fn of(t: &I18n, mark: &BarMark) -> Chip {
             Chip {
                 kind: DEVICE,
                 said: t.voice_with(VOICE_ON_DEVICE, &[(NAME, name.clone())]),
+                cut: true,
                 name,
             }
         }

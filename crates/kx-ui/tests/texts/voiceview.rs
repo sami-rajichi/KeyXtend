@@ -31,6 +31,8 @@ const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
 /// The view of a first dictation to a service whose card warns.
 const WARNED: &str = "cloudWarned";
+/// The view whose cloud mark names Custom, the longest service name in French.
+const CUSTOM: &str = "cloudCustom";
 /// The start of a view's name whose chip names the model on this PC: the table's longest short name.
 const DEVICE: &str = "device";
 /// The view whose chip names a user's own file, too long to show whole.
@@ -141,12 +143,13 @@ fn longest() -> String {
     most.expect("a model").short.clone()
 }
 
-/// The chip view `name` shows: the warning service's on `WARNED`, Groq's on another cloud view, the user's own file on
-/// `OWN`, the longest short name on another device view, none otherwise.
+/// The chip view `name` shows: the warning service's on `WARNED`, Custom on `CUSTOM`, Groq's on another cloud view, the
+/// user's own file on `OWN`, the longest short name on another device view, none otherwise.
 fn mark(name: &str) -> Option<BarMark> {
     let device = |n: String| Some(BarMark::Device(Redacted::new(n)));
     match name {
         WARNED => Some(BarMark::Cloud(warned().0)),
+        CUSTOM => Some(BarMark::Cloud(ServiceName::Custom)),
         OWN => device(OWN_FILE.to_owned()),
         _ if name.starts_with(DEVICE) => device(longest()),
         _ if name.starts_with(CLOUD) => Some(BarMark::Cloud(ServiceName::Named(SERVICE.into()))),
@@ -195,10 +198,12 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
     .collect()
 }
 
-/// The bars a dictation by a model on this PC draws in `lang`, each named with `DEVICE` first.
-fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 3] {
+/// The bars a dictation by a model on this PC draws in `lang`, each named with `DEVICE` first; nothing heard yet is the
+/// widest.
+fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
     [
         ("deviceListening", listening(lang, false, None)),
+        ("deviceNothing", listening(lang, true, None)),
         ("deviceTranscribing", VoiceBar::Transcribing),
         (OWN, listening(lang, false, None)),
     ]
@@ -206,10 +211,12 @@ fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 3] {
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
 /// most acts under its line, and the account note the longest line over its acts.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 7] {
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 9] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
+        ("cloudNothing", listening(lang, true, None)),
+        (CUSTOM, listening(lang, false, None)),
         (WARNED, listening(lang, false, Some(warned().1))),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
