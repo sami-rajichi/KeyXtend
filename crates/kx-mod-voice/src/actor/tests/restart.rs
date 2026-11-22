@@ -7,6 +7,7 @@ mod rest;
 
 use std::path::Path;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CloudButton, CloudSheet, LayoutChanged, LayoutId, ModelRow, ModelSide, ModelState, ModelsSheet,
     PanelButton, ServiceMark, ServiceName, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
@@ -198,6 +199,31 @@ fn cloud_off_keeps_each_cloud_pick_through_a_restart_and_cloud_on_brings_it_back
     assert!(!cloud(&fresh).on, "cloud stays off");
     fresh.act(VoiceClick::Cloud(true));
     assert_eq!(cloud_used(&mut fresh), in_use(picked), "ADR-0054");
+}
+
+#[test]
+fn a_typed_service_and_a_keep_switch_service_stay_on_with_their_lines_through_a_restart() {
+    let mut rig = Rig::new();
+    open(&mut rig, 0, VoiceTab::Cloud);
+    rig.act(VoiceClick::Cloud(true));
+    confirm(&mut rig, &ServiceName::Custom);
+    rig.act(VoiceClick::SetAddress(Redacted::new(ADDRESS.into())));
+    rig.act(VoiceClick::SetModel(Redacted::new(MODEL.into())));
+    confirm(&mut rig, &named("OpenRouter"));
+    rig.act(VoiceClick::KeepNothing(false));
+    let mut fresh = restart(&rig);
+    let page = |fresh: &mut Rig, name: &ServiceName| {
+        open(fresh, 0, VoiceTab::Cloud);
+        assert_ne!(tick(fresh, name), ServiceMark::Off, "{name:?} stays On");
+        fresh.act(VoiceClick::Service(CloudButton::Lines));
+        lines(fresh)
+    };
+    let custom = page(&mut fresh, &ServiceName::Custom);
+    let address = custom.address.map(|a| a.expose().clone());
+    assert_eq!(address.as_deref(), Some(ADDRESS));
+    assert_eq!(custom.model.expose(), MODEL);
+    let router = page(&mut fresh, &named("OpenRouter"));
+    assert_eq!(router.keep, Some(false), "its switch, with no Confirm");
 }
 
 /// Each of `names` as a language's model in use.
