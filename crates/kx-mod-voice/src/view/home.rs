@@ -8,14 +8,15 @@ use crate::cloud::Offered;
 use crate::flow::Supply;
 use crate::panel::{Panel, options};
 
-/// The home list's values for the language in front, with `tabs`, the pages its shown page lists; a cloud pick names
-/// its model, and the device stays the one picked.
+/// The home list's values for the language in front, with `tabs`, the pages its shown page lists; a cloud pick, in
+/// use or waiting for its service Off, names its model, and the device stays the one picked.
 pub(super) fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> VoiceHome {
-    let cloud = facts.cloud_choice();
+    let held = facts.cloud_choice().map(|c| Offered::from(&c));
+    let cloud = held.or_else(|| facts.waiting());
     let ready = (cloud.is_none())
         .then(|| panel.stock(facts).supply(facts.iso()).ok())
         .flatten();
-    let named = cloud.map(|c| Redacted::new(Offered::from(&c).name().to_owned()));
+    let named = cloud.map(|o| Redacted::new(o.name().to_owned()));
     let compared = facts.scores.get(facts.iso()).map(|b| b.day);
     VoiceHome {
         model: named.or_else(|| {

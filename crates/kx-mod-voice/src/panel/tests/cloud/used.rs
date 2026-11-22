@@ -1,6 +1,7 @@
 //! A language that dictates with a cloud pick (voice-b C1, edge 29): no local row is in use, so the default keeps Use,
 //! and the Home names the cloud model with the device picked, not the card the local model would take. A pick waiting
-//! for a service Off leaves no local row in use either, and the Cloud side lists it in the services' order.
+//! for a service Off leaves no local row in use either, the Home names it, and the Cloud side lists it in the services'
+//! order.
 
 use kx_module_api::ports::{
     DeviceLabel, DeviceName, ModelSide, PanelButton, ServiceMark, VoiceClick, VoiceHome,
@@ -96,7 +97,7 @@ fn a_waiting_pick_sits_on_the_cloud_side_in_the_services_order() {
 }
 
 #[test]
-fn the_home_names_the_cloud_model_and_the_device_picked_while_a_cloud_pick_holds() {
+fn the_home_names_the_cloud_model_and_the_device_picked_while_a_cloud_pick_holds_or_waits() {
     let mut rig = on_local();
     let local = home(&mut rig);
     assert_eq!(
@@ -108,6 +109,11 @@ fn the_home_names_the_cloud_model_and_the_device_picked_while_a_cloud_pick_holds
     let name = model(first(), 0).name.clone();
     assert_eq!(cloud.model.map(|m| m.expose().clone()), Some(name));
     assert_eq!(cloud.device, DeviceLabel::Auto(DeviceName::Cpu));
+    rig.settings.services.clear();
+    let waits = home(&mut rig);
+    let named = (waits.model.map(|m| m.expose().clone()), waits.device);
+    let cpu = DeviceLabel::Auto(DeviceName::Cpu);
+    assert_eq!(named, (Some(model(first(), 0).name.clone()), cpu), "Off");
     rig.settings.cloud = false;
     let back = home(&mut rig);
     let shown = |h: &VoiceHome| (h.model.clone(), h.device.clone());
