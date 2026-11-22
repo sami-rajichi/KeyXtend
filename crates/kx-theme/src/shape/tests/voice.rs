@@ -10,7 +10,7 @@ fn the_voice_bar_takes_the_mock_up_sizes() {
     assert_eq!(
         v.bar_px,
         [500.0, 650.0],
-        "--voice-bar-w, and 10 past --voice-bar-w-text for each service's whole name"
+        "--voice-bar-w, --voice-bar-w-text"
     );
     assert_eq!(
         v.wave_px,
