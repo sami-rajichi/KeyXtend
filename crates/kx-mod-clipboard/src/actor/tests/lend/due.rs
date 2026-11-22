@@ -1,6 +1,6 @@
 //! A take's copy whose note is due (lend review, known #2): it keeps nothing when the watch tells it within
-//! `take_wait_ms`, whatever notes come between and however many times it is told, and is kept again after; at most
-//! `queue_copies` takes wait.
+//! `take_wait_ms`, whatever notes come between, even told again after the note the take found kept, and is kept again
+//! after; at most `queue_copies` takes wait.
 
 use std::time::Duration;
 
