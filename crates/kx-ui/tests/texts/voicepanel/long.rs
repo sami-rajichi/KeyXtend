@@ -2,8 +2,6 @@
 //! rows, page by page, then with each row Off and the ticked one's Remove key, the Models page's Cloud side, each part
 //! of each table service's card with every line on, and Compare's cloud models, also its widest page of them.
 
-use std::cmp::Reverse;
-
 use super::cloud::{TRAINS, card, named};
 use super::{Shown, paged, shown};
 use kx_mod_voice::VoiceSettings;
@@ -160,18 +158,16 @@ fn pick(name: &str, service: ServiceName) -> CompareCloud {
     }
 }
 
-/// Compare's widest page of picks (T24 review 1): Groq's and `OpenRouter`'s longest model names, then an Other id
-/// typed to its most under `OpenRouter`, all ticked.
+/// Compare's widest page of picks (T24 review 1): the longest model name of Groq, `OpenRouter`, `ElevenLabs` and
+/// `AssemblyAI`, each with its service's mark, then an Other id typed to its most under `OpenRouter`, all ticked.
 fn compare_wide() -> VoiceSheet {
-    let rows = ["groq", "openrouter"].map(|id| services().get(id).expect("an offered row"));
-    let all = rows
-        .iter()
-        .flat_map(|r| r.models.iter().map(|m| (&m.name, r.shown())));
-    let mut names: Vec<(&String, ServiceName)> = all.collect();
-    names.sort_by_key(|(name, _)| Reverse(name.len()));
-    let mut cloud: Vec<CompareCloud> = (names.into_iter().take(per() - 1))
-        .map(|(name, service)| pick(name, service))
-        .collect();
+    let ids = ["groq", "openrouter", "elevenlabs", "assemblyai"];
+    let rows = ids.map(|id| services().get(id).expect("an offered row"));
+    let longest = |r: &&Service| {
+        let name = r.models.iter().map(|m| &m.name).max_by_key(|n| n.len());
+        name.map(|n| pick(n, r.shown()))
+    };
+    let mut cloud: Vec<CompareCloud> = rows.iter().filter_map(longest).take(per() - 1).collect();
     cloud.push(pick(&"m".repeat(*TAG_LEN.end()), rows[1].shown()));
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
@@ -250,6 +246,17 @@ fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
         shown.extend(c.rows.iter().map(|r| r.name.clone()));
     }
     assert_eq!(shown, all);
+}
+
+/// Compare's wide page is a full page with each named service's mark, so the fit test measures the widest case.
+#[test]
+fn the_wide_compare_page_is_full_with_each_services_mark() {
+    let VoiceSheet::Compare(CompareSheet::Ready { cloud, send, .. }) = compare_wide() else {
+        panic!("Compare, ready")
+    };
+    assert_eq!(cloud.len(), per(), "a full page");
+    let marked = |s: &ServiceName| cloud.iter().any(|c| &c.service == s);
+    assert!(send.iter().all(marked), "each service's mark: {send:?}");
 }
 
 /// A Custom row shows its own warning as the module does, and none without one, so the fit test measures it too.

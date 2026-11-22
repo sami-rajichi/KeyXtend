@@ -5351,27 +5351,27 @@ var views = {
           "line": "نموذجان جاهزان · تلقائي (المعالج)",
           "picks": [
             {
-              "name": "Voxtral Mini Transcribe 3",
-              "said": "Voxtral Mini Transcribe 3، OpenRouter",
-              "service": "OpenRouter",
-              "tick": true
-            },
-            {
               "name": "Whisper Large v3 Turbo",
               "said": "Whisper Large v3 Turbo، Groq",
               "service": "Groq",
               "tick": true
             },
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo، OpenRouter",
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3، OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Whisper Large v3",
-              "said": "Whisper Large v3، Groq",
-              "service": "Groq",
+              "name": "Scribe v2",
+              "said": "Scribe v2، ElevenLabs",
+              "service": "ElevenLabs",
+              "tick": true
+            },
+            {
+              "name": "Universal-3.6 Pro",
+              "said": "Universal-3.6 Pro، AssemblyAI",
+              "service": "AssemblyAI",
               "tick": true
             },
             {
@@ -5382,7 +5382,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "سترسل المقارنة صوتك إلى Groq وOpenRouter عند الإيقاف.",
+          "send": "سترسل المقارنة صوتك إلى Groq وOpenRouter وElevenLabs وAssemblyAI عند الإيقاف.",
           "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
         },
         "sub": "للغة العربية",
@@ -15657,27 +15657,27 @@ var views = {
           "line": "2 ready models · Automatic (processor)",
           "picks": [
             {
-              "name": "Voxtral Mini Transcribe 3",
-              "said": "Voxtral Mini Transcribe 3, OpenRouter",
-              "service": "OpenRouter",
-              "tick": true
-            },
-            {
               "name": "Whisper Large v3 Turbo",
               "said": "Whisper Large v3 Turbo, Groq",
               "service": "Groq",
               "tick": true
             },
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Whisper Large v3",
-              "said": "Whisper Large v3, Groq",
-              "service": "Groq",
+              "name": "Scribe v2",
+              "said": "Scribe v2, ElevenLabs",
+              "service": "ElevenLabs",
+              "tick": true
+            },
+            {
+              "name": "Universal-3.6 Pro",
+              "said": "Universal-3.6 Pro, AssemblyAI",
+              "service": "AssemblyAI",
               "tick": true
             },
             {
@@ -15688,7 +15688,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Compare sends your voice to Groq and OpenRouter at Stop.",
+          "send": "Compare sends your voice to Groq, OpenRouter, ElevenLabs and AssemblyAI at Stop.",
           "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
         },
         "sub": "For English",
@@ -25963,27 +25963,27 @@ var views = {
           "line": "2 modèles prêts · Automatique (processeur)",
           "picks": [
             {
-              "name": "Voxtral Mini Transcribe 3",
-              "said": "Voxtral Mini Transcribe 3, OpenRouter",
-              "service": "OpenRouter",
-              "tick": true
-            },
-            {
               "name": "Whisper Large v3 Turbo",
               "said": "Whisper Large v3 Turbo, Groq",
               "service": "Groq",
               "tick": true
             },
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Whisper Large v3",
-              "said": "Whisper Large v3, Groq",
-              "service": "Groq",
+              "name": "Scribe v2",
+              "said": "Scribe v2, ElevenLabs",
+              "service": "ElevenLabs",
+              "tick": true
+            },
+            {
+              "name": "Universal-3.6 Pro",
+              "said": "Universal-3.6 Pro, AssemblyAI",
+              "service": "AssemblyAI",
               "tick": true
             },
             {
@@ -25994,7 +25994,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Comparer enverra votre voix à Groq et OpenRouter à l’arrêt.",
+          "send": "Comparer enverra votre voix à Groq, OpenRouter, ElevenLabs et AssemblyAI à l’arrêt.",
           "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
         },
         "sub": "En français",
