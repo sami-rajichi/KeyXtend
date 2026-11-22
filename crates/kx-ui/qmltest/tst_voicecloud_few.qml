@@ -45,5 +45,20 @@ Item {
             empty.forEach(o => within(box, o.parent, "its empty line"));
             uncut(box);
         }
+
+        function test_a_pages_height_holds_while_it_hides_data() {
+            return test_each_paged_page_fits_at_the_fewest_rows_data();
+        }
+        // T24 wave 4 re-review, note 2: the pager's least height and the page's height read no shown flag, so neither
+        // changes while the page hides.
+        function test_a_pages_height_holds_while_it_hides(d) {
+            const box = make(d.name, d.t, null, Panel.fewest);
+            const p = page(box);
+            const pg = Kit.only(Board.all(p, o => o.least !== undefined && o.canBack !== undefined));
+            verify(pg, "one pager");
+            const shown = [pg.least, p.height];
+            p.visible = false;
+            compare([pg.least, p.height], shown, "the same while hidden");
+        }
     }
 }
