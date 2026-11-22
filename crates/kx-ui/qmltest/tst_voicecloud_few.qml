@@ -17,10 +17,10 @@ Item {
         name: "voicecloudfew"
         host: root
 
-        // A card and each table service's long card parts, the longest key pages, Compare's widest pick and two lists
-        // of more than one page.
+        // A card and each table service's long card parts, the longest key pages, Compare's widest pick, two lists
+        // of more than one page and the empty History.
         readonly property var paged: ["card"].concat(Kit.named("en", "cardLong"), ["serviceLong"],
-            Kit.named("en", "servicePasted-"), ["compareFew", "history", "cloudLong-1"])
+            Kit.named("en", "servicePasted-"), ["compareFew", "history", "cloudLong-1", "historyEmpty"])
 
         function test_each_paged_page_fits_at_the_fewest_rows_data() {
             const all = [];
@@ -39,8 +39,10 @@ Item {
             within(box, body, "its body");
             const pagers = Board.all(p, o => o.visible && o.canBack !== undefined);
             if (list)
-                compare(pagers.length, 1, "a list of more than one page shows its pager");
+                compare(pagers.length, box.view.pages.count > 1 ? 1 : 0, "a list of more than one page shows its pager");
             pagers.forEach(o => within(box, o, "its pager"));
+            const empty = Board.all(p, o => o.visible && !!p.sheet.empty && o.text === p.sheet.empty);
+            empty.forEach(o => within(box, o.parent, "its empty line"));
             uncut(box);
         }
     }
