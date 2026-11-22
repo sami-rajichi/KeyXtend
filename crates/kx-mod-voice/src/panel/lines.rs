@@ -4,7 +4,7 @@
 
 use kx_module_api::ports::{
     AddressFault, BarHint, ClipText, CloudButton, CloudFault, CloudLine, HttpsUrl, KeyCheck,
-    LINK_SCHEME, Renewal,
+    LINK_SCHEME, PasteFault, Renewal,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
@@ -91,29 +91,30 @@ impl Panel {
     }
 
     /// The clipboard's text a Paste of `round` took, while the page and round are still the same: set as the key, or
-    /// put on its address or model line to save; a busy clipboard or a text that cannot go shows why.
+    /// put on its address or model line to save. An empty or busy clipboard says so under that line, and a text too
+    /// long gets the line's own refusal.
     pub fn pasted(&mut self, round: u32, text: ClipText, facts: &Facts<'_>) -> Vec<Do> {
         let line = match self.cloud.take {
             Some((r, line)) if r == round && self.page == Some(Page::Lines) => line,
             _ => return Vec::new(),
         };
         self.cloud.take = None;
-        match (line, text) {
-            (_, ClipText::Busy) => self.cloud.unkept = Some(KeyCheck::Busy),
+        match (line, blank(text)) {
+            (_, ClipText::Empty) => self.cloud.pasted = Some((line, PasteFault::Empty)),
+            (_, ClipText::Busy) => self.cloud.pasted = Some((line, PasteFault::Busy)),
             (CloudLine::Key, ClipText::Text(key)) => return self.set_key(&key),
-            (CloudLine::Key, _) => self.cloud.unkept = Some(KeyCheck::Unfit),
+            (CloudLine::Key, ClipText::TooLong) => self.cloud.unkept = Some(KeyCheck::Unfit),
             (line, ClipText::Text(text)) => self.put_line(line, text.expose().trim(), facts),
-            (line, ClipText::Empty) => self.unfit(line, true, facts),
-            (line, ClipText::TooLong) => self.unfit(line, false, facts),
+            (line, ClipText::TooLong) => self.unfit(line, facts),
         }
         Vec::new()
     }
 
-    /// Puts a pasted `text` on the address or model `line`, to save, and aims the letters at it; an empty or too long
-    /// one shows why instead.
+    /// Puts a pasted `text` on the address or model `line`, to save, and aims the letters at it; one too long shows
+    /// why instead.
     fn put_line(&mut self, line: CloudLine, text: &str, facts: &Facts<'_>) {
-        if text.is_empty() || text.len() > line_max(line) {
-            return self.unfit(line, text.is_empty(), facts);
+        if text.len() > line_max(line) {
+            return self.unfit(line, facts);
         }
         self.cloud.typed.put(line, text);
         if line == CloudLine::Address {
@@ -123,20 +124,14 @@ impl Panel {
         }
     }
 
-    /// An address or model a Paste could not put on `line`, `empty` or too long: the line keeps its text and says why,
-    /// an empty clipboard on the address line by the HTTPS it needs.
-    fn unfit(&mut self, line: CloudLine, empty: bool, facts: &Facts<'_>) {
+    /// An address or model too long for `line`, which keeps its text and says why.
+    fn unfit(&mut self, line: CloudLine, facts: &Facts<'_>) {
         let shown = Redacted::new(self.line_text(line, facts));
         if line == CloudLine::Model {
             self.cloud.refused_model = Some(shown);
-            return;
-        }
-        let fault = if empty {
-            AddressFault::Https
         } else {
-            AddressFault::Long
-        };
-        self.cloud.refused = Some((shown, fault));
+            self.cloud.refused = Some((shown, AddressFault::Long));
+        }
     }
 
     /// The test of `ticket` answered, a refusal by its reason and a used allowance with `renews`; dropped once the user
@@ -258,6 +253,14 @@ fn fault(text: &str) -> AddressFault {
         AddressFault::Path
     } else {
         AddressFault::Domain
+    }
+}
+
+/// `text`, read as no text when it holds only spaces and line breaks.
+fn blank(text: ClipText) -> ClipText {
+    match text {
+        ClipText::Text(t) if t.expose().trim().is_empty() => ClipText::Empty,
+        text => text,
     }
 }
 

@@ -180,27 +180,8 @@ fn the_cloud_pages_main_words_read_as_written_in_each_language() {
     read_as_written(&table);
 }
 
-#[test]
-fn each_lines_save_reads_short_and_names_its_line_for_readers() {
-    read_as_written(&[
-        ("cloud.line-save", ["Save", "Enregistrer", "حفظ"]),
-        (
-            "cloud.line-save-key",
-            ["Save the key", "Enregistrer la clé", "حفظ المفتاح"],
-        ),
-        (
-            "cloud.line-save-address",
-            ["Save the address", "Enregistrer l’adresse", "حفظ العنوان"],
-        ),
-        (
-            "cloud.line-save-model",
-            ["Save the model", "Enregistrer le modèle", "حفظ النموذج"],
-        ),
-    ]);
-}
-
 /// Checks that each key in `table` reads as its English, French and Arabic words.
-fn read_as_written(table: &[(&str, [&str; 3])]) {
+pub(super) fn read_as_written(table: &[(&str, [&str; 3])]) {
     for (key, words) in table {
         for (tag, word) in ["en", "fr", "ar"].into_iter().zip(words) {
             let got = lang(tag).text(key);

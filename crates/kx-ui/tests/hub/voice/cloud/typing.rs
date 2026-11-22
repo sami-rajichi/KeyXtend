@@ -1,12 +1,15 @@
 //! Typing on the key page's lines through the hub (ADR-0049): the key line draws the typed key's dots and caret, never
-//! its text; only the line taking the letters has a caret; each line's Save dims while it is empty; and a click on a
-//! line or its Save sends that line; a press on a line picks it as a click does.
+//! its text; only the line taking the letters has a caret; each line's Save dims while it is empty; a click on a line
+//! or its Save sends that line; a press on a line picks it as a click does; each Paste and Save names its line, and an
+//! empty or busy Paste says so under its line.
 
 use super::super::{button, buttons, heard, listening_bar, page, panel, panel_json};
 use super::lines::groq_lines;
 use crate::Rig;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CloudLine, VoiceAct, VoiceClick, VoicePanel, VoiceSheet};
+use kx_module_api::ports::{
+    AddressFault, CloudLine, PasteFault, VoiceAct, VoiceClick, VoicePanel, VoiceSheet,
+};
 use kx_ui::voice_acts::{CARET, PASTE, PICK, SAVE, SERVICE};
 use serde_json::Value;
 
@@ -130,26 +133,51 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
 }
 
 #[test]
-fn each_lines_save_has_its_own_name_for_readers() {
+fn each_lines_paste_and_save_has_its_own_name_for_readers() {
     let p = typed(0, CloudLine::Key, 0, &[]);
     let sheet = &p["sheet"];
-    let save = |line: &str| {
+    let named = |line: &str, kind: &str| {
         let all = sheet[line]["buttons"]
             .as_array()
             .cloned()
             .unwrap_or_default();
-        let it = all.into_iter().find(|b| b["kind"] == SAVE).unwrap();
+        let it = all.into_iter().find(|b| b["kind"] == kind).unwrap();
         (
             it["label"].as_str().map(str::to_owned),
             it["name"].as_str().map(str::to_owned),
         )
     };
-    let named = |name: &str| (Some("Save".to_owned()), Some(name.to_owned()));
-    assert_eq!(
-        save("key"),
-        named("Save the key"),
-        "a short label, a full name"
-    );
-    assert_eq!(save("address"), named("Save the address"));
-    assert_eq!(save("model"), named("Save the model"));
+    for (kind, label) in [(SAVE, "Save"), (PASTE, "Paste")] {
+        for line in ["key", "address", "model"] {
+            let want = (Some(label.to_owned()), Some(format!("{label} the {line}")));
+            assert_eq!(named(line, kind), want, "a short label, a full name");
+        }
+    }
+}
+
+/// That key page with its address refused and line `line`'s Paste refused by `fault`.
+fn pasted(line: CloudLine, fault: PasteFault) -> Value {
+    let mut panel = typed_panel(0, CloudLine::Key, 0, &[]);
+    if let VoiceSheet::Service(s) = &mut panel.sheet {
+        (s.pasted, s.address_fault) = (Some((line, fault)), Some(AddressFault::Https));
+    }
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    panel_json(&rig, &heard, panel)
+}
+
+#[test]
+fn an_empty_or_busy_paste_says_so_under_the_line_pasted_in_place_of_its_refusal() {
+    let empty = "The clipboard holds no text.";
+    let busy = "The clipboard did not answer. Try Paste again.";
+    let https = "The address must use HTTPS, such as https://example.com";
+    for (at, line) in CloudLine::ALL.into_iter().enumerate() {
+        for (fault, said) in [(PasteFault::Empty, empty), (PasteFault::Busy, busy)] {
+            let p = pasted(line, fault);
+            let got = ["key", "address", "model"].map(|id| p["sheet"][id]["fault"].clone());
+            let mut want = [Value::Null, Value::from(https), Value::Null];
+            want[at] = Value::from(said);
+            assert_eq!(got, want, "{line:?} {fault:?}");
+        }
+    }
 }

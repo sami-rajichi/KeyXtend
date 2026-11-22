@@ -11,7 +11,7 @@ mod options;
 
 pub use cloud::{
     AddressFault, CardPart, CloudCard, CloudLine, CloudSheet, Fact, FactArg, FactValue, KeyCheck,
-    ServiceMark, ServiceName, ServiceRow, ServiceSheet, UsePrice,
+    PasteFault, ServiceMark, ServiceName, ServiceRow, ServiceSheet, UsePrice,
 };
 pub use compare::{CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};

@@ -1,6 +1,6 @@
 //! A service's key page as QML reads it (ADR-0047): the key line as dots with Test and the test's answer, the address
-//! and Other model lines with why one was refused, each line's Paste and Save, the keep-nothing switch, and where keys
-//! are made.
+//! and Other model lines with why one was refused, each line's Paste and Save with why a Paste put nothing, the
+//! keep-nothing switch, and where keys are made.
 //! A typed line shows its text only on the panel's own line (ADR-0040); the key never leaves as text.
 
 use super::acts::{KEEP, PASTE, SAVE};
@@ -14,9 +14,9 @@ use crate::i18n::keys::vars::SITE;
 use crate::i18n::keys::{
     VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN, VOICE_ADDRESS_LINE,
     VOICE_KEEP_NOTHING, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK, VOICE_KEY_SEALED,
-    VOICE_LINE_PASTE, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT,
-    VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id,
-    panel_button_id, service_mark,
+    VOICE_LINE_PASTE, VOICE_LINE_PASTE_NAME, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK,
+    VOICE_MODEL_HINT, VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id,
+    key_check_id, panel_button_id, paste_fault_key, service_mark,
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -27,8 +27,8 @@ use serde::Serialize;
 /// The key page's id.
 pub(super) const SERVICE_PAGE: &str = "service";
 /// A typed line: its caption, its hint while empty, its text, or for the key its sealed and typed lengths and the mask
-/// `PanelLine` draws their dots from, whether it takes the letters and its caret there (ADR-0049), why it was refused,
-/// and its buttons, Paste and Save among them.
+/// `PanelLine` draws their dots from, whether it takes the letters and its caret there (ADR-0049), why it was refused
+/// or its Paste put nothing, and its buttons, Paste and Save among them.
 #[derive(Serialize)]
 pub(super) struct LineView {
     id: &'static str,
@@ -46,7 +46,8 @@ pub(super) struct LineView {
 
 impl LineView {
     /// Line `line` of `s` with `words`, its caption's key and its hint, and `text`; its caret while it takes the letters,
-    /// its Paste, and its Save, which dims while it has nothing to save and names its line for readers.
+    /// why its Paste put nothing, that Paste, and its Save, which dims while it has nothing to save. Both name their line
+    /// for readers.
     fn new(
         t: &I18n,
         s: &ServiceSheet,
@@ -56,9 +57,10 @@ impl LineView {
     ) -> Self {
         let typing = s.typing == line;
         let id = cloud_line_id(line);
+        let named = |name: &str| t.text(&format!("{name}{id}"));
         let paste = Button::new(PASTE, id, 0, t.text(VOICE_LINE_PASTE));
-        let save = Button::new(SAVE, id, 0, t.text(VOICE_LINE_SAVE))
-            .named(t.text(&format!("{VOICE_LINE_SAVE_NAME}{id}")));
+        let save = Button::new(SAVE, id, 0, t.text(VOICE_LINE_SAVE));
+        let pasted = s.pasted.filter(|&(at, _)| at == line);
         Self {
             id,
             caption: t.text(words.0),
@@ -69,8 +71,12 @@ impl LineView {
             mask: None,
             typing,
             at: if typing { *s.caret.expose() } else { 0 },
-            fault: None,
-            buttons: vec![paste, save.on(s.saves.contains(&line))],
+            fault: pasted.map(|(_, fault)| t.text(paste_fault_key(fault))),
+            buttons: vec![
+                paste.named(named(VOICE_LINE_PASTE_NAME)),
+                save.named(named(VOICE_LINE_SAVE_NAME))
+                    .on(s.saves.contains(&line)),
+            ],
         }
     }
 }
@@ -99,8 +105,7 @@ impl Check {
             | K::Allowance
             | K::Rate
             | K::Strange
-            | K::Unfit
-            | K::Busy => (false, true),
+            | K::Unfit => (false, true),
         };
         Self { hint, works, warns }
     }
@@ -167,7 +172,8 @@ fn key(t: &I18n, s: &ServiceSheet) -> LineView {
     line
 }
 
-/// The address line with `a`: the Custom row's hint names an HTTPS host, a service's own its resource.
+/// The address line with `a`: the Custom row's hint names an HTTPS host, a service's own its resource; a Paste's note
+/// shows in place of its refusal.
 fn address(t: &I18n, s: &ServiceSheet, a: &Redacted<String>) -> LineView {
     let hint = if s.service == ServiceName::Custom {
         VOICE_ADDRESS_HINT
@@ -179,11 +185,12 @@ fn address(t: &I18n, s: &ServiceSheet, a: &Redacted<String>) -> LineView {
         .map(|f| t.voice_https(&format!("{VOICE_ADDRESS}{}", address_fault_id(f))));
     let words = (VOICE_ADDRESS_LINE, t.voice_https(hint));
     let mut line = LineView::new(t, s, CloudLine::Address, words, clean(a.expose()));
-    line.fault = fault;
+    line.fault = line.fault.or(fault);
     line
 }
 
-/// The Other model line: why its id was refused, or why no host of it keeps nothing (edge 17).
+/// The Other model line: why its Paste put nothing, why its id was refused, or why no host of it keeps nothing (edge
+/// 17).
 fn model(t: &I18n, s: &ServiceSheet) -> LineView {
     let fault = if s.model_refused {
         Some(t.text(VOICE_MODEL_REFUSED))
@@ -193,6 +200,6 @@ fn model(t: &I18n, s: &ServiceSheet) -> LineView {
     };
     let words = (VOICE_MODEL_LINE, t.text(VOICE_MODEL_HINT));
     let mut line = LineView::new(t, s, CloudLine::Model, words, clean(s.model.expose()));
-    line.fault = fault;
+    line.fault = line.fault.or(fault);
     line
 }

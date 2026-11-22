@@ -25,10 +25,11 @@ Item {
         host: root
 
         // The cloud pages: the Cloud page, also with an Off row ticked, and each page of the table's rows, also with
-        // each row Off, the cards with each table service's long one, the key pages, Models with its Local | Cloud
-        // chips, and Compare's set text and run with cloud models and the warning.
+        // each row Off, the cards with each table service's long one, the key pages, also with each line's empty
+        // Paste, Models with its Local | Cloud chips, and Compare's set text and run with cloud models and the warning.
+        readonly property var pasted: Kit.named("en", "servicePasted-")
         readonly property var cloudPages: ["cloud", "cloudSealed", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cloudLongOff-"),
-            Kit.named("en", "cardLong"), [
+            Kit.named("en", "cardLong"), pasted, [
             "service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped", "serviceLong", "models", "modelsSlow",
             "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"])
 
@@ -112,12 +113,14 @@ Item {
             const looks = { "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD };
             const all = [];
             for (const [tag, f] of Object.entries(looks))
-                ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + t, lk: f.lk, t: t }));
+                for (const name of ["serviceLong"].concat(pasted))
+                    ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + name + " " + t, name: name, lk: f.lk, t: t }));
             return all;
         }
-        // The owner's rule (2026-11-21): its address, model and key lines, with their longest answers, read together.
+        // The owner's rule (2026-11-21): its address, model and key lines, with their longest answers or a line's empty
+        // Paste, read together.
         function test_a_typed_addresss_key_page_fits_in_every_theme(d) {
-            const box = make("serviceLong", d.t, d.lk);
+            const box = make(d.name, d.t, d.lk);
             keeps(box);
             uncut(box);
             compare(["address", "model", "key"].map(id => one(box, "voice.line-" + id).visible), [true, true, true]);

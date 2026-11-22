@@ -4,8 +4,8 @@
 
 use super::VoiceMark;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, Renewal,
-    ServiceMark, Unavailable,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, PasteFault,
+    Renewal, ServiceMark, Unavailable,
 };
 
 /// The start of every cloud key.
@@ -110,6 +110,8 @@ pub const VOICE_LINE_SAVE: &str = "cloud.line-save";
 pub const VOICE_LINE_PASTE: &str = "cloud.key-paste";
 /// A line's Save as readers hear it: this, then its `cloud_line_id`.
 pub const VOICE_LINE_SAVE_NAME: &str = "cloud.line-save-";
+/// A line's Paste as readers hear it: this, then its `cloud_line_id`.
+pub const VOICE_LINE_PASTE_NAME: &str = "cloud.line-paste-";
 /// The keep-nothing switch's label.
 pub const VOICE_KEEP_NOTHING: &str = "cloud.keep-nothing";
 /// The bar's cloud mark for readers: `$name`.
@@ -180,6 +182,15 @@ pub const fn cloud_line_id(line: CloudLine) -> &'static str {
     }
 }
 
+/// The note under a line whose Paste put nothing; the busy clipboard's is the one the key line had.
+#[must_use]
+pub const fn paste_fault_key(fault: PasteFault) -> &'static str {
+    match fault {
+        PasteFault::Empty => "cloud.paste-empty",
+        PasteFault::Busy => "cloud.key-busy",
+    }
+}
+
 /// A cloud button's word; Link's is the card's, as the key page words its own with `VOICE_KEY_LINK`.
 #[must_use]
 pub const fn cloud_button_key(button: CloudButton) -> &'static str {
@@ -212,7 +223,6 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
         KeyCheck::Strange => "strange",
         KeyCheck::Unfit => "unfit",
         KeyCheck::NoTest => "no-test",
-        KeyCheck::Busy => "busy",
     })
 }
 

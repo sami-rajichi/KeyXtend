@@ -1,8 +1,9 @@
 // The key page's lines over the hub's views (ADR-0049): a typed key draws only its dots and its caret, the sealed key
 // keeps its dots with the caret after them once the keys aim at it, an address reads left to right in Arabic too, a click
 // places the caret, a reader's press picks its line, an empty line's hint starts at its caret, each Save dims while its
-// line is empty, has a name of its own and sends its line, each Paste sends its line, and a typed address's page shows
-// its address, model and key in that order, in English, French and Arabic.
+// line is empty and sends its line, each Save and Paste has a name of its own, each Paste sends its line and an empty
+// one says so under it, and a typed address's page shows its address, model and key in that order, in English, French
+// and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -197,18 +198,45 @@ Item {
             box.visible = false;
         }
 
-        function test_each_save_has_its_own_name_data() {
+        function test_each_save_and_paste_has_its_own_name_data() {
             return langs_data();
         }
-        function test_each_save_has_its_own_name(d) {
+        // Readers hear each line's own Save and Paste, as the hub names them, under one short label.
+        function test_each_save_and_paste_has_its_own_name(d) {
             for (const [page, ids] of [["service", ["key", "model"]], ["serviceCustom", ["key", "address", "model"]]]) {
                 const box = make(page, d.t);
-                const saves = ids.map(id => one(box, "voice.save-" + id));
-                const names = saves.map(b => b.Accessible.name);
-                compare(new Set(names).size, names.length, page + ": " + names);
-                verify(saves.every(b => b.label === saves[0].label && b.Accessible.name !== b.label), "a short label, a full name");
+                for (const kind of ["save", "paste"]) {
+                    const presses = ids.map(id => one(box, "voice." + kind + "-" + id));
+                    const names = presses.map(b => b.Accessible.name);
+                    const hub = ids.map(id => box.view.sheet[id].buttons.find(b => b.kind === kind).name);
+                    compare(names, hub, page + " " + kind);
+                    compare(new Set(names).size, names.length, page + ": " + names);
+                    verify(presses.every(b => b.label === presses[0].label && b.Accessible.name !== b.label), "a short label, a full name");
+                }
                 box.visible = false;
             }
+        }
+
+        function test_an_empty_paste_says_so_under_its_line_data() {
+            return langs_data();
+        }
+        // The owner's ruling (2026-11-22): one line under the line pasted, the same words on each line.
+        function test_an_empty_paste_says_so_under_its_line(d) {
+            const ids = ["address", "model", "key"];
+            const said = [];
+            for (const id of ids) {
+                const box = make("servicePasted-" + id, d.t);
+                const y = o => o.mapToItem(null, 0, 0).y;
+                const text = box.view.sheet[id].fault;
+                const lines = ids.map(l => y(one(box, "voice.line-" + l)));
+                const at = ids.indexOf(id);
+                const shown = heard(box.contentItem, text);
+                verify(shown.length === 1 && y(shown[0]) > lines[at], id + ": under its line");
+                verify(at === ids.length - 1 || y(shown[0]) < lines[at + 1], id + ": above the next");
+                said.push(text);
+                box.visible = false;
+            }
+            compare(new Set(said).size, 1, "one text: " + said);
         }
 
         // A left-to-right line's hint starts at its start, where the caret waits, as a text box shows its placeholder.

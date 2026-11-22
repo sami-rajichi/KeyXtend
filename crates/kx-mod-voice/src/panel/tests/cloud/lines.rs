@@ -5,7 +5,7 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, ClipText, CloudButton, CloudFault, CloudLine, HttpsUrl, KeyCheck, MAX_KEY_BYTES,
-    PanelButton, PanelKey, ServiceName, TAG_LEN, VoiceClick,
+    PanelButton, PanelKey, PasteFault, ServiceName, TAG_LEN, VoiceClick,
 };
 
 use super::super::super::rig::Rig;
@@ -93,7 +93,10 @@ fn paste_sets_the_clipboards_text_as_the_key_which_shows_only_as_dots() {
     );
     let out = rig.with(|p, f| p.pasted(again, ClipText::Empty, f));
     assert!(out.is_empty());
-    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Unfit);
+    let sheet = lines_sheet(&mut rig);
+    let empty = Some((CloudLine::Key, PasteFault::Empty));
+    assert_eq!(sheet.pasted, empty, "its note");
+    assert_eq!(sheet.check, KeyCheck::Untested, "in the answer's place");
 }
 
 #[test]
@@ -120,21 +123,32 @@ fn paste_on_the_address_line_puts_the_clipboards_text_there_ready_for_save() {
 }
 
 #[test]
-fn a_busy_empty_or_too_long_paste_on_a_line_shows_that_lines_refusal() {
+fn an_empty_or_busy_paste_says_so_under_its_line_and_a_too_long_one_keeps_its_refusal() {
     let mut rig = on_custom_lines(&format!(r#", address = "{ADDRESS}""#));
-    paste(&mut rig, CloudLine::Address, ClipText::Empty);
-    let sheet = lines_sheet(&mut rig);
-    assert_eq!(sheet.address_fault, Some(AddressFault::Https));
-    let address = sheet.address.as_ref().map(|a| a.expose().as_str());
-    assert_eq!(address, Some(ADDRESS), "the line keeps its text");
+    for line in [CloudLine::Address, CloudLine::Model, CloudLine::Key] {
+        paste(&mut rig, line, ClipText::Empty);
+        let sheet = lines_sheet(&mut rig);
+        assert_eq!(sheet.pasted, Some((line, PasteFault::Empty)), "{line:?}");
+        assert_eq!(sheet.address_fault, None, "{line:?}: no address refusal");
+        let address = sheet.address.as_ref().map(|a| a.expose().as_str());
+        assert_eq!(address, Some(ADDRESS), "the line keeps its text");
+    }
+    let blank = paste(&mut rig, CloudLine::Key, ClipText::Text(secret(" \n")));
+    assert!(blank.is_empty(), "spaces set no key");
+    let empty = Some((CloudLine::Key, PasteFault::Empty));
+    assert_eq!(lines_sheet(&mut rig).pasted, empty, "spaces are no text");
+    paste(&mut rig, CloudLine::Model, ClipText::Busy);
+    let busy = Some((CloudLine::Model, PasteFault::Busy));
+    assert_eq!(lines_sheet(&mut rig).pasted, busy, "busy on the model line");
     paste(&mut rig, CloudLine::Address, ClipText::TooLong);
-    let fault = lines_sheet(&mut rig).address_fault;
-    assert_eq!(fault, Some(AddressFault::Long));
+    let sheet = lines_sheet(&mut rig);
+    let long = (sheet.address_fault, sheet.pasted);
+    assert_eq!(long, (Some(AddressFault::Long), None));
     let long = "m".repeat(*TAG_LEN.end() + 1);
     paste(&mut rig, CloudLine::Model, ClipText::Text(secret(&long)));
     assert!(lines_sheet(&mut rig).model_refused, "past the line's most");
-    paste(&mut rig, CloudLine::Model, ClipText::Busy);
-    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Busy);
+    paste(&mut rig, CloudLine::Key, ClipText::TooLong);
+    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Unfit);
 }
 
 #[test]

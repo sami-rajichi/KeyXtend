@@ -4,8 +4,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, ServiceSheet, VoiceClick,
-    VoiceTab,
+    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, PasteFault, ServiceSheet,
+    VoiceClick, VoiceTab,
 };
 use std::time::Duration;
 
@@ -25,7 +25,8 @@ fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
     };
     let out = rig.with(|p, f| p.pasted(round, ClipText::Busy, f));
     assert!(out.is_empty());
-    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Busy);
+    let busy = Some((CloudLine::Key, PasteFault::Busy));
+    assert_eq!(lines_sheet(&mut rig).pasted, busy);
     assert_eq!(rig.view().unwrap().note, None, "no general fault band");
 }
 
@@ -126,8 +127,8 @@ fn test(rig: &mut Rig) -> u32 {
 #[test]
 fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing() {
     for (clip, said) in [
-        (ClipText::Busy, KeyCheck::Busy),
-        (ClipText::Empty, KeyCheck::Unfit),
+        (ClipText::Busy, PasteFault::Busy),
+        (ClipText::Empty, PasteFault::Empty),
     ] {
         let mut rig = on_groq_lines();
         let out = rig.click(&VoiceClick::Service(CloudButton::Test));
@@ -140,9 +141,13 @@ fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing()
             panic!("no take: {out:?}");
         };
         rig.with(|p, f| p.pasted(round, clip, f));
-        assert_eq!(lines_sheet(&mut rig).check, said);
+        let sheet = lines_sheet(&mut rig);
+        let note = (Some((CloudLine::Key, said)), KeyCheck::Untested);
+        assert_eq!((sheet.pasted, sheet.check), note, "in the answer's place");
         reopen(&mut rig);
-        assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Works, "{said:?}");
+        let sheet = lines_sheet(&mut rig);
+        let back = (sheet.pasted, sheet.check);
+        assert_eq!(back, (None, KeyCheck::Works), "{said:?}");
     }
 }
 

@@ -1,6 +1,6 @@
 //! The Qt Quick tests' key pages: Groq's with its key tested, `OpenRouter`'s, the Custom row's, a typed key,
 //! `AssemblyAI`'s, the answers that draw a warning band, and the Custom row's with its three lines and the longest
-//! answer in each language.
+//! answer in each language, also with each line's empty Paste.
 
 use super::cloud::named;
 use super::{Shown, shown};
@@ -8,9 +8,10 @@ use crate::lang;
 use crate::qml::LANGS;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, Renewal, ServiceMark, ServiceName,
-    ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, PasteFault, Renewal, ServiceMark,
+    ServiceName, ServiceSheet, VoiceSheet,
 };
+use kx_ui::i18n::keys::cloud_line_id;
 
 /// A renewal at 23:59 UTC, as a used allowance's answer shows it.
 const RENEWS_MS: i64 = 1_794_700_740_000;
@@ -47,6 +48,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         typing: CloudLine::Key,
         caret: Redacted::new(DOTS),
         saves: Vec::new(),
+        pasted: None,
     };
     if which == "router" {
         (s.service, s.mark, s.check) = (named("OpenRouter"), ServiceMark::Ready, KeyCheck::NoTest);
@@ -104,6 +106,18 @@ fn service_long(tag: &str) -> VoiceSheet {
     VoiceSheet::Service(s)
 }
 
+/// The long key page in language `tag` with line `line`'s Paste finding no text, its note in that line's answer's place.
+fn pasted(tag: &str, line: CloudLine) -> VoiceSheet {
+    let VoiceSheet::Service(mut s) = service_long(tag) else {
+        unreachable!("a key page")
+    };
+    s.pasted = Some((line, PasteFault::Empty));
+    if line == CloudLine::Key {
+        (s.check, s.renews_at) = (KeyCheck::Untested, None);
+    }
+    VoiceSheet::Service(s)
+}
+
 /// The key pages in language `tag`, by name.
 pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
     let typed = groq(|s| {
@@ -126,7 +140,12 @@ pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
         let sheet = groq(|s| (s.check, s.renews_at) = (check, renews_at));
         out.push((name, shown(sheet, &[])));
     }
-    out.into_iter().map(|(n, s)| (n.to_owned(), s)).collect()
+    let mut out: Vec<_> = out.into_iter().map(|(n, s)| (n.to_owned(), s)).collect();
+    for line in CloudLine::ALL {
+        let name = format!("servicePasted-{}", cloud_line_id(line));
+        out.push((name, shown(pasted(tag, line), &[])));
+    }
+    out
 }
 
 /// The long key page shows the key test's longest answer in each language, so the fit test measures it.

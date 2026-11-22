@@ -98,6 +98,7 @@ fn the_key_page_hides_the_typed_key_and_its_caret_and_names_the_lines_that_save(
         typing: CloudLine::Key,
         caret: Redacted::new(LENGTH - 1),
         saves: vec![CloudLine::Key, CloudLine::Model],
+        pasted: None,
     };
     let shown = shown(VoiceSheet::Service(sheet));
     for n in [LENGTH, LENGTH - 1] {

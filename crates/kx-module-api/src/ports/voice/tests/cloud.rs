@@ -52,14 +52,15 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 #[test]
 fn a_key_tests_answers_are_the_designs_with_a_refusals_own_reasons() {
     use KeyCheck::{
-        Account, Allowance, Busy, Credit, Failed, NoTest, Rate, Refused, Region, Strange, Testing,
-        Unfit, Untested, Works,
+        Account, Allowance, Credit, Failed, NoTest, Rate, Refused, Region, Strange, Testing, Unfit,
+        Untested, Works,
     };
     let checks = [
         Untested, Testing, Works, Refused, Failed, Credit, Account, Region, Allowance, Rate,
-        Strange, Unfit, NoTest, Busy,
+        Strange, Unfit, NoTest,
     ];
     assert_eq!(KeyCheck::ALL, checks);
+    assert_eq!(PasteFault::ALL, [PasteFault::Empty, PasteFault::Busy]);
 }
 
 #[test]
@@ -249,6 +250,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         typing: CloudLine::Address,
         caret: Redacted::new(0),
         saves: vec![CloudLine::Address],
+        pasted: Some((CloudLine::Model, PasteFault::Busy)),
     };
     let shown = shown(VoiceSheet::Service(sheet));
     assert!(!shown.contains("56"), "a key's length is a secret: {shown}");

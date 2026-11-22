@@ -8,8 +8,8 @@ use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, Renewal, ServiceMark, ServiceName,
-    ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LocalTime, PasteFault, Renewal, ServiceMark,
+    ServiceName, ServiceSheet, VoiceSheet,
 };
 use kx_ui::voice_acts::{KEEP, PASTE, SAVE, SERVICE};
 use serde_json::{Value, json};
@@ -36,17 +36,20 @@ pub(super) fn groq_lines() -> ServiceSheet {
         typing: CloudLine::Key,
         caret: Redacted::new(0),
         saves: Vec::new(),
+        pasted: None,
     }
 }
 
-/// The Custom row's page: an address that is not HTTPS, a refused model id, and a Paste the clipboard did not answer.
+/// The Custom row's page: an address that is not HTTPS, a refused model id, and a key Paste the clipboard did not
+/// answer, whose note shows in place of the test's answer.
 fn custom_lines() -> ServiceSheet {
     let mut lines = groq_lines();
     (lines.service, lines.mark, lines.check) = (
         ServiceName::Custom,
         ServiceMark::NeedsAddress,
-        KeyCheck::Busy,
+        KeyCheck::Untested,
     );
+    lines.pasted = Some((CloudLine::Key, PasteFault::Busy));
     lines.address = Some(Redacted::new("http://lan.example".to_owned()));
     lines.address_fault = Some(AddressFault::Https);
     lines.model = Redacted::new("no such/model".to_owned());
@@ -215,7 +218,8 @@ fn a_refused_address_model_or_busy_paste_each_says_why_on_its_own_line() {
         (Some("Custom address"), Some("Needs an address"))
     );
     let busy = "The clipboard did not answer. Try Paste again.";
-    assert_eq!(marks(&one(&sheet["check"])), pairs(&[("busy", busy)]));
+    assert_eq!(sheet["key"]["fault"], busy, "the key Paste's note");
+    assert_eq!(sheet["check"], Value::Null, "in the answer's place");
     let address = &sheet["address"];
     assert_eq!(address["text"], "http://lan.example");
     let hint = "Your service’s address, such as https://example.com/v1/audio/transcriptions";
@@ -248,7 +252,7 @@ fn a_typed_addresss_key_page_shows_its_address_model_and_key_in_that_order() {
     let p = lines_json(custom_lines());
     let sheet = &p["sheet"];
     assert_eq!(sheet["order"], json!(["address", "model", "key"]));
-    for id in ["address", "model", "key", "check"] {
+    for id in ["address", "model", "key"] {
         assert!(sheet[id].is_object(), "{id} on the one page");
     }
     let p = lines_json(groq_lines());

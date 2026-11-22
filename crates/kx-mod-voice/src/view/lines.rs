@@ -47,6 +47,7 @@ impl Panel {
             saves: (lines.iter().copied())
                 .filter(|&l| self.line_saves(l, facts))
                 .collect(),
+            pasted: self.cloud.pasted,
         };
         (VoiceSheet::Service(sheet), self.single())
     }
@@ -76,10 +77,14 @@ impl Panel {
     }
 
     /// Why a Paste or typed key kept nothing, else how the shown key's test stands, with a used allowance's renewal
-    /// while that answer shows; a row with no test says so while the key is untested.
+    /// while that answer shows; a row with no test says so while the key is untested. The key Paste's own note takes
+    /// the answer's place.
     fn key_check(&self, row: &Service) -> (KeyCheck, Option<Renewal>) {
         if let Some(unkept) = self.cloud.unkept {
             return (unkept, None);
+        }
+        if let Some((CloudLine::Key, _)) = self.cloud.pasted {
+            return (KeyCheck::Untested, None);
         }
         match self.cloud.check {
             KeyCheck::Untested if row.test == KeyTest::None => (KeyCheck::NoTest, None),

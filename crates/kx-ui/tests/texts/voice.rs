@@ -17,6 +17,7 @@ mod cloud;
 mod eleven;
 mod gemini;
 mod icons;
+mod lines;
 mod money;
 mod newer;
 mod numbers;

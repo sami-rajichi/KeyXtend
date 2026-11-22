@@ -167,9 +167,9 @@ pub use voice::{
     CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
     DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
     FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow, ModelSide,
-    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, Renewal, RunStep,
-    ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, Unavailable, UsePrice,
-    VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceHome, VoiceKey, VoiceLang,
+    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, PasteFault, Renewal,
+    RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, Unavailable,
+    UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceHome, VoiceKey, VoiceLang,
     VoiceLevel, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet,
     VoiceTab, VoiceText, VoiceView,
 };

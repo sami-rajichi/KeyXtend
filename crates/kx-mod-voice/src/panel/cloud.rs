@@ -4,8 +4,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, Link, ModelSide, Renewal, ServiceMark,
-    VoiceClick, VoiceTab,
+    AddressFault, CloudButton, CloudLine, KeyCheck, Link, ModelSide, PasteFault, Renewal,
+    ServiceMark, VoiceClick, VoiceTab,
 };
 
 use super::typing::Typed;
@@ -29,10 +29,12 @@ pub(crate) struct Clouds {
     pub(crate) renews_at: Option<Renewal>,
     /// Counts Pastes, tests and key changes, so an answer to an older one is dropped.
     pub(crate) round: u32,
-    /// Why a Paste or a typed key kept nothing, Busy or Unfit, until the next round; the test's answer stays beneath.
+    /// Why a typed or pasted key kept nothing, Unfit, until the next round; the test's answer stays beneath.
     pub(crate) unkept: Option<KeyCheck>,
     /// The Paste waited for, and the line it goes on.
     pub(crate) take: Option<(u32, CloudLine)>,
+    /// The line whose Paste put nothing, with why, until the next round.
+    pub(crate) pasted: Option<(CloudLine, PasteFault)>,
     /// The test waited for.
     pub(crate) test: Option<u32>,
     /// The address just refused, with why, until the page changes.
@@ -56,6 +58,7 @@ impl Default for Clouds {
             round: 0,
             unkept: None,
             take: None,
+            pasted: None,
             test: None,
             refused: None,
             refused_model: None,
@@ -73,7 +76,7 @@ impl Clouds {
         if self.test.take().is_some() {
             self.check = KeyCheck::Untested;
         }
-        (self.take, self.unkept) = (None, None);
+        (self.take, self.unkept, self.pasted) = (None, None, None);
         self.round
     }
 

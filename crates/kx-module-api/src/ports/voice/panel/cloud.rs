@@ -62,11 +62,19 @@ listed! {
         Rate,
         /// The reply was not the service's, such as a hotspot's sign-in page.
         Strange,
-        /// The text set or pasted is no key a request can carry, so nothing was kept.
+        /// The text set or pasted is no key a request can carry, such as one too long, so nothing was kept.
         Unfit,
         /// The row has no test call, so the first dictation tests the key.
         NoTest,
-        /// The clipboard was busy or gave no answer to Paste, which may be tried again.
+    }
+}
+
+listed! {
+    /// Why a Paste put nothing on its line, which that line's warning names; a text too long keeps the line's refusal.
+    pub enum PasteFault ("Every fault.") {
+        /// The clipboard holds no text, or only spaces.
+        Empty,
+        /// The clipboard was busy or gave no answer, so Paste may be tried again.
         Busy,
     }
 }
@@ -259,4 +267,6 @@ pub struct ServiceSheet {
     pub caret: Redacted<u32>,
     /// The shown lines whose Save acts now: a key typed, or an address or model holding text or emptied to clear it.
     pub saves: Vec<CloudLine>,
+    /// The line whose Paste just put nothing, and why, until the next round; the key line's replaces the answer.
+    pub pasted: Option<(CloudLine, PasteFault)>,
 }
