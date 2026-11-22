@@ -111,9 +111,11 @@ Item {
             return [["en", "ar"], ["ar", "fr"]].map(([from, to]) => ({ tag: from + " to " + to, from, to }));
         }
         // The voice leaves at Stop, so the hub words the take's warning on Transcribing while its service writes: a switch
-        // of the keyboard's language brings its text, side and font; the model on this PC, a text or a note shows none.
+        // of the keyboard's language brings its text, side and font, and the bar takes the taller of its held height
+        // and the new one, its row at the top; the model on this PC, a text or a note shows none.
         function test_the_warning_stays_while_its_service_writes_in_the_keyboard_language(d) {
             const bar = make("cloudWarned", d.from);
+            const held = bar.height;
             let t = d.from;
             const show = name => {
                 bar.voice.page = JSON.parse(JSON.stringify(Voice.views[t][name]));
@@ -130,6 +132,13 @@ Item {
                 compare(line[0].font.family, bar.res.fam.ui, t + ": in its font");
                 const px = N.lk.shape.notice.font_px * (bar.ar ? N.lk.look.arabic_scale : 1);
                 compare(line[0].font.pixelSize, Math.round(px), t + ": at its size");
+                const own = make("cloudWarnedTranscribing", t);
+                compare(bar.height, Math.max(held, own.height), t + ": the taller of the held and its own height");
+                own.visible = false;
+                for (const b of buttons(bar)) {
+                    const mid = b.mapToItem(bar.body, 0, 0).y + b.height / 2;
+                    fuzzyCompare(mid, bar.row / 2, 0.5, t + ": " + b.Accessible.id + " in the row at the top");
+                }
             }
             const text = bar.view.bar.warn;
             for (const name of ["deviceTranscribing", "text", "cloudNet"]) {
