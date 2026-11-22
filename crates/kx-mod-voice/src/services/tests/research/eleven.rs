@@ -53,10 +53,7 @@ fn it_posts_its_own_form_to_its_own_address_and_tests_its_key_on_the_subscriptio
         row.keep.is_none() && !row.other,
         "no keep-nothing switch, no Other line"
     );
-    assert!(
-        row.offered && row.untested,
-        "offered for the owner's free-plan check"
-    );
+    assert!(row.offered && !row.untested, "its free-plan key passed");
 }
 
 #[test]

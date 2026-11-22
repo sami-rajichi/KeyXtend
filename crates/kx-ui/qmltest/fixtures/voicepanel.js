@@ -834,8 +834,8 @@ var views = {
               "tone": "plain"
             },
             "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
-            "said": "قُرئت هذه المعلومات في 17/11/2026. قد تكون قديمة، فراجع صفحة الخدمة.",
-            "text": "قُرئت هذه المعلومات في 17/11/2026."
+            "said": "قُرئت هذه المعلومات في 21/11/2026. قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 21/11/2026."
           },
           "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
           "warn": {
@@ -2482,8 +2482,8 @@ var views = {
               "tone": "plain"
             },
             "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
-            "said": "قُرئت هذه المعلومات في 17/11/2026. قد تكون قديمة، فراجع صفحة الخدمة.",
-            "text": "قُرئت هذه المعلومات في 17/11/2026."
+            "said": "قُرئت هذه المعلومات في 21/11/2026. قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 21/11/2026."
           },
           "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
           "warn": {
@@ -11140,8 +11140,8 @@ var views = {
               "tone": "plain"
             },
             "old": "They may be out of date; check the service’s page.",
-            "said": "Facts read on 17/11/2026. They may be out of date; check the service’s page.",
-            "text": "Facts read on 17/11/2026."
+            "said": "Facts read on 21/11/2026. They may be out of date; check the service’s page.",
+            "text": "Facts read on 21/11/2026."
           },
           "untested": "Untested: not yet checked with a real key.",
           "warn": {
@@ -12788,8 +12788,8 @@ var views = {
               "tone": "plain"
             },
             "old": "They may be out of date; check the service’s page.",
-            "said": "Facts read on 17/11/2026. They may be out of date; check the service’s page.",
-            "text": "Facts read on 17/11/2026."
+            "said": "Facts read on 21/11/2026. They may be out of date; check the service’s page.",
+            "text": "Facts read on 21/11/2026."
           },
           "untested": "Untested: not yet checked with a real key.",
           "warn": {
@@ -21446,8 +21446,8 @@ var views = {
               "tone": "plain"
             },
             "old": "Elles datent peut-être ; vérifiez la page du service.",
-            "said": "Informations relevées le 17/11/2026. Elles datent peut-être ; vérifiez la page du service.",
-            "text": "Informations relevées le 17/11/2026."
+            "said": "Informations relevées le 21/11/2026. Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 21/11/2026."
           },
           "untested": "Non testé : pas encore vérifié avec une vraie clé.",
           "warn": {
@@ -23094,8 +23094,8 @@ var views = {
               "tone": "plain"
             },
             "old": "Elles datent peut-être ; vérifiez la page du service.",
-            "said": "Informations relevées le 17/11/2026. Elles datent peut-être ; vérifiez la page du service.",
-            "text": "Informations relevées le 17/11/2026."
+            "said": "Informations relevées le 21/11/2026. Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 21/11/2026."
           },
           "untested": "Non testé : pas encore vérifié avec une vraie clé.",
           "warn": {

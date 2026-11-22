@@ -29,8 +29,18 @@ fn usd(cents: u32) -> FactValue {
 /// The first reading's day, and check day's for the rows read again then.
 const FIRST: (u16, u8, u8) = (2026, 11, 17);
 const AGAIN: (u16, u8, u8) = (2026, 11, 21);
-/// The rows whose pages were read again on check day; Gemini's waits for its codes' hand check.
-const REREAD: [&str; 4] = ["groq", "lemonfox", "elevenlabs", "assemblyai"];
+/// The rows whose pages were read again on check day.
+const REREAD: [&str; 5] = ["groq", "lemonfox", "elevenlabs", "gemini", "assemblyai"];
+/// The rows the owner's real keys passed at the hands-on check (2026-11-21); `OpenRouter` waits for its own.
+const TESTED: [&str; 5] = ["groq", "lemonfox", "elevenlabs", "gemini", "assemblyai"];
+
+#[test]
+fn only_the_rows_the_owners_real_keys_passed_are_marked_tested() {
+    for row in shipped().rows() {
+        let tested = TESTED.contains(&row.id.as_str());
+        assert_eq!(row.untested, !tested, "{}", row.id);
+    }
+}
 
 #[test]
 fn the_rows_read_again_on_check_day_say_so_and_the_rest_keep_the_first_reading() {

@@ -148,7 +148,6 @@ fn each_form_row_posts_to_its_own_address_and_tests_its_key_there() {
             "{}",
             w.id
         );
-        assert!(row.untested, "{}: task 24 checks it with a real key", w.id);
     }
 }
 

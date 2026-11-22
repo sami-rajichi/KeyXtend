@@ -18,11 +18,11 @@ test = "https://api.elevenlabs.io/v1/user/subscription"
 header = "xi-api-key"
 keys = "https://elevenlabs.io/app/settings/api-keys"
 # A file may reach 5 GB [E3] and 15 hours (its speech-to-text page); the free plan takes 8 batch requests at once
-# (its help centre). `max_mb`, `max_s` and `per_min` are untested guesses, checked at task 24.
+# (its help centre). No limit was met at the hands-on check, so `max_mb`, `max_s` and `per_min` stay guesses.
 limits = { cap_mb = 5000, cap_s = 54000, max_mb = 23, max_s = 600, per_min = 60, at_once = 8 }
 terms = 1
 offered = true
-untested = true
+untested = false
 
 [[services.models]]
 id = "scribe_v3"
@@ -49,8 +49,9 @@ heavy = { id = "plain", money = { price = 22.00 } }
 warn = { id = "trains-profile", text = { switch = "Terms and privacy → Data use → Improve the models for everyone" } }
 rule = { id = "non-commercial" }
 
-# Gemini: aistudio.google.com read 2026-11-17 (transcribe, the model, pricing, terms, rate limits, audio,
-# troubleshooting, the models reference). Gemini 3.5 Transcribe in one JSON request with the sound inline as Base64.
+# Gemini: aistudio.google.com read 2026-11-17 and again 2026-11-21 (transcribe, the model, pricing, terms, rate
+# limits, audio, troubleshooting, the models reference). Gemini 3.5 Transcribe in one JSON request with the sound
+# inline as Base64.
 [[services]]
 id = "gemini"
 name = "Gemini"
@@ -61,15 +62,15 @@ test = "https://generativelanguage.googleapis.com/v1beta/models"
 header = "x-goog-api-key"
 keys = "https://aistudio.google.com/apikey"
 # A request takes 20 MB with the Base64 growth, about 14 MB or 7 minutes of raw sound, and an hour of sound [N1][N6].
-# Its rates are not published [N5]: `per_min` and `at_once` are guesses, checked at task 24.
+# Its rates are not published [N5], and no limit was met at the hands-on check, so `per_min` and `at_once` stay guesses.
 limits = { cap_mb = 20, cap_s = 3600, max_mb = 14, max_s = 420, per_min = 10, at_once = 2 }
 terms = 1
 offered = true
-untested = true
+untested = false
 
 # Read again 2026-11-21: the free tier may ask for a phone check (403 `FREE_TIER_VERIFICATION_REQUIRED`, already the
-# `PAY` fault), and the model's table names Arabic only as `ar-EG` and Spanish as `es-419` or `es-US`; the hands-on
-# check tries `ar-SA` and `es-ES`.
+# `PAY` fault), and the model's table names Arabic only as `ar-EG` and Spanish as `es-419` or `es-US`. The hands-on
+# check accepted `ar-SA`, its Arabic coming back right; `es-ES` was not tried.
 [[services.models]]
 id = "models/gemini-3.5-transcribe"
 name = "Gemini 3.5 Transcribe"
@@ -79,7 +80,7 @@ langs = "bcp-47"
 # [N3][N4]. Its keeping is the paid tier's abuse logging [N4], and light and heavy use take the paid tier's $0.005 a
 # minute [N3]; each says it is the paid tier's.
 [services.facts]
-read = 2026-11-17
+read = 2026-11-21
 source = "https://aistudio.google.com/docs/pricing"
 currency = "USD"
 place = { id = "unstated" }
@@ -105,11 +106,12 @@ address = "https://sync.eu.assemblyai.com/v1/transcribe"
 header = "bearer"
 keys = "https://www.assemblyai.com/dashboard/api-keys"
 # A request takes 256 MB and 20 minutes, but one past its 30-second server deadline fails [A2], so a piece keeps to
-# the live limit's 2 minutes [A1], 3.84 MB raw. `per_min`, `at_once` and the keys page are guesses, checked at task 24.
+# the live limit's 2 minutes [A1], 3.84 MB raw. No limit was met at the hands-on check, so `per_min` and `at_once` stay
+# guesses, as does the keys page.
 limits = { cap_mb = 256, cap_s = 1200, max_mb = 4, max_s = 120, per_min = 20, at_once = 2 }
 terms = 2
 offered = true
-untested = true
+untested = false
 
 [[services.models]]
 id = "universal-3-6-pro"

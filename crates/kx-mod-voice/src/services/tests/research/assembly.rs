@@ -37,7 +37,7 @@ fn it_posts_one_sync_request_to_the_european_servers_with_the_model_in_its_own_h
     assert_eq!(row.header, KeyHeader::Bearer, "Authorization [A1]");
     assert_eq!(row.test, KeyTest::None, "no call without sound [A1]");
     assert!(row.keep.is_none() && !row.other, "no switch, no Other line");
-    assert!(row.offered && row.untested, "offered for the owner's check");
+    assert!(row.offered && !row.untested, "offered, its real key passed");
 }
 
 #[test]

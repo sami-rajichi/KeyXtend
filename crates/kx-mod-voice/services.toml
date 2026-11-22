@@ -61,12 +61,12 @@ address = "https://api.groq.com/openai/v1/audio/transcriptions"
 test = "https://api.groq.com/openai/v1/models"
 header = "bearer"
 keys = "https://console.groq.com/keys"
-# `at_once` is not stated on its pages: a guess, checked at task 24.
+# `at_once` is not stated on its pages, and no limit was met at the hands-on check, so it stays a guess.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 20, at_once = 4 }
 other = true
 terms = 1
 offered = true
-untested = true
+untested = false
 
 [[services.models]]
 id = "whisper-large-v3-turbo"
@@ -220,11 +220,11 @@ host = "api.lemonfox.ai"
 address = "https://api.lemonfox.ai/v1/audio/transcriptions"
 header = "bearer"
 keys = "https://www.lemonfox.ai/apis/keys"
-# It allows fair use only: `per_min` and `at_once` are guesses, checked at task 24.
+# It allows fair use only, and no limit was met at the hands-on check, so `per_min` and `at_once` stay guesses.
 limits = { cap_mb = 100, max_mb = 23, max_s = 600, per_min = 20, at_once = 2 }
 terms = 1
 offered = true
-untested = true
+untested = false
 
 [[services.models]]
 id = "whisper-large-v3"

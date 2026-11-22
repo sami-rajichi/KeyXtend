@@ -1,7 +1,8 @@
-//! Gemini's row as its pages read 2026-11-17 give it (research file `[N…]` lines): its single JSON request to the
-//! Interactions API with the key in `x-goog-api-key`, its key test on the models list, Gemini 3.5 Transcribe with one
-//! BCP-47 code per keyboard language, pieces under its 20 MB request cap, and its card: training on the free allowance
-//! with its warning, the paid price per minute for light and heavy use, and its rule for the EEA and for age.
+//! Gemini's row as its pages read 2026-11-17, and again 2026-11-21, give it (research file `[N…]` lines): its single
+//! JSON request to the Interactions API with the key in `x-goog-api-key`, its key test on the models list, Gemini 3.5
+//! Transcribe with one BCP-47 code per keyboard language, pieces under its 20 MB request cap, and its card: training on
+//! the free allowance with its warning, the paid price per minute for light and heavy use, and its rule for the EEA and
+//! for age.
 
 use super::*;
 use kx_module_api::ports::KeyHeader;
@@ -10,7 +11,8 @@ use kx_module_api::ports::KeyHeader;
 const FREE_USE: &str = "free-allowance";
 /// The model it offers [N2].
 const TRANSCRIBE: &str = "models/gemini-3.5-transcribe";
-/// The codes it gets for the owner's three languages: Modern Standard Arabic's usual locale, then French and English.
+/// The codes it gets for the owner's three languages: Modern Standard Arabic's usual locale, which the hands-on check
+/// accepted, then French and English.
 const CODES: [(&str, &str); 3] = [("ar", "ar-SA"), ("fr", "fr-FR"), ("en", "en-US")];
 /// The other BCP-47 codes its pages name [N1][N2], by keyboard language.
 const NAMED: [(&str, &str); 3] = [("es", "es-ES"), ("hi", "hi-IN"), ("zh", "cmn-Hans-CN")];
@@ -41,7 +43,7 @@ fn it_posts_one_json_request_to_its_own_address_and_tests_its_key_on_the_models_
         row.keep.is_none() && !row.other,
         "no keep-nothing switch, no Other line"
     );
-    assert!(row.offered && row.untested, "offered for the owner's check");
+    assert!(row.offered && !row.untested, "offered, its real key passed");
 }
 
 #[test]
@@ -92,7 +94,8 @@ fn its_card_warns_what_the_free_allowance_gives_google() {
 #[test]
 fn its_facts_are_its_pages_with_the_paid_tiers_keeping_and_price_and_its_rule() {
     let facts = &gemini().facts;
-    assert_eq!(facts.read, Date::new(2026, 11, 17).unwrap());
+    let (y, m, d) = AGAIN;
+    assert_eq!(facts.read, Date::new(y, m, d).unwrap(), "read again");
     let host = facts.source.as_ref().map(HttpsUrl::host);
     assert_eq!(host, Some("aistudio.google.com"));
     let ids = [&facts.place, &facts.keeps, &facts.free].map(|f| f.id.as_str());
