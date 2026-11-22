@@ -89,6 +89,20 @@ Item {
             compare(["address", "model", "key"].map(id => one(box, "voice.line-" + id).visible), [true, true, true]);
         }
 
+        function test_cards_and_key_pages_keep_their_height_in_every_look_data() {
+            const all = [];
+            const keyPages = ["service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped"];
+            for (const [tag, f] of Object.entries(looks))
+                for (const name of Kit.named("en", "cardLong").concat(keyPages))
+                    ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + name + " " + t, name, lk: f.lk, t }));
+            return all;
+        }
+        // T24 wave 4 re-review, note 5: at the default rows no long card part or key page grows the panel in any look;
+        // the typed address's key pages have their own test above.
+        function test_cards_and_key_pages_keep_their_height_in_every_look(d) {
+            keeps(make(d.name, d.t, d.lk));
+        }
+
         function test_compares_widest_picks_stay_in_the_body_data() {
             const all = [];
             for (const [tag, f] of Object.entries(looks))
