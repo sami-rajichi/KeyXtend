@@ -1,6 +1,7 @@
 //! The bar's chip as QML reads it: what takes the voice, a cloud service or the model on this PC (owner, 2026-11-22),
-//! by its kind, which picks its icon, its short name and the sentence readers hear with that name.
+//! by its kind, which picks its icon, its short name and the sentence readers hear.
 
+use super::cloud::service;
 use crate::I18n;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::NAME;
@@ -23,17 +24,25 @@ pub(super) struct Chip {
     said: String,
 }
 
-/// The chip for `mark`, whose sentence says the name the chip shows, so the eye and the ear agree.
+/// The chip for `mark`, whose sentence names a service by its row's full name, which reads right in every language,
+/// and a model by the name the chip shows.
 pub(super) fn of(t: &I18n, mark: &BarMark) -> Chip {
-    let (kind, name, capped, line) = match mark {
-        BarMark::Cloud(name) => (CLOUD, short(t, name), false, VOICE_ON_BAR_CLOUD),
-        BarMark::Device(name) => (DEVICE, clean(name.expose()), true, VOICE_ON_DEVICE),
+    let (kind, name, capped, said) = match mark {
+        BarMark::Cloud(name) => {
+            let said = t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, service(t, name))]);
+            (CLOUD, short(t, name), false, said)
+        }
+        BarMark::Device(name) => {
+            let name = clean(name.expose());
+            let said = t.voice_with(VOICE_ON_DEVICE, &[(NAME, name.clone())]);
+            (DEVICE, name, true, said)
+        }
     };
     Chip {
         kind,
-        said: t.voice_with(line, &[(NAME, name.clone())]),
-        capped,
         name,
+        capped,
+        said,
     }
 }
 

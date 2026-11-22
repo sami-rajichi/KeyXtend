@@ -176,9 +176,13 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
     assert_eq!(json(&rig)["mark"], mark, "a service's name is never capped");
     shown.mark = Some(BarMark::Cloud(ServiceName::Custom));
     heard.view(shown);
-    let said = "Your voice goes to Custom at Stop";
+    let said = "Your voice goes to Custom address at Stop";
     let mark = json!({"kind": "cloud", "name": "Custom", "capped": false, "said": said});
-    assert_eq!(json(&rig)["mark"], mark, "Custom's short name, seen, heard");
+    assert_eq!(
+        json(&rig)["mark"],
+        mark,
+        "Custom's short name seen, its row's name heard"
+    );
 }
 
 #[test]
