@@ -7,7 +7,7 @@ use kx_module_api::ports::{AddressFault, CloudButton, HttpsUrl, ServiceMark, Voi
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::lines::on_custom_lines;
-use super::{act, apply, lines_sheet, named, on_cloud, put};
+use super::{act, apply, lines_sheet, named, on_cloud, put, written};
 use crate::services::tests::DOMAIN;
 use crate::settings::{PICKS, SERVICES};
 
@@ -47,7 +47,7 @@ fn a_typed_address_is_kept_when_https_on_a_host_name_and_refused_with_why() {
     );
     apply(&mut rig, &out);
     let out = typed(&mut rig, "");
-    assert!(out.iter().any(|d| matches!(d, Do::Set(PICKS, _))));
+    assert_eq!(written(&out), [[PICKS, SERVICES]], "one save");
     apply(&mut rig, &out);
     assert!(
         !rig.settings.picks.contains_key("en"),

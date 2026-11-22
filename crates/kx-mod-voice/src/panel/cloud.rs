@@ -273,26 +273,21 @@ pub(super) fn edit(
     writes(facts.settings, &next)
 }
 
-/// The writes that bring `[voice]` from `before` to `after`: the picks, the services On and parked, and the switch that
-/// changed. The map gaining an entry goes first, so a stop between the saves leaves it in both, which the start repair
-/// settles, never in neither.
+/// The one write that brings `[voice]` from `before` to `after`: the picks, the services On and parked, and the switch
+/// that changed, saved all or none, so a stop never leaves an entry in both maps.
 fn writes(before: &VoiceSettings, after: &VoiceSettings) -> Vec<Do> {
-    let mut out = Vec::new();
+    let mut keys = Vec::new();
     if before.picks != after.picks {
-        let picks = toml::Value::try_from(&after.picks).ok();
-        out.extend(picks.map(|v| Do::Set(PICKS, v)));
+        keys.extend(toml::Value::try_from(&after.picks).ok().map(|v| (PICKS, v)));
     }
-    let on = (before.services != after.services).then(|| after.services_value());
-    let on = on.flatten().map(|v| Do::Set(SERVICES, v));
-    let parked = (before.parked != after.parked).then(|| after.parked_value());
-    let parked = parked.flatten().map(|v| Do::Set(PARKED, v));
-    if after.parked.len() > before.parked.len() {
-        out.extend(parked.into_iter().chain(on));
-    } else {
-        out.extend(on.into_iter().chain(parked));
+    if before.services != after.services {
+        keys.extend(after.services_value().map(|v| (SERVICES, v)));
+    }
+    if before.parked != after.parked {
+        keys.extend(after.parked_value().map(|v| (PARKED, v)));
     }
     if before.cloud != after.cloud {
-        out.push(Do::Set(CLOUD, toml::Value::Boolean(after.cloud)));
+        keys.push((CLOUD, toml::Value::Boolean(after.cloud)));
     }
-    out
+    Do::write(keys)
 }

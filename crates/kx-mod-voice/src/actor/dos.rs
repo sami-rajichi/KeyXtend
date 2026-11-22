@@ -38,6 +38,7 @@ impl Actor {
             Do::Browse(dir) => self.browse(&dir),
             Do::Make(dir) => self.make(&dir),
             Do::Set(key, value) => self.set(key, value),
+            Do::SetAll(values) => self.set_all(values),
             Do::Fetch { row, ask } => self.fetch(row, ask),
             Do::FetchCall { row, button } => self.fetch_call(&row, button),
             Do::Remove(file) => self.remove(&file),
@@ -88,10 +89,16 @@ impl Actor {
 
     /// Writes `[voice]` key `key`, then follows the settings after it; a refused write shows the fault band.
     pub(super) fn set(&mut self, key: &'static str, value: toml::Value) {
-        let Some(next) = self.held.settings.with(key, value.clone()) else {
+        self.set_all(toml::Table::from_iter([(key.to_owned(), value)]));
+    }
+
+    /// Writes `values` to `[voice]` in one save, all or none, then follows the settings after them; a refused write
+    /// shows the fault band.
+    fn set_all(&mut self, values: toml::Table) {
+        let Some(next) = self.held.settings.with_all(&values) else {
             return;
         };
-        if let Err(error) = self.ports.handle.set(key, value) {
+        if let Err(error) = self.ports.handle.set_all(values) {
             tracing::warn!(kind = error.kind(), "a voice setting could not be written");
             if !error.holds() {
                 self.panel.note = Some(BarHint::Fault);

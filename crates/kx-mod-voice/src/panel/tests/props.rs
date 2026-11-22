@@ -249,6 +249,7 @@ fn after(rig: &mut Rig, seen: &mut Seen, out: Vec<Do>) -> Result<(), TestCaseErr
         match done {
             Do::Compare(Act::Open { take, .. }) => seen.take = take,
             Do::Set(key, value) => set(rig, key, value),
+            Do::SetAll(values) => values.into_iter().for_each(|(k, v)| set(rig, &k, v)),
             _ => {}
         }
     }

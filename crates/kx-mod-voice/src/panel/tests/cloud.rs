@@ -15,6 +15,7 @@ use crate::services::tests::shipped::{entry, first, pick};
 use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
 use rows::{named, row_of, shown, tick};
+pub(super) use writes::{apply, put, written};
 
 mod address;
 mod answers;
@@ -31,6 +32,7 @@ mod settle;
 mod trial;
 mod typing;
 mod used;
+mod writes;
 
 /// A calendar that tells `now`, on which the actor reads a used allowance's renewal.
 pub(super) struct At(pub LocalTime);
@@ -39,21 +41,6 @@ impl Calendar for At {
     fn now(&self) -> LocalTime {
         self.0
     }
-}
-
-/// Applies the `[voice]` writes in `dos`, as the settings would after the actor wrote them.
-pub(super) fn apply(rig: &mut Rig, dos: &[Do]) {
-    for done in dos {
-        if let Do::Set(key, value) = done {
-            rig.settings = rig.settings.with(key, value.clone()).unwrap();
-        }
-    }
-}
-
-/// Writes `text` as `[voice]` table `key`.
-pub(super) fn put(rig: &mut Rig, key: &str, text: &str) {
-    let value = toml::Value::Table(text.parse().unwrap());
-    rig.settings = rig.settings.with(key, value).unwrap();
 }
 
 /// Cloud on, with the shipped rows and `rows` after them, on the Cloud page.

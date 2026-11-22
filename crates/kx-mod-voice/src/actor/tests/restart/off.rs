@@ -54,6 +54,24 @@ fn off(rig: &mut Rig, name: &ServiceName) {
 }
 
 #[test]
+fn an_off_reaches_the_file_as_one_save_of_both_maps() {
+    let (mut rig, lemonfox) = (Rig::new(), named("Lemonfox"));
+    open(&mut rig, 0, VoiceTab::Cloud);
+    rig.act(VoiceClick::Cloud(true));
+    confirm(&mut rig, &lemonfox);
+    let before = rig.host.sink.writes().len();
+    off(&mut rig, &lemonfox);
+    let writes = rig.host.sink.writes();
+    let keys = |(_, values): &(_, toml::Table)| {
+        let mut keys: Vec<_> = values.keys().cloned().collect();
+        keys.sort_unstable();
+        keys
+    };
+    let saves: Vec<_> = writes[before..].iter().map(keys).collect();
+    assert_eq!(saves, [["parked", "services"]], "a stop never leaves both");
+}
+
+#[test]
 fn a_listed_pick_of_a_service_off_waits_through_a_restart_and_its_confirm_brings_it_back() {
     let (mut rig, lemonfox) = (Rig::new(), named("Lemonfox"));
     seal(&rig, &["lemonfox"]);

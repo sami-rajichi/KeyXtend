@@ -5,7 +5,7 @@ use kx_module_api::ports::{CloudLine, PanelKey, VoiceClick};
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::typing::{key, on_custom_page};
-use super::{apply, lines_sheet, put};
+use super::{apply, lines_sheet, put, written};
 use crate::settings::{PICKS, SERVICES};
 
 /// Backspaces the line taking the letters from its caret to its start, one for each character before it.
@@ -29,8 +29,7 @@ fn saving_an_emptied_address_or_model_line_clears_it_and_the_picks_it_served() {
         "Save stays live to clear it"
     );
     let out = rig.click(&VoiceClick::Save(CloudLine::Model));
-    let set = |key| out.iter().any(|d| matches!(d, Do::Set(k, _) if *k == key));
-    assert!(set(SERVICES) && set(PICKS), "{out:?}");
+    assert_eq!(written(&out), [[PICKS, SERVICES]], "one save");
     apply(&mut rig, &out);
     assert_eq!(rig.settings.services["custom"].model, "");
     assert!(

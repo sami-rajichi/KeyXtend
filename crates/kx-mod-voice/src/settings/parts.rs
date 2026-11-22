@@ -19,8 +19,14 @@ impl VoiceSettings {
     /// The settings with `key` set to `value`, as the panel writes it; `None` for a key or value `check` refuses.
     #[must_use]
     pub fn with(&self, key: &str, value: toml::Value) -> Option<Self> {
+        self.with_all(&toml::Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// The settings with each of `values` set, as one write of several keys leaves them; `None` as for `with`.
+    #[must_use]
+    pub fn with_all(&self, values: &toml::Table) -> Option<Self> {
         let mut table = toml::Table::try_from(self).ok()?;
-        table.insert(key.to_owned(), value);
+        table.extend(values.clone());
         let next: Self = table.try_into().ok()?;
         next.check().ok().map(|()| next)
     }

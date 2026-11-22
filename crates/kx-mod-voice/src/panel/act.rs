@@ -49,6 +49,8 @@ pub enum Do {
     Make(PathBuf),
     /// Write this `[voice]` key.
     Set(&'static str, toml::Value),
+    /// Write these `[voice]` keys in one save, all or none: the keys one act changes together.
+    SetAll(toml::Table),
     /// Start row `row`'s download as `ask` says; its notes go to `Panel::fetch_note`.
     Fetch {
         /// The row's id.
@@ -112,4 +114,16 @@ pub enum Do {
     },
     /// Open this link from the services table in the browser.
     Link(Link),
+}
+
+impl Do {
+    /// The one write of `keys`: none, a lone key's `Set`, or one `SetAll`, which saves them all or none.
+    pub(super) fn write(mut keys: Vec<(&'static str, toml::Value)>) -> Vec<Self> {
+        if keys.len() < 2 {
+            let one = keys.pop().map(|(key, value)| Self::Set(key, value));
+            return one.into_iter().collect();
+        }
+        let all = keys.into_iter().map(|(key, value)| (key.to_owned(), value));
+        vec![Self::SetAll(all.collect())]
+    }
 }
