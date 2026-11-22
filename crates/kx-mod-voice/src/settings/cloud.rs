@@ -10,7 +10,7 @@ use kx_module_api::{Redacted, SettingsError, within};
 use serde::{Deserialize, Serialize};
 use toml::value::Datetime;
 
-use super::{SERVICES, VoiceSettings};
+use super::{PARKED, SERVICES, VoiceSettings};
 use crate::plain::day;
 
 /// Days after which a card's facts show as old.
@@ -84,13 +84,24 @@ impl VoiceSettings {
         within("facts_days", self.facts_days, &FACTS_DAYS)
     }
 
-    /// `services` as a settings write takes it, each day a plain date; it goes through the file's text, as
-    /// `toml::Value::try_from` would keep a day as toml's private table.
+    /// `services` as a settings write takes it, each day a plain date.
     #[must_use]
     pub fn services_value(&self) -> Option<toml::Value> {
-        let text = toml::to_string(&BTreeMap::from([(SERVICES, &self.services)])).ok()?;
-        toml::from_str::<toml::Table>(&text).ok()?.remove(SERVICES)
+        entries_value(SERVICES, &self.services)
     }
+
+    /// `parked` as a settings write takes it, each day a plain date.
+    #[must_use]
+    pub fn parked_value(&self) -> Option<toml::Value> {
+        entries_value(PARKED, &self.parked)
+    }
+}
+
+/// `entries` under `key` as a settings write takes it; it goes through the file's text, as `toml::Value::try_from`
+/// would keep a day as toml's private table.
+fn entries_value(key: &str, entries: &BTreeMap<String, ServiceOn>) -> Option<toml::Value> {
+    let text = toml::to_string(&BTreeMap::from([(key, entries)])).ok()?;
+    toml::from_str::<toml::Table>(&text).ok()?.remove(key)
 }
 
 /// `day` as the settings file writes it, a plain date.

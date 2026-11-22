@@ -18,7 +18,7 @@ use kx_module_api::{
 };
 
 use crate::actor::{Actor, Job, Msg, Ports, typer};
-use crate::settings::{PICKS, SERVICES, VoiceSettings};
+use crate::settings::{PARKED, PICKS, SERVICES, VoiceSettings};
 use crate::{ID, MANIFEST};
 
 /// The actor thread's name, as a debugger shows it.
@@ -110,7 +110,11 @@ impl Drop for VoiceModule {
 /// rest is written back so the next start finds it gone.
 pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     let mut settings = cx.settings::<VoiceSettings>()?;
-    let before = (settings.services.len(), settings.picks.len());
+    let before = (
+        settings.services.len(),
+        settings.parked.len(),
+        settings.picks.len(),
+    );
     let dropped = settings.drop_bad();
     if dropped.is_empty() {
         return Ok(settings);
@@ -118,7 +122,10 @@ pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     if before.0 != settings.services.len() {
         keep(cx, SERVICES, settings.services_value());
     }
-    if before.1 != settings.picks.len() {
+    if before.1 != settings.parked.len() {
+        keep(cx, PARKED, settings.parked_value());
+    }
+    if before.2 != settings.picks.len() {
         keep(cx, PICKS, toml::Value::try_from(&settings.picks).ok());
     }
     let mut notice = Notice::about(keys::SETTINGS_RESET, ID);

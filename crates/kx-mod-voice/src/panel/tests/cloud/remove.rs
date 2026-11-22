@@ -10,6 +10,7 @@ use super::rows::{named, row_of, tick};
 use super::{act, apply, card, cloud_sheet, lines_sheet, on_cloud, put};
 use crate::services::tests::ROUTER;
 use crate::services::tests::shipped::{entry, first, pick};
+use crate::settings::{PARKED, SERVICES};
 
 /// Groq, the first offered row, on with its key sealed, on the Cloud page.
 fn keyed_groq() -> Rig {
@@ -138,15 +139,17 @@ fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
     );
     rig.keyed.insert(first().id.clone());
     let out = act(&mut rig, &first().shown(), CloudButton::Off);
-    assert!(
-        !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
-        "only Remove key deletes it"
-    );
+    let parks = matches!(&out[..], [Do::Set(PARKED, _), Do::Set(SERVICES, _)]);
+    assert!(parks, "parked first, so a stop between keeps it: {out:?}");
     apply(&mut rig, &out);
     assert!(rig.settings.services.is_empty(), "Groq is Off");
+    assert!(rig.settings.parked.contains_key("groq"), "its entry waits");
     assert!(rig.settings.picks.contains_key("en"), "its pick waits");
     rig.click(&VoiceClick::Service(CloudButton::On)); // Groq stays ticked.
     let out = rig.click(&VoiceClick::Confirm(true));
+    let back = matches!(&out[..], [Do::Set(SERVICES, _), Do::Set(PARKED, _), ..]);
+    assert!(back, "On first, so a stop between keeps it: {out:?}");
     apply(&mut rig, &out);
+    assert!(rig.settings.parked.is_empty());
     assert_eq!(lines_sheet(&mut rig).mark, ServiceMark::Ready);
 }

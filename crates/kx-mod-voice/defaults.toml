@@ -92,6 +92,9 @@ cloud = false
 # The services the user switched on, by id: the day and terms number confirmed, any typed address or model, the
 # keep-nothing switch, and the terms number at which the first dictation showed the card's warning.
 services = {}
+# The services the user switched off or whose newer terms they declined, by id, each entry kept as it was until that
+# service's Confirm brings it back; nothing is sent to them.
+parked = {}
 # The longest silence a cloud request may keep, in seconds; a piece may take several of these.
 net_wait_s = 60
 # Tries per piece before a cloud note.

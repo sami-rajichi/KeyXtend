@@ -181,6 +181,62 @@ fn a_stale_entry_takes_only_the_typed_picks_its_lines_held() {
     assert_eq!(s.drop_bad(), ["picks.en", "services.custom"]);
 }
 
+/// Custom's entry with its address and model typed, and its pick for English.
+fn custom_typed(s: &mut VoiceSettings) -> ServiceOn {
+    s.picks.insert("en".into(), "custom:my-model".into());
+    entry(|on| {
+        on.address = "https://stt.example.com/v1/audio/transcriptions".into();
+        on.model = "my-model".into();
+    })
+}
+
+#[test]
+fn a_parked_entry_and_its_typed_pick_stay_with_cloud_on_or_off() {
+    let mut s = on();
+    let parked = custom_typed(&mut s);
+    s.parked.insert("custom".into(), parked);
+    assert!(s.drop_bad().is_empty(), "ADR-0054 decision 4: they wait");
+    s.cloud = false;
+    assert!(s.drop_bad().is_empty(), "cloud off keeps them too");
+    assert!(s.parked.contains_key("custom") && s.picks.contains_key("en"));
+}
+
+#[test]
+fn a_parked_entry_is_checked_as_an_on_one_and_named_alone() {
+    let bad = [
+        ("custom", at("http://stt.example.com/v1")),
+        ("custom", entry(|on| on.model = "a//b".into())),
+        ("groq", entry(|on| on.terms = 0)),
+        (NOT_OFFERED[0], entry(|_| {})),
+    ];
+    for (id, one) in bad {
+        let mut s = on();
+        s.parked.insert("lemonfox".into(), entry(|_| {}));
+        s.parked.insert(id.into(), one);
+        assert_eq!(s.drop_bad(), [format!("parked.{id}")], "{id}");
+        assert_eq!(s.parked.keys().collect::<Vec<_>>(), ["lemonfox"], "{id}");
+    }
+}
+
+#[test]
+fn a_service_both_on_and_parked_keeps_the_on_entry() {
+    let mut s = on();
+    let typed = custom_typed(&mut s);
+    s.services.insert("custom".into(), typed);
+    s.parked.insert("custom".into(), entry(|_| {}));
+    assert_eq!(s.drop_bad(), ["parked.custom"]);
+    assert_eq!(s.services["custom"].model, "my-model");
+    s.services.insert("custom".into(), entry(|on| on.terms = 0));
+    let parked = custom_typed(&mut s);
+    s.parked.insert("custom".into(), parked);
+    assert_eq!(
+        s.drop_bad(),
+        ["services.custom"],
+        "a bad On entry leaves the parked one"
+    );
+    assert!(s.parked.contains_key("custom") && s.picks.contains_key("en"));
+}
+
 #[test]
 fn a_typed_rows_pick_goes_while_no_address_is_typed() {
     let mut s = on();

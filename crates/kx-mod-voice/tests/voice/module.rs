@@ -68,8 +68,7 @@ fn a_bad_pick_falls_back_alone_with_the_notice_and_is_written_back() {
 }
 
 #[test]
-fn a_service_entry_no_row_takes_is_dropped_alone_and_written_back() {
-    let mut host = Fakes::new().host();
+fn a_service_entry_no_row_takes_on_or_parked_is_dropped_alone_and_written_back() {
     let entry = |terms: i64| {
         let on = "2026-11-17".parse::<toml::value::Datetime>().unwrap();
         toml::Value::Table(toml::Table::from_iter([
@@ -77,24 +76,27 @@ fn a_service_entry_no_row_takes_is_dropped_alone_and_written_back() {
             ("terms".to_owned(), terms.into()),
         ]))
     };
-    let services = [("groq", entry(1)), ("no-such-row", entry(1))];
-    let services = toml::Table::from_iter(services.map(|(k, v)| (k.to_owned(), v)));
-    host.put("services", toml::Value::Table(services));
-    let (heard, _guard) = notices(&host);
-    let mut module = VoiceModule::new();
-    assert!(start(&mut module, &mut host).is_ok());
-    stop(&mut module, &mut host);
-    let mut want = Notice::about(keys::SETTINGS_RESET, ID);
-    let named = vec!["services.no-such-row".into()];
-    want.args.push((args::KEYS, NoticeArg::List(named)));
-    assert_eq!(*heard.lock().unwrap(), [want]);
-    let mut groq = entry(1);
-    groq.as_table_mut()
-        .unwrap()
-        .insert("keep".to_owned(), true.into());
-    let kept = toml::Table::from_iter([("groq".to_owned(), groq)]);
-    let written = toml::Table::from_iter([("services".to_owned(), toml::Value::Table(kept))]);
-    assert_eq!(host.sink.writes(), [(ID, written)]);
+    for key in ["services", "parked"] {
+        let mut host = Fakes::new().host();
+        let services = [("groq", entry(1)), ("no-such-row", entry(1))];
+        let services = toml::Table::from_iter(services.map(|(k, v)| (k.to_owned(), v)));
+        host.put(key, toml::Value::Table(services));
+        let (heard, _guard) = notices(&host);
+        let mut module = VoiceModule::new();
+        assert!(start(&mut module, &mut host).is_ok());
+        stop(&mut module, &mut host);
+        let mut want = Notice::about(keys::SETTINGS_RESET, ID);
+        let named = vec![format!("{key}.no-such-row")];
+        want.args.push((args::KEYS, NoticeArg::List(named)));
+        assert_eq!(*heard.lock().unwrap(), [want], "{key}");
+        let mut groq = entry(1);
+        groq.as_table_mut()
+            .unwrap()
+            .insert("keep".to_owned(), true.into());
+        let kept = toml::Table::from_iter([("groq".to_owned(), groq)]);
+        let written = toml::Table::from_iter([(key.to_owned(), toml::Value::Table(kept))]);
+        assert_eq!(host.sink.writes(), [(ID, written)], "{key}");
+    }
 }
 
 #[test]

@@ -74,6 +74,8 @@ const BAD_JOIN: &str =
 pub(crate) const PICKS: &str = "picks";
 /// The switched-on services' key in the section, which also names a dropped entry in the settings notice.
 pub(crate) const SERVICES: &str = "services";
+/// The switched-off services' key in the section, named in the settings notice as `services` is.
+pub(crate) const PARKED: &str = "parked";
 /// The cloud switch's key in the section, which the Cloud page's switch writes.
 pub(crate) const CLOUD: &str = "cloud";
 /// The device's key in the section, which the Device page's Use writes.
@@ -107,6 +109,8 @@ pub struct VoiceSettings {
     pub cloud: bool,
     /// The services the user switched on, by row id.
     pub services: BTreeMap<String, ServiceOn>,
+    /// The services the user switched off, by row id, kept as they were until each one's Confirm; never sent to.
+    pub parked: BTreeMap<String, ServiceOn>,
     /// The longest silence a cloud request may keep, in seconds; a piece may take several of these.
     pub net_wait_s: u16,
     /// Tries per piece before a cloud note.

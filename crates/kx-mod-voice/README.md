@@ -52,7 +52,7 @@ It provides no service, and it never injects input: the keyboard types each text
 
 ## Settings (`[voice]`, version 1)
 
-The defaults live only in `defaults.toml`, each with its one-line meaning. The ranges the ports already know come from `kx-module-api` (`SpeechAsk`, `JobLimits`, `FetchAsk`, `CardUse`, and `CloudAsk` for `net_wait_s` and `net_tries`); the module's own ranges are named constants in `src/settings.rs` and `src/settings/cloud.rs`. A bad key goes back to its default with the kernel's settings notice. A bad service entry or pick goes alone: the check takes any, and every read of `[voice]` drops a bad one with `VoiceSettings::drop_bad`, raises the same notice naming `services.<id>` or `picks.<lang>`, and writes back only the key it changed. An entry in `services` keeps the day and terms number the user confirmed, and any typed address, Other model and keep-nothing switch.
+The defaults live only in `defaults.toml`, each with its one-line meaning. The ranges the ports already know come from `kx-module-api` (`SpeechAsk`, `JobLimits`, `FetchAsk`, `CardUse`, and `CloudAsk` for `net_wait_s` and `net_tries`); the module's own ranges are named constants in `src/settings.rs` and `src/settings/cloud.rs`. A bad key goes back to its default with the kernel's settings notice. A bad service entry or pick goes alone: the check takes any, and every read of `[voice]` drops a bad one with `VoiceSettings::drop_bad`, raises the same notice naming `services.<id>`, `parked.<id>` or `picks.<lang>`, and writes back only the key it changed. An entry in `services` keeps the day and terms number the user confirmed, and any typed address, Other model and keep-nothing switch; a service Off keeps it in `parked` until its Confirm (ADR-0054).
 
 | Group | Keys |
 |---|---|
@@ -61,11 +61,11 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 | Typing and bar | `type_suffix`, `history_join`, `type_gap_ms`, `insert`, `paste_ms`, `take_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
 | History | `history`, `history_max`, `keep_voice`, `voice_max_mb` |
 | Worker | `job_mb`, `idle_min`, `ask_ms`, `load_s`, `warm_s`, `piece_wait_s`, `restart_ms`, `restart_max_ms` |
-| Cloud | `cloud`, `services`, `net_wait_s`, `net_tries`, `facts_days` |
+| Cloud | `cloud`, `services`, `parked`, `net_wait_s`, `net_tries`, `facts_days` |
 
 ## Public API
 
-`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad`, `services_value` and its `SPEC` with the range constants), `ServiceOn`, `Insert`, `INSERTS`, `KEEP_START`, `PLACES` and `place_name`; the `models`, `services`, `cloud`, `keys`, `line`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
+`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad`, `services_value`, `parked_value` and its `SPEC` with the range constants), `ServiceOn`, `Insert`, `INSERTS`, `KEEP_START`, `PLACES` and `place_name`; the `models`, `services`, `cloud`, `keys`, `line`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 

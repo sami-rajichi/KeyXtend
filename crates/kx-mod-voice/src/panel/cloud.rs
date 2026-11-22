@@ -1,6 +1,6 @@
 //! The cloud pages' state and clicks (ADR-0047): the Cloud page's switch and its ticked service's buttons, a card's
 //! confirm, and the writes each act leaves in `[voice]`. The key page's acts are in `lines`, the Models page's sides in
-//! `sides`; `services` is written only through `VoiceSettings::services_value`.
+//! `sides`; `services` and `parked` are written only through `services_value` and `parked_value`.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -11,7 +11,7 @@ use kx_module_api::ports::{
 use super::typing::Typed;
 use super::{Do, Key, Page, Panel};
 use crate::cloud::Cloud;
-use crate::settings::{CLOUD, PICKS, SERVICES, VoiceSettings};
+use crate::settings::{CLOUD, PARKED, PICKS, SERVICES, VoiceSettings};
 use crate::view::Facts;
 
 /// The cloud pages' state.
@@ -188,8 +188,8 @@ impl Panel {
         self.go(page)
     }
 
-    /// Switches service `id` Off, plainly or as its newer terms were `declined`: its listed picks wait for its Confirm
-    /// (ADR-0054). Its sealed key stays, as only Remove key deletes it.
+    /// Switches service `id` Off, plainly or as its newer terms were `declined`: its entry goes aside and its picks
+    /// wait for its Confirm (ADR-0054). Its sealed key stays, as only Remove key deletes it.
     fn turn_off(&mut self, id: &str, declined: bool, facts: &Facts<'_>) -> Vec<Do> {
         let mut out = edit(facts, |c, s| {
             if declined {
@@ -273,15 +273,23 @@ pub(super) fn edit(
     writes(facts.settings, &next)
 }
 
-/// The writes that bring `[voice]` from `before` to `after`: the picks, the services and the switch that changed.
+/// The writes that bring `[voice]` from `before` to `after`: the picks, the services On and parked, and the switch that
+/// changed. The map gaining an entry goes first, so a stop between the saves leaves it in both, which the start repair
+/// settles, never in neither.
 fn writes(before: &VoiceSettings, after: &VoiceSettings) -> Vec<Do> {
     let mut out = Vec::new();
     if before.picks != after.picks {
         let picks = toml::Value::try_from(&after.picks).ok();
         out.extend(picks.map(|v| Do::Set(PICKS, v)));
     }
-    if before.services != after.services {
-        out.extend(after.services_value().map(|v| Do::Set(SERVICES, v)));
+    let on = (before.services != after.services).then(|| after.services_value());
+    let on = on.flatten().map(|v| Do::Set(SERVICES, v));
+    let parked = (before.parked != after.parked).then(|| after.parked_value());
+    let parked = parked.flatten().map(|v| Do::Set(PARKED, v));
+    if after.parked.len() > before.parked.len() {
+        out.extend(parked.into_iter().chain(on));
+    } else {
+        out.extend(on.into_iter().chain(parked));
     }
     if before.cloud != after.cloud {
         out.push(Do::Set(CLOUD, toml::Value::Boolean(after.cloud)));

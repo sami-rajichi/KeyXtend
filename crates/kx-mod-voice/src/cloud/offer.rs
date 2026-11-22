@@ -4,9 +4,9 @@
 
 use kx_module_api::ports::Unavailable;
 
-use super::{Choice, Chosen, Cloud, typed};
+use super::{Choice, Chosen, Cloud, entry_ok, reaches, typed};
 use crate::services::Service;
-use crate::settings::VoiceSettings;
+use crate::settings::{ServiceOn, VoiceSettings};
 
 /// A cloud model a language may pick: its service and the model.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -75,8 +75,9 @@ impl<'a> Cloud<'a> {
         out
     }
 
-    /// The listed model `lang`'s pick keeps while its offered service is Off, or its entry stale, and cloud is on
-    /// (owner, 2026-11-21); only that service's Confirm brings it back into use.
+    /// The model `lang`'s pick keeps while its offered service is Off, or its entry stale, and cloud is on (owner,
+    /// 2026-11-21): a listed one, or the typed id its parked entry holds (ADR-0054); only that service's Confirm brings
+    /// it back into use.
     #[must_use]
     pub fn waits<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Offered<'s>>
     where
@@ -84,9 +85,17 @@ impl<'a> Cloud<'a> {
     {
         let (id, model) = self.table.pick(s.picks.get(lang)?)?;
         let service = self.table.get(id).filter(|r| r.offered && self.on(s))?;
-        let listed = service.model(model).filter(|m| m.code(lang).is_some())?;
-        let model = Chosen::Listed(listed);
-        (self.entry(s, service).is_none()).then_some(Offered { service, model })
+        if self.entry(s, service).is_some() {
+            return None;
+        }
+        let model = if let Some(listed) = service.model(model) {
+            listed.code(lang).map(|_| Chosen::Listed(listed))?
+        } else {
+            let held = |e: &&ServiceOn| entry_ok(service, e) && reaches(service, e);
+            let parked = s.parked.get(id).filter(held)?;
+            typed(service, parked, model, lang).then_some(Chosen::Typed(parked.model.as_str()))?
+        };
+        Some(Offered { service, model })
     }
 
     /// What service `id`'s `model` is for `lang` now, as Compare sends to it; `None` when the rules do not take it.

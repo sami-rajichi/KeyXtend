@@ -1,16 +1,16 @@
 //! A service switched Off (owner, 2026-11-21) or its newer terms declined (ADR-0054): its listed picks wait, dictating
-//! nowhere, until that service's own Confirm, and the `cloud` switch Off keeps every pick for Cloud On; a typed pick
-//! still goes with its service's typed lines.
+//! nowhere, until that service's own Confirm, and the `cloud` switch Off keeps every pick for Cloud On. Its typed lines
+//! and their picks wait too, in `parked`.
 
 use super::*;
 
 /// The service `lang`'s pick waits for, by id.
-fn waits(s: &VoiceSettings, lang: &str) -> Option<String> {
+pub(super) fn waits(s: &VoiceSettings, lang: &str) -> Option<String> {
     rules().waits(s, lang).map(|o| o.service.id.clone())
 }
 
 /// The service `lang` dictates with, by id.
-fn used(s: &VoiceSettings, lang: &str) -> Option<String> {
+pub(super) fn used(s: &VoiceSettings, lang: &str) -> Option<String> {
     rules().choice(s, lang).map(|c| c.service.id.clone())
 }
 
@@ -74,15 +74,4 @@ fn the_cloud_switch_off_keeps_a_typed_pick_and_cloud_on_brings_it_back() {
     assert_eq!(used(&s, "en"), None, "local while cloud is off");
     rules().switch(&mut s, true);
     assert_eq!(used(&s, "en").as_deref(), Some("custom"));
-}
-
-#[test]
-fn off_still_drops_a_typed_pick_with_its_typed_lines() {
-    let mut s = on();
-    assert!(rules().confirm(&mut s, "custom", today()));
-    assert!(rules().type_address(&mut s, "custom", ADDRESS));
-    assert!(rules().type_model(&mut s, "custom", "my-model"));
-    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
-    rules().turn_off(&mut s, "custom");
-    assert!(s.picks.is_empty() && waits(&s, "en").is_none());
 }

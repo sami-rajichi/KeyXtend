@@ -16,9 +16,12 @@ Decided by the owner on 2026-11-22.
 1. **The Cloud switch Off** keeps every cloud pick waiting: local models serve, and nothing is sent. Cloud On again brings each language back to its cloud pick. This is the owner's own act, so ADR-0047 decision 12 ("nothing moves to cloud on its own") still holds.
 2. **New terms declined** turns the service Off, and its picks wait for its Confirm, as a service Off does. Accepting the terms later brings them back.
 3. **Side effects keep the choice.** Only the owner changing that very choice drops it, such as a new local pick, a cleared typed address or a new typed model id. Any other act or repair leaves the choice waiting, marked or unavailable, as the screens already show.
+4. **A service Off keeps its entry aside.** Off and declined terms move the service's entry from `services` to a new `[voice] parked` map, with its typed address, typed model and keep-nothing switch, and its typed picks wait as listed ones do. Its Confirm moves the entry back with the new day and terms number; nothing ever reads or sends to a parked entry.
 
 ## Consequences
 
 - The start-up repair keeps a cloud pick while cloud is off, and keeps a listed pick when its service entry is dropped. It still drops a pick whose row or model the table no longer offers, and names it in the settings notice.
 - While a cloud pick waits with cloud off, the language dictates with its local default; Start shows no cloud note, as cloud offers nothing.
 - An older version reads a waiting pick as before: with cloud off it drops it at start with the settings notice.
+- The start-up repair checks a parked entry as an On one, and drops it, named `parked.<id>`, when its row is gone or not offered, or when the service is also On.
+- An older version cannot read `parked`: its section refuses a key it does not know, so it resets that key with the settings notice and the parked entries are lost there, while its other values stay.

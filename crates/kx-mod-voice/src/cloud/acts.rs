@@ -1,6 +1,7 @@
 //! The acts that change a language's cloud pick or a service's entry (ADR-0047 decision 12, ADR-0054): the `cloud`
 //! switch, a card's confirmation, a service Off or its newer terms declined, a pick, the typed lines, and the card's
-//! warning seen. Only `pick` moves a language to a service; Confirm and Cloud On bring back the picks that wait.
+//! warning seen. Only `pick` moves a language to a service; Confirm and Cloud On bring back the picks that wait, and
+//! Confirm a parked entry.
 
 use kx_module_api::ports::{CloudAsk, Date};
 
@@ -18,18 +19,19 @@ impl<'a> Cloud<'a> {
         s.cloud = on;
     }
 
-    /// Switches service `id` on as confirmed on `today` at its row's terms number, keeping its typed lines; false
-    /// while cloud is off or for a row not offered. An entry the row no longer takes, as a hand edit leaves, starts
-    /// afresh, so only the typed picks its lines held go.
+    /// Switches service `id` on as confirmed on `today` at its row's terms number, keeping its On entry or bringing
+    /// back its parked one with its typed lines; false while cloud is off or for a row not offered. An entry the row no
+    /// longer takes, as a hand edit leaves, starts afresh, so only the typed picks its lines held go.
     pub fn confirm(&self, s: &mut VoiceSettings, id: &str, today: Date) -> bool {
         let Some(row) = self.table.get(id).filter(|row| row.offered && self.on(s)) else {
             return false;
         };
         let fresh = ServiceOn::new(today, row.terms);
+        let parked = s.parked.remove(id);
         let entry = s
             .services
             .entry(id.to_owned())
-            .or_insert_with(|| fresh.clone());
+            .or_insert_with(|| parked.unwrap_or_else(|| fresh.clone()));
         let stale = !entry_ok(row, entry);
         if stale {
             *entry = fresh;
@@ -45,10 +47,12 @@ impl<'a> Cloud<'a> {
         true
     }
 
-    /// Switches service `id` Off: its listed picks wait for its Confirm (owner, 2026-11-21), and a typed pick goes with
-    /// its typed lines.
+    /// Switches service `id` Off: its entry goes aside to `parked`, so its typed lines, its switch and its picks wait
+    /// for its Confirm (owner, 2026-11-21; ADR-0054); a pick with nothing to wait for goes.
     pub fn turn_off(&self, s: &mut VoiceSettings, id: &str) {
-        s.services.remove(id);
+        if let Some(entry) = s.services.remove(id) {
+            s.parked.insert(id.to_owned(), entry);
+        }
         let waits: Vec<String> = (s.picks.keys())
             .filter(|lang| self.waits(s, lang).is_some())
             .cloned()
@@ -57,8 +61,8 @@ impl<'a> Cloud<'a> {
         s.picks.retain(|l, p| waits.contains(l) || !its(p));
     }
 
-    /// Switches service `id` Off as its newer terms were declined: as a plain Off, its listed picks wait for its
-    /// Confirm (ADR-0054).
+    /// Switches service `id` Off as its newer terms were declined: as a plain Off, its entry goes aside and its picks
+    /// wait for its Confirm (ADR-0054).
     pub fn decline(&self, s: &mut VoiceSettings, id: &str) {
         self.turn_off(s, id);
     }
