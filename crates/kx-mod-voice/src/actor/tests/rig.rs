@@ -17,6 +17,7 @@ use kx_test_support::host::FakeHost;
 use super::super::{Actor, Msg, Ports};
 pub(super) use super::fakes::{DIR, Fakes, done, english, english_layout};
 use super::taps::{Heard, in_place, listen, typist};
+use crate::module::read;
 use crate::{MANIFEST, VoiceSettings};
 
 /// The actor on a fake host, its fakes, and what it published.
@@ -66,14 +67,34 @@ impl Rig {
         Self::unbegun_as(false, setup)
     }
 
+    /// A begun rig on `section`, read and repaired as the module's own start does, with `fake` behind its ports.
+    pub fn restarted(fake: Fakes, section: toml::Table) -> Self {
+        let setup = |_: &Fakes, host: &mut FakeHost| {
+            for (key, value) in section {
+                host.put(&key, value);
+            }
+        };
+        let rig = Self::unbegun_from(false, fake, setup, |cx| read(cx).unwrap());
+        Self::begun(rig)
+    }
+
     /// The rig before `begin`, of a hidden run when `hidden`, its settings and fakes prepared by `setup`.
     fn unbegun_as(hidden: bool, setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
+        Self::unbegun_from(hidden, Fakes::new(), setup, |cx| cx.settings().unwrap())
+    }
+
+    /// The rig before `begin` on `fake`, prepared by `setup`, its settings as `read` takes them from the host.
+    fn unbegun_from(
+        hidden: bool,
+        fake: Fakes,
+        setup: impl FnOnce(&Fakes, &mut FakeHost),
+        read: impl FnOnce(&ModuleCx<'_>) -> VoiceSettings,
+    ) -> Self {
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();
         host.put("models_dir", DIR.into());
-        let fake = Fakes::new();
         setup(&fake, &mut host);
-        let settings: VoiceSettings = ModuleCx::new(&mut host).settings().unwrap();
+        let settings = read(&ModuleCx::new(&mut host));
         let (tx, inbox) = mpsc::channel();
         let (asks, heard) = (Arc::default(), Arc::default());
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);

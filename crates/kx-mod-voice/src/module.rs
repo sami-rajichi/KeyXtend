@@ -108,7 +108,7 @@ impl Drop for VoiceModule {
 
 /// `[voice]` with each bad service entry and pick dropped alone (edge case 19): the settings notice names it, and the
 /// rest is written back so the next start finds it gone.
-fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
+pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     let mut settings = cx.settings::<VoiceSettings>()?;
     let before = (settings.services.len(), settings.picks.len());
     let dropped = settings.drop_bad();

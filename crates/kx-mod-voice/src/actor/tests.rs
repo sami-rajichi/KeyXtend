@@ -18,6 +18,7 @@ mod key;
 mod logs;
 mod panel;
 mod paste;
+mod restart;
 mod rig;
 mod store;
 mod taps;
