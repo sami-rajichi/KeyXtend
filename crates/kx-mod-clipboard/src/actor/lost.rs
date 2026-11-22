@@ -1,7 +1,7 @@
-//! The texts that left the history, by a take, a delete or a sweep, as content hashes alone: Paste at once never writes
-//! one back until the history keeps it again (owner's check, 2026-11-21). The copy a take read also keeps nothing when
-//! the watch tells it within `take_wait_ms`, as that note can come after the take, or twice. A rich entry's text is not
-//! matched, as only the board can name it; past `max_entries` the oldest goes.
+//! The texts that left the history, as content hashes alone, takes apart from deletes so a bulk delete never pushes a
+//! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21). A take's
+//! copy also keeps nothing when the watch tells it within `take_wait_ms`, as its note can come after the take or twice;
+//! a rich entry's hash never matches, as only the board names it, but the history cannot tell it without its blobs.
 
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -13,22 +13,22 @@ use crate::entry::{Entry, text_of};
 use crate::hash;
 use crate::settings::ClipSettings;
 
-/// The hashes of the texts that left the history, oldest first, and of the takes' copies whose note is due, each with
-/// the end of its wait; it holds at most `max` and `due_max`.
+/// The hashes of the texts takes read and of those deleted, swept or trimmed, and of the takes' copies whose note is
+/// due, each with the end of its wait; at most `due_max` are due.
 pub(super) struct Lost {
-    hashes: VecDeque<u64>,
-    max: usize,
+    taken: Ring,
+    gone: Ring,
     due: VecDeque<(u64, Mono)>,
     due_max: usize,
     wait: Duration,
 }
 
 impl Lost {
-    /// None yet; at most `max_entries` texts, and `queue_copies` takes due, as no more copies wait for the history.
+    /// None yet; at most `max_entries` texts of each kind, and `queue_copies` takes due, as no more copies wait.
     pub(super) fn new(s: &ClipSettings) -> Self {
         Self {
-            hashes: VecDeque::new(),
-            max: s.max_entries,
+            taken: Ring::new(s.max_entries),
+            gone: Ring::new(s.max_entries),
             due: VecDeque::new(),
             due_max: s.queue_copies,
             wait: s.take_wait(),
@@ -38,7 +38,7 @@ impl Lost {
     /// `entry` left the history; a text entry's hash is kept, matched only when that text was all it held.
     pub(super) fn gone(&mut self, entry: &Entry) {
         if matches!(entry.kind, ClipKind::Text | ClipKind::Link) {
-            self.add(entry.hash);
+            self.gone.add(entry.hash);
         }
     }
 
@@ -46,7 +46,7 @@ impl Lost {
     /// most due, the oldest is due no more.
     pub(super) fn taken(&mut self, text: &str, now: Mono) {
         let hash = hash::of_text(text);
-        self.add(hash);
+        self.taken.add(hash);
         self.expire(now);
         if self.due.len() >= self.due_max {
             self.due.pop_front();
@@ -72,29 +72,53 @@ impl Lost {
     pub(super) fn kept(&mut self, parts: &[ClipPart]) {
         if let Some(text) = text_of(parts) {
             let hash = hash::of_text(text);
-            self.hashes.retain(|h| *h != hash);
+            self.taken.remove(hash);
+            self.gone.remove(hash);
         }
     }
 
     /// True when `text` left the history and was not kept since.
     pub(super) fn has(&self, text: &str) -> bool {
-        self.hashes.contains(&hash::of_text(text))
+        let hash = hash::of_text(text);
+        self.taken.has(hash) || self.gone.has(hash)
     }
 
-    /// Keeps `hash`, unless it is kept already; past the most it holds, the oldest goes.
+    /// Drops the takes whose wait ended by `now`.
+    fn expire(&mut self, now: Mono) {
+        self.due.retain(|(_, end)| now < *end);
+    }
+}
+
+/// Hashes, oldest first, at most `max`.
+struct Ring {
+    hashes: VecDeque<u64>,
+    max: usize,
+}
+
+impl Ring {
+    /// None yet, holding at most `max`.
+    fn new(max: usize) -> Self {
+        let hashes = VecDeque::new();
+        Self { hashes, max }
+    }
+
+    /// Keeps `hash` as the newest, moving it there if held; past the most, the oldest goes.
     fn add(&mut self, hash: u64) {
-        if self.hashes.contains(&hash) {
-            return;
-        }
+        self.remove(hash);
         if self.hashes.len() >= self.max {
             self.hashes.pop_front();
         }
         self.hashes.push_back(hash);
     }
 
-    /// Drops the takes whose wait ended by `now`.
-    fn expire(&mut self, now: Mono) {
-        self.due.retain(|(_, end)| now < *end);
+    /// Lets `hash` go.
+    fn remove(&mut self, hash: u64) {
+        self.hashes.retain(|h| *h != hash);
+    }
+
+    /// True when it holds `hash`.
+    fn has(&self, hash: u64) -> bool {
+        self.hashes.contains(&hash)
     }
 }
 
@@ -116,17 +140,40 @@ mod tests {
     }
 
     #[test]
-    fn a_text_stays_lost_until_kept_and_past_the_most_the_oldest_goes() {
+    fn a_text_stays_lost_until_kept_and_past_the_most_the_oldest_of_its_kind_goes() {
         let (mut lost, now) = (lost(2, 1), Mono::default());
         lost.taken("a", now);
         lost.gone(&entry("b"));
         assert!(lost.has("a") && lost.has("b"));
-        lost.taken("a", now);
         lost.taken("c", now);
-        assert!(!lost.has("a"), "a went first, held once");
+        lost.taken("d", now);
+        assert!(!lost.has("a"), "a went first among the takes");
         assert!(lost.has("b") && lost.has("c"));
         lost.kept(&[text("b")]);
         assert!(!lost.has("b") && lost.has("c"));
+    }
+
+    #[test]
+    fn a_bulk_delete_never_pushes_out_a_take() {
+        let (mut lost, now) = (lost(2, 1), Mono::default());
+        lost.taken("k", now);
+        for t in ["b", "c", "d"] {
+            lost.gone(&entry(t));
+        }
+        assert!(lost.has("k") && !lost.has("b") && lost.has("d"));
+    }
+
+    #[test]
+    fn a_hash_added_again_moves_to_the_back() {
+        let (mut lost, now) = (lost(2, 1), Mono::default());
+        for t in ["a", "b", "a", "c"] {
+            lost.taken(t, now);
+        }
+        assert!(lost.has("a") && !lost.has("b"), "a take moved back");
+        for t in ["x", "y", "x", "z"] {
+            lost.gone(&entry(t));
+        }
+        assert!(lost.has("x") && !lost.has("y"), "a delete moved back");
     }
 
     #[test]
