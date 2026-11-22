@@ -26,7 +26,7 @@ Item {
     // The key line's id, under which the test's answer shows.
     readonly property string keyId: shows && sheet.key ? sheet.key.id : ""
     // The pager's room beside the lines while the page has more than one part.
-    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
+    readonly property real pager: pg.room
     // The key works, which shows as a lit mark; or its answer warns, which shows as a warning band (mock-up .res.bad).
     readonly property bool works: shows && !!sheet.check && sheet.check.works
     readonly property bool refused: shows && !!sheet.check && sheet.check.warns

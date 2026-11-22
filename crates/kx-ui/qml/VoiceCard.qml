@@ -24,7 +24,7 @@ Item {
     readonly property real scale: host.ar ? lk.look.arabic_scale : 1
     readonly property real hintPx: pn.hint_px[0] * s * scale
     // The pager's room beside the facts while the card has more than one page.
-    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
+    readonly property real pager: pg.room
     readonly property alias body: col
 
     height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height, pg.least)

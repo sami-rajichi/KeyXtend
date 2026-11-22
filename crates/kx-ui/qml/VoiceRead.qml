@@ -22,7 +22,7 @@ Item {
     // Start shows only while the microphone is closed; once it opens the run's plan is fixed, so the picks only show.
     readonly property bool idle: host.view.foot.some(b => b.kind === host.names.acts.compare)
     // The pager's room beside the body while the picks take more than one page.
-    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
+    readonly property real pager: pg.room
     readonly property alias body: col
     // Picks pair, `across` to a row and each at that share of the body, when at their own widths they take more rows than
     // a full page's picks would paired.

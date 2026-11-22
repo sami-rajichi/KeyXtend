@@ -39,7 +39,7 @@ Item {
         x: listing.side
         y: listing.pn.body_pad_px[0] * listing.s
         // The pager's room stays, so rows keep their width as views change.
-        width: listing.width - 2 * listing.side - (listing.pn.body_gap_px + listing.pn.page_px[0]) * listing.s
+        width: listing.width - 2 * listing.side - pg.span
         height: col.y + listing.host.pageH
 
         VoiceHeads {
