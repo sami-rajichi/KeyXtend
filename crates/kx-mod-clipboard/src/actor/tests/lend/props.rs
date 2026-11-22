@@ -73,6 +73,11 @@ impl Run {
         rounds
     }
 
+    /// True while an insert runs.
+    fn inserting(&self) -> bool {
+        !matches!(self.rig.pasting(), Paste::Idle)
+    }
+
     /// The titles of the entries the history holds.
     fn titles(&self) -> Vec<String> {
         let entries = self.rig.actor.history.entries();
@@ -87,9 +92,15 @@ impl Run {
         self.gone.retain(|t| !now.contains(t));
     }
 
-    /// Notes what `step` changed, given the writes before it and whether its mark was taken as our echo; a note not
-    /// ours drops the echoes due, and only an echoed numbered copy or our echo keeps `echoed`.
-    fn note(&mut self, step: &Step, writes: usize, echo: bool) -> Result<(), TestCaseError> {
+    /// Notes what `step` changed, given the writes before it, whether its mark was taken as our echo and whether an
+    /// insert ran; a note not ours drops the echoes due, and only an echoed numbered copy or our echo keeps `echoed`.
+    fn note(
+        &mut self,
+        step: &Step,
+        writes: usize,
+        echo: bool,
+        insert: bool,
+    ) -> Result<(), TestCaseError> {
         let moved = step.notes();
         self.told |= moved;
         self.vault = matches!(step, Step::Skipped)
@@ -109,12 +120,13 @@ impl Run {
         if wrote > 0 && now.last() == Some(&vec![text(SAID)]) {
             self.told = false;
         }
-        self.wrote(&now[writes..])
+        self.wrote(&now[writes..], insert)
     }
 
     /// Follows this step's writes, each then on the clipboard: the lend's text keeps whether it was written over an
-    /// echoed numbered copy, only such a copy may come back, and a text gone from the history never does.
-    fn wrote(&mut self, new: &[Vec<ClipPart>]) -> Result<(), TestCaseError> {
+    /// echoed numbered copy, only such a copy may come back, and a text gone from the history never does. An `insert`
+    /// writes no put-back, and pastes an entry it read before a delete, as `joins.rs` checks.
+    fn wrote(&mut self, new: &[Vec<ClipPart>], insert: bool) -> Result<(), TestCaseError> {
         let (flags, clip) = (&mut self.numbered, &self.rig.fakes.clip);
         for parts in new {
             if *parts == [text(SAID)] {
@@ -122,7 +134,8 @@ impl Run {
                 clip.set_marked(Some(SAID));
                 continue;
             }
-            let back = text_of(parts).is_some_and(|t| self.gone.iter().any(|g| g == t));
+            let gone = text_of(parts).is_some_and(|t| self.gone.iter().any(|g| g == t));
+            let back = gone && !insert;
             prop_assert!(
                 !back,
                 "a taken or deleted text is never written back until kept again"
@@ -155,9 +168,10 @@ impl Run {
     fn one(&mut self, step: &Step) -> Result<(), TestCaseError> {
         let (writes, before) = (self.rig.fakes.writer.writes().len(), self.titles());
         let marks = matches!(step, Step::Private | Step::Numbered | Step::Marked);
-        let echo = marks && self.due > 0;
+        let (echo, inserted) = (marks && self.due > 0, self.inserting());
         self.apply(step);
-        self.note(step, writes, echo)?;
+        let insert = inserted || self.inserting();
+        self.note(step, writes, echo, insert)?;
         self.forgot(&before);
         let now = self.rig.fakes.writer.writes();
         prop_assert!(
@@ -169,9 +183,11 @@ impl Run {
             !(self.vault && vaulted),
             "a skipped app's text is never put back"
         );
-        let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
-        prop_assert!(idle || !inserting, "a lend never runs beside an insert");
+        prop_assert!(
+            idle || !self.inserting(),
+            "a lend never runs beside an insert"
+        );
         let mut answers = self.answers();
         let all = answers.len();
         answers.dedup();
@@ -182,12 +198,12 @@ impl Run {
     /// Waits until nothing is under way; then every ask was answered, and the text pasted is not left.
     fn drain(&mut self) -> Result<(), TestCaseError> {
         let wait = self.rig.settings.paste_wait();
-        let writes = self.rig.fakes.writer.writes().len();
+        let (writes, insert) = (self.rig.fakes.writer.writes().len(), self.inserting());
         for _ in 0..DRAIN {
             self.rig.advance(wait);
         }
         let now = self.rig.fakes.writer.writes();
-        self.wrote(&now[writes..])?;
+        self.wrote(&now[writes..], insert)?;
         prop_assert!(self.rig.actor.lent.idle(), "a lend always ends");
         prop_assert_eq!(
             self.answers(),
