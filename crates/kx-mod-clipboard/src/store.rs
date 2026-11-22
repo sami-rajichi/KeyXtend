@@ -138,6 +138,12 @@ impl Store {
             .map_err(|_| SealedError::Damaged)
     }
 
+    /// The folder and name of `entry`'s first content blob, for tests that damage it.
+    #[cfg(test)]
+    pub(crate) fn first_blob(&self, entry: &Entry) -> Result<(BlobName, BlobName), SealedError> {
+        Ok((folder_of(self.home(entry))?, part_name(entry.id, 0)?))
+    }
+
     /// Saves `thumb` as `entry`'s thumbnail.
     ///
     /// # Errors

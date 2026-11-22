@@ -13,8 +13,8 @@ use crate::fixture::{app, text};
 
 /// The voice key page, whose Paste takes the clipboard's text.
 const ASKER: &str = "voice";
-/// The clock's step just short of a wait's end.
-const STEP: Duration = Duration::from_millis(1);
+/// The clock's step just short of or just past a wait's end.
+pub(super) const STEP: Duration = Duration::from_millis(1);
 
 /// The texts the history keeps, oldest first.
 pub(super) fn texts(rig: &Rig) -> Vec<String> {
