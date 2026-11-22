@@ -1,6 +1,6 @@
 //! Cloud models as the Models page's Cloud side and Compare list them (design "Choosing"): each switched-on service's
 //! models that know the language in front, and its pick waiting for a service Off, with the service, its mark and why
-//! one cannot be used now.
+//! one cannot be used now. The pick in use or waiting, and its row's key, are read here too.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -103,6 +103,20 @@ impl Panel {
             .collect();
         let send = sent_to(&list);
         (list, send)
+    }
+}
+
+impl<'a> Facts<'a> {
+    /// The language in front's cloud pick, in use or waiting for its service Off (owner, 2026-11-21).
+    #[must_use]
+    pub fn cloud_pick(&self) -> Option<Offered<'a>> {
+        let held = self.cloud_choice().map(|c| Offered::from(&c));
+        held.or_else(|| self.waiting())
+    }
+
+    /// The key of that pick's row on the Cloud side.
+    pub(crate) fn pick_key(&self) -> Option<Key> {
+        self.cloud_pick().map(key_of)
     }
 }
 

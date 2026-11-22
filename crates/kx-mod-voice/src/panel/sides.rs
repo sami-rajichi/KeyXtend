@@ -9,13 +9,15 @@ use super::{Do, Key, Page, Panel};
 use crate::view::Facts;
 
 impl Panel {
-    /// Opens `tab` from Home; Models shows the Cloud side while the language in front has a cloud pick, in use or
-    /// waiting for its service Off, else the Local side.
+    /// Opens `tab` from Home; Models shows the Cloud side on the page holding the language in front's cloud pick, in
+    /// use or waiting for its service Off, until a page turns, else the Local side.
     pub(super) fn open_tab(&mut self, tab: VoiceTab, facts: &Facts<'_>) -> Vec<Do> {
         let out = self.go(Page::Tab(tab));
-        let cloud = facts.cloud_choice().is_some() || facts.waiting().is_some();
-        if tab == VoiceTab::Models && cloud {
+        if tab == VoiceTab::Models
+            && let Some(pick) = facts.pick_key()
+        {
             self.cloud.side = (ModelSide::Cloud, 0);
+            self.hold = Some(pick);
         }
         out
     }

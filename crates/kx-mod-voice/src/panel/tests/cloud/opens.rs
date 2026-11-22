@@ -1,5 +1,5 @@
-//! The Models page opened from Home shows the Cloud side while the language in front has a cloud pick, in use or
-//! waiting for its service Off, else the Local side; Download and Back from the folders still open the Local side.
+//! The Models page opened from Home shows the Cloud side, on the pick's page, while the language in front has a cloud
+//! pick, in use or waiting for its service Off, else the Local side; Download and Back from the folders open Local.
 
 use kx_module_api::ports::{ModelSide, PanelButton, Unavailable, VoiceClick, VoiceTab};
 
@@ -8,6 +8,7 @@ use super::super::models;
 use super::{apply, home, put};
 use crate::services::tests::shipped::{entry, first, pick};
 use crate::services::tests::{ROUTER, with_rows};
+use crate::services::{self, Service};
 
 /// Cloud on, with the first offered row on and keyed, at Home.
 fn groq_on() -> Rig {
@@ -84,6 +85,31 @@ fn a_pick_the_keep_nothing_switch_rules_out_opens_on_the_cloud_side_with_its_rea
     let cloud = kept.and_then(|r| r.cloud.as_ref());
     let why = cloud.and_then(|c| c.unavailable);
     assert_eq!(why, Some(Unavailable::KeepNothing));
+}
+
+#[test]
+fn the_cloud_side_opens_on_the_page_that_holds_the_pick_till_a_page_turns() {
+    let knows = |r: &&Service| r.models.iter().any(|m| m.code("en").is_some());
+    let table = services::table().unwrap();
+    let rows: Vec<&Service> = table.offered().filter(knows).collect();
+    let mut rig = Rig::new();
+    rig.settings.cloud = true;
+    let on: Vec<String> = rows.iter().map(|r| entry(r, "")).collect();
+    put(&mut rig, "services", &on.join("\n"));
+    rig.keyed.extend(rows.iter().map(|r| r.id.clone()));
+    let last = rows.last().unwrap();
+    let n = last.models.iter().rposition(|m| m.code("en").is_some());
+    let picks = format!(r#"en = "{}""#, pick(last, n.unwrap()));
+    put(&mut rig, "picks", &picks);
+    home(&mut rig);
+    rig.click(&VoiceClick::Open(VoiceTab::Models));
+    let view = rig.view().unwrap();
+    assert!(view.pages.count > 1, "the pick sits past the first page");
+    assert_eq!(view.pages.at + 1, view.pages.count, "the pick's page");
+    assert!(models(&view).rows.iter().any(|r| r.used), "the pick shows");
+    rig.click(&VoiceClick::Page { back: true });
+    let back = rig.view().unwrap().pages.at;
+    assert_eq!(back + 2, view.pages.count, "a page turn lets go");
 }
 
 #[test]

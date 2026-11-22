@@ -4,15 +4,13 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{ServiceMark, VoiceHome, VoiceTab};
 
 use super::{Facts, device, short, shown_name};
-use crate::cloud::Offered;
 use crate::flow::Supply;
 use crate::panel::{Panel, options};
 
 /// The home list's values for the language in front, with `tabs`, the pages its shown page lists; a cloud pick, in
 /// use or waiting for its service Off, names its model, and the device stays the one picked.
 pub(super) fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> VoiceHome {
-    let held = facts.cloud_choice().map(|c| Offered::from(&c));
-    let cloud = held.or_else(|| facts.waiting());
+    let cloud = facts.cloud_pick();
     let ready = (cloud.is_none())
         .then(|| panel.stock(facts).supply(facts.iso()).ok())
         .flatten();

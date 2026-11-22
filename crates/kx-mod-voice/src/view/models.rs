@@ -126,7 +126,7 @@ impl Panel {
     /// The local model used for the language in front, as the flow's `Supply` finds it; none while a cloud pick holds
     /// or waits for its service Off.
     pub(crate) fn used_choice(&self, facts: &Facts<'_>) -> Option<Choice> {
-        if facts.cloud_choice().is_some() || facts.waiting().is_some() {
+        if facts.cloud_pick().is_some() {
             return None;
         }
         let table = table().ok()?;
