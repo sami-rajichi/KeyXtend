@@ -607,7 +607,9 @@ var lk = {
       ],
       "fact_px": 200.0,
       "pick_across": 2,
-      "pick_name_px": 96.0
+      "pick_name_px": 96.0,
+      "chip_name_px": 128.0,
+      "wave_room_px": 48.0
     }
   },
   "motion": {
@@ -1210,6 +1212,7 @@ var lk = {
       "service_key": "key-round",
       "local": "cpu",
       "cloud": "cloud",
+      "device": "cpu",
       "transcribing": "audio-lines",
       "text": "captions",
       "password": "lock",

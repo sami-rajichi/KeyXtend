@@ -241,7 +241,7 @@ fn views(tag: &str) -> Value {
             panel: Some(panel),
             place: BarPlace::Above,
             sounds: true,
-            cloud: None,
+            mark: None,
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");

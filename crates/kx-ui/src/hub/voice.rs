@@ -4,6 +4,7 @@
 
 pub mod acts;
 mod card;
+mod chip;
 mod cloud;
 mod device;
 mod lists;

@@ -145,6 +145,7 @@ cloud =
     .paste-empty = Le presse-papiers ne contient aucun texte.
     .keep-nothing = Seulement des hébergeurs qui ne gardent rien
     .on-bar = Votre voix partira vers { $name } à l’arrêt
+    .on-device = { $name } transcrit ce que vous dites
     .use-local = Utiliser le modèle local
     .send-warning = Comparer enverra votre voix à { $names } à l’arrêt.
     .note-net = Le service n’a pas répondu. Vérifiez le réseau et réessayez.

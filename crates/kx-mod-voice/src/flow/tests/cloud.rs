@@ -5,7 +5,9 @@
 //! pick that moved in `moved`, Open service in `settle`, and a used allowance's renewal in `renewal`.
 
 use super::*;
-use kx_module_api::ports::{BarNote, CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName};
+use kx_module_api::ports::{
+    BarMark, BarNote, CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName,
+};
 
 mod faults;
 mod guard;
@@ -127,7 +129,10 @@ impl Rig {
 
     /// The cloud mark the last view shows.
     fn mark(&self) -> Option<ServiceName> {
-        self.page.as_ref().and_then(|p| p.cloud.clone())
+        match self.page.as_ref()?.mark.clone()? {
+            BarMark::Cloud(name) => Some(name),
+            BarMark::Device(_) => None,
+        }
     }
 }
 
@@ -149,6 +154,8 @@ fn a_cloud_pick_shows_the_cloud_mark_with_its_service_from_start() {
     local.key();
     local.tell(SpeechNote::Stage(SpeechStage::Open));
     assert_eq!(local.mark(), None, "a local dictation has none");
+    let chip = local.page.as_ref().and_then(|p| p.mark.clone());
+    assert!(matches!(chip, Some(BarMark::Device(_))));
 }
 
 #[test]

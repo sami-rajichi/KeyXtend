@@ -273,14 +273,25 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
 #[test]
 fn the_bar_names_the_service_its_voice_goes_to() {
     let page_a = VoicePage {
-        cloud: Some(service()),
+        mark: Some(BarMark::Cloud(service())),
         ..page(VoiceBar::Transcribing)
     };
     let shown = format!("{:?}", VoiceView::new(page_a));
     holds(
         &shown,
-        &["cloud: Some(Named(\"Service A\"))", "Transcribing"],
+        &["mark: Some(Cloud(Named(\"Service A\")))", "Transcribing"],
     );
-    let local = format!("{:?}", page(VoiceBar::Hidden));
-    assert!(local.contains("cloud: None"), "{local}");
+    let none = format!("{:?}", page(VoiceBar::Hidden));
+    assert!(none.contains("mark: None"), "{none}");
+}
+
+#[test]
+fn the_bar_names_the_model_on_this_pc_and_never_prints_it() {
+    let page_a = VoicePage {
+        mark: Some(BarMark::Device(Redacted::new("my-own-model".into()))),
+        ..page(VoiceBar::Transcribing)
+    };
+    let shown = format!("{:?}", VoiceView::new(page_a));
+    holds(&shown, &["mark: Some(Device(", REDACTED_MARKER]);
+    assert!(!shown.contains("my-own-model"), "{shown}");
 }

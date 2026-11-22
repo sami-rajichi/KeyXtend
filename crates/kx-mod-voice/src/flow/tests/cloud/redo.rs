@@ -85,6 +85,9 @@ fn use_the_local_model_writes_the_held_recording_on_this_pc() {
     assert_eq!(calls(&out), [RunCall::Again(local)]);
     assert!(uploads(&out).is_empty());
     assert_eq!((rig.shown(), rig.mark()), (VoiceBar::Transcribing, None));
+    let chip = rig.page.as_ref().and_then(|p| p.mark.clone());
+    let parakeet = BarMark::Device(Redacted::new("parakeet".into()));
+    assert_eq!(chip, Some(parakeet), "the model on this PC");
     let out = rig.write(&["en local"]);
     assert_eq!(kept(&out)[0].model.expose(), "parakeet");
 }

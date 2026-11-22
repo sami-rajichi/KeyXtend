@@ -220,7 +220,7 @@ fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "cancel=x stop=square gear=settings-2 close=x copy=copy copied=check undo=undo-2 \
                 anyway=rotate-ccw again=rotate-ccw listen=mic download=download service=file \
-                service_key=key-round local=cpu cloud=cloud \
+                service_key=key-round local=cpu cloud=cloud device=cpu \
                 transcribing=audio-lines text=captions password=lock note=square-x notes.cancelled=x \
                 notes.checking=refresh-cw \
                 notes.folder=folder notes.full=hard-drive notes.language=languages notes.mic-busy=mic-off \

@@ -1,14 +1,15 @@
 //! Cloud models and the bar through the hub: the Models page's Local | Cloud chips and band (edge 29), a cloud model's
 //! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
-//! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4),
-//! with Open service under the line of a note the service's pages settle, a key on the key note's (final review m5).
+//! a cloud model's reason while Compare runs (carry 5), the bar's chip for a service or the model on this PC, and a
+//! cloud note's buttons (carry 4), with Open service under the line of a note the service's pages settle, a key on the
+//! key note's (final review m5).
 
 use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
 use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareMic,
+    BarButton, BarHint, BarMark, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareMic,
     CompareRun, CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState,
     ModelsSheet, RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
 };
@@ -167,20 +168,37 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
     let heard = heard(&rig);
     let mut shown = page(1, listening_bar(), None);
     heard.view(shown.clone());
-    assert_eq!(json(&rig)["cloud"], Value::Null);
-    shown.cloud = Some(groq());
+    assert_eq!(json(&rig)["mark"], Value::Null);
+    shown.mark = Some(BarMark::Cloud(groq()));
     heard.view(shown.clone());
-    let mark = json!({"name": "Groq", "said": "Your voice goes to Groq at Stop"});
-    assert_eq!(json(&rig)["cloud"], mark);
-    shown.cloud = Some(ServiceName::Custom);
+    let said = "Your voice goes to Groq at Stop";
+    let mark = json!({"kind": "cloud", "name": "Groq", "said": said});
+    assert_eq!(json(&rig)["mark"], mark);
+    shown.mark = Some(BarMark::Cloud(ServiceName::Custom));
     heard.view(shown);
     let said = "Your voice goes to the address you type at Stop";
-    let mark = json!({"name": "Custom address", "said": said});
+    let mark = json!({"kind": "cloud", "name": "Custom address", "said": said});
+    assert_eq!(json(&rig)["mark"], mark, "a sentence names Custom mid-line");
+}
+
+#[test]
+fn the_bar_names_the_model_on_this_pc_and_readers_hear_who_writes() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let mut shown = page(1, listening_bar(), None);
+    shown.mark = Some(BarMark::Device(Redacted::new("Whisper Turbo".into())));
+    heard.view(shown.clone());
+    let said = "Whisper Turbo writes what you say";
+    let mark = json!({"kind": "device", "name": "Whisper Turbo", "said": said});
+    assert_eq!(json(&rig)["mark"], mark);
+    shown.mark = Some(BarMark::Device(Redacted::new("my\u{202E}model".into())));
+    heard.view(shown);
+    let mark = &json(&rig)["mark"];
     assert_eq!(
-        json(&rig)["cloud"],
-        mark,
-        "a sentence names Custom mid-line"
+        mark["name"], "mymodel",
+        "a file name's hidden marks are dropped"
     );
+    assert_eq!(mark["said"], "mymodel writes what you say");
 }
 
 /// The bar's two rows for a cloud note on `why` with `local`, and Try again when `again`: its buttons, then the acts

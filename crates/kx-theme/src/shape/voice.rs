@@ -31,6 +31,10 @@ pub struct VoiceShape {
     pub pick_across: u8,
     /// The least a cut pick's name keeps before its service's mark is cut too.
     pub pick_name_px: f32,
+    /// The widest the bar's chip shows its name before it is cut in the middle.
+    pub chip_name_px: f32,
+    /// The least room the wave or the shimmer keeps; past it the bar widens, at most to its text width.
+    pub wave_room_px: f32,
 }
 
 impl VoiceShape {
@@ -57,6 +61,8 @@ impl VoiceShape {
             ("voice.panel_px", self.panel_px),
             ("voice.fact_px", self.fact_px),
             ("voice.pick_name_px", self.pick_name_px),
+            ("voice.chip_name_px", self.chip_name_px),
+            ("voice.wave_room_px", self.wave_room_px),
         ]);
         if let Some((n, v)) = above.find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));

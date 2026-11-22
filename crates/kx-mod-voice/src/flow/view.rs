@@ -1,13 +1,14 @@
-//! The bar and the light as the flow tells them: once per change, each view with a new round, and a click taken only
-//! while the bar it saw keeps its face.
+//! The bar, its chip and the light as the flow tells them: once per change, each view with a new round, and a click
+//! taken only while the bar it saw keeps its face.
 
 use std::mem::{Discriminant, discriminant};
 
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarText, CloudWhy, Listening, ServiceName, VoiceBar, VoiceLit,
+    BarButton, BarHint, BarMark, BarNote, BarText, CloudWhy, Listening, VoiceBar, VoiceLit,
     VoicePage, VoiceView,
 };
 
+use super::net::Engine;
 use super::{Flow, Out, State};
 
 /// A bar's kind, its take and a note's line; a click made on another face is dropped.
@@ -59,7 +60,7 @@ impl Flow {
             panel: self.panel.clone(),
             place: self.settings.bar_place(),
             sounds: self.settings.sounds,
-            cloud: self.mark(),
+            mark: self.mark(),
         };
         if !self.told.page.as_ref().is_some_and(|p| same(p, &page)) {
             let take = self.take.as_ref().map(|t| t.id);
@@ -126,18 +127,24 @@ impl Flow {
         }
     }
 
-    /// The cloud mark: the service a cloud dictation goes to, from Start to its text or its note.
-    fn mark(&self) -> Option<ServiceName> {
-        let net = self.take.as_ref()?.engine.net()?;
-        let shows = match &self.state {
-            State::Preparing | State::Listening { .. } | State::Transcribing => true,
+    /// The bar's chip: the service a cloud dictation goes to, from Start to its text or its note; or the model on this
+    /// PC that writes a local one, while it prepares, listens or writes (owner, 2026-11-22).
+    fn mark(&self) -> Option<BarMark> {
+        let live = matches!(
+            self.state,
+            State::Preparing | State::Listening { .. } | State::Transcribing
+        );
+        let noted = match &self.state {
             State::Note {
                 hint: BarHint::Cloud { why, .. },
                 ..
             } => *why != CloudWhy::NoLocal,
-            State::Idle | State::Text { .. } | State::Note { .. } => false,
+            _ => false,
         };
-        shows.then(|| net.name.clone())
+        match &self.take.as_ref()?.engine {
+            Engine::Cloud(net) => (live || noted).then(|| BarMark::Cloud(net.name.clone())),
+            Engine::Local(ready) => live.then(|| BarMark::Device(ready.short.clone())),
+        }
     }
 
     /// The Listening bar, with the time listened so far and the service's warning on its first dictation.
@@ -174,5 +181,5 @@ fn same(a: &VoicePage, b: &VoicePage) -> bool {
         }
         (x, y) => x == y,
     };
-    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds && a.cloud == b.cloud
+    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds && a.mark == b.mark
 }

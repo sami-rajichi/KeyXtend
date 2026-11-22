@@ -1,5 +1,5 @@
 //! The cloud pages as QML reads them (ADR-0047): the Cloud page with its switch and services, and the parts the card,
-//! the key page, Models, Compare and the bar share.
+//! the key page, Models, Compare and the bar's chip share.
 
 use super::acts::{CLOUD, OPEN, SERVICE};
 use super::panel::{Cx, Page, Sheet};
@@ -7,12 +7,11 @@ use super::parts::{Button, Hint, Tone, heard};
 use super::sheets::{mark, mark_key, tab_id};
 use crate::I18n;
 use crate::i18n::clean;
-use crate::i18n::keys::vars::{FREE, NAME, NAMES};
+use crate::i18n::keys::vars::{FREE, NAMES};
 use crate::i18n::keys::{
     FACT_FREE, VOICE_CARD_CUSTOM, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL, VOICE_CLOUD_OFF,
     VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE, VOICE_OFF, VOICE_ON,
-    VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VoiceMark, cloud_button_id, cloud_button_key,
-    service_mark, warn_mark_key,
+    VOICE_SEND_WARNING, VoiceMark, cloud_button_id, cloud_button_key, service_mark, warn_mark_key,
 };
 use kx_module_api::ports::{
     CloudButton, CloudRow, CloudSheet, CloudWhy, CompareCloud, ServiceMark, ServiceName,
@@ -78,13 +77,6 @@ pub(super) struct PickView {
     service: String,
     said: String,
     tick: bool,
-}
-
-/// The bar's cloud mark: the service the voice goes to at Stop, and the line readers hear.
-#[derive(Serialize)]
-pub(super) struct CloudMark {
-    name: String,
-    said: String,
 }
 
 /// Service `name` as the pages name it; the Custom row in the user's language.
@@ -195,13 +187,4 @@ pub(super) fn pick(t: &I18n, c: &CompareCloud) -> PickView {
 pub(super) fn send(t: &I18n, send: &[ServiceName]) -> Option<String> {
     let names: Vec<String> = send.iter().map(|s| in_sentence(t, s)).collect();
     (!send.is_empty()).then(|| t.voice_with(VOICE_SEND_WARNING, &[(NAMES, t.and_list(&names))]))
-}
-
-/// The bar's cloud mark for `name`, which its sentence names as a sentence does.
-pub(super) fn cloud_mark(t: &I18n, name: &ServiceName) -> CloudMark {
-    let said = t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, in_sentence(t, name))]);
-    CloudMark {
-        name: service(t, name),
-        said,
-    }
 }

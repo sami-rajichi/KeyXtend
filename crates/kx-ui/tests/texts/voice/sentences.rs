@@ -1,9 +1,11 @@
-//! The cloud sentences as the owner approved them on 2026-11-21, word for word in each language: the bar's line for
-//! the address the user types, and Compare's send warning, whose names join as CLDR's list patterns end, with "and".
+//! The bar's and Compare's sentences as the owner approved them, word for word in each language: the bar's line for
+//! the address the user types or the model on this PC, and Compare's send warning, whose names end with "and".
 
 use crate::{items, lang};
 use kx_ui::i18n::keys::vars::{NAME, NAMES};
-use kx_ui::i18n::keys::{VOICE_CARD_CUSTOM, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING};
+use kx_ui::i18n::keys::{
+    VOICE_CARD_CUSTOM, VOICE_ON_BAR_CLOUD, VOICE_ON_DEVICE, VOICE_SEND_WARNING,
+};
 
 /// The UI languages, in the order the tables give their words.
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
@@ -40,6 +42,22 @@ fn the_bar_sends_the_voice_to_the_typed_address_in_the_approved_words() {
             bar,
             "{tag}"
         );
+    }
+}
+
+/// The bar's line while Whisper Turbo on this PC writes (owner, 2026-11-22).
+const DEVICE: [&str; 3] = [
+    "Whisper Turbo writes what you say",
+    "Whisper Turbo transcrit ce que vous dites",
+    "يكتب Whisper Turbo ما تقوله",
+];
+
+#[test]
+fn the_bar_names_the_model_on_this_pc_in_the_approved_words() {
+    for (tag, bar) in TAGS.iter().zip(DEVICE) {
+        let t = lang(tag);
+        let name = "Whisper Turbo".to_owned();
+        assert_eq!(t.voice_with(VOICE_ON_DEVICE, &[(NAME, name)]), bar, "{tag}");
     }
 }
 

@@ -116,6 +116,8 @@ pub const VOICE_LINE_PASTE_NAME: &str = "cloud.line-paste-";
 pub const VOICE_KEEP_NOTHING: &str = "cloud.keep-nothing";
 /// The bar's cloud mark for readers: `$name`.
 pub const VOICE_ON_BAR_CLOUD: &str = "cloud.on-bar";
+/// The bar's chip for the model on this PC, for readers: `$name`.
+pub const VOICE_ON_DEVICE: &str = "cloud.on-device";
 /// "Use the local model", on a cloud note.
 pub const VOICE_USE_LOCAL: &str = "cloud.use-local";
 /// Compare's warning before Start: `$names`.

@@ -37,8 +37,10 @@ pub struct VoiceIcons {
     pub service_key: String,
     /// "Use the local model", after a cloud note.
     pub local: String,
-    /// The cloud mark beside the language while a cloud service takes the voice.
+    /// The chip's picture beside the language while a cloud service takes the voice.
     pub cloud: String,
+    /// The chip's picture while a model on this PC takes the voice.
+    pub device: String,
     /// Before Transcribing.
     pub transcribing: String,
     /// Before a text.
@@ -72,6 +74,7 @@ impl VoiceIcons {
             ("voice.service_key", &self.service_key),
             ("voice.local", &self.local),
             ("voice.cloud", &self.cloud),
+            ("voice.device", &self.device),
             ("voice.transcribing", &self.transcribing),
             ("voice.text", &self.text),
             ("voice.password", &self.password),

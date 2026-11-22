@@ -1,12 +1,13 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
-//! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, and the cloud
-//! mark with a cloud note's buttons, Open service under a note's line, and a card's warning; and every click kind QML
-//! sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
+//! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, the cloud
+//! mark with a cloud note's buttons, Open service under a note's line, a card's warning and the chip naming the model
+//! on this PC; and every click kind QML sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
+use kx_mod_voice::models;
 use kx_mod_voice::services::table;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Fact, Listening, LocalUse,
+    BarButton, BarHint, BarMark, BarNote, BarPlace, BarText, CloudWhy, Fact, Listening, LocalUse,
     ServiceName, VoiceBar, VoiceLang, VoicePage, VoiceText, VoiceView,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing};
@@ -30,6 +31,11 @@ const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
 /// The view of a first dictation to a service whose card warns.
 const WARNED: &str = "cloudWarned";
+/// The start of a view's name whose chip names the model on this PC: the table's longest short name.
+const DEVICE: &str = "device";
+/// The view whose chip names a user's own file, too long to show whole.
+const OWN: &str = "deviceOwn";
+const OWN_FILE: &str = "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m";
 
 /// Each click kind by the name QML holds it under.
 fn kinds() -> Value {
@@ -128,13 +134,24 @@ fn warned() -> (ServiceName, Fact) {
     first.expect("an offered service warns")
 }
 
-/// The cloud mark view `name` shows: the warning service's on `WARNED`, Groq's on another cloud view, none otherwise.
-fn mark(name: &str) -> Option<ServiceName> {
-    if name == WARNED {
-        return Some(warned().0);
+/// The models table's longest short name, which the bar must fit whole.
+fn longest() -> String {
+    let rows = models::table().expect("the models table reads").rows();
+    let most = rows.iter().max_by_key(|r| r.short.chars().count());
+    most.expect("a model").short.clone()
+}
+
+/// The chip view `name` shows: the warning service's on `WARNED`, Groq's on another cloud view, the user's own file on
+/// `OWN`, the longest short name on another device view, none otherwise.
+fn mark(name: &str) -> Option<BarMark> {
+    let device = |n: String| Some(BarMark::Device(Redacted::new(n)));
+    match name {
+        WARNED => Some(BarMark::Cloud(warned().0)),
+        OWN => device(OWN_FILE.to_owned()),
+        _ if name.starts_with(DEVICE) => device(longest()),
+        _ if name.starts_with(CLOUD) => Some(BarMark::Cloud(ServiceName::Named(SERVICE.into()))),
+        _ => None,
     }
-    name.starts_with(CLOUD)
-        .then(|| ServiceName::Named(SERVICE.to_owned()))
 }
 
 /// Every bar the tests draw in language `tag`, by name.
@@ -174,7 +191,17 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
     ]
     .into_iter()
     .chain(cloud_bars(&lang))
+    .chain(device_bars(&lang))
     .collect()
+}
+
+/// The bars a dictation by a model on this PC draws in `lang`, each named with `DEVICE` first.
+fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 3] {
+    [
+        ("deviceListening", listening(lang, false, None)),
+        ("deviceTranscribing", VoiceBar::Transcribing),
+        (OWN, listening(lang, false, None)),
+    ]
 }
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
@@ -220,7 +247,7 @@ fn views(tag: &str) -> Value {
             panel: None,
             place: BarPlace::Above,
             sounds: true,
-            cloud: mark(name),
+            mark: mark(name),
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");

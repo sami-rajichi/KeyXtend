@@ -162,16 +162,16 @@ pub use speech::{
     SpeechModel, SpeechNote, SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
-    AddressFault, BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CardPart, CloudBand,
-    CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet, CloudWhy, CompareCloud, CompareMic,
-    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
-    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
-    FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow, ModelSide,
-    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, PasteFault, Renewal,
-    RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, Unavailable,
-    UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceHome, VoiceKey, VoiceLang,
-    VoiceLevel, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet,
-    VoiceTab, VoiceText, VoiceView,
+    AddressFault, BarButton, BarHint, BarMark, BarNote, BarPlace, BarText, CardCheck, CardPart,
+    CloudBand, CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet, CloudWhy, CompareCloud,
+    CompareMic, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
+    DeviceRow, DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState,
+    FolderLine, FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow,
+    ModelSide, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton,
+    PasteFault, Renewal, RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk,
+    TextDone, Unavailable, UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose,
+    VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen,
+    VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

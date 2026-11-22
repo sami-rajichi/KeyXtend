@@ -8,7 +8,7 @@ mod panel;
 
 pub use act::{BarButton, CloudButton, FetchButton, PanelButton, VoiceClick};
 pub use bar::{
-    BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, Renewal, VoiceBar,
+    BarHint, BarMark, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, Renewal, VoiceBar,
     VoiceLang, VoicePage, VoiceText,
 };
 pub use panel::{

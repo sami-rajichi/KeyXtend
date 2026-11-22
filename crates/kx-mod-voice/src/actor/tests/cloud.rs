@@ -22,8 +22,8 @@ mod window;
 use std::sync::Arc;
 
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, CloudFault, CloudWhy, LocalUse, MAX_BLOB_BYTES, ServiceName,
-    SpeechNote, VoiceBar, VoiceClick,
+    BarButton, BarHint, BarMark, BarNote, CloudFault, CloudWhy, LocalUse, MAX_BLOB_BYTES,
+    ServiceName, SpeechNote, VoiceBar, VoiceClick,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 use kx_platform_fake::{CloudAnswer, CloudState};
@@ -109,7 +109,10 @@ impl Rig {
 
     /// The cloud mark of the last view.
     fn mark(&self) -> Option<ServiceName> {
-        self.views().last().and_then(|v| v.cloud.clone())
+        match self.views().last()?.mark.clone()? {
+            BarMark::Cloud(name) => Some(name),
+            BarMark::Device(_) => None,
+        }
     }
 }
 

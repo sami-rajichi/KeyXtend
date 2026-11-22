@@ -223,8 +223,8 @@ lock = "lock"
 
 # The dictation bar (design/voice-bar.js bar(), lines 97-115): each button by the hub's id (Listen again as the
 # Dictation key, Copy turning to its tick once copied, Open service as a page, or a key on the key note), the gear, the
-# mark before Transcribing, a text and a password box's dots, and before each note by its hint id; a note not listed
-# wears `note`.
+# chip's picture by its kind (a cloud, or for a model on this PC the processor, as the Device page draws it), the mark
+# before Transcribing, a text and a password box's dots, and before each note by its hint id; `note` for the rest.
 [voice]
 cancel = "x"
 stop = "square"
@@ -241,6 +241,7 @@ service = "file"
 service_key = "key-round"
 local = "cpu"
 cloud = "cloud"
+device = "cpu"
 transcribing = "audio-lines"
 text = "captions"
 password = "lock"

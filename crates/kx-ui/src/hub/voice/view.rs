@@ -5,7 +5,7 @@
 //! The gear shows in every state but `hidden`, before the last button.
 
 use super::acts::LOCAL;
-use super::cloud::{self, CloudMark};
+use super::chip::{self, Chip};
 use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
 use crate::I18n;
@@ -24,7 +24,7 @@ use kx_module_api::ports::{
 };
 use serde::Serialize;
 
-/// The bar with its cloud mark, and the panel, as JSON.
+/// The bar with its chip, and the panel, as JSON.
 #[derive(Serialize)]
 pub(super) struct View {
     round: u32,
@@ -32,7 +32,7 @@ pub(super) struct View {
     sounds: bool,
     words: Words,
     bar: Bar,
-    cloud: Option<CloudMark>,
+    mark: Option<Chip>,
     panel: Option<Panel>,
 }
 
@@ -110,7 +110,7 @@ pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
             timer: timer(t),
         },
         bar: bar(&page.bar, t),
-        cloud: page.cloud.as_ref().map(|s| cloud::cloud_mark(t, s)),
+        mark: page.mark.as_ref().map(|m| chip::of(t, m)),
         panel: page.panel.as_ref().map(|p| panel::of(p, t, read)),
     }
 }

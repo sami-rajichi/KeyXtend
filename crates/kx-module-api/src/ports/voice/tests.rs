@@ -76,7 +76,7 @@ fn page(bar: VoiceBar) -> VoicePage {
         panel: None,
         place: BarPlace::Above,
         sounds: true,
-        cloud: None,
+        mark: None,
     }
 }
 

@@ -55,7 +55,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -87,7 +87,7 @@ var views = {
         "mic": true,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 14,
@@ -145,7 +145,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -207,7 +208,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -256,7 +258,8 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -315,7 +318,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -358,7 +362,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -427,7 +432,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
       },
@@ -476,7 +482,8 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "ElevenLabs",
         "said": "يُرسَل صوتك إلى ElevenLabs عند الإيقاف"
       },
@@ -532,10 +539,150 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 9,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "deviceListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "said": "جارٍ الاستماع…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "يكتب Whisper Large v3 ما تقوله"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "deviceOwn": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "said": "جارٍ الاستماع…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
+        "said": "يكتب whisper-large-v3-turbo-german-and-french-finetune-q5_k_m ما تقوله"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "deviceTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "يكتب Whisper Large v3 ما تقوله"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -564,7 +711,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -604,7 +751,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -621,7 +768,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -667,7 +814,7 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -717,7 +864,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل. شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل. شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -757,7 +904,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -803,7 +950,7 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -848,7 +995,7 @@ var views = {
           "text": "••••••••"
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -901,7 +1048,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -933,7 +1080,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -983,7 +1130,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -1019,7 +1166,7 @@ var views = {
         "state": "transcribing",
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -1069,7 +1216,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 7,
@@ -1111,7 +1258,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -1143,7 +1290,7 @@ var views = {
         "mic": true,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 14,
@@ -1201,7 +1348,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1263,7 +1411,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1312,7 +1461,8 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1371,7 +1521,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1414,7 +1565,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1483,7 +1635,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Your voice goes to Groq at Stop"
       },
@@ -1532,7 +1685,8 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "ElevenLabs",
         "said": "Your voice goes to ElevenLabs at Stop"
       },
@@ -1588,10 +1742,150 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 9,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "deviceListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "said": "Listening…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 writes what you say"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "deviceOwn": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "said": "Listening…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
+        "said": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m writes what you say"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "deviceTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 writes what you say"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1620,7 +1914,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -1660,7 +1954,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -1677,7 +1971,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -1723,7 +2017,7 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -1773,7 +2067,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week. Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week. Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -1813,7 +2107,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -1859,7 +2153,7 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -1904,7 +2198,7 @@ var views = {
           "text": "••••••••"
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -1957,7 +2251,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -1989,7 +2283,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -2039,7 +2333,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -2075,7 +2369,7 @@ var views = {
         "state": "transcribing",
         "word": "Transcribing…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -2125,7 +2419,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 7,
@@ -2167,7 +2461,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -2199,7 +2493,7 @@ var views = {
         "mic": true,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 14,
@@ -2257,7 +2551,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2319,7 +2614,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2368,7 +2664,8 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2427,7 +2724,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2470,7 +2768,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2539,7 +2838,8 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "Groq",
         "said": "Votre voix partira vers Groq à l’arrêt"
       },
@@ -2588,7 +2888,8 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
-      "cloud": {
+      "mark": {
+        "kind": "cloud",
         "name": "ElevenLabs",
         "said": "Votre voix partira vers ElevenLabs à l’arrêt"
       },
@@ -2644,10 +2945,150 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 9,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "deviceListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "said": "Écoute…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 transcrit ce que vous dites"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "deviceOwn": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "said": "Écoute…",
+        "state": "listening",
+        "warn": null,
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m",
+        "said": "whisper-large-v3-turbo-german-and-french-finetune-q5_k_m transcrit ce que vous dites"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "deviceTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "Transcription…"
+      },
+      "mark": {
+        "kind": "device",
+        "name": "Whisper Large v3",
+        "said": "Whisper Large v3 transcrit ce que vous dites"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2676,7 +3117,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -2716,7 +3157,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -2733,7 +3174,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -2779,7 +3220,7 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -2829,7 +3270,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine. Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine. Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -2869,7 +3310,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -2915,7 +3356,7 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -2960,7 +3401,7 @@ var views = {
           "text": "••••••••"
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -3013,7 +3454,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -3045,7 +3486,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -3095,7 +3536,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -3131,7 +3572,7 @@ var views = {
         "state": "transcribing",
         "word": "Transcription…"
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -3181,7 +3622,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
-      "cloud": null,
+      "mark": null,
       "panel": null,
       "place": "above",
       "round": 7,

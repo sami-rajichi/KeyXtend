@@ -66,7 +66,7 @@ Item {
         }
         function test_the_cloud_mark_names_its_service_only_while_one_takes_the_voice(d) {
             const bar = make("cloudListening", d.t);
-            const mark = bar.view.cloud;
+            const mark = bar.view.mark;
             compare(heard(bar, mark.said).length, 1, "readers hear where the voice goes");
             const name = Board.all(bar.contentItem, o => o.visible && o.text === mark.name && o.font !== undefined);
             compare(name.length, 1, "the service's name");

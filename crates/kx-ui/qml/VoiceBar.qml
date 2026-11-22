@@ -61,7 +61,13 @@ Window {
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
-    width: rescale.keep(Math.ceil(lk.shape.voice.bar_px[wide || warns ? 1 : 0] * s))
+    width: rescale.keep(Math.ceil(span))
+    // The text's width for a text, a note or a warning; else the narrow one, widened up to it for the wave's least room.
+    readonly property real span: {
+        const [narrow, broad] = lk.shape.voice.bar_px.map(px => px * s);
+        const need = lead.width + tail.width + lk.shape.voice.wave_room_px * s + 2 * (pad + gap);
+        return wide || warns ? broad : Math.min(broad, Math.max(narrow, need));
+    }
     height: rescale.keep(Math.ceil(row + under))
     // The row's height: one key row, or its parts with their padding.
     readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)

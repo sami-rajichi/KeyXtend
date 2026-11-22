@@ -21,7 +21,11 @@ fn a_view_is_told_once_per_change() {
     assert_eq!(rig.views().len(), told, "nothing the bar shows changed");
     rig.listen();
     rig.tell(SpeechNote::Level(10));
-    assert_eq!(rig.views().len(), told + 1, "only Listening was told");
+    assert_eq!(
+        rig.views().len(),
+        told + 2,
+        "only the model's chip while preparing, then Listening"
+    );
     let rounds: Vec<u32> = rig.views().iter().map(|v| v.round).collect();
     assert!(rounds.windows(2).all(|w| w[0] < w[1]), "{rounds:?}");
 }

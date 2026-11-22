@@ -145,6 +145,7 @@ cloud =
     .paste-empty = The clipboard holds no text.
     .keep-nothing = Only hosts that keep nothing
     .on-bar = Your voice goes to { $name } at Stop
+    .on-device = { $name } writes what you say
     .use-local = Use the local model
     .send-warning = Compare sends your voice to { $names } at Stop.
     .note-net = The service did not answer. Check the network and try again.

@@ -1,10 +1,10 @@
-//! What the dictation bar shows (design "The bar"): its place, its state, its hint, its text and the cloud mark. Text
-//! stays redacted and is wiped on drop, and a password box's text never reaches the ui.
+//! What the dictation bar shows (design "The bar"): its place, its state, its hint, its text and the chip naming what
+//! takes the voice. Text stays redacted and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
 use super::panel::{Fact, ServiceName, Unavailable, VoicePanel};
-use crate::Secret;
 use crate::ports::LocalTime;
+use crate::{Redacted, Secret};
 use serde::{Deserialize, Serialize};
 
 listed! {
@@ -244,6 +244,15 @@ pub enum LocalUse {
     Dimmed,
 }
 
+/// The bar's chip while a dictation prepares, listens or writes: what takes the voice.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BarMark {
+    /// The cloud service the voice goes to at Stop, which a cloud note keeps naming.
+    Cloud(ServiceName),
+    /// The model on this PC that writes it, by its short name; a user's own file name stays redacted.
+    Device(Redacted<String>),
+}
+
 /// Everything the bar and the panel draw.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VoicePage {
@@ -257,6 +266,6 @@ pub struct VoicePage {
     pub place: BarPlace,
     /// The start and stop sounds play (`sounds`).
     pub sounds: bool,
-    /// The service a cloud dictation sends the voice to at Stop; while set, the bar shows the cloud mark and its name.
-    pub cloud: Option<ServiceName>,
+    /// What takes the voice; while set, the bar shows its chip with its picture and name.
+    pub mark: Option<BarMark>,
 }

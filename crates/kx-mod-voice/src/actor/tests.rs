@@ -16,6 +16,7 @@ mod fakes;
 mod faults;
 mod key;
 mod logs;
+mod mark;
 mod panel;
 mod paste;
 mod restart;

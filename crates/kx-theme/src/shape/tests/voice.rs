@@ -42,6 +42,13 @@ fn the_voice_panel_takes_the_mock_up_sizes() {
         "a cut pick's name keeps about 15 characters"
     );
     assert_eq!(
+        v.chip_name_px, 128.0,
+        "the bar's chip shows about 20 characters whole"
+    );
+    assert_eq!(v.wave_room_px, 48.0, "the wave keeps about seven bars");
+    let [width, gap, _, _] = v.wave_px;
+    assert!(v.wave_room_px >= width + gap, "a bar and its gap at least");
+    assert_eq!(
         v.run_share,
         [0.4, 0.5],
         ".prog.run i: 40 %, .still: opacity .5"
@@ -119,6 +126,18 @@ fn an_odd_panel_size_is_refused_by_name() {
             "run_share = [0.4, 0.5]",
             "run_share = [0.4, 1.5]",
             "voice.run_share",
+        ),
+        (
+            "voice",
+            "chip_name_px = 128.0",
+            "chip_name_px = 0.0",
+            "voice.chip_name_px",
+        ),
+        (
+            "voice",
+            "wave_room_px = 48.0",
+            "wave_room_px = -1.0",
+            "voice.wave_room_px",
         ),
     ]);
 }
