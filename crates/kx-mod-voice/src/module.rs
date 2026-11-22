@@ -119,15 +119,19 @@ pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     if dropped.is_empty() {
         return Ok(settings);
     }
+    let mut kept = toml::Table::new();
     if before.0 != settings.services.len() {
-        keep(cx, SERVICES, settings.services_value());
+        keep(&mut kept, SERVICES, settings.services_value());
     }
     if before.1 != settings.parked.len() {
-        keep(cx, PARKED, settings.parked_value());
+        keep(&mut kept, PARKED, settings.parked_value());
     }
     if before.2 != settings.picks.len() {
-        keep(cx, PICKS, toml::Value::try_from(&settings.picks).ok());
+        let picks = toml::Value::try_from(&settings.picks).ok();
+        keep(&mut kept, PICKS, picks);
     }
+    // One save, so a stop never leaves half the repair; a failed one keeps it for this run, and the kernel tells the user.
+    let _ = cx.settings_handle().set_all(kept);
     let mut notice = Notice::about(keys::SETTINGS_RESET, ID);
     notice.args.push((args::KEYS, NoticeArg::List(dropped)));
     // A notice needs no gate, so none is refused.
@@ -135,10 +139,10 @@ pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     Ok(settings)
 }
 
-/// Writes `value` back under `key`; a failed save keeps the repair for this run, and the kernel tells the user.
-fn keep(cx: &ModuleCx<'_>, key: &str, value: Option<toml::Value>) {
+/// Adds `value` under `key` to the keys the repair writes back.
+fn keep(kept: &mut toml::Table, key: &str, value: Option<toml::Value>) {
     if let Some(value) = value {
-        let _ = cx.settings_handle().set(key, value);
+        kept.insert(key.to_owned(), value);
     }
 }
 

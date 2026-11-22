@@ -1,6 +1,6 @@
 //! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick or service entry alone with the
-//! settings notice, fails on a bad section or a missing service, starts with a fixed line when cloud speech is missing,
-//! and stops.
+//! settings notice and saves the repair once, fails on a bad section or a missing service, starts with a fixed line
+//! when cloud speech is missing, and stops.
 
 use std::sync::{Arc, Mutex};
 
@@ -97,6 +97,27 @@ fn a_service_entry_no_row_takes_on_or_parked_is_dropped_alone_and_written_back()
         let written = toml::Table::from_iter([(key.to_owned(), toml::Value::Table(kept))]);
         assert_eq!(host.sink.writes(), [(ID, written)], "{key}");
     }
+}
+
+#[test]
+fn a_repair_of_several_keys_is_written_back_in_one_save() {
+    let mut host = Fakes::new().host();
+    let on = "2026-11-17".parse::<toml::value::Datetime>().unwrap();
+    let entry = toml::Table::from_iter([
+        ("on".to_owned(), toml::Value::Datetime(on)),
+        ("terms".to_owned(), 1.into()),
+    ]);
+    let map = |id: &str| toml::Table::from_iter([(id.to_owned(), entry.clone().into())]);
+    host.put("services", map("no-such-row").into());
+    host.put("parked", map("gone-row").into());
+    host.put("picks", picks(&[("fr", "whisper-medium-q5")]));
+    let mut module = VoiceModule::new();
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
+    let keys = |t: &toml::Table| t.keys().cloned().collect::<std::collections::BTreeSet<_>>();
+    let saves: Vec<_> = host.sink.writes().iter().map(|(_, t)| keys(t)).collect();
+    let all = ["parked", "picks", "services"].map(String::from).into();
+    assert_eq!(saves, [all], "one save of every key the repair changed");
 }
 
 #[test]
