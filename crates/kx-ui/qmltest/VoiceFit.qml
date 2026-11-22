@@ -47,9 +47,13 @@ VoiceCase {
         const p = page(box);
         const body = p.body !== undefined ? p.body : Kit.only(kids(p).filter(o => o.spacing !== undefined));
         verify(body, "one body");
-        const inside = rect(box, body), room = rect(box, p);
-        verify(inside.y >= room.y - 0.5, "it starts inside the page: " + inside.h + " of " + room.h);
-        verify(inside.y + inside.h <= room.y + room.h + 0.5, "it ends inside the page: " + inside.h + " of " + room.h);
+        within(box, body, "it");
+    }
+    // Checks that `o`, named `what` in a failure, lies inside `box`'s page from top to bottom.
+    function within(box, o, what) {
+        const inside = rect(box, o), room = rect(box, page(box));
+        verify(inside.y >= room.y - 0.5, what + " starts inside the page: " + inside.h + " of " + room.h);
+        verify(inside.y + inside.h <= room.y + room.h + 0.5, what + " ends inside the page: " + inside.h + " of " + room.h);
     }
     // Checks that no text on `box` is cut, drawn past the panel or past its own width, but those `skip` leaves out.
     function uncut(box, skip) {

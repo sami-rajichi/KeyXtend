@@ -22,13 +22,6 @@ Item {
         readonly property var paged: ["card"].concat(Kit.named("en", "cardLong"), ["serviceLong"],
             Kit.named("en", "servicePasted-"), ["compareFew", "history", "cloudLong-1"])
 
-        // Checks that `o` lies inside `box`'s page from top to bottom.
-        function within(box, o, what) {
-            const inside = rect(box, o), room = rect(box, page(box));
-            verify(inside.y >= room.y - 0.5, what + " starts inside the page: " + inside.h + " of " + room.h);
-            verify(inside.y + inside.h <= room.y + room.h + 0.5, what + " ends inside the page: " + inside.h + " of " + room.h);
-        }
-
         function test_each_paged_page_fits_at_the_fewest_rows_data() {
             const all = [];
             for (const t of ["en", "fr", "ar"])
