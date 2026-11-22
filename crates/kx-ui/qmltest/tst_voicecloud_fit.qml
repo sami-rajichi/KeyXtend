@@ -6,6 +6,7 @@ import QtTest
 import "../qml"
 import "board.js" as Board
 import "voicekit.js" as Kit
+import "fixtures/voicepanel.js" as Panel
 import "../../kx-theme/fixtures/look-native-light.js" as NL
 import "../../kx-theme/fixtures/look-native-dark.js" as ND
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as NH
@@ -75,8 +76,12 @@ Item {
         function keeps(box) {
             const p = page(box);
             verify(p.height <= listH(box) + 0.5, "the page keeps a list's height: " + p.height + " of " + listH(box));
-            if (p.rowW !== undefined)
-                return;
+            if (p.rowW === undefined)
+                holds(box);
+        }
+        // Checks that `box`'s page lays its body inside it.
+        function holds(box) {
+            const p = page(box);
             const body = p.body !== undefined ? p.body : Kit.only(kids(p).filter(o => o.spacing !== undefined));
             verify(body, "one body");
             const inside = rect(box, body), room = rect(box, p);
@@ -199,6 +204,19 @@ Item {
             const box = make("compareShort", d.t, d.lk);
             keeps(box);
             verify(!page(box).pair, "its picks do not pair");
+            uncut(box);
+        }
+
+        function test_compare_fits_at_the_fewest_rows_data() {
+            return test_a_short_page_keeps_every_name_whole_data();
+        }
+        // T24 re-review 2: at the fewest rows a page may show, Compare's page is at least a list's height and grows to
+        // hold its set text and picks, so no text is cut or drawn past the panel.
+        function test_compare_fits_at_the_fewest_rows(d) {
+            const box = make("compareFew", d.t, d.lk, Panel.fewest);
+            compare(box.per, Panel.fewest, "the fewest rows");
+            verify(page(box).height >= listH(box) - 0.5, "at least a list's height");
+            holds(box);
             uncut(box);
         }
     }

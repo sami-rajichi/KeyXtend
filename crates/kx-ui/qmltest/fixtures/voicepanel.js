@@ -5210,6 +5210,84 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "compareFew": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "بدء القراءة",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "اقرأ هذا النص بصوت عالٍ مرة واحدة، ثم يكتبه كل نموذج جاهز، واحدًا تلو الآخر.",
+          "is": "ready",
+          "line": "نموذجان جاهزان · تلقائي (المعالج)",
+          "picks": [
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3، OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "سترسل المقارنة صوتك إلى Groq وLemonfox والعنوان الذي تكتبه وOpenRouter وElevenLabs وGemini وAssemblyAI عند الإيقاف.",
+          "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
+        },
+        "sub": "للغة العربية",
+        "ticked": 0,
+        "title": "مقارنة النماذج",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 73,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "compareLong": {
       "bar": {
         "state": "hidden"
@@ -15693,6 +15771,84 @@ var views = {
       },
       "place": "above",
       "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "compareFew": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Start reading",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "Read this text aloud once. Each ready model then writes it, one after another.",
+          "is": "ready",
+          "line": "2 ready models · Automatic (processor)",
+          "picks": [
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Compare sends your voice to Groq, Lemonfox, the address you type, OpenRouter, ElevenLabs, Gemini and AssemblyAI at Stop.",
+          "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
+        },
+        "sub": "For English",
+        "ticked": 0,
+        "title": "Compare models",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 73,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -26194,6 +26350,84 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "compareFew": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Commencer la lecture",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "Lisez ce texte à voix haute une fois. Chaque modèle prêt l’écrit ensuite, l’un après l’autre.",
+          "is": "ready",
+          "line": "2 modèles prêts · Automatique (processeur)",
+          "picks": [
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Comparer enverra votre voix à Groq, Lemonfox, l’adresse que vous saisissez, OpenRouter, ElevenLabs, Gemini et AssemblyAI à l’arrêt.",
+          "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
+        },
+        "sub": "En français",
+        "ticked": 0,
+        "title": "Comparer les modèles",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 73,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "compareLong": {
       "bar": {
         "state": "hidden"
@@ -31478,3 +31712,4 @@ var views = {
     }
   }
 };
+var fewest = 1;

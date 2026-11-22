@@ -1,7 +1,7 @@
 //! The Voice panel's views the Qt Quick tests draw (`qmltest/fixtures/voicepanel.js`), as the hub writes them in each
 //! language: every page, a second page of models with a note, the model in use ticked, a slow language, the folder
 //! question, Compare's steps, History with two ticks, its question and empty, three pages of Options, Paste at once
-//! chosen on the third, the drives, and the cloud pages.
+//! chosen on the third, the drives, the cloud pages, and the fewest rows a page may show.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::ports::{
@@ -254,6 +254,7 @@ fn views(tag: &str) -> Value {
 #[test]
 fn the_voice_panel_fixture_matches_the_hub() {
     let all: Map<String, Value> = LANGS.iter().map(|t| ((*t).to_owned(), views(t))).collect();
-    let text = format!("{HEAD}{}", var("views", &Value::Object(all), true));
+    let fewest = var("fewest", &Value::from(picks::fewest()), true);
+    let text = format!("{HEAD}{}{fewest}", var("views", &Value::Object(all), true));
     fixture(FILE.to_owned(), &text);
 }

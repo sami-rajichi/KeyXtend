@@ -1,16 +1,28 @@
 //! Compare's pages of cloud picks, which the fit test measures: its set text with cloud models, the offered models
-//! longest by name plus mark beside one or two typed Other ids, and a short last page that fits whole.
+//! longest by name plus mark beside one or two typed Other ids, a short last page, and a page at the fewest rows.
 
 use super::cloud::named;
 use super::long::{per, services};
 use super::{Shown, paged, shown};
 use kx_mod_voice::services::Service;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CompareCloud, CompareMic, CompareSheet, DeviceLabel, DeviceName, ServiceName, TAG_LEN,
     VoiceSheet,
 };
+use kx_module_api::{Redacted, Settings};
+use kx_ui::UiSettings;
 use std::cmp::Reverse;
+
+/// The fewest rows a page may show, as the `[ui]` settings allow them.
+pub fn fewest() -> usize {
+    let mut s = UiSettings::from_defaults().expect("the [ui] defaults");
+    let default = s.page_rows;
+    let fits = |n: &usize| {
+        s.page_rows = *n;
+        s.check().is_ok()
+    };
+    (0..=default).find(fits).expect("the default fits")
+}
 
 /// Row `id` of the services table.
 fn row(id: &str) -> &'static Service {
@@ -108,6 +120,11 @@ fn compare_short() -> VoiceSheet {
     ready(cloud, every())
 }
 
+/// Compare's page at the fewest rows a page may show: that many of the widest offered picks.
+fn compare_few() -> VoiceSheet {
+    ready(widest().into_iter().take(fewest()).collect(), every())
+}
+
 /// Compare's longest panels, by name; the wide pages show the pager, and the short one is the last of two.
 pub fn panels() -> Vec<(String, Shown)> {
     let two = |sheet| paged(shown(sheet, &[]), 0, 2, 0);
@@ -116,6 +133,7 @@ pub fn panels() -> Vec<(String, Shown)> {
         ("compareWide", two(compare_wide())),
         ("compareTyped", two(compare_typed())),
         ("compareShort", paged(shown(compare_short(), &[]), 1, 2, 0)),
+        ("compareFew", two(compare_few())),
     ]
     .into_iter()
     .map(|(name, s)| (name.to_owned(), s))
