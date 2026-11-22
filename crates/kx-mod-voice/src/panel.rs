@@ -219,7 +219,7 @@ impl Panel {
             | VoiceClick::KeepNothing(_)
             | VoiceClick::Side(_) => return self.cloud_click(&act.click, facts),
             VoiceClick::Open(tab) if self.page == Some(Page::Home) => {
-                return self.go(Page::Tab(*tab));
+                return self.open_tab(*tab, facts);
             }
             VoiceClick::Page { back } => self.turn(*back),
             VoiceClick::Row(at) => return self.row(row(at)),

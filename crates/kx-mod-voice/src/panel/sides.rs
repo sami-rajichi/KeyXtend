@@ -1,5 +1,5 @@
-//! The Models page's Local | Cloud sides (edge 29), each paging alone, and Use on a cloud model, the one act that moves
-//! a language to a service.
+//! The Models page's Local | Cloud sides (edge 29), each paging alone, the side Models opens on from Home, and Use on
+//! a cloud model, the one act that moves a language to a service.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ModelSide, VoiceTab};
@@ -9,6 +9,17 @@ use super::{Do, Key, Page, Panel};
 use crate::view::Facts;
 
 impl Panel {
+    /// Opens `tab` from Home; Models shows the Cloud side while the language in front has a cloud pick, in use or
+    /// waiting for its service Off, else the Local side.
+    pub(super) fn open_tab(&mut self, tab: VoiceTab, facts: &Facts<'_>) -> Vec<Do> {
+        let out = self.go(Page::Tab(tab));
+        let cloud = facts.cloud_choice().is_some() || facts.waiting().is_some();
+        if tab == VoiceTab::Models && cloud {
+            self.cloud.side = (ModelSide::Cloud, 0);
+        }
+        out
+    }
+
     /// Shows the Models page's `side`; each side keeps the page it was left on, and the ticks go.
     pub(super) fn side(&mut self, side: ModelSide) -> Vec<Do> {
         if self.page != Some(Page::Tab(VoiceTab::Models)) || self.cloud.side.0 == side {

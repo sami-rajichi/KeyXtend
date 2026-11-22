@@ -2,8 +2,8 @@
 //! just before `send`, and the service's texts are typed, kept and counted under the pick; the run is dropped once it
 //! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the key page's effects in `page`, the local
 //! model's take in `local`, the missing port and the row's piece length in `port`, the card's warning in `warn`, Open
-//! service in `settle`, the stop flag's window in `window`, a used allowance's renewal in `renewal`, and the run's
-//! table in `table`.
+//! service in `settle`, the stop flag's window in `window`, a used allowance's renewal in `renewal`, the run's table in
+//! `table`, and the Models page's side in `side`.
 
 mod keys;
 mod local;
@@ -12,6 +12,7 @@ mod port;
 mod remove;
 mod renewal;
 mod settle;
+mod side;
 mod table;
 mod trial;
 mod typed;
