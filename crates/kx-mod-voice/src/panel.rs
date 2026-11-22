@@ -86,7 +86,8 @@ pub struct Panel {
     pub(crate) rows: usize,
     /// The shown page of the list, or the one holding `hold`.
     pub(crate) at: usize,
-    /// The option row a stepper or chip click keeps on screen until the page turns.
+    /// The row kept on screen until the page turns, the side switches or another page opens: an option a stepper or
+    /// chip click moved, or the cloud pick Models opened on.
     pub(crate) hold: Option<Key>,
     pub(crate) ticks: Vec<Key>,
     /// What each row of the last view stands for.

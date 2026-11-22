@@ -6,8 +6,9 @@ use kx_module_api::ports::{ClipText, CloudButton, CloudLine, KeyCheck, VoiceClic
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::lines::on_groq_lines;
-use super::lines_sheet;
+use super::{act, lines_sheet, named, on_cloud, put};
 use crate::compare::tests::secret;
+use crate::services::tests::DOMAIN;
 
 /// The Other model id pasted in these tests.
 const MODEL: &str = "whisper-1";
@@ -67,6 +68,24 @@ fn test_remove_or_a_key_save_never_drop_a_model_paste_whose_copy_was_taken() {
         answer(&mut rig, round);
         assert_eq!(lines_sheet(&mut rig).model.expose(), MODEL, "act {at}");
     }
+}
+
+#[test]
+fn a_key_test_never_drops_an_address_paste_whose_copy_was_taken() {
+    let mut rig = on_cloud(DOMAIN);
+    let old = "https://kx-old.speech.example.com/stt";
+    let entry = format!(r#"domain-test = {{ on = 2026-11-01, terms = 1, address = "{old}" }}"#);
+    put(&mut rig, "services", &entry);
+    rig.keyed.insert("domain-test".into());
+    act(&mut rig, &named("Domain Test"), CloudButton::Lines);
+    let round = take(&mut rig, CloudLine::Address);
+    test(&mut rig);
+    let address = "https://kx-new.speech.example.com/stt";
+    rig.with(|p, f| p.pasted(round, ClipText::Text(secret(address)), f));
+    let sheet = lines_sheet(&mut rig);
+    let shown = sheet.address.as_ref().map(|a| a.expose().as_str());
+    assert_eq!(shown, Some(address), "the pasted address reaches its line");
+    assert_eq!(sheet.check, KeyCheck::Testing, "and the test runs on");
 }
 
 #[test]
