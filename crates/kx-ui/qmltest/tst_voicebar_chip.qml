@@ -35,8 +35,6 @@ Item {
     readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
     // The bundled fonts, so each bar is measured as the app draws it, whichever suites ran before.
     property var bundled: []
-    // The rows whose French name Dolch's text width lacks up to 8 px for, held as expected fails until the owner decides.
-    readonly property var unfit: ["cloud-custom", "cloud-openrouter", "cloud-assemblyai"]
 
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
@@ -147,11 +145,9 @@ Item {
             const label = chipName(bar);
             const v = d.lk.shape.voice;
             const broad = Math.ceil(v.bar_px[1] * bar.s);
-            if (root.cloud.indexOf(d.name) >= 0) {
-                if (d.tag.startsWith("dolch") && d.t === "fr" && root.unfit.indexOf(d.name) >= 0)
-                    expectFail(d.tag, "the owner's call: a wider text width, shorter words, or a cut");
+            if (root.cloud.indexOf(d.name) >= 0)
                 verify(!label.truncated, "a service's name whole, " + label.width + " px of " + label.implicitWidth);
-            } else if (d.name !== "deviceOwn")
+            else if (d.name !== "deviceOwn")
                 verify(!label.truncated || bar.width === broad, "cut only at the text's width, " + label.width + " px");
             const chip = label.parent.parent;
             const at = chip.mapToItem(bar.body, 0, 0);

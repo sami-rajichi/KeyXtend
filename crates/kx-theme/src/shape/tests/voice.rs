@@ -9,8 +9,8 @@ fn the_voice_bar_takes_the_mock_up_sizes() {
     let v = &s.voice;
     assert_eq!(
         v.bar_px,
-        [500.0, 640.0],
-        "--voice-bar-w, --voice-bar-w-text"
+        [500.0, 650.0],
+        "--voice-bar-w, and 10 past --voice-bar-w-text for each service's whole name"
     );
     assert_eq!(
         v.wave_px,
@@ -67,7 +67,7 @@ fn an_odd_voice_size_is_refused_by_name() {
         ("voice", "bar_px = [500.0", "bar_px = [0.0", "voice.bar_px"),
         (
             "voice",
-            "bar_px = [500.0, 640.0]",
+            "bar_px = [500.0, 650.0]",
             "bar_px = [500.0, 400.0]",
             "voice.bar_px",
         ),
