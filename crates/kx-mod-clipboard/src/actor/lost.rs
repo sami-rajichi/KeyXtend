@@ -1,7 +1,7 @@
 //! The texts that left the history, as content hashes alone, takes apart from deletes so a bulk delete never pushes a
-//! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21). A take's
-//! copy also keeps nothing when the watch tells it within `take_wait_ms`, as its note can come after the take or twice;
-//! a rich entry's hash never matches, as only the board names it, but the history cannot tell it without its blobs.
+//! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21). Every
+//! note of a take's copy told within `take_wait_ms` keeps nothing, however many come and from any app; a rich entry's
+//! hash never matches, as only the board names it, but the history cannot tell it without its blobs.
 
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -13,8 +13,8 @@ use crate::entry::{Entry, text_of};
 use crate::hash;
 use crate::settings::ClipSettings;
 
-/// The hashes of the texts takes read and of those deleted, swept or trimmed, and of the takes' copies whose note is
-/// due, each with the end of its wait; at most `due_max` are due.
+/// The hashes of the texts takes read and of those deleted, swept or trimmed, and of the takes' copies still due, each
+/// with the end of its wait; at most `due_max` are due.
 pub(super) struct Lost {
     taken: Ring,
     gone: Ring,
@@ -42,33 +42,30 @@ impl Lost {
         }
     }
 
-    /// A take read `text` at `now`, so it never goes back, and its copy's note is due until the wait ends; past the
-    /// most due, the oldest is due no more.
+    /// A take read `text` at `now`, so it never goes back, and its copy is due until the wait ends, one wait per text;
+    /// past the most due, the one that ends first is due no more.
     pub(super) fn taken(&mut self, text: &str, now: Mono) {
         let hash = hash::of_text(text);
         self.taken.add(hash);
-        self.expire(now);
+        self.due.retain(|(h, _)| *h != hash);
         if self.due.len() >= self.due_max {
             self.due.pop_front();
         }
         self.due.push_back((hash, now.saturating_add(self.wait)));
     }
 
-    /// The watch told a copy of `parts` at `now`: true when one of its texts is a take's copy still due, which is then
-    /// due no more. With none due, no text is hashed.
+    /// The watch told a copy of `parts` at `now`: true when one of its texts is a take's copy still due, which stays
+    /// due until its wait ends. With none due, no text is hashed.
     pub(super) fn noted(&mut self, parts: &[ClipPart], now: Mono) -> bool {
-        self.expire(now);
+        self.due.retain(|(_, end)| now < *end);
         if self.due.is_empty() {
             return false;
         }
-        let texts: Vec<u64> = (parts.iter())
-            .filter_map(|p| match p {
-                ClipPart::Text(t) => Some(hash::of_text(t.expose())),
-                _ => None,
-            })
-            .collect();
-        let at = self.due.iter().position(|(h, _)| texts.contains(h));
-        at.and_then(|i| self.due.remove(i)).is_some()
+        let mut texts = parts.iter().filter_map(|p| match p {
+            ClipPart::Text(t) => Some(hash::of_text(t.expose())),
+            _ => None,
+        });
+        texts.any(|h| self.due.iter().any(|(d, _)| *d == h))
     }
 
     /// The history kept `parts` again, so their text may go back.
@@ -84,11 +81,6 @@ impl Lost {
     pub(super) fn has(&self, text: &str) -> bool {
         let hash = hash::of_text(text);
         self.taken.has(hash) || self.gone.has(hash)
-    }
-
-    /// Drops the takes whose wait ended by `now`.
-    fn expire(&mut self, now: Mono) {
-        self.due.retain(|(_, end)| now < *end);
     }
 }
 
@@ -189,15 +181,18 @@ mod tests {
     }
 
     #[test]
-    fn a_takes_copy_is_noted_once_within_its_wait_and_past_the_most_due_the_oldest_goes() {
+    fn a_takes_copy_is_noted_until_its_wait_ends_and_past_the_most_due_the_oldest_goes() {
         let mut lost = lost(4, 2);
         let (now, wait) = (Mono::default(), lost.wait);
-        for t in ["a", "b", "c"] {
+        for t in ["a", "b", "c", "c"] {
             lost.taken(t, now);
         }
         assert!(!lost.noted(&[text("a")], now), "a went first");
-        assert!(lost.noted(&[text("b")], now));
-        assert!(!lost.noted(&[text("b")], now), "noted once");
+        assert!(
+            lost.noted(&[text("b")], now),
+            "a take again holds one place"
+        );
+        assert!(lost.noted(&[text("b")], now), "noted until its wait ends");
         assert!(
             !lost.noted(&[text("c")], now.saturating_add(wait)),
             "its wait ended"

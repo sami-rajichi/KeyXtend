@@ -1,8 +1,7 @@
 //! Quick-fill's take (ADR-0034, design "Paste"): the clipboard's text, read within the take's cap, goes to Quick-fill,
-//! and the history forgets its newest entry when it is that text and not pinned; the copy the take read keeps nothing
-//! either when the watch tells it within `take_wait_ms`, as that note can come after the take, or twice. Paste at once
-//! never puts that text back until the history keeps it again; only its hash stays, every copy read here is wiped, and
-//! none is logged.
+//! and the history forgets its newest entry when it is that text and not pinned; every note of the copy the take read
+//! keeps nothing either while the watch tells it within `take_wait_ms`, from any app. Paste at once never puts that
+//! text back until the history keeps it again; only its hash stays, every copy read here is wiped, and none is logged.
 
 use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
 use kx_module_api::{Secret, Zeroizing};

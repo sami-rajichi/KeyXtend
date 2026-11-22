@@ -1,13 +1,13 @@
-//! A take's copy whose note is due (lend review, known #2): it keeps nothing when the watch tells it within
-//! `take_wait_ms`, whatever notes come between, even told again after the note the take found kept, and is kept again
-//! after; at most `queue_copies` takes wait.
+//! A take's copy whose note is due (lend review, known #2): every note of it the watch tells within `take_wait_ms`
+//! keeps nothing, from any app and whatever comes between, and it is kept again after; at most `queue_copies` takes
+//! wait.
 
 use std::time::Duration;
 
 use super::super::rig::Rig;
 use super::gone::{KEY, emptied, pasted, take};
-use super::holding;
-use crate::fixture::text;
+use super::{holding, html};
+use crate::fixture::{app, text};
 
 /// The voice key page, whose Paste takes the clipboard's text.
 const ASKER: &str = "voice";
@@ -42,6 +42,30 @@ fn a_second_note_of_a_taken_copy_keeps_nothing() {
     take(&mut rig, ASKER);
     rig.text(KEY);
     assert!(texts(&rig).is_empty(), "never kept again");
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// After the take, a second note of the key from another app keeps nothing, so Paste at once never puts it back.
+#[test]
+fn a_second_note_after_the_take_keeps_nothing() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKER);
+    rig.text(KEY);
+    rig.copy(vec![text(KEY)], Some(app("notepad.exe")));
+    assert!(texts(&rig).is_empty(), "never kept");
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// After the take, the app writes the key again with HTML beside it; its text part keeps nothing either.
+#[test]
+fn a_rich_second_write_after_the_take_keeps_nothing() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKER);
+    rig.text(KEY);
+    rig.copy(vec![text(KEY), html(KEY)], None);
+    assert!(texts(&rig).is_empty(), "never kept");
     assert_eq!(pasted(&mut rig), emptied());
 }
 

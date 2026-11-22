@@ -1,7 +1,7 @@
 //! Quick-fill's take: what the clipboard holds now, read within the take's cap, whatever the history kept. The newest
 //! entry is forgotten when the text was read in full and the entry is that copy and not pinned, and the copy read keeps
-//! nothing when its note comes later; no text, a text too long or a busy clipboard each answer as such, and nothing is
-//! logged. Each answer names the module that asked.
+//! nothing while its notes come within `take_wait_ms`; no text, a text too long or a busy clipboard each answer as
+//! such, and nothing is logged. Each answer names the module that asked.
 
 use kx_module_api::ports::{
     ClipAct, ClipError, ClipNote, ClipTake, ClipTaken, ClipText, MAX_FIELD_CHARS,
@@ -207,13 +207,13 @@ fn a_different_copy_is_kept_and_never_ends_the_wait_for_the_taken_text() {
 }
 
 #[test]
-fn only_the_first_note_after_the_take_keeps_nothing() {
+fn every_note_of_the_taken_text_within_the_wait_keeps_nothing() {
     let mut rig = Rig::new();
     rig.fakes.clip.set_text(Some(PASSWORD));
     take(&mut rig, 1);
     rig.text(PASSWORD);
     rig.text(PASSWORD);
-    assert_eq!(kept(&mut rig), [PASSWORD]);
+    assert!(kept(&mut rig).is_empty());
 }
 
 #[test]

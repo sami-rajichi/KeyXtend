@@ -75,7 +75,8 @@ fn a_take_whose_note_is_still_due_never_writes_the_taken_text_back() {
 }
 
 /// The lend seed's steps (T24): a copy taken before its note, a lend that times out, the note, another copy, then the
-/// same text copied again, its note still due, and a busy take; that text stays gone until the history keeps it again.
+/// same text copied again, its note still due, and a busy take; that text stays gone until a copy past `take_wait_ms`
+/// is kept again.
 #[test]
 fn the_same_text_copied_again_after_its_take_stays_gone_until_kept_again() {
     let mut rig = Rig::new();
@@ -91,6 +92,9 @@ fn the_same_text_copied_again_after_its_take_stays_gone_until_kept_again() {
     rig.fakes.clip.set_text(Some(KEY));
     take(&mut rig, ASKERS[1]);
     assert_eq!(pasted(&mut rig), emptied(), "not kept again yet");
+    rig.text(KEY);
+    assert_eq!(pasted(&mut rig), emptied(), "still within the wait");
+    rig.advance(rig.settings.take_wait());
     rig.text(KEY);
     assert_eq!(pasted(&mut rig), [vec![text(SAID)], vec![text(KEY)]]);
 }

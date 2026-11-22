@@ -1,5 +1,5 @@
-//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's, a marked copy or the one a
-//! take read before its note came keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
+//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's, a marked copy or a take's
+//! copy told within `take_wait_ms` keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
 //! refused with a note, and the caps then trim the oldest unpinned entries.
 
 use kx_module_api::keys;
