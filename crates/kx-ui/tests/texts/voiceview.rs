@@ -1,7 +1,8 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
 //! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, the cloud
 //! mark with a cloud note's buttons, Open service under a note's line, a card's warning, the chip naming each services
-//! row or the model on this PC; and every click kind QML sends to `Voice.act`, by the name QML holds each under.
+//! row as it listens and writes, or the model on this PC; and every click kind QML sends to `Voice.act`, by the name
+//! QML holds each under.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_mod_voice::models;
@@ -33,8 +34,9 @@ const SERVICE: &str = "Groq";
 /// hub words with the take's warning.
 const WARNED: &str = "cloudWarned";
 const WARNED_WRITES: &str = "cloudWarnedTranscribing";
-/// The start of a view's name whose cloud mark names a services table row, then the row's id; each must show whole.
+/// The starts of a Listening and a Transcribing view's name whose chip names a services row, then its id, shown whole.
 const ROW: &str = "cloud-";
+const ROW_WRITES: &str = "cloudTranscribing-";
 /// The start of a view's name whose chip names the model on this PC: the table's longest short name.
 const DEVICE: &str = "device";
 /// The view whose chip names a user's own file, too long to show whole.
@@ -145,11 +147,12 @@ fn longest() -> String {
     most.expect("a model").short.clone()
 }
 
-/// The chip view `name` shows: the warning service's on `WARNED` and `WARNED_WRITES`, a row's on a `ROW` view, Groq's
+/// The chip view `name` shows: the warning service's on `WARNED` and `WARNED_WRITES`, a row's on a row view, Groq's
 /// on another cloud view, the user's own file on `OWN`, the longest short name on another device view, none otherwise.
 fn mark(name: &str) -> Option<BarMark> {
     let device = |n: String| Some(BarMark::Device(Redacted::new(n)));
-    if let Some(id) = name.strip_prefix(ROW) {
+    let after = |start: &str| name.strip_prefix(start);
+    if let Some(id) = after(ROW).or_else(|| after(ROW_WRITES)) {
         let services = table().expect("the services table reads");
         return services.get(id).map(|s| BarMark::Cloud(s.shown()));
     }
@@ -205,11 +208,17 @@ fn bars(tag: &str) -> Vec<(String, VoiceBar)> {
     .collect()
 }
 
-/// A Listening bar in `lang` for each services table row, offered or not, named `ROW` then the row's id.
+/// A Listening bar then a Transcribing one in `lang` for each services table row, offered or not, named `ROW` and
+/// `ROW_WRITES` then the row's id.
 fn row_bars(lang: &VoiceLang) -> Vec<(String, VoiceBar)> {
     let rows = table().expect("the services table reads").rows().iter();
-    rows.map(|s| (format!("{ROW}{}", s.id), listening(lang, false, None)))
-        .collect()
+    let take = |id: &str| {
+        [
+            (format!("{ROW}{id}"), listening(lang, false, None)),
+            (format!("{ROW_WRITES}{id}"), VoiceBar::Transcribing),
+        ]
+    };
+    rows.flat_map(|s| take(&s.id)).collect()
 }
 
 /// The bars a dictation by a model on this PC draws in `lang`, each named with `DEVICE` first; nothing heard yet is the

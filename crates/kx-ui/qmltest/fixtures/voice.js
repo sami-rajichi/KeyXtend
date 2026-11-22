@@ -142,7 +142,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 41,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -194,7 +194,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -246,7 +246,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -298,7 +298,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -350,7 +350,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 40,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -454,7 +454,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -506,7 +506,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -558,7 +558,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -610,7 +610,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -662,7 +662,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1113,6 +1113,468 @@ var views = {
       "panel": null,
       "place": "above",
       "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-assemblyai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "AssemblyAI",
+        "said": "يُرسَل صوتك إلى AssemblyAI عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-custom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "مخصّص",
+        "said": "يُرسَل صوتك إلى العنوان الذي تكتبه عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 42,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-deepinfra": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "DeepInfra",
+        "said": "يُرسَل صوتك إلى DeepInfra عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-elevenlabs": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "ElevenLabs",
+        "said": "يُرسَل صوتك إلى ElevenLabs عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-gemini": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Gemini",
+        "said": "يُرسَل صوتك إلى Gemini عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 50,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-groq": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 32,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-lemonfox": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Lemonfox",
+        "said": "يُرسَل صوتك إلى Lemonfox عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-mistral": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Mistral",
+        "said": "يُرسَل صوتك إلى Mistral عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-openai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenAI",
+        "said": "يُرسَل صوتك إلى OpenAI عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-openrouter": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenRouter",
+        "said": "يُرسَل صوتك إلى OpenRouter عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing-together": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Together AI",
+        "said": "يُرسَل صوتك إلى Together AI عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2123,7 +2585,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 41,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2175,7 +2637,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2227,7 +2689,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2279,7 +2741,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2331,7 +2793,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 40,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2435,7 +2897,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2487,7 +2949,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2539,7 +3001,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2591,7 +3053,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2643,7 +3105,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3094,6 +3556,468 @@ var views = {
       "panel": null,
       "place": "above",
       "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-assemblyai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "AssemblyAI",
+        "said": "Your voice goes to AssemblyAI at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-custom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Custom",
+        "said": "Your voice goes to the address you type at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 42,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-deepinfra": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "DeepInfra",
+        "said": "Your voice goes to DeepInfra at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-elevenlabs": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "ElevenLabs",
+        "said": "Your voice goes to ElevenLabs at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-gemini": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Gemini",
+        "said": "Your voice goes to Gemini at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 50,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-groq": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 32,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-lemonfox": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Lemonfox",
+        "said": "Your voice goes to Lemonfox at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-mistral": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Mistral",
+        "said": "Your voice goes to Mistral at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-openai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenAI",
+        "said": "Your voice goes to OpenAI at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-openrouter": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenRouter",
+        "said": "Your voice goes to OpenRouter at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing-together": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Together AI",
+        "said": "Your voice goes to Together AI at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -4104,7 +5028,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 41,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4156,7 +5080,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4208,7 +5132,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4260,7 +5184,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4312,7 +5236,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 40,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4416,7 +5340,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4468,7 +5392,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4520,7 +5444,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4572,7 +5496,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4624,7 +5548,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5075,6 +5999,468 @@ var views = {
       "panel": null,
       "place": "above",
       "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-assemblyai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "AssemblyAI",
+        "said": "Votre voix partira vers AssemblyAI à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-custom": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Personnalisé",
+        "said": "Votre voix partira vers l’adresse que vous saisissez à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 42,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-deepinfra": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "DeepInfra",
+        "said": "Votre voix partira vers DeepInfra à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-elevenlabs": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "ElevenLabs",
+        "said": "Votre voix partira vers ElevenLabs à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-gemini": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Gemini",
+        "said": "Votre voix partira vers Gemini à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 50,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-groq": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Votre voix partira vers Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 32,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-lemonfox": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Lemonfox",
+        "said": "Votre voix partira vers Lemonfox à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-mistral": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Mistral",
+        "said": "Votre voix partira vers Mistral à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-openai": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenAI",
+        "said": "Votre voix partira vers OpenAI à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-openrouter": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "OpenRouter",
+        "said": "Votre voix partira vers OpenRouter à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing-together": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "warn": null,
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Together AI",
+        "said": "Votre voix partira vers Together AI à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copié",

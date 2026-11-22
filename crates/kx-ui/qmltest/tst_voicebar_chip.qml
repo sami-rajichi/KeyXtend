@@ -1,7 +1,7 @@
 // The bar's chip over the hub's views (owner, 2026-11-22): while a model on this PC listens or writes, the processor's
 // picture and the model's short name, which readers hear in a sentence, as the cloud mark names its service whole; a
 // user's own long file name cut in the middle; the bar holding the longest names in all eight looks, in English, French
-// and Arabic; and one size for the whole take, Listening to Transcribing, warned or not, so Stop and Cancel never move.
+// and Arabic; and one size for the whole take, warned or not, so Stop and Cancel never move, a service's name whole.
 import QtQuick
 import QtTest
 import "../qml"
@@ -35,20 +35,26 @@ Item {
     readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
     // Each take's Listening views, then its Transcribing ones: a model on this PC, Groq, a first dictation that warns,
     // that one handed to the model on this PC as a password box does, with its warned Transcribing view or straight,
-    // and Groq's handed over too, whose chip then names the table's longest model.
+    // Groq's handed over too, whose chip then names the table's longest model, and the widest services row per look.
     readonly property var takes: ({
         device: [["deviceListening", "deviceNothing"], ["deviceTranscribing"]],
         cloud: [["cloudListening", "cloudNothing"], ["cloudTranscribing"]],
         warned: [["cloudWarned"], ["cloudWarnedTranscribing"]],
         handover: [["cloudWarned"], ["cloudWarnedTranscribing", "deviceTranscribing"]],
         password: [["cloudWarned"], ["deviceTranscribing"]],
-        unwarned: [["cloudListening", "cloudNothing"], ["deviceTranscribing"]]
+        unwarned: [["cloudListening", "cloudNothing"], ["deviceTranscribing"]],
+        longest: null
     })
+    // The start of a services row's Transcribing view's name, and the rows that have one, by id.
+    readonly property string writing: "cloudTranscribing-"
+    readonly property var rows: Object.keys(Voice.views.en).filter(n => n.startsWith(writing))
+        .map(n => n.slice(writing.length))
     // The bundled fonts, so each bar is measured as the app draws it, whichever suites ran before.
     property var bundled: []
 
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
+    Component { id: metricsC; FontMetrics {} }
     // Every size its bar takes while watched, in whole units, so a change that lasts part of a step shows.
     Component {
         id: watchC
@@ -223,6 +229,25 @@ Item {
         function others(all, size) {
             return all.filter(s => s[0] !== size[0] || s[1] !== size[1]);
         }
+        // Row `d`'s take, or the widest services row's take in its look and language, measured in the chip's own font.
+        function viewsOf(d) {
+            if (d.views)
+                return d.views;
+            const bar = make("cloud-" + root.rows[0], d.t, d.lk);
+            const fm = createTemporaryObject(metricsC, root, { font: chipName(bar).font });
+            bar.visible = false;
+            const wide = id => fm.advanceWidth(Voice.views[d.t]["cloud-" + id].mark.name);
+            const id = root.rows.reduce((a, b) => wide(b) > wide(a) ? b : a);
+            return [["cloud-" + id], [root.writing + id]];
+        }
+        // The chip's name as a take ends: a service's whole, a model's cut only where the middle keeps its least room.
+        function whole(bar, lk) {
+            const label = chipName(bar);
+            const model = bar.view.mark.kind !== bar.names.cloud;
+            const least = bar.wave.width <= lk.shape.voice.wave_room_px * bar.s + 1;
+            verify(!label.truncated || model && least, (model ? "a model's name cut only at the least room, " :
+                "a service's name whole while it writes, ") + label.width + " px of " + label.implicitWidth);
+        }
 
         function test_stop_and_cancel_keep_their_place_through_the_whole_take_data() {
             return every_take(["above", "bottom"]);
@@ -230,7 +255,7 @@ Item {
         // One take holds one size from its first Listening view, with the hint, the warning or neither, to the end of
         // Transcribing, never another even for a moment, so the hub keeps the bar's bottom edge and nothing moves.
         function test_stop_and_cancel_keep_their_place_through_the_whole_take(d) {
-            const [firsts, writes] = d.views;
+            const [firsts, writes] = viewsOf(d);
             for (const first of firsts) {
                 const bar = make(first, d.t, d.lk, d.place);
                 const held = spots(bar);
@@ -242,6 +267,7 @@ Item {
                     compare(spots(bar), held, first + " to " + name + ": Stop and Cancel stay");
                 }
                 inside(bar, d.lk);
+                whole(bar, d.lk);
                 compare(others(watch.seen, size), [], "never another size, even part of a step");
                 const asked = bar.voice.asks.slice(from).map(a => [a.w, a.h]);
                 verify(asked.length > 0, "the hub is asked where the bar goes");
@@ -256,7 +282,7 @@ Item {
         // Try again shows Transcribing with no Listening before it, after a text or a note: the bar takes that view's own
         // size, as a fresh bar on it does.
         function test_a_take_after_a_text_or_a_note_starts_afresh(d) {
-            const [firsts, writes] = d.views;
+            const [firsts, writes] = viewsOf(d);
             const last = writes[writes.length - 1];
             const fresh = make(last, d.t, d.lk);
             const want = [fresh.width, fresh.height];
