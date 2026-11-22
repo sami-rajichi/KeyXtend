@@ -56,7 +56,8 @@ open_ms = 250
 poll_ms = 10
 # The most copies that wait for the history to keep them; past it a new copy is dropped.
 queue_copies = 8
-# How long after a take the watch's copies of the taken text are not kept, in ms, as an app may tell one late or twice.
+# How long after a take the watch's copies of the taken text are not kept, in ms, as an app may tell one late or twice;
+# also how far apart one app's two writes of it may be for the take to forget both.
 take_wait_ms = 5000
 # A change is saved this many ms after the first unsaved one, and at stop.
 save_ms = 500

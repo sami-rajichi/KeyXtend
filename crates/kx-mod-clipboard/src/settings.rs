@@ -43,7 +43,8 @@ pub const PASTE_WAIT_MS: RangeInclusive<u32> = 100..=5_000;
 pub const BACK_CHARS: RangeInclusive<usize> = 1_000..=16_000_000;
 /// The wait for an insert's file check, in ms.
 pub const CHECK_MS: RangeInclusive<u32> = 1_000..=30_000;
-/// A take's wait for the note of the copy it read, in ms: past the watch's longest clipboard wait and a margin.
+/// A take's wait in ms, in which no copy of its text is kept, and the twin window's width: past the watch's longest
+/// clipboard wait and a margin.
 pub const TAKE_WAIT_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=60_000;
 /// The characters search reads.
 pub const SEARCH_CHARS: RangeInclusive<usize> = 100..=2_000;
@@ -133,7 +134,7 @@ pub struct ClipSettings {
     pub back_chars: usize,
     /// How long an insert waits for its files to be checked, in ms.
     pub check_ms: u32,
-    /// How long a take waits for the watch to tell the copy it read, in ms; that copy keeps nothing meanwhile.
+    /// How long after a take no copy of its text is kept, in ms; also how far apart one app's two writes of it may be.
     pub take_wait_ms: u32,
     /// The system's clipboard-history shortcut opens our panel.
     pub history_key: bool,

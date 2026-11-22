@@ -1,7 +1,7 @@
 //! The texts that left the history, as content hashes alone, takes apart from deletes so a bulk delete never pushes a
-//! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21). Every
-//! copy of a take's text the watch reads within `take_wait_ms` keeps nothing, however many come and from any app; a
-//! rich entry's hash never matches, as only the board names it, but the history cannot tell it without its blobs.
+//! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21), though
+//! among the deletes a rich entry's own hash never matches, as only the board names it. Every copy of a take's text the
+//! watch reads within `take_wait_ms` keeps nothing, however many come and from any app.
 
 use std::collections::VecDeque;
 use std::time::Duration;
