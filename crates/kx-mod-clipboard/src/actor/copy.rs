@@ -95,7 +95,8 @@ impl Actor {
         self.history.twin(entry.hash, same)
     }
 
-    /// Saves the content of new entry `id`; a failed save deletes the entry, and a locked shelf says so once.
+    /// Saves the content of new entry `id`; a failed save takes its row out, as the history never kept it, so its text
+    /// may still go back, and a locked shelf says so once.
     fn put(&mut self, id: u64, parts: &[ClipPart]) -> bool {
         let Some(entry) = self.history.get(id) else {
             return false;
@@ -107,7 +108,8 @@ impl Actor {
                 if error == SealedError::Locked {
                     self.say_once(keys::CLIP_LOCKED);
                 }
-                self.remove(id);
+                // The store's put already removed the blobs it saved.
+                self.history.remove(id);
                 false
             }
         }

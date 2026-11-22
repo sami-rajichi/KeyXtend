@@ -3,7 +3,8 @@
 //! clipboard empty. With no text there it is typed, as it may be a picture.
 
 use kx_module_api::ModuleId;
-use kx_module_api::ports::{ClipAct, ClipError, ClipNote, ClipPart, ClipTake};
+use kx_module_api::ports::{ClipAct, ClipError, ClipNote, ClipPart, ClipTake, SealedError};
+use kx_platform_fake::ShelfCall;
 
 use super::super::super::Msg;
 use super::super::rig::Rig;
@@ -162,6 +163,17 @@ fn a_take_of_a_kept_text_copied_again_before_its_note_never_comes_back() {
         "the older entry goes"
     );
     assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// The lend review's I1 (T24): a copy whose save failed was never kept, so it never left the history and goes back.
+#[test]
+fn a_copy_whose_save_failed_still_goes_back() {
+    let mut rig = Rig::new();
+    rig.fakes.shelf.fail(ShelfCall::Save, SealedError::Io);
+    rig.fakes.clip.set_text(Some("unsaved"));
+    rig.text("unsaved");
+    assert!(rig.actor.history.entries().is_empty(), "never kept");
+    assert_eq!(pasted(&mut rig), [vec![text(SAID)], vec![text("unsaved")]]);
 }
 
 #[test]
