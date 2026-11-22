@@ -32,7 +32,7 @@ Item {
     // The views whose chip names the model on this PC with the table's longest short name, and those naming a service:
     // Groq's, then each services row's.
     readonly property var device: ["deviceListening", "deviceNothing", "deviceTranscribing"]
-    readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
+    readonly property var cloud: ["cloudListening", "cloudNothing"].concat(rows.map(id => listening + id))
     // Each take's Listening views, then its Transcribing ones: a model on this PC, Groq, a first dictation that warns,
     // that one handed to the model on this PC as a password box does, with its warned Transcribing view or straight,
     // Groq's handed over too, whose chip then names the table's longest model, and the widest services row per look.
@@ -45,7 +45,8 @@ Item {
         unwarned: [["cloudListening", "cloudNothing"], ["deviceTranscribing"]],
         longest: null
     })
-    // The start of a services row's Transcribing view's name, and the rows that have one, by id.
+    // The starts of a services row's Listening and Transcribing view names, and the rows, by id.
+    readonly property string listening: "cloud-"
     readonly property string writing: "cloudTranscribing-"
     readonly property var rows: Object.keys(Voice.views.en).filter(n => n.startsWith(writing))
         .map(n => n.slice(writing.length))
@@ -229,21 +230,20 @@ Item {
         function others(all, size) {
             return all.filter(s => s[0] !== size[0] || s[1] !== size[1]);
         }
-        // Row `d`'s take, or the widest services row's take in its look and language, measured in the chip's own font.
+        // Take `d`'s views, or the widest services row's take in its look and language, measured in the chip's font.
         function viewsOf(d) {
             if (d.views)
                 return d.views;
-            const bar = make("cloud-" + root.rows[0], d.t, d.lk);
+            const bar = make(root.listening + root.rows[0], d.t, d.lk);
             const fm = createTemporaryObject(metricsC, root, { font: chipName(bar).font });
             bar.visible = false;
-            const wide = id => fm.advanceWidth(Voice.views[d.t]["cloud-" + id].mark.name);
+            const wide = id => fm.advanceWidth(Voice.views[d.t][root.listening + id].mark.name);
             const id = root.rows.reduce((a, b) => wide(b) > wide(a) ? b : a);
-            return [["cloud-" + id], [root.writing + id]];
+            return [[root.listening + id], [root.writing + id]];
         }
         // The chip's name as a take ends: a service's whole, a model's cut only where the middle keeps its least room.
         function whole(bar, lk) {
-            const label = chipName(bar);
-            const model = bar.view.mark.kind !== bar.names.cloud;
+            const label = chipName(bar), model = bar.view.mark.capped;
             const least = bar.wave.width <= lk.shape.voice.wave_room_px * bar.s + 1;
             verify(!label.truncated || model && least, (model ? "a model's name cut only at the least room, " :
                 "a service's name whole while it writes, ") + label.width + " px of " + label.implicitWidth);
