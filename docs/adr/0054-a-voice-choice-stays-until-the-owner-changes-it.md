@@ -16,7 +16,7 @@ Decided by the owner on 2026-11-22.
 1. **The Cloud switch Off** keeps every cloud pick waiting: local models serve, and nothing is sent. Cloud On again brings each language back to its cloud pick. This is the owner's own act, so ADR-0047 decision 12 ("nothing moves to cloud on its own") still holds.
 2. **New terms declined** turns the service Off, and its picks wait for its Confirm, as a service Off does. Accepting the terms later brings them back.
 3. **Side effects keep the choice.** Only the owner changing that very choice drops it, such as a new local pick, a cleared typed address or a new typed model id. Any other act or repair leaves the choice waiting, marked or unavailable, as the screens already show.
-4. **A service Off keeps its entry aside.** Off and declined terms move the service's entry from `services` to a new `[voice] parked` map, with its typed address, typed model and keep-nothing switch, and its typed picks wait as listed ones do. Its Confirm moves the entry back with the new day and terms number; nothing ever reads or sends to a parked entry.
+4. **A service Off keeps its entry aside.** Off and declined terms move the service's entry, with its typed address, typed model and keep-nothing switch, from `services` to a new `[voice] parked` map, where nothing sends to it or dictates with it; only the waiting row, the start repair and its Confirm read it. Its typed picks wait as listed ones do, and its Confirm moves the entry back with the new day and terms number and shows the card's warning again at the first dictation.
 
 ## Consequences
 
