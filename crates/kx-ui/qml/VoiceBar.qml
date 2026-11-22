@@ -62,8 +62,12 @@ Window {
     visible: false
     // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
     width: rescale.keep(Math.ceil(span))
+    // Transcribing keeps the width its take listened at, so Stop and Cancel never move; hiding, a text or a note ends it.
+    readonly property real span: writes ? Math.max(listened, fit) : fit
+    property real listened: 0
+    onFitChanged: if (listens) listened = fit
     // The text's width for a text, a note or a warning; else the narrow one, widened up to it for the wave's least room.
-    readonly property real span: wide || warns ? broad : Math.min(broad, Math.max(narrow, broad - leadRoom + lead.width))
+    readonly property real fit: wide || warns ? broad : Math.min(broad, Math.max(narrow, broad - leadRoom + lead.width))
     readonly property real narrow: lk.shape.voice.bar_px[0] * s
     readonly property real broad: lk.shape.voice.bar_px[1] * s
     // The most the lead may take for the wave's least room within the text's width; a model's name on the chip fits it.
@@ -101,6 +105,8 @@ Window {
             return;
         const was = view;
         view = JSON.parse(voice.view());
+        if (!writes)
+            listened = listens ? fit : 0;
         if (!view || mode === names.states.hidden)
             return shut();
         const fresh = !was || was.bar.state !== mode;

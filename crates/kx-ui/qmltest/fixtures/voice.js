@@ -142,7 +142,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -194,7 +194,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -246,7 +246,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -298,7 +298,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -350,7 +350,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -402,7 +402,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -454,7 +454,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -506,7 +506,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -558,7 +558,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -610,7 +610,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -662,7 +662,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -725,7 +725,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 24,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -789,7 +789,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -902,7 +902,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -947,7 +947,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1070,7 +1070,48 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "جارٍ تحويل الكلام إلى نص…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1122,7 +1163,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1227,7 +1268,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1279,7 +1320,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1331,7 +1372,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1372,7 +1413,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2037,7 +2078,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2089,7 +2130,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2141,7 +2182,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2193,7 +2234,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2245,7 +2286,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2297,7 +2338,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2349,7 +2390,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2401,7 +2442,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2453,7 +2494,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2505,7 +2546,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2557,7 +2598,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2620,7 +2661,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 24,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2684,7 +2725,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2797,7 +2838,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2842,7 +2883,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2965,7 +3006,48 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "Transcribing…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3017,7 +3099,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3122,7 +3204,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3174,7 +3256,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3226,7 +3308,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3267,7 +3349,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3932,7 +4014,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -3984,7 +4066,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4036,7 +4118,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4088,7 +4170,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4140,7 +4222,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4192,7 +4274,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4244,7 +4326,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4296,7 +4378,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4348,7 +4430,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4400,7 +4482,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4452,7 +4534,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4515,7 +4597,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 23,
+      "round": 24,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4579,7 +4661,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4692,7 +4774,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 21,
+      "round": 22,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4737,7 +4819,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 24,
+      "round": 25,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4860,7 +4942,48 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudTranscribing": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "state": "transcribing",
+        "word": "Transcription…"
+      },
+      "mark": {
+        "capped": false,
+        "kind": "cloud",
+        "name": "Groq",
+        "said": "Votre voix partira vers Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -4912,7 +5035,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5017,7 +5140,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 25,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5069,7 +5192,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5121,7 +5244,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5162,7 +5285,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copié",

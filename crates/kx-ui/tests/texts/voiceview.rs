@@ -223,11 +223,12 @@ fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
 /// most acts under its line, and the account note the longest line over its acts.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 8] {
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 9] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
         ("cloudNothing", listening(lang, true, None)),
+        ("cloudTranscribing", VoiceBar::Transcribing),
         (WARNED, listening(lang, false, Some(warned().1))),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),

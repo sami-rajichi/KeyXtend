@@ -1,7 +1,7 @@
 // What the bar does while it listens or writes (design/voice-bar.css .st, .lc): the red dot and Listening, or Nothing
 // heard yet in its place, then the language's chip; or the audio mark and Transcribing; then the chip naming what takes
 // the voice, a cloud service or the model on this PC. Words follow the keyboard's language, the chip the language's own
-// script; while it listens the word takes the wider of both texts' room, so one take holds one width.
+// script; while it listens the word takes the wider of both texts' room, so the hint coming or going moves nothing.
 import QtQuick
 
 Row {
