@@ -6,6 +6,7 @@ import QtTest
 import "../qml"
 import "board.js" as Board
 import "voicekit.js" as Kit
+import "fixtures/face.js" as Face
 import "fixtures/voicepanel.js" as Panel
 import "../../kx-theme/fixtures/look-native-light.js" as NL
 import "../../kx-theme/fixtures/look-native-dark.js" as ND
@@ -66,9 +67,13 @@ Item {
             return { x: at.x, y: at.y, w: o.width, h: o.height };
         }
 
+        // Pick `o`'s service mark.
+        function markOf(o) {
+            return Kit.only(Board.all(o, n => n.markId !== undefined));
+        }
         // The word of pick `o`'s service mark.
         function word(o) {
-            const mark = Kit.only(Board.all(o, n => n.markId !== undefined));
+            const mark = markOf(o);
             return Kit.only(Board.all(mark, n => n.text === mark.mark.text));
         }
 
@@ -201,6 +206,33 @@ Item {
                 verify(!word(o).truncated || name.width <= least + 0.5, "the mark is cut only past the name's least: " + tag);
                 verify(o.Accessible.name.indexOf(service) >= 0, "readers hear the mark whole: " + tag);
             }
+        }
+
+        function test_a_whole_mark_keeps_every_letter_at_other_sizes_data() {
+            const all = [];
+            for (const size of [Face.sizeMin, Face.sizeMax])
+                for (const name of ["compareWide", "compareTyped"])
+                    ["en", "fr", "ar"].forEach(t => all.push({ tag: size + " " + name + " " + t, size, name, t }));
+            return all;
+        }
+        // T24 re-review 3: at the keyboard's smallest and largest sizes a mark is capped only once its name is at its
+        // least, so a whole mark keeps every letter and only a pick past its room is shortened.
+        function test_a_whole_mark_keeps_every_letter_at_other_sizes(d) {
+            const box = make(d.name, d.t, null, null, d.size);
+            compare(box.s, d.size, "the keyboard's size");
+            keeps(box);
+            uncut(box, inPick);
+            const p = page(box), least = box.lk.shape.voice.pick_name_px * box.s;
+            const picks = Board.all(p.body, o => o.visible && o.Accessible.role === Accessible.CheckBox);
+            const names = picks.map(o => Kit.only(Board.all(o, n => n.text === o.entry.name)));
+            picks.forEach((o, i) => {
+                const atLeast = names[i].width <= least + 0.5;
+                verify(markOf(o).most === Infinity || atLeast, "a cap only once the name is at its least: " + o.entry.name);
+                verify(!word(o).truncated || atLeast, "a whole mark keeps every letter: " + o.entry.name);
+            });
+            const over = picks.filter(o => o.natural > p.most + 0.5).map(o => o.entry.name);
+            const cut = picks.filter((o, i) => names[i].truncated || word(o).truncated).map(o => o.entry.name);
+            compare(cut, over, "only a pick past its room is shortened");
         }
 
         function test_a_short_page_keeps_every_name_whole_data() {

@@ -202,7 +202,8 @@ Item {
                 host: read.host
                 mark: ({ id: read.host.names.cloud, text: pick.entry.service })
                 lit: pick.lit
-                most: pick.room - label.width
+                // Capped only once the name is at its least, so a whole mark never loses a letter to rounding.
+                most: label.width > label.least ? Infinity : pick.room - label.width
             }
         }
         Act {
