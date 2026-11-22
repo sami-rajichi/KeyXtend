@@ -17,8 +17,8 @@ Rectangle {
     property bool badge: false
     // The widest it may be; past that its word is shortened, while readers still hear it whole.
     property real most: Infinity
-    // Its width with its whole word.
-    readonly property real natural: word.implicitWidth + (pic.visible ? pic.width + row.spacing : 0) + 2 * sh.pad_px * host.s
+    // Its width with its whole word; the icon counts by its own flag, as the row lays it out, so it holds while hidden.
+    readonly property real natural: word.implicitWidth + (icon ? pic.width + row.spacing : 0) + 2 * sh.pad_px * host.s
 
     readonly property string markId: mark.id
     readonly property var names: host.names

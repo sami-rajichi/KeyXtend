@@ -111,5 +111,21 @@ Item {
             compare(picks.filter(o => o.mapToItem(page, o.width, 0).x > edge).length, 0, "no pick under the pager");
             box.visible = false;
         }
+
+        function test_a_marks_natural_width_holds_while_its_page_hides_data() {
+            return langs_data();
+        }
+        // T24 re-review 3: a mark counts its icon by the icon's own flag, as its row lays it out, so the picks' widths
+        // and pairing are the same while the page or the panel hides.
+        function test_a_marks_natural_width_holds_while_its_page_hides(d) {
+            const box = make("compareCloud", d.t);
+            const marks = Board.all(box.contentItem, o => o.visible && o.markId !== undefined && o.natural !== undefined);
+            verify(marks.some(m => !!m.icon), "a mark with its icon");
+            const widths = marks.map(m => m.natural);
+            const page = Kit.only(Board.all(box.contentItem, o => o.visible && o.pager !== undefined && o.body !== undefined));
+            page.visible = false;
+            compare(marks.map(m => m.natural), widths, "the same while its page hides");
+            box.visible = false;
+        }
     }
 }
