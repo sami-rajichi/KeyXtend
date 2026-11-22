@@ -160,8 +160,8 @@ fn pick(name: &str, service: ServiceName) -> CompareCloud {
     }
 }
 
-/// Compare's widest page of picks (T24 review 1): Groq's and OpenRouter's longest model names, then an Other id typed
-/// to its most under OpenRouter, all ticked.
+/// Compare's widest page of picks (T24 review 1): Groq's and `OpenRouter`'s longest model names, then an Other id
+/// typed to its most under `OpenRouter`, all ticked.
 fn compare_wide() -> VoiceSheet {
     let rows = ["groq", "openrouter"].map(|id| services().get(id).expect("an offered row"));
     let all = rows
