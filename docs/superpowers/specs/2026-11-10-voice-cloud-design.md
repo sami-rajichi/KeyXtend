@@ -133,6 +133,7 @@ Facts read on 2026-11-09 and 2026-11-10 (light use is 15 hours a month, heavy is
 - An Azure address typed wrong (void since Azure was dropped); a Custom address that is not HTTPS.
 - A card always shows the date its facts were read; older than `facts_days`, the date takes a warning tone (designer).
 - A service's terms number changed by an update; the user declines the new confirmation (the service goes back to Off).
+- A service switched Off keeps its listed picks: Start shows the Off note with Open service and never listens, and only that service's Confirm brings the pick back (owner, 2026-11-21).
 
 ## To confirm with a real key
 

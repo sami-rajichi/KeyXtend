@@ -13,6 +13,7 @@ mod assembly;
 mod eleven;
 mod gemini;
 mod keep;
+mod off;
 mod offered;
 mod picks;
 mod props;
@@ -212,7 +213,7 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     let rules = Cloud::new(&newer, false);
     let groq = newer.get("groq").unwrap();
     assert!(rules.asks(&s, groq) && rules.choice(&s, "fr").is_some_and(|c| c.ask));
-    rules.turn_off(&mut s, "groq");
+    rules.decline(&mut s, "groq");
     assert_eq!(rules.mark(&s, groq, true), ServiceMark::Off);
     assert!(rules.choice(&s, "fr").is_none() && rules.choice(&s, "ar").is_none());
     assert_eq!(

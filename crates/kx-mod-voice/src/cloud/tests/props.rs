@@ -1,6 +1,7 @@
 //! Property (ADR-0047 decision 12): no sequence of settings changes, picks or table loads moves a language from a local
-//! model to a service by itself; only the user's own pick of that service for that language does. Each case starts
-//! with languages in the cloud, so the chains that hide a pick and then could bring it back are run often.
+//! model to a service by itself; only the user's own pick of that service for that language does, or that service's
+//! Confirm while the pick waits for it Off (owner, 2026-11-21). Each case starts with languages in the cloud, so the
+//! chains that hide a pick and then could bring it back are run often.
 
 use std::cell::Cell;
 
@@ -47,8 +48,10 @@ enum Step {
     Switch(bool),
     /// A card confirmed.
     Confirm(usize),
-    /// A service switched off, or its newer terms declined.
+    /// A service switched Off, which leaves its listed picks waiting.
     TurnOff(usize),
+    /// A service's newer terms declined, which drops its picks.
+    Decline(usize),
     /// The user picks a service's model for a language.
     Pick(usize, usize, usize),
     /// The user picks a local row for a language.
@@ -74,6 +77,7 @@ impl Step {
             self,
             Self::Switch(false)
                 | Self::TurnOff(_)
+                | Self::Decline(_)
                 | Self::Type(..)
                 | Self::Address(..)
                 | Self::Load(_)
@@ -88,6 +92,7 @@ fn step() -> impl Strategy<Value = Step> {
         1 => mostly_on().prop_map(Step::Switch),
         3 => s.clone().prop_map(Step::Confirm),
         1 => s.clone().prop_map(Step::TurnOff),
+        1 => s.clone().prop_map(Step::Decline),
         6 => (l.clone(), s.clone(), m.clone()).prop_map(|(l, s, m)| Step::Pick(l, s, m)),
         1 => (l.clone(), 0..LOCAL.len()).prop_map(|(l, r)| Step::Local(l, r)),
         1 => l.prop_map(Step::Unpick),
@@ -156,6 +161,12 @@ fn used(table: &Services, s: &VoiceSettings) -> [Option<String>; 4] {
     LANGS.map(|lang| rules.choice(s, lang).map(|c| c.service.id.clone()))
 }
 
+/// The service Off each language's pick waits for, if any.
+fn waiting(table: &Services, s: &VoiceSettings) -> [Option<String>; 4] {
+    let rules = Cloud::new(table, false);
+    LANGS.map(|lang| rules.waits(s, lang).map(|o| o.service.id.clone()))
+}
+
 /// Carries out `step` on `s` with table `at`, which a load changes. A refused act changes nothing, and the property
 /// checks it all the same.
 fn apply(step: &Step, tables: &[Services], at: &mut usize, s: &mut VoiceSettings) {
@@ -169,6 +180,10 @@ fn apply(step: &Step, tables: &[Services], at: &mut usize, s: &mut VoiceSettings
         Step::Confirm(i) => rules.confirm(s, SERVICES[i], today()),
         Step::TurnOff(i) => {
             rules.turn_off(s, SERVICES[i]);
+            true
+        }
+        Step::Decline(i) => {
+            rules.decline(s, SERVICES[i]);
             true
         }
         Step::Pick(l, i, m) => rules.pick(s, LANGS[l], SERVICES[i], cloud_models()[m]),
@@ -190,20 +205,18 @@ fn apply(step: &Step, tables: &[Services], at: &mut usize, s: &mut VoiceSettings
     };
 }
 
-/// The property after `step`: no language reached a service it did not pick, no cloud pick waits hidden to come back,
-/// and a hidden run or `cloud` off dictates nowhere in the cloud.
+/// The property after `step`: no language reached a service it did not pick or wait for, no cloud pick waits hidden to
+/// come back but an Off service's, and a hidden run or `cloud` off dictates nowhere in the cloud.
 fn check(
     step: &Step,
     table: &Services,
     s: &VoiceSettings,
-    before: &[Option<String>; 4],
+    before: &[[Option<String>; 4]; 2],
 ) -> Result<(), TestCaseError> {
     let after = used(table, s);
     for (i, lang) in LANGS.iter().enumerate() {
-        let moved = after[i].is_some() && after[i] != before[i];
-        let asked = matches!(step, Step::Pick(l, svc, _) if *l == i && after[i].as_deref() == Some(SERVICES[*svc]));
         prop_assert!(
-            !moved || asked,
+            !moved(step, i, before, &after),
             "{} moved to {:?} by {:?}",
             lang,
             after[i],
@@ -211,10 +224,9 @@ fn check(
         );
     }
     let rules = Cloud::new(table, false);
-    let hidden_pick = s
-        .picks
-        .iter()
-        .any(|(l, p)| cloud_pick(p).is_some() && rules.choice(s, l).is_none());
+    let hidden_pick = s.picks.iter().any(|(l, p)| {
+        cloud_pick(p).is_some() && rules.choice(s, l).is_none() && rules.waits(s, l).is_none()
+    });
     prop_assert!(!hidden_pick, "a cloud pick waits hidden: {:?}", s.picks);
     let hidden = Cloud::new(table, true);
     prop_assert!(
@@ -226,6 +238,20 @@ fn check(
         "cloud off in the cloud"
     );
     Ok(())
+}
+
+/// True when language `i` reached a service by `step` alone: neither its own pick of that service nor that service's
+/// Confirm while its pick waited for it, of `before`'s used and waiting services.
+fn moved(
+    step: &Step,
+    i: usize,
+    before: &[[Option<String>; 4]; 2],
+    after: &[Option<String>; 4],
+) -> bool {
+    let (now, waited) = (after[i].as_deref(), before[1][i].as_deref());
+    let asked = matches!(step, Step::Pick(l, svc, _) if *l == i && now == Some(SERVICES[*svc]));
+    let back = matches!(step, Step::Confirm(svc) if waited == Some(SERVICES[*svc]));
+    now.is_some() && after[i] != before[0][i] && !asked && !(back && now == waited)
 }
 
 #[test]
@@ -242,8 +268,8 @@ fn no_step_moves_a_language_from_local_to_a_service_by_itself() {
         let mut s = seeded(&tables[0]);
         for step in &steps {
             chained |= hid;
-            let before = used(&tables[at], &s);
-            let in_cloud = before.iter().any(Option::is_some);
+            let before = [used(&tables[at], &s), waiting(&tables[at], &s)];
+            let in_cloud = before[0].iter().any(Option::is_some);
             held.set(held.get() + u32::from(in_cloud));
             all.set(all.get() + 1);
             apply(step, &tables, &mut at, &mut s);

@@ -53,4 +53,9 @@ impl Supply for Offer<'_> {
         };
         cloud.mark(self.settings, row, true) != ServiceMark::Off
     }
+
+    fn off(&self, iso: &str) -> Option<String> {
+        let waits = self.cloud?.waits(self.settings, iso)?;
+        Some(waits.service.id.clone())
+    }
 }

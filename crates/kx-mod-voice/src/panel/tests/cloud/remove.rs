@@ -143,7 +143,8 @@ fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
         "only Remove key deletes it"
     );
     apply(&mut rig, &out);
-    assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
+    assert!(rig.settings.services.is_empty(), "Groq is Off");
+    assert!(rig.settings.picks.contains_key("en"), "its pick waits");
     rig.click(&VoiceClick::Service(CloudButton::On)); // Groq stays ticked.
     let out = rig.click(&VoiceClick::Confirm(true));
     apply(&mut rig, &out);

@@ -144,7 +144,7 @@ impl Panel {
                 self.show(id, Page::Card)
             }
             CloudButton::Lines => self.show(id, Page::Lines),
-            CloudButton::Off => self.turn_off(&id, facts),
+            CloudButton::Off => self.turn_off(&id, false, facts),
             CloudButton::Link => self.link(&id, facts),
             CloudButton::Test | CloudButton::Remove => self.key_button(&id, button, facts),
         }
@@ -170,11 +170,15 @@ impl Panel {
         self.go(page)
     }
 
-    /// Switches service `id` off: its picks go to the local default (edge 16); its sealed key stays, as only Remove key
-    /// deletes it.
-    fn turn_off(&mut self, id: &str, facts: &Facts<'_>) -> Vec<Do> {
+    /// Switches service `id` Off: its listed picks wait for its Confirm, or all go to the local default when its newer
+    /// terms were `declined` (edge 16). Its sealed key stays, as only Remove key deletes it.
+    fn turn_off(&mut self, id: &str, declined: bool, facts: &Facts<'_>) -> Vec<Do> {
         let mut out = edit(facts, |c, s| {
-            c.turn_off(s, id);
+            if declined {
+                c.decline(s, id);
+            } else {
+                c.turn_off(s, id);
+            }
             true
         });
         if self.page != Some(Page::Tab(VoiceTab::Cloud)) {
@@ -213,7 +217,7 @@ impl Panel {
             return out;
         }
         if cloud.asks(facts.settings, row) {
-            return self.turn_off(&id, facts);
+            return self.turn_off(&id, true, facts);
         }
         let back = if self.cloud.from_lines {
             Page::Lines

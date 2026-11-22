@@ -14,8 +14,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use book::Book;
 use outs::{ask, calls, kept, note, opened, text};
 
+mod book;
 mod cancel;
 mod close;
 mod cloud;
@@ -62,27 +64,6 @@ impl TestClock {
 impl Clock for TestClock {
     fn now(&self) -> Mono {
         Mono::from_us(self.0.load(Ordering::SeqCst))
-    }
-}
-
-/// What each language gets: its local model, then its cloud pick, if any; and the services still switched on.
-struct Book(
-    BTreeMap<String, Result<Ready, Lack>>,
-    BTreeMap<String, Net>,
-    BTreeSet<String>,
-);
-
-impl Supply for Book {
-    fn supply(&self, iso: &str) -> Result<Ready, Lack> {
-        self.0.get(iso).cloned().unwrap_or(Err(Lack::Unknown))
-    }
-
-    fn cloud(&self, iso: &str) -> Option<Net> {
-        self.1.get(iso).cloned()
-    }
-
-    fn on(&self, service: &str) -> bool {
-        self.2.contains(service)
     }
 }
 
@@ -177,7 +158,7 @@ impl Rig {
         let mut rig = Self {
             flow,
             clock,
-            book: Book(book, BTreeMap::new(), BTreeSet::new()),
+            book: Book(book, BTreeMap::new(), BTreeSet::new(), BTreeMap::new()),
             take: 0,
             upload: None,
             page: None,

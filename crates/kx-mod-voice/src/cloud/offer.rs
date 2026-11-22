@@ -1,5 +1,6 @@
 //! The cloud models a language may pick (design "Choosing"): each switched-on service's listed models that know it,
-//! then its typed Other id, and why one cannot be used now. The Models page's Cloud side and Compare list them.
+//! then its typed Other id, why one cannot be used now, and the pick waiting for a service Off. The Models page's Cloud
+//! side and Compare list them.
 
 use kx_module_api::ports::Unavailable;
 
@@ -72,6 +73,20 @@ impl<'a> Cloud<'a> {
             }
         }
         out
+    }
+
+    /// The listed model `lang`'s pick keeps while its offered service is Off and cloud is on (owner, 2026-11-21); only
+    /// that service's Confirm brings it back into use.
+    #[must_use]
+    pub fn waits<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Offered<'s>>
+    where
+        'a: 's,
+    {
+        let (id, model) = self.table.pick(s.picks.get(lang)?)?;
+        let service = self.table.get(id).filter(|r| r.offered && self.on(s))?;
+        let listed = service.model(model).filter(|m| m.code(lang).is_some())?;
+        let model = Chosen::Listed(listed);
+        (!s.services.contains_key(id)).then_some(Offered { service, model })
     }
 
     /// What service `id`'s `model` is for `lang` now, as Compare sends to it; `None` when the rules do not take it.

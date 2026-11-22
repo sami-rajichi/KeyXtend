@@ -1,6 +1,6 @@
 //! The acts that change a language's cloud pick or a service's entry (ADR-0047 decisions 9 and 12): the `cloud` switch,
-//! a card's confirmation, a service off or its newer terms declined, a pick, the typed lines, and the card's warning
-//! seen. Only `pick` moves a language to a service.
+//! a card's confirmation, a service Off or its newer terms declined, a pick, the typed lines, and the card's warning
+//! seen. Only `pick` moves a language to a service, and a confirmation brings back the pick waiting for it.
 
 use kx_module_api::ports::{CloudAsk, Date};
 
@@ -46,8 +46,20 @@ impl<'a> Cloud<'a> {
         true
     }
 
-    /// Switches service `id` off and drops its picks, as a declined newer terms number does (edge 16).
+    /// Switches service `id` Off: its listed picks wait for its Confirm (owner, 2026-11-21), and a typed pick goes with
+    /// its typed lines.
     pub fn turn_off(&self, s: &mut VoiceSettings, id: &str) {
+        s.services.remove(id);
+        let waits: Vec<String> = (s.picks.keys())
+            .filter(|lang| self.waits(s, lang).is_some())
+            .cloned()
+            .collect();
+        let its = |p: &String| self.table.pick(p).is_some_and(|(service, _)| service == id);
+        s.picks.retain(|l, p| waits.contains(l) || !its(p));
+    }
+
+    /// Switches service `id` Off as its newer terms were declined, and drops all its picks (edge 16).
+    pub fn decline(&self, s: &mut VoiceSettings, id: &str) {
         s.services.remove(id);
         self.drop_picks(s, |service, _| service == id);
     }

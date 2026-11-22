@@ -155,6 +155,21 @@ fn a_saved_entry_of_a_row_not_offered_drops_alone_and_its_picks_go_back_to_local
 }
 
 #[test]
+fn a_listed_pick_of_a_service_merely_off_stays_unnamed_for_that_services_confirm() {
+    let mut s = on();
+    let pick = pick_text("groq", &row("groq").models[0].id);
+    s.picks.insert("fr".into(), pick.clone());
+    assert!(s.drop_bad().is_empty(), "owner, 2026-11-21: it waits");
+    assert!(s.picks.contains_key("fr"));
+    s.services.insert("groq".into(), entry(|on| on.terms = 0));
+    let stale = ["picks.fr", "services.groq"];
+    assert_eq!(s.drop_bad(), stale, "a stale entry takes its picks along");
+    s.picks.insert("fr".into(), pick);
+    s.cloud = false;
+    assert_eq!(s.drop_bad(), ["picks.fr"], "edge 21: cloud off drops it");
+}
+
+#[test]
 fn a_typed_rows_pick_goes_while_no_address_is_typed() {
     let mut s = on();
     s.services

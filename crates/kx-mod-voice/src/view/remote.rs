@@ -1,5 +1,6 @@
 //! Cloud models as the Models page's Cloud side and Compare list them (design "Choosing"): each switched-on service's
-//! models that know the language in front, with its service, its mark and why one cannot be used now.
+//! models that know the language in front, and its pick waiting for a service Off, with the service, its mark and why
+//! one cannot be used now.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -7,7 +8,8 @@ use kx_module_api::ports::{
 };
 
 use super::Facts;
-use crate::cloud::Offered;
+use crate::VoiceSettings;
+use crate::cloud::{Cloud, Offered};
 use crate::panel::{Key, Panel};
 
 impl Panel {
@@ -39,7 +41,7 @@ impl Panel {
             };
             (key, model)
         };
-        cloud.models(s, facts.iso()).into_iter().map(row).collect()
+        listed(cloud, s, facts.iso()).into_iter().map(row).collect()
     }
 
     /// The Cloud side's band: cloud off, no service switched on yet, or the models listed.
@@ -113,6 +115,19 @@ fn sent_to(list: &[(Key, CompareCloud)]) -> Vec<ServiceName> {
         }
     }
     send
+}
+
+/// The models `lang` may pick, with its pick waiting for a service Off among them in the services' order, so the Cloud
+/// side shows it with that Off mark (owner, 2026-11-21).
+fn listed<'s>(cloud: Cloud<'s>, s: &'s VoiceSettings, lang: &str) -> Vec<Offered<'s>> {
+    let mut list = cloud.models(s, lang);
+    if let Some(waits) = cloud.waits(s, lang) {
+        let rows = cloud.offered(s);
+        let order = |o: &Offered<'_>| rows.iter().position(|r| r.id == o.service.id);
+        let at = list.iter().position(|o| order(o) > order(&waits));
+        list.insert(at.unwrap_or(list.len()), waits);
+    }
+    list
 }
 
 /// True for a cloud model whose service is ready and which can be used now.

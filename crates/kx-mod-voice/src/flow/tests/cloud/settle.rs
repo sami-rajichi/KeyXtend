@@ -1,5 +1,6 @@
 //! Open service on a cloud note (final review m5): the five notes the service's own pages settle open its card, or its
-//! key page for the key note, also once the dictation that showed the note ended; the other notes open nothing.
+//! key page for the key note, also once the dictation that showed the note ended, and at Start for a pick waiting for
+//! a service Off; the other notes open nothing.
 
 use super::*;
 
@@ -54,6 +55,22 @@ fn open_service_on_the_off_note_opens_the_card_also_once_the_dictation_ended() {
     let off = cloud_note(CloudWhy::Off, LocalUse::Dimmed, false);
     assert_eq!(rig.shown(), off, "the take ended while preparing");
     assert_eq!(settles(&rig.bar(BarButton::Service)), groq_page(false));
+}
+
+#[test]
+fn a_pick_waiting_for_a_service_off_shows_the_off_note_at_start_and_never_listens() {
+    let mut rig = Rig::new();
+    rig.book.3.insert("fr".into(), "groq".into());
+    let out = rig.key();
+    assert!(opened(&out).is_empty(), "nothing listens");
+    assert!(uploads(&out).is_empty(), "nothing leaves");
+    let off = cloud_note(CloudWhy::Off, LocalUse::Dimmed, false);
+    assert_eq!(rig.shown(), off, "owner, 2026-11-21");
+    assert_eq!(settles(&rig.bar(BarButton::Service)), groq_page(false));
+    let mut password = Rig::new();
+    password.book.3.insert("fr".into(), "groq".into());
+    password.field(FieldKind::Password, BOX);
+    assert_eq!(opened(&password.key()).len(), 1, "edge 10: the local model");
 }
 
 #[test]

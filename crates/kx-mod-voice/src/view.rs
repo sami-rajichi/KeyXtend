@@ -20,7 +20,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
-use crate::cloud::{Choice, Cloud};
+use crate::cloud::{Choice, Cloud, Offered};
 use crate::counts::{Checks, Scores};
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
@@ -87,6 +87,12 @@ impl<'a> Facts<'a> {
     #[must_use]
     pub fn cloud_choice(&self) -> Option<Choice<'a>> {
         self.cloud?.choice(self.settings, &self.front.iso)
+    }
+
+    /// The language in front's pick waiting for its service Off, so Start shows the Off note (owner, 2026-11-21).
+    #[must_use]
+    pub fn waiting(&self) -> Option<Offered<'a>> {
+        self.cloud?.waits(self.settings, &self.front.iso)
     }
 
     /// The run's services table, which names a cloud pick's service and model; `None` when it does not load.

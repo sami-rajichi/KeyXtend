@@ -84,6 +84,9 @@ impl Flow {
         if let Some(net) = supply.cloud(lang.iso()) {
             return self.start_cloud(lang, net, supply, out);
         }
+        if let Some(service) = supply.off(lang.iso()) {
+            return self.start_off(lang, service, supply, out);
+        }
         match supply.supply(lang.iso()) {
             Ok(ready) => self.open(lang, ready, out),
             Err(lack) => self.lack(lack, &lang),

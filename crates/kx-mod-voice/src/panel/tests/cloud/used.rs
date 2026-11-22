@@ -1,14 +1,19 @@
 //! A language that dictates with a cloud pick (voice-b C1, edge 29): no local row is in use, so the default keeps Use,
-//! and the Home names the cloud model with the device picked, not the card the local model would take.
+//! and the Home names the cloud model with the device picked, not the card the local model would take. A pick waiting
+//! for a service Off leaves no local row in use either, and the Cloud side lists it in the services' order.
 
-use kx_module_api::ports::{DeviceLabel, DeviceName, PanelButton, VoiceClick, VoiceHome};
+use kx_module_api::ports::{
+    DeviceLabel, DeviceName, ModelSide, PanelButton, ServiceMark, VoiceClick, VoiceHome,
+};
 
 use super::super::super::rig::{Rig, card};
 use super::super::device::clips::parakeet_in;
 use super::super::{models, on_models};
 use super::{home, put};
 use crate::models::table;
+use crate::panel::{Key, Panel};
 use crate::services::tests::shipped::{entry, first, model, pick};
+use crate::services::{self, Service};
 
 /// The rig on the Models page with English's default held, a card that passed its check, and cloud on.
 fn on_local() -> Rig {
@@ -48,6 +53,46 @@ fn a_cloud_pick_leaves_no_local_row_in_use_so_one_click_moves_back_to_the_defaul
         ready.iter().all(|b| acts.contains(b)),
         "as the mock-up: {acts:?}"
     );
+}
+
+#[test]
+fn a_pick_waiting_for_a_service_off_leaves_no_local_row_in_use_and_shows_off_on_the_cloud_side() {
+    let mut rig = on_local();
+    pick_cloud(&mut rig);
+    rig.settings.services.clear(); // Groq Off, its pick kept (owner, 2026-11-21).
+    let view = rig.view().unwrap();
+    let rows = &models(&view).rows;
+    assert!(rows.iter().all(|r| !r.used), "Start shows the Off note");
+    rig.click(&VoiceClick::Side(ModelSide::Cloud));
+    let view = rig.view().unwrap();
+    let name = &model(first(), 0).name;
+    let held = models(&view).rows.iter().find(|r| r.name.expose() == name);
+    let mark = held.and_then(|r| r.cloud.as_ref()).map(|c| c.mark);
+    let off = Some(ServiceMark::Off);
+    assert_eq!(mark, off, "the pick, with its Off reason");
+}
+
+#[test]
+fn a_waiting_pick_sits_on_the_cloud_side_in_the_services_order() {
+    let knows = |r: &&Service| r.models.iter().any(|m| m.code("en").is_some());
+    let table = services::table().unwrap();
+    let rows: Vec<&Service> = table.offered().filter(knows).take(3).collect();
+    let mut rig = on_local();
+    let on = [entry(rows[0], ""), entry(rows[2], "")].join("\n");
+    put(&mut rig, "services", &on);
+    let n = rows[1].models.iter().position(|m| m.code("en").is_some());
+    let waits = format!(r#"en = "{}""#, pick(rows[1], n.unwrap()));
+    put(&mut rig, "picks", &waits);
+    let list = rig.with(|_, f| Panel::cloud_list(f));
+    let mut ids: Vec<&str> = (list.iter())
+        .filter_map(|(key, _)| match key {
+            Key::Cloud { service, .. } => Some(service.as_str()),
+            _ => None,
+        })
+        .collect();
+    ids.dedup();
+    let order: Vec<&str> = rows.iter().map(|r| r.id.as_str()).collect();
+    assert_eq!(ids, order, "the Off one between the two on");
 }
 
 #[test]

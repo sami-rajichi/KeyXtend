@@ -19,12 +19,9 @@ impl Flow {
         supply: &dyn Supply,
         out: &mut Vec<Out>,
     ) {
-        if self.password() {
-            return match supply.supply(lang.iso()) {
-                Ok(ready) => self.open(lang, ready, out),
-                Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned(), None),
-            };
-        }
+        let Some(lang) = self.unmasked(lang, supply, out) else {
+            return;
+        };
         if let Some(why) = net::unfit(&net) {
             return self.show_cloud(why, lang.iso().to_owned(), Some(net.service));
         }
@@ -33,6 +30,33 @@ impl Flow {
             ..self.settings.ask(None, None)
         };
         self.open_with(lang, Engine::Cloud(net), ask, out);
+    }
+
+    /// Start with the pick waiting for `service`, switched Off (owner, 2026-11-21): the Off note with Open service,
+    /// never listening, as a pick with no key; a password box takes the local model.
+    pub(super) fn start_off(
+        &mut self,
+        lang: Lang,
+        service: String,
+        supply: &dyn Supply,
+        out: &mut Vec<Out>,
+    ) {
+        if let Some(lang) = self.unmasked(lang, supply, out) {
+            self.show_cloud(CloudWhy::Off, lang.iso().to_owned(), Some(service));
+        }
+    }
+
+    /// `lang` back, unless a password box is in front: it takes the local model, or the bar says none is ready (edge
+    /// 10).
+    fn unmasked(&mut self, lang: Lang, supply: &dyn Supply, out: &mut Vec<Out>) -> Option<Lang> {
+        if !self.password() {
+            return Some(lang);
+        }
+        match supply.supply(lang.iso()) {
+            Ok(ready) => self.open(lang, ready, out),
+            Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned(), None),
+        }
+        None
     }
 
     /// The listen-only run handed its speech over: it goes to the service while the dictation runs, unless no speech

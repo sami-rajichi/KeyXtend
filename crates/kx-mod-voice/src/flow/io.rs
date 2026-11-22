@@ -222,6 +222,11 @@ pub trait Supply {
     fn on(&self, _service: &str) -> bool {
         false
     }
+
+    /// The service switched Off that `iso`'s pick waits for, which Start names in the Off note (owner, 2026-11-21).
+    fn off(&self, _iso: &str) -> Option<String> {
+        None
+    }
 }
 
 impl<F: Fn(&str) -> Result<Ready, Lack>> Supply for F {

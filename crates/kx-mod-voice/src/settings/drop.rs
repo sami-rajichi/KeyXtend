@@ -14,7 +14,8 @@ use crate::services::{self, Services};
 impl VoiceSettings {
     /// Drops each service entry the services table no longer takes, then each pick that names no row that knows its
     /// language, no model file, and no service switched on with a model for it while `cloud` is on, alone, and names
-    /// them as `services.<id>` and `picks.<lang>`. Nothing drops while a table does not load.
+    /// them as `services.<id>` and `picks.<lang>`; a listed pick of a service merely Off stays (owner, 2026-11-21).
+    /// Nothing drops while a table does not load.
     pub fn drop_bad(&mut self) -> Vec<String> {
         let (Ok(models), Ok(services)) = (models::table(), services::table()) else {
             return Vec::new();
@@ -24,33 +25,45 @@ impl VoiceSettings {
 
     /// `drop_bad` against these tables, as a later version's would load.
     pub(crate) fn drop_bad_with(&mut self, models: &Table, services: &Services) -> Vec<String> {
-        let mut dropped = BTreeSet::new();
+        let (mut dropped, mut gone) = (BTreeSet::new(), BTreeSet::new());
         self.services.retain(|id, on| {
             let row = services.get(id).filter(|row| row.offered);
             let good = row.is_some_and(|row| entry_ok(row, on));
             if !good {
                 dropped.insert(named(SERVICES, id, BlobName::new(id).is_ok()));
+                gone.insert(id.clone());
             }
             good
         });
-        let cloud = Cloud::new(services, false);
-        let bad: Vec<String> = self
-            .picks
-            .iter()
-            .filter(|(lang, pick)| {
-                let good = match services.pick(pick) {
-                    Some(_) => cloud.choice(self, lang).is_some(),
-                    None => models.pick(lang, pick).is_some(),
-                };
-                !(fits_iso(lang) && good)
-            })
-            .map(|(lang, _)| lang.clone())
-            .collect();
-        for lang in bad {
+        for lang in self.bad_picks(models, services, &gone) {
             self.picks.remove(&lang);
             dropped.insert(named(PICKS, &lang, fits_iso(&lang)));
         }
         dropped.into_iter().collect()
+    }
+
+    /// The languages whose pick names no local row or file for them and no service on with a model for them; one
+    /// waiting for a service Off stays, unless its entry is among `gone`, as a stale entry takes its picks along.
+    fn bad_picks(
+        &self,
+        models: &Table,
+        services: &Services,
+        gone: &BTreeSet<String>,
+    ) -> Vec<String> {
+        let cloud = Cloud::new(services, false);
+        let waits = |lang: &str| {
+            cloud
+                .waits(self, lang)
+                .is_some_and(|o| !gone.contains(&o.service.id))
+        };
+        let good = |lang: &str, pick: &str| match services.pick(pick) {
+            Some(_) => cloud.choice(self, lang).is_some() || waits(lang),
+            None => models.pick(lang, pick).is_some(),
+        };
+        (self.picks.iter())
+            .filter(|(lang, pick)| !(fits_iso(lang) && good(lang, pick)))
+            .map(|(lang, _)| lang.clone())
+            .collect()
     }
 }
 
