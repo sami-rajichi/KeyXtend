@@ -5,6 +5,8 @@ import QtQuick
 Pager {
     // The panel window, whose view, look, names and Ui object it takes.
     required property var host
+    // The height its page keeps for it: its own while it shows, so it never spills past the page at few rows.
+    readonly property real least: pages > 1 ? implicitHeight : 0
 
     page: host.view.pages.at
     pages: host.view.pages.count

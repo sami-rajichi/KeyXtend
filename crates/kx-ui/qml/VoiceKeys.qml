@@ -1,4 +1,5 @@
-// A service's key page (mock-up svcPage()) in a page of rows' height (ADR-0008): the key line as dots with Paste, Save
+// A service's key page (mock-up svcPage()) in a page of rows' height, or its lines' or pager's when too few rows to a
+// page cannot hold them (ADR-0008): the key line as dots with Paste, Save
 // and Test and the test's answer, Key works as a lit mark and a refused one as a warning band, the address and Other
 // model lines with their Paste and Save and why one was refused, in the hub's order (a typed address's address, model,
 // then key), the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
@@ -31,7 +32,7 @@ Item {
     readonly property bool refused: shows && !!sheet.check && sheet.check.warns
     readonly property alias body: col
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height, pg.least)
 
     Column {
         id: col
@@ -137,6 +138,7 @@ Item {
     }
 
     VoicePager {
+        id: pg
         anchors.right: parent.right
         anchors.rightMargin: keys.pn.body_pad_px[1] * keys.s
         anchors.verticalCenter: parent.verticalCenter

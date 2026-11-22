@@ -1,7 +1,8 @@
 // A service's card (mock-up cardPage()): each fact's label in a column, then its sentence, a warning fact in warn_ink;
 // under a rule, the day the facts were read with the link to the service's page, the day, its icon and the words after it
 // in warn_ink and bold once they are old (mock-up .ro.old), and the Untested line. It takes a page of rows' height, its
-// facts in two parts the pager turns, so the panel keeps its size (ADR-0008, ADR-0047).
+// facts in two parts the pager turns, so the panel keeps its size, or its facts' or pager's when too few rows to a page
+// cannot hold them (ADR-0008, ADR-0047).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -26,7 +27,7 @@ Item {
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     readonly property alias body: col
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height, pg.least)
 
     Column {
         id: col
@@ -87,6 +88,7 @@ Item {
     }
 
     VoicePager {
+        id: pg
         anchors.right: parent.right
         anchors.rightMargin: card.pn.body_pad_px[1] * card.s
         anchors.verticalCenter: parent.verticalCenter

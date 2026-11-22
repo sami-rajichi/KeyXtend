@@ -1,7 +1,7 @@
 // Compare's set text (mock-up compare()): what to do, the text to read aloud in a box, in its language's direction and
 // font, then how many models it runs on which device, or the recording's line while the user reads, then its cloud
 // models to tick, a page of them at a time with the pager beside; it takes a page of rows' height, so the panel keeps
-// its size, or its body's when too few rows to a page cannot hold that.
+// its size, or its body's or pager's when too few rows to a page cannot hold them.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -48,7 +48,7 @@ Item {
         return n;
     }
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height)
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height, pg.least)
 
     Column {
         id: col
@@ -103,6 +103,7 @@ Item {
     }
 
     VoicePager {
+        id: pg
         anchors.right: parent.right
         anchors.rightMargin: read.pn.body_pad_px[1] * read.s
         anchors.verticalCenter: parent.verticalCenter

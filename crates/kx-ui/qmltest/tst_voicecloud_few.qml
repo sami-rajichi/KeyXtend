@@ -1,0 +1,54 @@
+// The cloud pages at the fewest rows a page may show (ADR-0008): each page is at least a list's height and grows to hold
+// its body and its pager, so nothing spills over the bands, the folder line or the footer, and no text is cut, in
+// English, French and Arabic.
+import QtQuick
+import QtTest
+import "../qml"
+import "board.js" as Board
+import "voicekit.js" as Kit
+import "fixtures/voicepanel.js" as Panel
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    VoiceFit {
+        name: "voicecloudfew"
+        host: root
+
+        // A card and each table service's long card parts, the longest key pages, Compare's widest pick and two lists
+        // of more than one page.
+        readonly property var paged: ["card"].concat(Kit.named("en", "cardLong"), ["serviceLong"],
+            Kit.named("en", "servicePasted-"), ["compareFew", "history", "cloudLong-1"])
+
+        // Checks that `o` lies inside `box`'s page from top to bottom.
+        function within(box, o, what) {
+            const inside = rect(box, o), room = rect(box, page(box));
+            verify(inside.y >= room.y - 0.5, what + " starts inside the page: " + inside.h + " of " + room.h);
+            verify(inside.y + inside.h <= room.y + room.h + 0.5, what + " ends inside the page: " + inside.h + " of " + room.h);
+        }
+
+        function test_each_paged_page_fits_at_the_fewest_rows_data() {
+            const all = [];
+            for (const t of ["en", "fr", "ar"])
+                paged.forEach(n => all.push({ tag: n + " " + t, name: n, t }));
+            return all;
+        }
+        // T24 re-review 3: a card, a key page, Compare and a list at the fewest rows hold their body and their pager.
+        function test_each_paged_page_fits_at_the_fewest_rows(d) {
+            const box = make(d.name, d.t, null, Panel.fewest);
+            compare(box.per, Panel.fewest, "the fewest rows");
+            const p = page(box);
+            verify(p.height >= listH(box) - 0.5, "at least a list's height");
+            const list = p.rowW !== undefined;
+            const body = list ? Kit.only(Board.all(p, o => o.visible && o.Accessible.role === Accessible.List)) : p.body;
+            within(box, body, "its body");
+            const pagers = Board.all(p, o => o.visible && o.canBack !== undefined);
+            if (list)
+                compare(pagers.length, 1, "a list of more than one page shows its pager");
+            pagers.forEach(o => within(box, o, "its pager"));
+            uncut(box);
+        }
+    }
+}

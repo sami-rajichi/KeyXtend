@@ -31,7 +31,8 @@ Item {
         return i < all.length ? all[i] : null;
     }
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + (headed ? head.height + pn.row_px[1] * s : 0) + host.pageH
+    // A page of rows under the heads, or the pager's height when too few rows to a page cannot hold it.
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max((headed ? head.height + pn.row_px[1] * s : 0) + host.pageH, pg.least)
 
     Item {
         id: frame
@@ -94,6 +95,7 @@ Item {
         }
     }
     VoicePager {
+        id: pg
         anchors.right: parent.right
         anchors.rightMargin: listing.side
         anchors.verticalCenter: parent.verticalCenter
