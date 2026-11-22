@@ -28,6 +28,7 @@ Item {
         // each row Off, the cards with each table service's long one, the key pages, also with each line's empty
         // Paste, Models with its Local | Cloud chips, and Compare's set text and run with cloud models and the warning.
         readonly property var pasted: Kit.named("en", "servicePasted-")
+        readonly property var looks: ({ "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD })
         readonly property var cloudPages: ["cloud", "cloudSealed", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cloudLongOff-"),
             Kit.named("en", "cardLong"), pasted, [
             "service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped", "serviceLong", "models", "modelsSlow",
@@ -110,7 +111,6 @@ Item {
         }
 
         function test_a_typed_addresss_key_page_fits_in_every_theme_data() {
-            const looks = { "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD };
             const all = [];
             for (const [tag, f] of Object.entries(looks))
                 for (const name of ["serviceLong"].concat(pasted))
@@ -124,6 +124,34 @@ Item {
             keeps(box);
             uncut(box);
             compare(["address", "model", "key"].map(id => one(box, "voice.line-" + id).visible), [true, true, true]);
+        }
+
+        function test_compares_widest_picks_stay_in_the_body_data() {
+            const all = [];
+            for (const [tag, f] of Object.entries(looks))
+                ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + t, lk: f.lk, t: t }));
+            return all;
+        }
+        // T24 review 1: Groq's and OpenRouter's longest picks and a typed id at its most, beside the pager. Each chip
+        // stays inside the body, and only a name wider than the body is shortened, while readers hear it whole.
+        function test_compares_widest_picks_stay_in_the_body(d) {
+            const box = make("compareWide", d.t, d.lk);
+            keeps(box);
+            const p = page(box);
+            verify(p.pager > 0, "the pager beside the picks");
+            const picks = Board.all(p.body, o => o.visible && o.Accessible.role === Accessible.CheckBox);
+            compare(picks.length, p.all.length, "a page of picks");
+            const room = rect(box, picks[0].parent);
+            const out = picks.filter(o => {
+                const r = rect(box, o);
+                return r.x < room.x - 0.5 || r.x + r.w > room.x + room.w + 0.5;
+            });
+            compare(out.map(o => o.entry.name), [], "every chip inside the body");
+            const names = picks.map(o => Kit.only(Board.all(o, n => n.text === o.entry.name)));
+            const typed = p.all[p.all.length - 1].name;
+            compare(names.filter(n => n.truncated).map(n => n.text), [typed], "only the typed id is shortened");
+            compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
+            verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
         }
     }
 }

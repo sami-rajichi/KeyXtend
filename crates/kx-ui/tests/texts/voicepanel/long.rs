@@ -1,6 +1,8 @@
 //! The cloud panels with their longest content, which the fit test measures: each Cloud page of the services table's
 //! rows, page by page, then with each row Off and the ticked one's Remove key, the Models page's Cloud side, each part
-//! of each table service's card with every line on, and Compare with each table service's cloud models.
+//! of each table service's card with every line on, and Compare's cloud models, also its widest page of them.
+
+use std::cmp::Reverse;
 
 use super::cloud::{TRAINS, card, named};
 use super::{Shown, paged, shown};
@@ -11,7 +13,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud, CompareMic, CompareSheet,
     DeviceLabel, DeviceName, Fact, ModelRow, ModelSide, ModelState, ModelsSheet, PanelButton,
-    ServiceMark, ServiceName, ServiceRow, Unavailable, VoiceSheet,
+    ServiceMark, ServiceName, ServiceRow, TAG_LEN, Unavailable, VoiceSheet,
 };
 use kx_ui::UiSettings;
 
@@ -149,13 +151,39 @@ fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
     VoiceSheet::Card(Box::new(c))
 }
 
-/// Compare's set text with every cloud model of Groq and Custom ticked.
-fn compare_long() -> VoiceSheet {
-    let pick = |name: &str, service| CompareCloud {
+/// Compare's cloud model `name` of `service`, ticked.
+fn pick(name: &str, service: ServiceName) -> CompareCloud {
+    CompareCloud {
         name: Redacted::new(name.to_owned()),
         service,
         tick: true,
-    };
+    }
+}
+
+/// Compare's widest page of picks (T24 review 1): Groq's and OpenRouter's longest model names, then an Other id typed
+/// to its most under OpenRouter, all ticked.
+fn compare_wide() -> VoiceSheet {
+    let rows = ["groq", "openrouter"].map(|id| services().get(id).expect("an offered row"));
+    let all = rows
+        .iter()
+        .flat_map(|r| r.models.iter().map(|m| (&m.name, r.shown())));
+    let mut names: Vec<(&String, ServiceName)> = all.collect();
+    names.sort_by_key(|(name, _)| Reverse(name.len()));
+    let mut cloud: Vec<CompareCloud> = (names.into_iter().take(per() - 1))
+        .map(|(name, service)| pick(name, service))
+        .collect();
+    cloud.push(pick(&"m".repeat(*TAG_LEN.end()), rows[1].shown()));
+    VoiceSheet::Compare(CompareSheet::Ready {
+        models: 2,
+        device: DeviceLabel::Auto(DeviceName::Cpu),
+        mic: CompareMic::Closed,
+        cloud,
+        send: rows.map(Service::shown).to_vec(),
+    })
+}
+
+/// Compare's set text with every cloud model of Groq and Custom ticked.
+fn compare_long() -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
@@ -179,6 +207,7 @@ pub fn panels() -> Vec<(String, Shown)> {
             paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1),
         ),
         ("compareLong", shown(compare_long(), &[])),
+        ("compareWide", paged(shown(compare_wide(), &[]), 0, 2, 0)),
     ]
     .into_iter()
     .map(|(name, s)| (name.to_owned(), s))

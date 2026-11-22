@@ -98,7 +98,8 @@ Item {
         Accessible.name: text
     }
     // A cloud model to tick (no mock-up of its own, so a list row's tick box and ticked fill, VoiceRow, on a filter
-    // chip's big target, WCAG 2.5.8): its tick box, name and service's mark; a click ticks it at let-go (ADR-0024).
+    // chip's big target, WCAG 2.5.8): its tick box, name and service's mark; a click ticks it at let-go (ADR-0024). A
+    // name too wide for the body is shortened, and readers still hear it whole.
     component Pick: Rectangle {
         id: pick
         required property int index
@@ -156,7 +157,11 @@ Item {
                 s: read.s
             }
             Label {
+                // The body's width less the chip's padding, tick box, mark and gaps.
+                readonly property real room: read.body.width - 2 * pick.sh[1] * read.s - box.width - mark.width - 2 * parts.spacing
                 anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, Math.max(0, room))
+                elide: Text.ElideRight
                 text: pick.entry.name
                 font.family: read.host.res.fam.latin
                 font.pixelSize: read.lk.shape.chip.font_px[0] * read.s
@@ -164,6 +169,7 @@ Item {
                 color: pick.lit ? read.lk.sel_ink : read.lk.palette.pop_ink
             }
             VoiceMark {
+                id: mark
                 anchors.verticalCenter: parent.verticalCenter
                 host: read.host
                 mark: ({ id: read.host.names.cloud, text: pick.entry.service })
