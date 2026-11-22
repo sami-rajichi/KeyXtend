@@ -1,9 +1,9 @@
 // A service's key page (mock-up svcPage()) in a page of rows' height, or its lines' or pager's when too few rows to a
-// page cannot hold them (ADR-0008): the key line as dots with Paste, Save
-// and Test and the test's answer, Key works as a lit mark and a refused one as a warning band, the address and Other
-// model lines with their Paste and Save and why one was refused, in the hub's order (a typed address's address, model,
-// then key), the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
-// only draw: the key never shows as text, and a click never focuses them (ADR-0013, ADR-0049).
+// page cannot hold them (ADR-0008): the key line as dots with Paste, Save and Test and the test's answer, Key works as
+// a lit mark and a refused one as a warning band, the address and Other model lines with their Paste and Save and why
+// one was refused, in the hub's order (a typed address's address, model, then key), the keep-nothing switch, and where
+// keys are made. The lines take our keyboard's letters while aimed but only draw: the key never shows as text, and a
+// click never focuses them (ADR-0013, ADR-0049).
 pragma ComponentBehavior: Bound
 import QtQuick
 
