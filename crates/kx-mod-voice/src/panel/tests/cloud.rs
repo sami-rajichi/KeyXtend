@@ -25,6 +25,7 @@ mod opens;
 mod parts;
 mod props;
 mod remove;
+mod rounds;
 mod rows;
 mod settle;
 mod trial;

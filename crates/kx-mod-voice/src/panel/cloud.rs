@@ -80,6 +80,23 @@ impl Clouds {
         self.round
     }
 
+    /// A round for the key's Test, Remove or Save: as `next`, but a Paste for the address or model line, and its note,
+    /// stay, as the history may have given that copy up already.
+    pub(crate) fn key_round(&mut self) -> u32 {
+        let take = self.take.filter(|(_, line)| *line != CloudLine::Key);
+        let pasted = self.pasted.filter(|(line, _)| *line != CloudLine::Key);
+        let round = self.next();
+        (self.take, self.pasted) = (take, pasted);
+        round
+    }
+
+    /// A round for a Paste on the address or model line: only the Paste waited for and its note go, so a test runs on.
+    pub(crate) fn line_round(&mut self) -> u32 {
+        self.round = self.round.wrapping_add(1);
+        (self.take, self.pasted) = (None, None);
+        self.round
+    }
+
     /// Forgets the closed panel's cloud pages but keeps counting rounds, so an answer from before the close is dropped.
     pub(crate) fn reset(&mut self) {
         *self = Self {

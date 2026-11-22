@@ -1,6 +1,7 @@
 //! A service's key page (ADR-0047, design "Keys"): the key set from its line or Paste, sealed and shown only as dots,
 //! its Test off the actor, Remove, the typed address and Other model kept in `services`, each line's Paste, and the
-//! keep-nothing switch. A Paste's or a test's answer is dropped once the page or the key changed.
+//! keep-nothing switch. A test's or key Paste's answer is dropped once the page or the key changed, an address or model
+//! Paste's only once the page changed or another Paste came.
 
 use kx_module_api::ports::{
     AddressFault, BarHint, ClipText, CloudButton, CloudFault, CloudLine, HttpsUrl, KeyCheck,
@@ -22,7 +23,7 @@ impl Panel {
         button: CloudButton,
         facts: &Facts<'_>,
     ) -> Vec<Do> {
-        let round = self.cloud.next();
+        let round = self.cloud.key_round();
         match button {
             CloudButton::Test if facts.keyed.contains(id) => {
                 (self.cloud.test, self.cloud.check) = (Some(round), KeyCheck::Testing);
@@ -40,15 +41,18 @@ impl Panel {
         }
     }
 
-    /// Paste on the shown `line`: asks the clipboard history for at most what the line holds; a key typed is wiped.
+    /// Paste on the shown `line`: asks the clipboard history for at most what the line holds. The key line's starts a
+    /// whole round and wipes a key typed; another line's replaces only the Paste waited for.
     pub(super) fn paste(&mut self, line: CloudLine, facts: &Facts<'_>) -> Vec<Do> {
         if !self.shows_line(line, facts) {
             return Vec::new();
         }
-        let round = self.cloud.next();
-        if line == CloudLine::Key {
+        let round = if line == CloudLine::Key {
             self.cloud.typed.key = None;
-        }
+            self.cloud.next()
+        } else {
+            self.cloud.line_round()
+        };
         self.cloud.take = Some((round, line));
         vec![Do::Take {
             round,
@@ -56,12 +60,12 @@ impl Panel {
         }]
     }
 
-    /// The key line's text, set as the shown service's key; a test or Paste waited for, and a key typed, are dropped.
+    /// The key line's text, set as the shown service's key; a test or key Paste waited for, and a key typed, are dropped.
     pub(super) fn set_key(&mut self, key: &Secret) -> Vec<Do> {
         let Some(id) = self.cloud.shown.clone() else {
             return Vec::new();
         };
-        self.cloud.next();
+        self.cloud.key_round();
         self.cloud.typed.key = None;
         vec![Do::SetKey {
             service: id,
