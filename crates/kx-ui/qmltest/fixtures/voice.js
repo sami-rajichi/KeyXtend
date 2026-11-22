@@ -1101,6 +1101,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
       "mark": {
@@ -1194,6 +1195,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
       "mark": {
@@ -1444,6 +1446,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
       "mark": {
@@ -1938,6 +1941,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
       "mark": null,
@@ -3078,6 +3082,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcribing…"
       },
       "mark": {
@@ -3171,6 +3176,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
         "word": "Transcribing…"
       },
       "mark": {
@@ -3421,6 +3427,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcribing…"
       },
       "mark": {
@@ -3915,6 +3922,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcribing…"
       },
       "mark": null,
@@ -5055,6 +5063,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcription…"
       },
       "mark": {
@@ -5148,6 +5157,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
         "word": "Transcription…"
       },
       "mark": {
@@ -5398,6 +5408,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcription…"
       },
       "mark": {
@@ -5892,6 +5903,7 @@ var views = {
           }
         ],
         "state": "transcribing",
+        "warn": null,
         "word": "Transcription…"
       },
       "mark": null,

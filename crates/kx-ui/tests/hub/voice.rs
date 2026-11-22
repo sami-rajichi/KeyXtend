@@ -18,6 +18,7 @@ mod place;
 #[cfg(feature = "qt")]
 mod sounds;
 mod wakes;
+mod warned;
 
 use crate::Rig;
 use kx_module_api::ports::{

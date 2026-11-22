@@ -1,7 +1,7 @@
 //! The bar as QML reads it (design "The bar"): each state's words in the keyboard's language, its buttons in one order
 //! in every language with the dimmed ones in place, a text with its own direction or dots, a note with its action and,
 //! for a note the service's pages settle, its acts under the line, and a service's card warning while the first
-//! dictation to it listens.
+//! dictation to it listens and while that service writes it.
 //! The gear shows in every state but `hidden`, before the last button.
 
 use super::acts::LOCAL;
@@ -19,7 +19,7 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, VoiceBar,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Fact, Listening, LocalUse, VoiceBar,
     VoicePage, VoiceText,
 };
 use serde::Serialize;
@@ -71,6 +71,7 @@ enum Bar {
     },
     Transcribing {
         word: String,
+        warn: Option<String>,
         buttons: Vec<Button>,
     },
     Text {
@@ -97,8 +98,9 @@ struct Shown {
     masked: bool,
 }
 
-/// `page` with every text in `t`; `read` is Compare's set text in the language in front, if it has one.
-pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
+/// `page` with every text in `t`; `read` is Compare's set text in the language in front, if it has one, and `warn` the
+/// take's card warning, which a Transcribing bar shows.
+pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>, warn: Option<&Fact>) -> View {
     View {
         round: page.round,
         place: page.place,
@@ -110,7 +112,7 @@ pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
             copied: t.text(VOICE_COPIED),
             timer: timer(t),
         },
-        bar: bar(&page.bar, t),
+        bar: bar(&page.bar, t, warn),
         mark: page.mark.as_ref().map(|m| chip::of(t, m)),
         panel: page.panel.as_ref().map(|p| panel::of(p, t, read)),
     }
@@ -122,8 +124,8 @@ fn timer(t: &I18n) -> String {
     t.voice_with(VOICE_TIMER, &[(MINUTES, minutes), (SECONDS, seconds)])
 }
 
-/// The bar in `t`'s words.
-fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
+/// The bar in `t`'s words, Transcribing with the take's card warning `warn`.
+fn bar(bar: &VoiceBar, t: &I18n, warn: Option<&Fact>) -> Bar {
     let cancel = || Button::bar(t, BarButton::Cancel);
     // The strongest button last, drawn dark (owner, 2026-11-14).
     let stop = || Button::bar(t, BarButton::Stop).tone(Tone::Primary);
@@ -132,6 +134,7 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
         VoiceBar::Listening(l) => listening(l, t, vec![cancel(), stop()]),
         VoiceBar::Transcribing => Bar::Transcribing {
             word: t.text(VOICE_TRANSCRIBING),
+            warn: warn.map(|w| t.voice_fact(FACT_WARN, w).text),
             buttons: vec![cancel(), stop().on(false)],
         },
         VoiceBar::Text(text) => text_bar(text, t),

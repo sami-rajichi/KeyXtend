@@ -42,10 +42,9 @@ Window {
     readonly property bool listens: mode === names.states.listening
     readonly property bool writes: mode === names.states.transcribing
     readonly property bool wide: mode === names.states.text || mode === names.states.note
-    // The card's warning while the first dictation to its service listens, kept while that service writes the take; it
-    // widens the bar and sits under its row.
-    readonly property string warning: listens ? field("warn", "")
-        : writes && held && held.by === chipOf(view) ? held.warn : ""
+    // The card's warning while the first dictation to its service listens, and while that service writes it, as the hub
+    // words it; it widens the bar and sits under its row.
+    readonly property string warning: listens || writes ? field("warn", "") : ""
     readonly property bool warns: warning !== ""
     readonly property var cap: lk.shape.caption
     readonly property var p: lk.palette
@@ -68,7 +67,7 @@ Window {
     // Transcribing keeps the size its take listened at, so Stop and Cancel never move; a hide, text or note ends it.
     readonly property real span: writes && held ? Math.max(held.w, fit) : fit
     readonly property real tall: writes && held ? Math.max(held.h, stack) : stack
-    // The settled Listening view's width, height, warning and chip, or null.
+    // The settled Listening view's width and height, or null.
     property var held: null
     onFitChanged: hold()
     onStackChanged: hold()
@@ -127,18 +126,14 @@ Window {
         if (fresh || hintOf(was) !== hintOf(view))
             tell();
     }
-    // Holds a Listening view's size, warning and chip for its Transcribing view, reading the view itself so a half-made
-    // change never sticks; any other state lets them go.
+    // Holds a Listening view's size for its Transcribing view, reading the view itself so a half-made change never
+    // sticks; any other state lets it go.
     function hold() {
         const state = view ? view.bar.state : names.states.hidden;
         if (state === names.states.listening)
-            held = { w: fit, h: stack, warn: view.bar.warn || "", by: chipOf(view) };
+            held = { w: fit, h: stack };
         else if (state !== names.states.transcribing)
             held = null;
-    }
-    // The chip view `v` shows, as its kind and name; empty for none.
-    function chipOf(v) {
-        return v && v.mark ? v.mark.kind + " " + v.mark.name : "";
     }
     // The start sound as it starts listening, the stop sound as it stops, unless the view has sounds off.
     function chime(was) {

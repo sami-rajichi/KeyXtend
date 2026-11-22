@@ -29,7 +29,8 @@ const LONG: usize = 3;
 /// The start of a view's name that shows the cloud mark, and the service it names.
 const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
-/// The views of a first dictation to a service whose card warns: Listening, then Transcribing.
+/// The views of a first dictation to a service whose card warns: Listening, then Transcribing right after it, which the
+/// hub words with the take's warning.
 const WARNED: &str = "cloudWarned";
 const WARNED_WRITES: &str = "cloudWarnedTranscribing";
 /// The start of a view's name whose cloud mark names a services table row, then the row's id; each must show whole.
@@ -144,8 +145,8 @@ fn longest() -> String {
     most.expect("a model").short.clone()
 }
 
-/// The chip view `name` shows: the warning service's on `WARNED`, a row's on a `ROW` view, Groq's on another cloud view,
-/// the user's own file on `OWN`, the longest short name on another device view, none otherwise.
+/// The chip view `name` shows: the warning service's on `WARNED` and `WARNED_WRITES`, a row's on a `ROW` view, Groq's
+/// on another cloud view, the user's own file on `OWN`, the longest short name on another device view, none otherwise.
 fn mark(name: &str) -> Option<BarMark> {
     let device = |n: String| Some(BarMark::Device(Redacted::new(n)));
     if let Some(id) = name.strip_prefix(ROW) {

@@ -107,27 +107,36 @@ Item {
             bar.visible = plain.visible = false;
         }
 
-        function test_the_warning_stays_while_its_service_writes_the_take_data() {
-            return langs_data();
+        function test_the_warning_stays_while_its_service_writes_in_the_keyboard_language_data() {
+            return [["en", "ar"], ["ar", "fr"]].map(([from, to]) => ({ tag: from + " to " + to, from, to }));
         }
-        // The voice leaves at Stop, so the warning stays under the row while its service writes; it goes when the model
-        // on this PC writes instead, as for a password box, and on Try again after a note.
-        function test_the_warning_stays_while_its_service_writes_the_take(d) {
-            const cases = [
-                [["cloudWarnedTranscribing"], 1, "while its service writes"],
-                [["deviceTranscribing"], 0, "while the model on this PC writes"],
-                [["cloudNet", "cloudWarnedTranscribing"], 0, "on Try again after a note"]
-            ];
-            for (const [views, shows, why] of cases) {
-                const bar = make("cloudWarned", d.t);
-                const text = bar.view.bar.warn;
-                for (const name of views) {
-                    bar.voice.page = JSON.parse(JSON.stringify(Voice.views[d.t][name]));
-                    waitForRendering(bar.contentItem);
-                }
-                compare(Board.all(bar.contentItem, o => o.visible && o.text === text).length, shows, why);
-                bar.visible = false;
+        // The voice leaves at Stop, so the hub words the take's warning on Transcribing while its service writes: a switch
+        // of the keyboard's language brings its text, side and font; the model on this PC, a text or a note shows none.
+        function test_the_warning_stays_while_its_service_writes_in_the_keyboard_language(d) {
+            const bar = make("cloudWarned", d.from);
+            let t = d.from;
+            const show = name => {
+                bar.voice.page = JSON.parse(JSON.stringify(Voice.views[t][name]));
+                waitForRendering(bar.contentItem);
+            };
+            const lines = text => Board.all(bar.contentItem, o => o.visible && o.text === text && o.font !== undefined);
+            for (t of [d.from, d.to]) {
+                bar.res = Board.resOf(N.lk, root.texts[t]);
+                bar.ar = t === "ar";
+                show("cloudWarnedTranscribing");
+                const line = lines(bar.view.bar.warn);
+                compare(line.length, 1, t + ": under the row");
+                compare(line[0].horizontalAlignment, bar.ar ? Text.AlignRight : Text.AlignLeft, t + ": on its side");
+                compare(line[0].font.family, bar.res.fam.ui, t + ": in its font");
+                const px = N.lk.shape.notice.font_px * (bar.ar ? N.lk.look.arabic_scale : 1);
+                compare(line[0].font.pixelSize, Math.round(px), t + ": at its size");
             }
+            const text = bar.view.bar.warn;
+            for (const name of ["deviceTranscribing", "text", "cloudNet"]) {
+                show(name);
+                compare(lines(text).length, 0, name + ": none");
+            }
+            bar.visible = false;
         }
 
         function test_a_cloud_note_offers_the_local_model_dimmed_with_download_when_none_is_ready_data() {
