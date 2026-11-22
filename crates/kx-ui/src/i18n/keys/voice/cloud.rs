@@ -20,7 +20,7 @@ pub const VOICE_CLOUD_OFF: &str = "cloud.off-line";
 pub const VOICE_CLOUD_FREE: &str = "cloud.free";
 /// The Custom row's name.
 pub const VOICE_CUSTOM: &str = "cloud.custom";
-/// The Custom row's short name, on the bar's chip and in its sentence for readers.
+/// The Custom row's short name, on the bar's chip.
 pub const VOICE_CUSTOM_SHORT: &str = "cloud.custom-short";
 /// The Custom row's line.
 pub const VOICE_CUSTOM_LINE: &str = "cloud.custom-line";

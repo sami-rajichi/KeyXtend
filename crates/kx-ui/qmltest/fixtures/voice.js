@@ -190,7 +190,7 @@ var views = {
         "capped": false,
         "kind": "cloud",
         "name": "مخصّص",
-        "said": "يُرسَل صوتك إلى عنوان مخصّص عند الإيقاف"
+        "said": "يُرسَل صوتك إلى العنوان الذي تكتبه عند الإيقاف"
       },
       "panel": null,
       "place": "above",
@@ -2126,7 +2126,7 @@ var views = {
         "capped": false,
         "kind": "cloud",
         "name": "Custom",
-        "said": "Your voice goes to Custom address at Stop"
+        "said": "Your voice goes to the address you type at Stop"
       },
       "panel": null,
       "place": "above",
@@ -4062,7 +4062,7 @@ var views = {
         "capped": false,
         "kind": "cloud",
         "name": "Personnalisé",
-        "said": "Votre voix partira vers Adresse personnalisée à l’arrêt"
+        "said": "Votre voix partira vers l’adresse que vous saisissez à l’arrêt"
       },
       "panel": null,
       "place": "above",
