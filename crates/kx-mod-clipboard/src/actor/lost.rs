@@ -55,9 +55,12 @@ impl Lost {
     }
 
     /// The watch told a copy of `parts` at `now`: true when one of its texts is a take's copy still due, which is then
-    /// due no more.
+    /// due no more. With none due, no text is hashed.
     pub(super) fn noted(&mut self, parts: &[ClipPart], now: Mono) -> bool {
         self.expire(now);
+        if self.due.is_empty() {
+            return false;
+        }
         let texts: Vec<u64> = (parts.iter())
             .filter_map(|p| match p {
                 ClipPart::Text(t) => Some(hash::of_text(t.expose())),
