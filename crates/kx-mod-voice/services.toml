@@ -275,6 +275,7 @@ id = "openrouter"
 name = "OpenRouter"
 shape = "form"
 form = { lang = "language", list = false }
+# Every ZDR endpoint of its four other models shows `safety_retention` false (ZDR list read 2026-11-22).
 keep = { name = "provider", value = '{"zdr":true}' }
 paywall = true
 host = "openrouter.ai"
@@ -300,22 +301,23 @@ id = "openai/whisper-large-v3"
 name = "Whisper Large v3"
 langs = "whisper"
 
+# No ZDR endpoint serves it, so keep-nothing leaves it no host (ZDR list read 2026-11-22).
 [[services.models]]
 id = "openai/gpt-transcribe"
 name = "GPT Transcribe"
 langs = "iso-639-1"
+keeps = true
 
 [[services.models]]
 id = "microsoft/mai-transcribe-2"
 name = "MAI-Transcribe-2"
 langs = "en-fr-ar"
 
-# Mistral keeps nothing only on request, so no host of it keeps nothing.
+# Mistral serves it from a ZDR endpoint on OpenRouter (ZDR list read 2026-11-22).
 [[services.models]]
 id = "mistralai/voxtral-mini-transcribe-3-0"
 name = "Voxtral Mini Transcribe 3"
 langs = "en-fr-ar"
-keeps = true
 
 [services.facts]
 read = 2026-11-17

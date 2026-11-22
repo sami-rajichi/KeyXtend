@@ -10,6 +10,7 @@ mod codes;
 mod eleven;
 mod gemini;
 mod groq;
+mod router;
 mod rows;
 
 /// `fact`'s text id and its values by name.
