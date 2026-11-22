@@ -19,7 +19,7 @@ Row {
     // Where the chip's name is cut: a model's past the theme's width, and any name only where the lead would pass its
     // room; the room counts all before the name, none of which follows its width.
     readonly property real cutAt: Math.min(nameCap, nameRoom)
-    readonly property real nameCap: mark && mark.cut ? host.lk.shape.voice.chip_name_px * host.s : Infinity
+    readonly property real nameCap: mark && mark.capped ? host.lk.shape.voice.chip_name_px * host.s : Infinity
     readonly property real nameRoom: host.leadRoom - x - status.width - (tongue.visible ? spacing + tongue.width : 0) -
         spacing - 2 * chip.pad_px * host.s - picture.width - where.spacing
 

@@ -10,6 +10,7 @@ cloud =
     .off-line = الخدمات السحابية معطّلة: لا تُعرض أي خدمة ولا يُرسَل شيء.
     .free = مجانًا: { $free }
     .custom = عنوان مخصّص
+    .custom-short = مخصّص
     .custom-line = عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك
     .home = مفعّلة · { $ready }
     .ready = { $form ->

@@ -29,10 +29,10 @@ Item {
     readonly property string over: JSON.stringify({ x: 100, y: 600, w: 900, h: 300 })
     readonly property var texts: ({ en: En, fr: Fr, ar: Ar })
     readonly property var looks: ({ "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD })
-    // The views whose chip names the model on this PC with the table's longest short name, and those naming a service,
-    // Custom's the longest in French.
+    // The views whose chip names the model on this PC with the table's longest short name, and those naming a service:
+    // Groq's, then each services row's.
     readonly property var device: ["deviceListening", "deviceNothing", "deviceTranscribing"]
-    readonly property var cloud: ["cloudListening", "cloudNothing", "cloudCustom"]
+    readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
 
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
@@ -132,13 +132,15 @@ Item {
             return every_look(root.device.concat(["deviceOwn"], root.cloud));
         }
         // Every part sits inside the bar, and the wave or the shimmer keeps its least room: the narrow bar widens only for
-        // it, never past its text width, where a name is cut further.
+        // it, never past its text width. A service's name shows whole; a model's is cut only there.
         function test_the_bar_holds_the_longest_names_in_every_look(d) {
             const bar = make(d.name, d.t, d.lk);
             const label = chipName(bar);
             const v = d.lk.shape.voice;
             const broad = Math.ceil(v.bar_px[1] * bar.s);
-            if (d.name !== "deviceOwn")
+            if (root.cloud.indexOf(d.name) >= 0)
+                verify(!label.truncated, "a service's name whole, " + label.width + " px");
+            else if (d.name !== "deviceOwn")
                 verify(!label.truncated || bar.width === broad, "cut only at the text's width, " + label.width + " px");
             const chip = label.parent.parent;
             const at = chip.mapToItem(bar.body, 0, 0);

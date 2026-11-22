@@ -1,7 +1,7 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
 //! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, the cloud
-//! mark with a cloud note's buttons, Open service under a note's line, a card's warning and the chip naming the model
-//! on this PC; and every click kind QML sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
+//! mark with a cloud note's buttons, Open service under a note's line, a card's warning, the chip naming each services
+//! row or the model on this PC; and every click kind QML sends to `Voice.act`, by the name QML holds each under.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_mod_voice::models;
@@ -31,8 +31,8 @@ const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
 /// The view of a first dictation to a service whose card warns.
 const WARNED: &str = "cloudWarned";
-/// The view whose cloud mark names Custom, the longest service name in French.
-const CUSTOM: &str = "cloudCustom";
+/// The start of a view's name whose cloud mark names a services table row, then the row's id; each must show whole.
+const ROW: &str = "cloud-";
 /// The start of a view's name whose chip names the model on this PC: the table's longest short name.
 const DEVICE: &str = "device";
 /// The view whose chip names a user's own file, too long to show whole.
@@ -143,13 +143,16 @@ fn longest() -> String {
     most.expect("a model").short.clone()
 }
 
-/// The chip view `name` shows: the warning service's on `WARNED`, Custom on `CUSTOM`, Groq's on another cloud view, the
-/// user's own file on `OWN`, the longest short name on another device view, none otherwise.
+/// The chip view `name` shows: the warning service's on `WARNED`, a row's on a `ROW` view, Groq's on another cloud view,
+/// the user's own file on `OWN`, the longest short name on another device view, none otherwise.
 fn mark(name: &str) -> Option<BarMark> {
     let device = |n: String| Some(BarMark::Device(Redacted::new(n)));
+    if let Some(id) = name.strip_prefix(ROW) {
+        let services = table().expect("the services table reads");
+        return services.get(id).map(|s| BarMark::Cloud(s.shown()));
+    }
     match name {
         WARNED => Some(BarMark::Cloud(warned().0)),
-        CUSTOM => Some(BarMark::Cloud(ServiceName::Custom)),
         OWN => device(OWN_FILE.to_owned()),
         _ if name.starts_with(DEVICE) => device(longest()),
         _ if name.starts_with(CLOUD) => Some(BarMark::Cloud(ServiceName::Named(SERVICE.into()))),
@@ -158,7 +161,7 @@ fn mark(name: &str) -> Option<BarMark> {
 }
 
 /// Every bar the tests draw in language `tag`, by name.
-fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
+fn bars(tag: &str) -> Vec<(String, VoiceBar)> {
     let (lang, said) = spoken(tag);
     let repeated = [said; LONG].join(" ");
     let no_model = BarHint::NoModel {
@@ -195,7 +198,16 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
     .into_iter()
     .chain(cloud_bars(&lang))
     .chain(device_bars(&lang))
+    .map(|(name, bar)| (name.to_owned(), bar))
+    .chain(row_bars(&lang))
     .collect()
+}
+
+/// A Listening bar in `lang` for each services table row, offered or not, named `ROW` then the row's id.
+fn row_bars(lang: &VoiceLang) -> Vec<(String, VoiceBar)> {
+    let rows = table().expect("the services table reads").rows().iter();
+    rows.map(|s| (format!("{ROW}{}", s.id), listening(lang, false, None)))
+        .collect()
 }
 
 /// The bars a dictation by a model on this PC draws in `lang`, each named with `DEVICE` first; nothing heard yet is the
@@ -211,12 +223,11 @@ fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
 /// most acts under its line, and the account note the longest line over its acts.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 9] {
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 8] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
         ("cloudNothing", listening(lang, true, None)),
-        (CUSTOM, listening(lang, false, None)),
         (WARNED, listening(lang, false, Some(warned().1))),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
@@ -254,12 +265,12 @@ fn views(tag: &str) -> Value {
             panel: None,
             place: BarPlace::Above,
             sounds: true,
-            mark: mark(name),
+            mark: mark(&name),
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");
         let v: Value = serde_json::from_str(&hub.voice_json()).expect("voice JSON");
-        (name.to_owned(), v)
+        (name, v)
     });
     Value::Object(shown.collect::<Map<_, _>>())
 }

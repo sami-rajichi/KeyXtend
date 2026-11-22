@@ -1,20 +1,21 @@
 //! The bar's and Compare's sentences as the owner approved them, word for word in each language: the bar's line for
-//! the address the user types or the model on this PC, and Compare's send warning, whose names end with "and".
+//! Custom by its chip's short name or the model on this PC, and Compare's send warning, whose names end with "and".
 
 use crate::{items, lang};
 use kx_ui::i18n::keys::vars::{NAME, NAMES};
 use kx_ui::i18n::keys::{
-    VOICE_CARD_CUSTOM, VOICE_ON_BAR_CLOUD, VOICE_ON_DEVICE, VOICE_SEND_WARNING,
+    VOICE_CARD_CUSTOM, VOICE_CUSTOM_SHORT, VOICE_ON_BAR_CLOUD, VOICE_ON_DEVICE, VOICE_SEND_WARNING,
 };
 
 /// The UI languages, in the order the tables give their words.
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
-/// The bar's line while the address the user types takes the voice.
+/// The bar's line while the address the user types takes the voice, named as its chip shows it, so the eye and the ear
+/// agree.
 const BAR: [&str; 3] = [
-    "Your voice goes to the address you type at Stop",
-    "Votre voix partira vers l’adresse que vous saisissez à l’arrêt",
-    "يُرسَل صوتك إلى العنوان الذي تكتبه عند الإيقاف",
+    "Your voice goes to Custom at Stop",
+    "Votre voix partira vers Personnalisé à l’arrêt",
+    "يُرسَل صوتك إلى مخصّص عند الإيقاف",
 ];
 
 /// Compare's warning for Groq and the typed address, then for Groq, `ElevenLabs` and the typed address; Arabic joins
@@ -36,7 +37,7 @@ const SEND: [[&str; 3]; 2] = [
 fn the_bar_sends_the_voice_to_the_typed_address_in_the_approved_words() {
     for (tag, bar) in TAGS.iter().zip(BAR) {
         let t = lang(tag);
-        let custom = t.text(VOICE_CARD_CUSTOM);
+        let custom = t.text(VOICE_CUSTOM_SHORT);
         assert_eq!(
             t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, custom)]),
             bar,

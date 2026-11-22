@@ -11,6 +11,7 @@ cloud =
     .off-line = Services cloud désactivés : aucun n’est proposé, rien n’est envoyé.
     .free = Gratuit : { $free }
     .custom = Adresse personnalisée
+    .custom-short = Personnalisé
     .custom-line = Une adresse HTTPS, un modèle et une clé à saisir
     .home = Activés · { $ready }
     .ready = { $form ->
