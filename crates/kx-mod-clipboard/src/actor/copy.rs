@@ -2,8 +2,8 @@
 //! copy told within `take_wait_ms` keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
 //! refused with a note, and the caps then trim the oldest unpinned entries.
 
-use kx_module_api::keys;
 use kx_module_api::ports::{AppRef, ClipKind, ClipNote, ClipPart, PanelNote, SealedError};
+use kx_module_api::{Mono, keys};
 
 use super::Actor;
 use super::take::wipe;
@@ -12,15 +12,15 @@ use crate::keep::{admit, trim};
 use crate::media::{Size, job_of};
 
 impl Actor {
-    /// Takes `note` from the watch, the board first, and a change not ours keeps a lent paste from putting back. A copy
-    /// too big shows a note unless its app is skipped, and a busy clipboard tells nothing.
-    pub(super) fn note(&mut self, note: ClipNote) {
+    /// Takes `note` from the watch, read at `read`, the board first, and a change not ours keeps a lent paste from
+    /// putting back. A copy too big shows a note unless its app is skipped, and a busy clipboard tells nothing.
+    pub(super) fn note(&mut self, note: ClipNote, read: Mono) {
         if !self.board.heard(&note, self.unsure(&note)) {
             self.lend_moved();
         }
         match note {
             ClipNote::Copied { parts, app } => {
-                if let Some(parts) = self.past_take(parts) {
+                if let Some(parts) = self.past_take(parts, read) {
                     self.copied(parts, app.as_ref());
                 }
             }

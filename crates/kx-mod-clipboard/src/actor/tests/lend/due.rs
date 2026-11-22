@@ -4,6 +4,8 @@
 
 use std::time::Duration;
 
+use kx_module_api::ports::ClipNote;
+
 use super::super::rig::Rig;
 use super::gone::{KEY, emptied, pasted, take};
 use super::{holding, html};
@@ -81,6 +83,18 @@ fn a_taken_copys_note_keeps_nothing_within_take_wait_ms_and_is_kept_after() {
         rig.text(KEY);
         assert_eq!(texts(&rig) == [KEY], kept, "{by:?}");
     }
+}
+
+/// The wait counts to when the watch read the copy, so a stall on the actor's thread past the wait keeps nothing.
+#[test]
+fn a_note_read_within_the_wait_keeps_nothing_after_a_stall() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKER);
+    let parts = vec![text(KEY)];
+    rig.fakes.clip.push(ClipNote::Copied { parts, app: None });
+    rig.advance(rig.settings.take_wait() + STEP);
+    assert!(texts(&rig).is_empty(), "read within the wait");
 }
 
 #[test]

@@ -66,8 +66,8 @@ impl Module for ClipboardModule {
         let calendar = cx.service::<CalendarKey>()?;
         let mut store = Store::new(Arc::clone(&sealed), settings.store_config());
         let loaded = store.load().map_err(refuse)?;
-        let (tx, inbox) = mpsc::channel();
-        let (watch, copies) = Watched::start(&*clip, &settings, &tx).map_err(no_watch)?;
+        let ((tx, inbox), clock) = (mpsc::channel(), cx.clock());
+        let (watch, copies) = Watched::start(&*clip, &settings, &tx, &clock).map_err(no_watch)?;
         let Helpers {
             media,
             files,
@@ -77,7 +77,7 @@ impl Module for ClipboardModule {
         let ports = Ports {
             bus: cx.bus(),
             clip: Arc::clone(&clip),
-            clock: cx.clock(),
+            clock,
             calendar,
             shelf: sealed,
             writer,

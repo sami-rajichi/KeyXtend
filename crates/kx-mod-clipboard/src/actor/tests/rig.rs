@@ -10,7 +10,7 @@ use kx_module_api::ports::{
     AppRef, BlobName, ClipAct, ClipNote, ClipPart, PanelNote, Pasted, PictureRun, Pictures,
     SealedShelf,
 };
-use kx_module_api::{Bus, ModuleCx, Subscription};
+use kx_module_api::{Bus, Clock, ModuleCx, Subscription};
 use kx_test_support::host::FakeHost;
 
 use super::super::paste::Paste;
@@ -220,12 +220,13 @@ fn ports(
     settings: &ClipSettings,
     tx: &Sender<Msg>,
 ) -> (Ports, Receiver<Task>, Receiver<Look>) {
-    let (watch, copies) = Watched::start(&fakes.clip, settings, tx).unwrap();
+    let clock: Arc<dyn Clock> = Arc::new(fakes.clock.clone());
+    let (watch, copies) = Watched::start(&fakes.clip, settings, tx, &clock).unwrap();
     let ((media, tasks), (files, looks)) = (mpsc::channel(), mpsc::channel());
     let ports = Ports {
         bus: ModuleCx::new(host).bus(),
         clip: Arc::new(fakes.clip.clone()),
-        clock: Arc::new(fakes.clock.clone()),
+        clock,
         calendar: Arc::new(fakes.calendar.clone()),
         shelf: Arc::new(fakes.shelf.clone()),
         writer: Arc::new(fakes.writer.clone()),

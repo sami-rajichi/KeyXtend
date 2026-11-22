@@ -37,7 +37,7 @@ use board::Board;
 use lend::Lend;
 use lost::Lost;
 use paste::Pasting;
-pub(crate) use watched::Watched;
+pub(crate) use watched::{Stamped, Watched};
 
 /// A message for the actor, from the watch, the bus, the helper threads or the module.
 #[derive(Debug)]
@@ -88,8 +88,8 @@ pub(crate) struct Ports {
     pub media: Sender<Task>,
     /// The files thread's inbox.
     pub files: Sender<Look>,
-    /// The copies the watch queued, one for each `Msg::Copied`.
-    pub copies: Receiver<ClipNote>,
+    /// The copies the watch queued, each with when it read it, one for each `Msg::Copied`.
+    pub copies: Receiver<Stamped>,
     /// The running watch, dropped at stop so no note comes after.
     pub watch: Option<Box<dyn ClipRun>>,
 }
@@ -208,10 +208,10 @@ impl Actor {
         }
         self.new_day();
         match msg {
-            Msg::Note(note) => self.note(note),
+            Msg::Note(note) => self.note(note, self.ports.clock.now()),
             Msg::Copied => {
-                if let Ok(note) = self.ports.copies.try_recv() {
-                    self.note(note);
+                if let Ok((note, read)) = self.ports.copies.try_recv() {
+                    self.note(note, read);
                 }
             }
             Msg::Open => self.toggle(),

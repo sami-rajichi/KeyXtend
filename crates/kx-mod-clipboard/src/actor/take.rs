@@ -4,7 +4,7 @@
 //! text back until the history keeps it again; only its hash stays, every copy read here is wiped, and none is logged.
 
 use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
-use kx_module_api::{Secret, Zeroizing};
+use kx_module_api::{Mono, Secret, Zeroizing};
 
 use super::Actor;
 use crate::entry::Entry;
@@ -52,10 +52,10 @@ impl Actor {
         }
     }
 
-    /// Takes the copy of `parts` the watch told: when it is a take's copy still due, it is wiped and never goes back;
-    /// else `parts` go on.
-    pub(super) fn past_take(&mut self, parts: Vec<ClipPart>) -> Option<Vec<ClipPart>> {
-        if !self.lost.noted(&parts, self.ports.clock.now()) {
+    /// Takes the copy of `parts` the watch read at `read`: when it is a take's copy still due then, it is wiped and
+    /// never goes back; else `parts` go on.
+    pub(super) fn past_take(&mut self, parts: Vec<ClipPart>, read: Mono) -> Option<Vec<ClipPart>> {
+        if !self.lost.noted(&parts, read) {
             return Some(parts);
         }
         wipe(parts);

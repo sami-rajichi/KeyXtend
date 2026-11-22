@@ -1,7 +1,7 @@
 //! The texts that left the history, as content hashes alone, takes apart from deletes so a bulk delete never pushes a
 //! take out: Paste at once never writes one back until the history keeps it again (owner's check, 2026-11-21). Every
-//! note of a take's copy told within `take_wait_ms` keeps nothing, however many come and from any app; a rich entry's
-//! hash never matches, as only the board names it, but the history cannot tell it without its blobs.
+//! copy of a take's text the watch reads within `take_wait_ms` keeps nothing, however many come and from any app; a
+//! rich entry's hash never matches, as only the board names it, but the history cannot tell it without its blobs.
 
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -54,10 +54,10 @@ impl Lost {
         self.due.push_back((hash, now.saturating_add(self.wait)));
     }
 
-    /// The watch told a copy of `parts` at `now`: true when one of its texts is a take's copy still due, which stays
-    /// due until its wait ends. With none due, no text is hashed.
-    pub(super) fn noted(&mut self, parts: &[ClipPart], now: Mono) -> bool {
-        self.due.retain(|(_, end)| now < *end);
+    /// The watch read a copy of `parts` at `read`: true when one of its texts is a take's copy still due then. Copies
+    /// come in the order read, so the waits ended by then end for good, and with none due no text is hashed.
+    pub(super) fn noted(&mut self, parts: &[ClipPart], read: Mono) -> bool {
+        self.due.retain(|(_, end)| read < *end);
         if self.due.is_empty() {
             return false;
         }
