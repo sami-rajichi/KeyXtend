@@ -1,7 +1,7 @@
-//! What the clipboard holds, as the watch and our own writes told it, so Paste at once can put an entry back whole
-//! and never put back a skipped app's or a marked copy the watch told (owner, 2026-11-17, ADR-0048); a copy made before
-//! the start is unknown. Our writes' echoes keep the board, and a presence marker is checked live at the read. A copy
-//! that left the history, or that a take read, never goes back: the clipboard is left empty (owner's check, 2026-11-21).
+//! What the clipboard holds, as the watch and our own writes told it, so Paste at once puts an entry back whole but
+//! never a skipped app's or a marked copy (owner, 2026-11-17, ADR-0048), nor one that left the history or a take read,
+//! for which it leaves the clipboard empty (owner's check, 2026-11-21). A copy made before the start is unknown, our
+//! writes' echoes keep the board, and a presence marker is checked live at the read.
 
 use std::mem;
 
