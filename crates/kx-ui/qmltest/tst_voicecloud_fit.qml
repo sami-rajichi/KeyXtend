@@ -65,6 +65,12 @@ Item {
             return { x: at.x, y: at.y, w: o.width, h: o.height };
         }
 
+        // The word of pick `o`'s service mark.
+        function word(o) {
+            const mark = Kit.only(Board.all(o, n => n.markId !== undefined));
+            return Kit.only(Board.all(mark, n => n.text === mark.mark.text));
+        }
+
         // Checks that `box`'s page keeps a list's height and lays its body inside it.
         function keeps(box) {
             const p = page(box);
@@ -135,7 +141,7 @@ Item {
         }
         // T24 re-review 1: the offered picks longest by name plus mark, by the pager, beside a typed id at its most or
         // beside Custom's and OpenRouter's. The page keeps its height, as picks pair when they would take more rows,
-        // each chip stays in the body, and only a name past its room is shortened, while readers hear it whole.
+        // each chip stays in the body, and only a pick past its room is shortened, while readers hear it whole.
         function test_compares_widest_picks_stay_in_the_body(d) {
             const box = make(d.name, d.t, d.lk);
             keeps(box);
@@ -155,12 +161,31 @@ Item {
             compare(typed.length, d.typed, "the page's typed ids");
             const over = picks.filter(o => o.natural > p.most + 0.5).map(o => o.entry.name);
             verify(typed.every(t => over.indexOf(t) >= 0), "each typed id passes its room");
-            compare(names.filter(n => n.truncated).map(n => n.text), over, "only a name past its room is shortened");
+            const cut = picks.filter((o, i) => names[i].truncated || word(o).truncated).map(o => o.entry.name);
+            compare(cut, over, "only a pick past its room is shortened");
             compare(picks.filter(o => o.width > p.most + 0.5).map(o => o.entry.name), [], "each chip within its room");
             const lines = new Set(picks.map(o => Math.round(rect(box, o).y))).size;
             verify(lines <= Math.ceil(box.per / d.lk.shape.voice.pick_across), "a full page's rows, paired: " + lines);
             compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
             verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
+        }
+
+        function test_a_cut_name_keeps_its_least_and_its_end_data() {
+            return test_compares_widest_picks_stay_in_the_body_data();
+        }
+        // T24 re-review 2: a cut name loses its middle and keeps the least a name keeps; only then is its service's mark
+        // cut too, and readers hear both whole.
+        function test_a_cut_name_keeps_its_least_and_its_end(d) {
+            const box = make(d.name, d.t, d.lk);
+            const picks = Board.all(page(box).body, o => o.visible && o.Accessible.role === Accessible.CheckBox);
+            const least = d.lk.shape.voice.pick_name_px * box.s;
+            for (const o of picks) {
+                const name = Kit.only(Board.all(o, n => n.text === o.entry.name));
+                const service = word(o).text, tag = o.entry.name.slice(0, 24) + " " + service;                compare(name.elide, Text.ElideMiddle, "a cut name keeps its end: " + tag);
+                verify(name.width >= Math.min(name.implicitWidth, least) - 0.5, "the name keeps its least: " + tag);
+                verify(!word(o).truncated || name.width <= least + 0.5, "the mark is cut only past the name's least: " + tag);
+                verify(o.Accessible.name.indexOf(service) >= 0, "readers hear the mark whole: " + tag);
+            }
         }
 
         function test_a_short_page_keeps_every_name_whole_data() {

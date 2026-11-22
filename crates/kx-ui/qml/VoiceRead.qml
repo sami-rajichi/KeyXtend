@@ -123,7 +123,7 @@ Item {
     }
     // A cloud model to tick (no mock-up of its own, so a list row's tick box and ticked fill, VoiceRow, on a filter
     // chip's big target, WCAG 2.5.8): its tick box, name and service's mark; a click ticks it at let-go (ADR-0024). A
-    // name too wide for its room is shortened, and readers still hear it whole.
+    // name too wide for its room loses its middle, then its mark is shortened too, and readers still hear both whole.
     component Pick: Rectangle {
         id: pick
         required property int index
@@ -132,8 +132,9 @@ Item {
         readonly property bool hot: read.idle && area.containsMouse
         readonly property bool lit: on || hot
         readonly property var sh: read.pn.filter_px
-        // Its width with the whole name.
-        readonly property real natural: label.implicitWidth + box.width + mark.width + 2 * parts.spacing + 2 * sh[1] * read.s
+        // Its width with the whole name and mark, and the room its name and mark share within the widest a pick may be.
+        readonly property real natural: label.implicitWidth + box.width + mark.natural + 2 * parts.spacing + 2 * sh[1] * read.s
+        readonly property real room: read.most - 2 * sh[1] * read.s - box.width - 2 * parts.spacing
 
         // Sends the tick click, which the module takes only while the microphone is closed.
         function act() {
@@ -184,11 +185,11 @@ Item {
             }
             Label {
                 id: label
-                // The widest a pick may be less the chip's padding, tick box, mark and gaps.
-                readonly property real room: read.most - 2 * pick.sh[1] * read.s - box.width - mark.width - 2 * parts.spacing
+                // The name keeps all the room the whole mark leaves, but never less than the least a name keeps.
+                readonly property real least: Math.min(implicitWidth, read.lk.shape.voice.pick_name_px * read.s)
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(implicitWidth, Math.max(0, room))
-                elide: Text.ElideRight
+                width: Math.min(implicitWidth, Math.max(least, pick.room - mark.natural))
+                elide: Text.ElideMiddle
                 text: pick.entry.name
                 font.family: read.host.res.fam.latin
                 font.pixelSize: read.lk.shape.chip.font_px[0] * read.s
@@ -201,6 +202,7 @@ Item {
                 host: read.host
                 mark: ({ id: read.host.names.cloud, text: pick.entry.service })
                 lit: pick.lit
+                most: pick.room - label.width
             }
         }
         Act {

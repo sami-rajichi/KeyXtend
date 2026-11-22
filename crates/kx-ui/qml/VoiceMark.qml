@@ -15,6 +15,10 @@ Rectangle {
     // Its own icon in place of its id's (empty for its id's), and the badge colours whatever its id: Key works takes both.
     property string glyph: ""
     property bool badge: false
+    // The widest it may be; past that its word is shortened, while readers still hear it whole.
+    property real most: Infinity
+    // Its width with its whole word.
+    readonly property real natural: word.implicitWidth + (pic.visible ? pic.width + row.spacing : 0) + 2 * sh.pad_px * host.s
 
     readonly property string markId: mark.id
     readonly property var names: host.names
@@ -52,6 +56,7 @@ Rectangle {
         anchors.centerIn: parent
         spacing: m.sh.gap_px * m.host.s
         Icon {
+            id: pic
             visible: !!m.icon
             anchors.verticalCenter: parent.verticalCenter
             icon: m.icon
@@ -61,7 +66,10 @@ Rectangle {
             tint: m.tint
         }
         Label {
+            id: word
             anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(implicitWidth, Math.max(0, implicitWidth - (m.natural - m.most)))
+            elide: Text.ElideRight
             text: m.mark.text
             font.family: m.host.ar ? m.host.res.fam.arabic : m.host.res.fam.latin
             font.pixelSize: m.sh.font_px[m.host.ar ? 1 : 0] * m.host.s

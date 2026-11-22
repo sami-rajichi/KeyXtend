@@ -38,6 +38,10 @@ fn the_voice_panel_takes_the_mock_up_sizes() {
     assert_eq!(v.fact_px, 200.0, "voice-cloud.css --voice-fact-px");
     assert_eq!(v.pick_across, 2, "Compare's picks pair, two to a row");
     assert_eq!(
+        v.pick_name_px, 96.0,
+        "a cut pick's name keeps about 15 characters"
+    );
+    assert_eq!(
         v.run_share,
         [0.4, 0.5],
         ".prog.run i: 40 %, .still: opacity .5"
@@ -103,6 +107,12 @@ fn an_odd_panel_size_is_refused_by_name() {
             "pick_across = 2",
             "pick_across = 0",
             "voice.pick_across",
+        ),
+        (
+            "voice",
+            "pick_name_px = 96.0",
+            "pick_name_px = 0.0",
+            "voice.pick_name_px",
         ),
         (
             "voice",

@@ -29,6 +29,8 @@ pub struct VoiceShape {
     pub fact_px: f32,
     /// Compare's cloud picks to a row once they pair.
     pub pick_across: u8,
+    /// The least a cut pick's name keeps before its service's mark is cut too.
+    pub pick_name_px: f32,
 }
 
 impl VoiceShape {
@@ -54,6 +56,7 @@ impl VoiceShape {
             ("voice.col_px", self.col_px),
             ("voice.panel_px", self.panel_px),
             ("voice.fact_px", self.fact_px),
+            ("voice.pick_name_px", self.pick_name_px),
         ]);
         if let Some((n, v)) = above.find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
