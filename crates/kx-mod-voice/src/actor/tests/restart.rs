@@ -1,22 +1,25 @@
 //! A choice the panel makes survives a restart (ADR-0054): it goes through the settings handle, is saved to a real
 //! settings file and read back by the store, and a fresh actor on the same PC, read and repaired as the module starts,
-//! shows it. Options and the device are in `restart/rest.rs`.
+//! shows it. Options and the device are in `restart/rest.rs`, a service Off in `restart/off.rs`.
 
+mod off;
 mod rest;
 
-use kx_module_api::Redacted;
+use std::path::Path;
+
 use kx_module_api::ports::{
-    CloudButton, CloudSheet, LayoutChanged, LayoutId, ModelSide, ModelsSheet, PanelButton,
-    ServiceMark, ServiceName, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
+    CloudButton, CloudSheet, LayoutChanged, LayoutId, ModelRow, ModelSide, ModelState, ModelsSheet,
+    PanelButton, ServiceMark, ServiceName, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
 };
 use kx_settings::{Files, Store};
 use kx_test_support::tempdir::TempDir;
 
 use super::Msg;
 use super::cloud::{key, set_key};
+use super::fakes::{DIR, Fakes};
 use super::rig::Rig;
 use crate::panel::rig::ROWS;
-use crate::{ID, SPEC};
+use crate::{ID, SPEC, models};
 
 /// The keyboard languages a choice is made and shown in, with their direction.
 const LANGS: [(&str, bool); 3] = [("en", false), ("fr", false), ("ar", true)];
@@ -142,15 +145,28 @@ fn named(name: &str) -> ServiceName {
     ServiceName::Named(name.into())
 }
 
+/// Places the file of each language's second model in the models folder, so Use can pick it.
+fn second_models(fake: &Fakes) {
+    let table = models::table().unwrap();
+    for (iso, _) in LANGS {
+        let row = table.order(iso).rows[1];
+        let file = Path::new(DIR).join(&row.file);
+        fake.files.add_file(&file, row.bytes, row.print);
+    }
+}
+
 #[test]
 fn a_local_pick_in_each_language_survives_a_restart() {
-    let mut rig = Rig::new();
+    let mut rig = Rig::build(|fake, _| second_models(fake));
     let mut picked = Vec::new();
-    for lang in 0..LANGS.len() {
+    for (lang, (iso, _)) in LANGS.iter().enumerate() {
         open(&mut rig, lang, VoiceTab::Models);
-        let at = models(&rig).rows.iter().position(|r| !r.used).unwrap();
+        let before = used(&rig);
+        let ready = |r: &&ModelRow| !r.used && r.state == ModelState::Ready;
+        let at = models(&rig).rows.iter().position(|r| ready(&r)).unwrap();
         rig.act(VoiceClick::Row(u8::try_from(at).unwrap()));
         rig.act(VoiceClick::Button(PanelButton::Use));
+        assert_ne!(used(&rig), before, "{iso}: Use changed it");
         picked.push(used(&rig));
     }
     let mut fresh = restart(&rig);
@@ -182,35 +198,6 @@ fn cloud_off_keeps_each_cloud_pick_through_a_restart_and_cloud_on_brings_it_back
     assert!(!cloud(&fresh).on, "cloud stays off");
     fresh.act(VoiceClick::Cloud(true));
     assert_eq!(cloud_used(&mut fresh), in_use(picked), "ADR-0054");
-}
-
-#[test]
-fn a_service_off_the_keep_switch_and_the_typed_lines_survive_a_restart() {
-    let mut rig = Rig::new();
-    open(&mut rig, 0, VoiceTab::Cloud);
-    rig.act(VoiceClick::Cloud(true));
-    confirm(&mut rig, &ServiceName::Custom);
-    rig.act(VoiceClick::SetAddress(Redacted::new(ADDRESS.into())));
-    rig.act(VoiceClick::SetModel(Redacted::new(MODEL.into())));
-    confirm(&mut rig, &named("OpenRouter"));
-    rig.act(VoiceClick::KeepNothing(false));
-    confirm(&mut rig, &named("Lemonfox"));
-    open(&mut rig, 0, VoiceTab::Cloud);
-    tick(&mut rig, &named("Lemonfox"));
-    rig.act(VoiceClick::Service(CloudButton::Off));
-    let mut fresh = restart(&rig);
-    open(&mut fresh, 0, VoiceTab::Cloud);
-    assert_eq!(tick(&mut fresh, &named("Lemonfox")), ServiceMark::Off);
-    tick(&mut fresh, &named("OpenRouter"));
-    fresh.act(VoiceClick::Service(CloudButton::Lines));
-    assert_eq!(lines(&fresh).keep, Some(false));
-    open(&mut fresh, 0, VoiceTab::Cloud);
-    tick(&mut fresh, &ServiceName::Custom);
-    fresh.act(VoiceClick::Service(CloudButton::Lines));
-    let page = lines(&fresh);
-    let address = page.address.map(|a| a.expose().clone());
-    assert_eq!(address.as_deref(), Some(ADDRESS));
-    assert_eq!(page.model.expose(), MODEL);
 }
 
 /// Each of `names` as a language's model in use.

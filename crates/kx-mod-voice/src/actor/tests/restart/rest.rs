@@ -95,11 +95,15 @@ fn the_device_picked_survives_a_restart() {
     let mut rig = Rig::new();
     rig.fake.speech.set_devices(Ok(cards()));
     open(&mut rig, 0, VoiceTab::Device);
+    let before = picked(&rig);
     let at = devices(&rig).iter().position(|r| !r.used).unwrap();
     rig.act(VoiceClick::Row(u8::try_from(at).unwrap()));
     rig.act(VoiceClick::Button(PanelButton::Use));
     let chosen = picked(&rig);
-    assert!(chosen.is_some(), "a device is picked");
+    assert!(
+        chosen.is_some() && chosen != before,
+        "Use picked another device"
+    );
     let mut fresh = restart(&rig);
     open(&mut fresh, 0, VoiceTab::Device);
     assert_eq!(picked(&fresh), chosen);
