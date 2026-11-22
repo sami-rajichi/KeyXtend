@@ -49,7 +49,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning; the r
 | Insert | `join_breaks`, `join_rule`, `paste_gap_ms`, `paste_wait_ms`, `back_chars`, `check_ms`, `history_key` |
 | Text | `search_chars`, `title_chars`, `preview_chars` |
 | Pictures | `thumb_px`, `preview_px`, `max_pixels`, `media_ms`, `worker_idle_s`, `worker_mb`, `restart_ms`, `restart_max_ms` |
-| Platform | `open_ms`, `poll_ms`, `queue_copies`, `save_ms` |
+| Platform | `open_ms`, `poll_ms`, `queue_copies`, `save_ms`, `take_wait_ms` |
 
 ## Public API
 

@@ -1,7 +1,8 @@
 //! Quick-fill's take (ADR-0034, design "Paste"): the clipboard's text, read within the take's cap, goes to Quick-fill,
-//! and the history forgets its newest entry when it is that text and not pinned; unless the board held that entry, the
-//! next copy also keeps nothing if it is that text, as the watch's note can come after the take. Either way Paste at
-//! once never puts that text back until the history keeps it again; every copy read here is wiped, and none is logged.
+//! and the history forgets its newest entry when it is that text and not pinned; the copy the take read keeps nothing
+//! either when the watch tells it within `take_wait_ms`, as that note can come after the take, or twice. Paste at once
+//! never puts that text back until the history keeps it again; only its hash stays, every copy read here is wiped, and
+//! none is logged.
 
 use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
 use kx_module_api::{Secret, Zeroizing};
@@ -12,13 +13,13 @@ use crate::entry::Entry;
 impl Actor {
     /// Answers `take` with what the clipboard holds, read within the take's cap: a longer text is `TooLong` and forgets
     /// nothing, and a held, refused or unreadable clipboard is `Busy`, logged by its kind alone. The answer names the
-    /// take's asker, so only that module takes it.
+    /// take's asker, so only that module takes it, and the text leaves memory with it.
     pub(super) fn take(&mut self, take: ClipTake) {
         let wait = self.settings.clip_config().wait;
         let text = match self.ports.clip.text(wait, take.cap()) {
             Ok(Some(text)) => {
-                self.lost.taken(text.expose());
-                self.missed = (!self.forget_copy(&text)).then(|| text.clone());
+                self.lost.taken(text.expose(), self.ports.clock.now());
+                self.forget_copy(&text);
                 ClipText::Text(text)
             }
             Ok(None) => ClipText::Empty,
@@ -31,41 +32,36 @@ impl Actor {
         self.publish(&take.answer(text));
     }
 
-    /// Deletes the newest entry when it is a text not pinned whose text is `text`; true when it did and the board held
-    /// it, so this copy's note already came.
-    fn forget_copy(&mut self, text: &Secret) -> bool {
+    /// Deletes the newest entry when it is a text not pinned whose text is `text`.
+    fn forget_copy(&mut self, text: &Secret) {
         let newest = self.history.entries().iter().max_by_key(|e| e.seq);
         let texts = |e: &&Entry| !e.pinned() && matches!(e.kind, ClipKind::Text | ClipKind::Link);
         let Some(entry) = newest.filter(texts) else {
-            return false;
+            return;
         };
         let parts = match self.store.parts(entry) {
             Ok(parts) => parts.unwrap_or_default(),
             Err(error) => {
                 tracing::warn!(%error, "the newest clipboard entry could not be read");
-                return false;
+                return;
             }
         };
-        let same = holds(&parts, text);
-        let (id, noted) = (entry.id, self.board.holds(entry.id));
+        let (same, id) = (holds(&parts, text), entry.id);
         wipe(parts);
         if same {
             self.remove(id);
         }
-        same && noted
     }
 
-    /// Ends the wait for the copy the last take missed: `parts` go on, unless they hold that text, so are wiped and
-    /// never go back.
+    /// Takes the copy of `parts` the watch told: when it is a take's copy still due, it is wiped and never goes back;
+    /// else `parts` go on.
     pub(super) fn past_take(&mut self, parts: Vec<ClipPart>) -> Option<Vec<ClipPart>> {
-        match self.missed.take() {
-            Some(text) if holds(&parts, &text) => {
-                wipe(parts);
-                self.board.taken();
-                None
-            }
-            _ => Some(parts),
+        if !self.lost.noted(&parts, self.ports.clock.now()) {
+            return Some(parts);
         }
+        wipe(parts);
+        self.board.taken();
+        None
     }
 }
 

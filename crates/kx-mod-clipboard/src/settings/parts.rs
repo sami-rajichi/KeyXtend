@@ -139,6 +139,12 @@ impl ClipSettings {
         Duration::from_millis(self.check_ms.into())
     }
 
+    /// A take's wait for the note of the copy it read.
+    #[must_use]
+    pub fn take_wait(&self) -> Duration {
+        Duration::from_millis(self.take_wait_ms.into())
+    }
+
     /// The wait for the DIB an inserted PNG goes with, the worker's own deadline.
     #[must_use]
     pub fn media_wait(&self) -> Duration {

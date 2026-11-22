@@ -1,6 +1,6 @@
 //! Quick-fill's take: what the clipboard holds now, read within the take's cap, whatever the history kept. The newest
-//! entry is forgotten when the text was read in full and the entry is that copy and not pinned, else the next copy
-//! keeps nothing if it is that text; no text, a text too long or a busy clipboard each answer as such, and nothing is
+//! entry is forgotten when the text was read in full and the entry is that copy and not pinned, and the copy read keeps
+//! nothing when its note comes later; no text, a text too long or a busy clipboard each answer as such, and nothing is
 //! logged. Each answer names the module that asked.
 
 use kx_module_api::ports::{
@@ -196,14 +196,14 @@ fn a_late_note_with_other_parts_beside_the_text_keeps_nothing_either() {
 }
 
 #[test]
-fn a_different_copy_is_kept_and_ends_the_wait_so_the_same_text_after_it_is_kept() {
+fn a_different_copy_is_kept_and_never_ends_the_wait_for_the_taken_text() {
     let mut rig = Rig::new();
     rig.fakes.clip.set_text(Some(PASSWORD));
     take(&mut rig, 1);
     rig.text("other");
     assert_eq!(kept(&mut rig), ["other"]);
     rig.text(PASSWORD);
-    assert_eq!(kept(&mut rig), [PASSWORD, "other"]);
+    assert_eq!(kept(&mut rig), ["other"], "still due");
 }
 
 #[test]
@@ -217,29 +217,30 @@ fn only_the_first_note_after_the_take_keeps_nothing() {
 }
 
 #[test]
-fn a_skipped_apps_copy_ends_the_wait_too() {
+fn a_skipped_apps_copy_never_ends_the_wait() {
     let skip = Value::Array(vec!["KeePass.exe".into()]);
     let mut rig = Rig::build(|_, host| host.put("skip_apps", skip));
     rig.fakes.clip.set_text(Some(PASSWORD));
     take(&mut rig, 1);
     rig.copy(vec![part("other")], Some(app("keepass.exe")));
     rig.text(PASSWORD);
-    assert_eq!(kept(&mut rig), [PASSWORD]);
+    assert!(kept(&mut rig).is_empty());
 }
 
 #[test]
-fn a_later_take_replaces_the_text_that_waits() {
+fn a_later_take_never_ends_the_wait_for_an_earlier_one() {
     let mut rig = Rig::new();
     rig.fakes.clip.set_text(Some("first"));
     take(&mut rig, 1);
     rig.fakes.clip.set_text(Some(PASSWORD));
     take(&mut rig, 2);
     rig.text("first");
-    assert_eq!(kept(&mut rig), ["first"], "no longer waited for");
+    rig.text(PASSWORD);
+    assert!(kept(&mut rig).is_empty(), "both still due");
 }
 
 #[test]
-fn a_later_take_that_forgets_its_copy_leaves_nothing_waiting() {
+fn a_later_take_that_forgets_its_copy_never_ends_the_wait_for_an_earlier_one() {
     let mut rig = Rig::new();
     rig.text(PASSWORD);
     rig.fakes.clip.set_text(Some("first"));
@@ -247,7 +248,7 @@ fn a_later_take_that_forgets_its_copy_leaves_nothing_waiting() {
     rig.fakes.clip.set_text(Some(PASSWORD));
     take(&mut rig, 2);
     rig.text("first");
-    assert_eq!(kept(&mut rig), ["first"]);
+    assert!(kept(&mut rig).is_empty());
 }
 
 #[test]

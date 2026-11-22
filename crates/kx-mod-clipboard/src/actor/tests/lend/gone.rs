@@ -12,19 +12,19 @@ use super::{SAID, holding, html, lend, lent};
 use crate::fixture::{date, image, text};
 
 /// A key copied from a service's page.
-const KEY: &str = "sk-zebra-quartz";
+pub(super) const KEY: &str = "sk-zebra-quartz";
 /// Quick-fill's module, then the voice key page's: both send the same take.
 const ASKERS: [&str; 2] = ["vault", "voice"];
 /// The characters of the field a take is asked for.
 const FIELD: usize = 50;
 
 /// `asker`'s Paste takes the clipboard's text.
-fn take(rig: &mut Rig, asker: &'static str) {
+pub(super) fn take(rig: &mut Rig, asker: &'static str) {
     rig.send(Msg::Take(ClipTake::new(ModuleId::new(asker), 1, FIELD)));
 }
 
 /// Lends, the keyboard pastes and the gap passes; checks the text was pasted, not typed, and gives the writes since.
-fn pasted(rig: &mut Rig) -> Vec<Vec<ClipPart>> {
+pub(super) fn pasted(rig: &mut Rig) -> Vec<Vec<ClipPart>> {
     let (writes, pastes) = (rig.fakes.writer.writes().len(), rig.pastes().len());
     lend(rig);
     assert_eq!(rig.pastes().len(), pastes + 1, "pasted, not typed");
@@ -35,7 +35,7 @@ fn pasted(rig: &mut Rig) -> Vec<Vec<ClipPart>> {
 }
 
 /// The text pasted, then an empty clipboard.
-fn emptied() -> Vec<Vec<ClipPart>> {
+pub(super) fn emptied() -> Vec<Vec<ClipPart>> {
     vec![vec![text(SAID)], vec![]]
 }
 
@@ -113,7 +113,8 @@ fn a_taken_text_back_on_the_clipboard_after_another_copy_never_goes_back() {
 }
 
 /// A sibling (T24): a key taken before its note, an entry inserted and then taken, then the key's late note; that note
-/// does not undo the second take, so the lend leaves the clipboard empty, never the inserted text.
+/// does not undo the second take, so the lend leaves the clipboard empty, never the inserted text. The second take
+/// never drops the first's wait either, so the key's note keeps nothing (lend review, case a).
 #[test]
 fn a_late_note_of_an_earlier_take_never_brings_back_a_text_taken_since() {
     let mut rig = holding(vec![text("older")]);
@@ -126,6 +127,11 @@ fn a_late_note_of_an_earlier_take_never_brings_back_a_text_taken_since() {
     rig.advance(rig.settings.paste_wait());
     take(&mut rig, ASKERS[1]);
     rig.text(KEY);
+    let entries = rig.actor.history.entries();
+    assert!(
+        entries.iter().all(|e| e.title.expose() != KEY),
+        "never kept"
+    );
     assert_eq!(pasted(&mut rig), emptied());
 }
 

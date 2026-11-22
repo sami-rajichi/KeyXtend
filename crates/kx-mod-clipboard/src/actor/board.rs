@@ -65,11 +65,6 @@ impl Board {
         }
     }
 
-    /// True when the board holds entry `id`, so the watch told the copy that entry keeps.
-    pub(super) fn holds(&self, id: u64) -> bool {
-        self.held == Held::Entry(id)
-    }
-
     /// The copy just told is one a take read, so it never goes back.
     pub(super) fn taken(&mut self) {
         self.held = Held::Gone;

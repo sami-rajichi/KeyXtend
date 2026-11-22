@@ -23,7 +23,7 @@ use kx_module_api::ports::{
     Calendar, ClipAct, ClipNote, ClipPanel, ClipRun, ClipTake, Clipboard, ClipboardWriter, Date,
     HistoryWanted, PanelKey, PanelLine, PanelNote, PasteText, Pasted, Room, SealedShelf,
 };
-use kx_module_api::{Bus, Clock, Event, Mono, Notice, Secret, keys};
+use kx_module_api::{Bus, Clock, Event, Mono, Notice, keys};
 
 use crate::ID;
 use crate::follow::Follow;
@@ -136,9 +136,7 @@ pub(crate) struct Actor {
     /// What the clipboard holds, and a lent paste under way.
     board: Board,
     lent: Lend,
-    /// The text of the last take that found no entry to forget, wiped once the next copy's note comes.
-    missed: Option<Secret>,
-    /// The texts that left the history, never written back until kept again.
+    /// The texts that left the history, never written back until kept again, and the takes' copies still due.
     lost: Lost,
     /// The entries whose thumbnail was asked this run.
     asked: BTreeSet<u64>,
@@ -177,8 +175,7 @@ impl Actor {
             paste: Pasting::default(),
             board: Board::default(),
             lent: Lend::default(),
-            missed: None,
-            lost: Lost::new(settings.max_entries),
+            lost: Lost::new(settings),
             asked: BTreeSet::new(),
             thumbs_at: None,
             draws: Draws::default(),

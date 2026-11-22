@@ -8,7 +8,7 @@ use std::fmt;
 use std::ops::RangeInclusive;
 
 use kx_module_api::ports::{
-    CLIP_OPEN_MAX_MS, MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
+    CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
 };
 use kx_module_api::{
     Redacted, Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within,
@@ -43,6 +43,8 @@ pub const PASTE_WAIT_MS: RangeInclusive<u32> = 100..=5_000;
 pub const BACK_CHARS: RangeInclusive<usize> = 1_000..=16_000_000;
 /// The wait for an insert's file check, in ms.
 pub const CHECK_MS: RangeInclusive<u32> = 1_000..=30_000;
+/// A take's wait for the note of the copy it read, in ms: past the watch's longest clipboard wait and a margin.
+pub const TAKE_WAIT_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=60_000;
 /// The characters search reads.
 pub const SEARCH_CHARS: RangeInclusive<usize> = 100..=2_000;
 /// The characters a title keeps.
@@ -131,6 +133,8 @@ pub struct ClipSettings {
     pub back_chars: usize,
     /// How long an insert waits for its files to be checked, in ms.
     pub check_ms: u32,
+    /// How long a take waits for the watch to tell the copy it read, in ms; that copy keeps nothing meanwhile.
+    pub take_wait_ms: u32,
     /// The system's clipboard-history shortcut opens our panel.
     pub history_key: bool,
     /// The characters of each text search reads.
@@ -188,6 +192,7 @@ impl ClipSettings {
         within("paste_wait_ms", self.paste_wait_ms, &PASTE_WAIT_MS)?;
         within("back_chars", self.back_chars, &BACK_CHARS)?;
         within("check_ms", self.check_ms, &CHECK_MS)?;
+        within("take_wait_ms", self.take_wait_ms, &TAKE_WAIT_MS)?;
         within("search_chars", self.search_chars, &SEARCH_CHARS)?;
         within("title_chars", self.title_chars, &TITLE_CHARS)?;
         within("preview_chars", self.preview_chars, &PREVIEW_CHARS)?;
@@ -255,6 +260,7 @@ impl fmt::Debug for ClipSettings {
             .field("paste_wait_ms", &self.paste_wait_ms)
             .field("back_chars", &self.back_chars)
             .field("check_ms", &self.check_ms)
+            .field("take_wait_ms", &self.take_wait_ms)
             .field("history_key", &self.history_key)
             .field("search_chars", &self.search_chars)
             .field("title_chars", &self.title_chars)

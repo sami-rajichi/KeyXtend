@@ -26,6 +26,8 @@ paste_wait_ms = 1000
 back_chars = 1000000
 # How long an insert waits for its files to be checked, in ms; past it the insert stops.
 check_ms = 5000
+# How long a take waits for the watch to tell the copy it read, in ms; that copy is not kept meanwhile.
+take_wait_ms = 5000
 # The system's clipboard-history shortcut clicked on our keyboard opens our panel.
 history_key = true
 # The characters of each text that search reads.
