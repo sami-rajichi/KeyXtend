@@ -138,9 +138,10 @@ Item {
             verify(band, "the send warning shows");
             const flow = Kit.only(Board.all(band, o => o.visible && o.flow !== undefined));
             const parts = Board.all(flow, o => o.visible && o.lineCount !== undefined && !!o.text);
+            verify(parts.length > 0, "the warning's texts show");
             const one = Math.min(...parts.map(o => o.height / o.lineCount));
             const lines = Math.round(flow.height / one);
-            verify(lines <= warnLines, "the warning's lines: " + lines);
+            verify(lines >= 1 && lines <= warnLines, "the warning's lines: " + lines);
         }
 
         function test_a_cut_name_keeps_its_least_and_its_end_data() {
