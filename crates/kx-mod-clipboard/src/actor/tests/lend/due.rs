@@ -17,7 +17,7 @@ const ASKER: &str = "voice";
 const STEP: Duration = Duration::from_millis(1);
 
 /// The texts the history keeps, oldest first.
-fn texts(rig: &Rig) -> Vec<String> {
+pub(super) fn texts(rig: &Rig) -> Vec<String> {
     let mut entries = rig.actor.history.entries().to_vec();
     entries.sort_by_key(|e| e.seq);
     entries.iter().map(|e| e.title.expose().clone()).collect()
