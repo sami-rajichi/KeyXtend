@@ -1,6 +1,6 @@
 //! The cloud panels with their longest content, which the fit test measures: each Cloud page of the services table's
-//! rows, page by page, then with each row Off and the ticked one's Remove key, the Models page's Cloud side, each part
-//! of each table service's card with every line on, and Compare's cloud models, also its widest page of them.
+//! rows, page by page, then with each row Off and the ticked one's Remove key, the Models page's Cloud side, and each
+//! part of each table service's card with every line on.
 
 use super::cloud::{TRAINS, card, named};
 use super::{Shown, paged, shown};
@@ -9,9 +9,8 @@ use kx_mod_voice::cloud::Cloud;
 use kx_mod_voice::services::{Address, Service, Services, table};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud, CompareMic, CompareSheet,
-    DeviceLabel, DeviceName, Fact, ModelRow, ModelSide, ModelState, ModelsSheet, PanelButton,
-    ServiceMark, ServiceName, ServiceRow, TAG_LEN, Unavailable, VoiceSheet,
+    CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, Fact, ModelRow, ModelSide, ModelState,
+    ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow, Unavailable, VoiceSheet,
 };
 use kx_ui::UiSettings;
 
@@ -23,7 +22,7 @@ const CARD_LONG: &str = "cardLong-";
 const PRICE_LONG: &str = "cardLongPrice-";
 
 /// The voice module's services table, which the long panels show whole.
-fn services() -> &'static Services {
+pub(super) fn services() -> &'static Services {
     table().expect("the services table reads")
 }
 
@@ -35,7 +34,7 @@ fn warn_id(s: &Service) -> Option<String> {
 }
 
 /// The rows a panel's page holds.
-fn per() -> usize {
+pub(super) fn per() -> usize {
     UiSettings::from_defaults()
         .expect("the [ui] defaults")
         .page_rows
@@ -149,65 +148,12 @@ fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
     VoiceSheet::Card(Box::new(c))
 }
 
-/// Compare's cloud model `name` of `service`, ticked.
-fn pick(name: &str, service: ServiceName) -> CompareCloud {
-    CompareCloud {
-        name: Redacted::new(name.to_owned()),
-        service,
-        tick: true,
-    }
-}
-
-/// Compare's widest page of picks (T24 review 1): the longest model name of Groq, `OpenRouter`, `ElevenLabs` and
-/// `AssemblyAI`, each with its service's mark, then an Other id typed to its most under `OpenRouter`, all ticked.
-fn compare_wide() -> VoiceSheet {
-    let ids = ["groq", "openrouter", "elevenlabs", "assemblyai"];
-    let rows = ids.map(|id| services().get(id).expect("an offered row"));
-    let longest = |r: &&Service| {
-        let name = r.models.iter().map(|m| &m.name).max_by_key(|n| n.len());
-        name.map(|n| pick(n, r.shown()))
-    };
-    let mut cloud: Vec<CompareCloud> = rows.iter().filter_map(longest).take(per() - 1).collect();
-    cloud.push(pick(&"m".repeat(*TAG_LEN.end()), rows[1].shown()));
-    VoiceSheet::Compare(CompareSheet::Ready {
-        models: 2,
-        device: DeviceLabel::Auto(DeviceName::Cpu),
-        mic: CompareMic::Closed,
-        cloud,
-        send: rows.map(Service::shown).to_vec(),
-    })
-}
-
-/// Compare's set text with every cloud model of Groq and Custom ticked.
-fn compare_long() -> VoiceSheet {
-    VoiceSheet::Compare(CompareSheet::Ready {
-        models: 2,
-        device: DeviceLabel::Auto(DeviceName::Cpu),
-        mic: CompareMic::Closed,
-        cloud: vec![
-            pick("Whisper Large v3 Turbo", named("Groq")),
-            pick("Whisper Large v3", named("Groq")),
-            pick("whisper-large-v3-turbo", ServiceName::Custom),
-        ],
-        send: vec![named("Groq"), ServiceName::Custom],
-    })
-}
-
 /// The longest cloud panels, by name; a card shows its first part on page 1 of 2, and its second on page 2. Each
 /// Cloud page is named by its number, and each service of the table has its card's two parts.
 pub fn panels() -> Vec<(String, Shown)> {
     let two = |sheet, at| paged(shown(sheet, &[]), at, 2, 0);
-    let mut out = vec![
-        (
-            "modelsLong",
-            paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1),
-        ),
-        ("compareLong", shown(compare_long(), &[])),
-        ("compareWide", paged(shown(compare_wide(), &[]), 0, 2, 0)),
-    ]
-    .into_iter()
-    .map(|(name, s)| (name.to_owned(), s))
-    .collect::<Vec<_>>();
+    let models = paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1);
+    let mut out = vec![("modelsLong".to_owned(), models)];
     for (start, off) in [(CLOUD_LONG, false), (CLOUD_LONG_OFF, true)] {
         let pages = cloud_long(off).into_iter().enumerate();
         out.extend(pages.map(|(i, s)| (format!("{start}{}", i + 1), s)));
@@ -246,17 +192,6 @@ fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
         shown.extend(c.rows.iter().map(|r| r.name.clone()));
     }
     assert_eq!(shown, all);
-}
-
-/// Compare's wide page is a full page with each named service's mark, so the fit test measures the widest case.
-#[test]
-fn the_wide_compare_page_is_full_with_each_services_mark() {
-    let VoiceSheet::Compare(CompareSheet::Ready { cloud, send, .. }) = compare_wide() else {
-        panic!("Compare, ready")
-    };
-    assert_eq!(cloud.len(), per(), "a full page");
-    let marked = |s: &ServiceName| cloud.iter().any(|c| &c.service == s);
-    assert!(send.iter().all(marked), "each service's mark: {send:?}");
 }
 
 /// A Custom row shows its own warning as the module does, and none without one, so the fit test measures it too.

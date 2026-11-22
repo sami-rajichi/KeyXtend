@@ -1,0 +1,148 @@
+//! Compare's longest pages of cloud picks, which the fit test measures: its set text with cloud models, the offered
+//! models longest by name plus mark beside a typed Other id, and the same beside Custom's and `OpenRouter`'s typed ids.
+
+use super::cloud::named;
+use super::long::{per, services};
+use super::{Shown, paged, shown};
+use kx_mod_voice::services::Service;
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    CompareCloud, CompareMic, CompareSheet, DeviceLabel, DeviceName, ServiceName, TAG_LEN,
+    VoiceSheet,
+};
+use std::cmp::Reverse;
+
+/// Row `id` of the services table.
+fn row(id: &str) -> &'static Service {
+    services().get(id).expect("a row of the table")
+}
+
+/// Compare's cloud model `name` of `service`, ticked.
+fn pick(name: &str, service: ServiceName) -> CompareCloud {
+    CompareCloud {
+        name: Redacted::new(name.to_owned()),
+        service,
+        tick: true,
+    }
+}
+
+/// A pick's width in characters, as the review counts it: its name and its service's mark.
+fn width(c: &CompareCloud) -> usize {
+    let mark = match &c.service {
+        ServiceName::Named(n) => n.chars().count(),
+        ServiceName::Custom => 0,
+    };
+    c.name.expose().chars().count() + mark
+}
+
+/// Each offered row's listed models as picks, in the table's order.
+fn offered() -> impl Iterator<Item = CompareCloud> {
+    let rows = services().rows().iter().filter(|r| r.offered);
+    rows.flat_map(|r| r.models.iter().map(|m| pick(&m.name, r.shown())))
+}
+
+/// The offered picks, widest first; ties keep the table's order.
+fn widest() -> Vec<CompareCloud> {
+    let mut all: Vec<CompareCloud> = offered().collect();
+    all.sort_by_key(|c| Reverse(width(c)));
+    all
+}
+
+/// Row `id`'s typed Other id at its most, `c` over and over.
+fn typed(c: char, id: &str) -> CompareCloud {
+    pick(&c.to_string().repeat(*TAG_LEN.end()), row(id).shown())
+}
+
+/// Compare, ready, with `cloud` on its page and `send` in its warning.
+fn ready(cloud: Vec<CompareCloud>, send: Vec<ServiceName>) -> VoiceSheet {
+    VoiceSheet::Compare(CompareSheet::Ready {
+        models: 2,
+        device: DeviceLabel::Auto(DeviceName::Cpu),
+        mic: CompareMic::Closed,
+        cloud,
+        send,
+    })
+}
+
+/// Every offered service, as the send warning names them with each ticked.
+fn every() -> Vec<ServiceName> {
+    let rows = services().rows().iter().filter(|r| r.offered);
+    rows.map(Service::shown).collect()
+}
+
+/// Compare's set text with every cloud model of Groq and Custom ticked.
+fn compare_long() -> VoiceSheet {
+    let cloud = vec![
+        pick("Whisper Large v3 Turbo", named("Groq")),
+        pick("Whisper Large v3", named("Groq")),
+        pick("whisper-large-v3-turbo", ServiceName::Custom),
+    ];
+    ready(cloud, vec![named("Groq"), ServiceName::Custom])
+}
+
+/// Compare's widest page (T24 re-review 1): the offered picks longest by name plus mark, then `OpenRouter`'s typed id.
+fn compare_wide() -> VoiceSheet {
+    let mut cloud: Vec<CompareCloud> = widest().into_iter().take(per() - 1).collect();
+    cloud.push(typed('m', "openrouter"));
+    ready(cloud, every())
+}
+
+/// Custom's typed id first and `OpenRouter`'s last, as the Cloud page's order puts them, with the widest offered picks
+/// between them.
+fn compare_typed() -> VoiceSheet {
+    let mut cloud = vec![typed('m', "custom")];
+    cloud.extend(widest().into_iter().take(per() - 2));
+    cloud.push(typed('w', "openrouter"));
+    ready(cloud, every())
+}
+
+/// Compare's longest panels, by name; the wide pages show the pager.
+pub fn panels() -> Vec<(String, Shown)> {
+    let two = |sheet| paged(shown(sheet, &[]), 0, 2, 0);
+    [
+        ("compareLong", shown(compare_long(), &[])),
+        ("compareWide", two(compare_wide())),
+        ("compareTyped", two(compare_typed())),
+    ]
+    .into_iter()
+    .map(|(name, s)| (name.to_owned(), s))
+    .collect()
+}
+
+/// The picks on Compare's page `sheet`.
+fn picks(sheet: VoiceSheet) -> Vec<CompareCloud> {
+    let VoiceSheet::Compare(CompareSheet::Ready { cloud, .. }) = sheet else {
+        panic!("Compare, ready")
+    };
+    cloud
+}
+
+/// The wide page is full, no offered pick left off it is wider than one on it, and its typed id is at its most.
+#[test]
+fn the_wide_compare_page_holds_the_widest_offered_picks_and_a_typed_id() {
+    let cloud = picks(compare_wide());
+    assert_eq!(cloud.len(), per(), "a full page");
+    let (on, typed) = cloud.split_at(per() - 1);
+    let least = on.iter().map(width).min().expect("offered picks");
+    let wider: Vec<CompareCloud> = offered()
+        .filter(|c| !on.contains(c) && width(c) > least)
+        .collect();
+    assert_eq!(wider, [], "no wider pick is left off");
+    assert_eq!(typed[0].name.expose().len(), *TAG_LEN.end());
+}
+
+/// The typed page holds Custom's and `OpenRouter`'s typed ids at their most round the widest offered picks, and both
+/// rows take an Other id.
+#[test]
+fn the_typed_compare_page_holds_two_typed_ids_round_the_widest_picks() {
+    let cloud = picks(compare_typed());
+    assert_eq!(cloud.len(), per(), "a full page");
+    let rows = ["custom", "openrouter"].map(row);
+    assert!(
+        rows.iter().all(|r| r.offered && r.other),
+        "both take a typed id"
+    );
+    let ends = [&cloud[0], &cloud[per() - 1]].map(|c| (c.service.clone(), c.name.expose().len()));
+    assert_eq!(ends, rows.map(|r| (r.shown(), *TAG_LEN.end())));
+    assert_eq!(cloud[1..per() - 1], widest()[..per() - 2]);
+}

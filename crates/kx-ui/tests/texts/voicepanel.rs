@@ -17,6 +17,7 @@ mod cloud;
 mod device;
 mod keys;
 mod long;
+mod picks;
 mod sheets;
 
 /// The fixture's file name.
@@ -213,6 +214,7 @@ fn panels(tag: &str) -> Vec<(String, Shown)> {
     fixed
         .chain(keys::panels(tag))
         .chain(long::panels())
+        .chain(picks::panels())
         .collect()
 }
 

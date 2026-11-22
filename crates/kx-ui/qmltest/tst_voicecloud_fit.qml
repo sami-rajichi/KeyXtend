@@ -74,7 +74,7 @@ Item {
             const body = p.body !== undefined ? p.body : Kit.only(kids(p).filter(o => o.spacing !== undefined));
             verify(body, "one body");
             const inside = rect(box, body), room = rect(box, p);
-            verify(inside.y >= room.y - 0.5, "it starts inside the page");
+            verify(inside.y >= room.y - 0.5, "it starts inside the page: " + inside.h + " of " + room.h);
             verify(inside.y + inside.h <= room.y + room.h + 0.5, "it ends inside the page: " + inside.h + " of " + room.h);
         }
         // Checks that no text on `box` is cut, drawn past the panel or past its own width.
@@ -129,13 +129,15 @@ Item {
         function test_compares_widest_picks_stay_in_the_body_data() {
             const all = [];
             for (const [tag, f] of Object.entries(looks))
-                ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + t, lk: f.lk, t: t }));
+                for (const [name, typed] of [["compareWide", 1], ["compareTyped", 2]])
+                    ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + name + " " + t, name, typed, lk: f.lk, t }));
             return all;
         }
-        // T24 review 1: Groq's and OpenRouter's longest picks and a typed id at its most, beside the pager. Each chip
-        // stays inside the body, and only a name wider than the body is shortened, while readers hear it whole.
+        // T24 re-review 1: the offered picks longest by name plus mark, by the pager, beside a typed id at its most or
+        // beside Custom's and OpenRouter's. The page keeps its height, as picks pair when they would take more rows,
+        // each chip stays in the body, and only a name past its room is shortened, while readers hear it whole.
         function test_compares_widest_picks_stay_in_the_body(d) {
-            const box = make("compareWide", d.t, d.lk);
+            const box = make(d.name, d.t, d.lk);
             keeps(box);
             const p = page(box);
             verify(p.pager > 0, "the pager beside the picks");
@@ -148,8 +150,13 @@ Item {
             });
             compare(out.map(o => o.entry.name), [], "every chip inside the body");
             const names = picks.map(o => Kit.only(Board.all(o, n => n.text === o.entry.name)));
-            const typed = p.all[p.all.length - 1].name;
-            compare(names.filter(n => n.truncated).map(n => n.text), [typed], "only the typed id is shortened");
+            const longest = Math.max(...p.all.map(e => e.name.length));
+            const typed = p.all.filter(e => e.name.length === longest).map(e => e.name);
+            compare(typed.length, d.typed, "the page's typed ids");
+            const over = picks.filter(o => o.natural > p.most + 0.5).map(o => o.entry.name);
+            verify(typed.every(t => over.indexOf(t) >= 0), "each typed id passes its room");
+            compare(names.filter(n => n.truncated).map(n => n.text), over, "only a name past its room is shortened");
+            compare(picks.filter(o => o.width > p.most + 0.5).map(o => o.entry.name), [], "each chip within its room");
             compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
             verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
         }

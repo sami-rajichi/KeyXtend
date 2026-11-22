@@ -24,6 +24,27 @@ Item {
     // The pager's room beside the body while the picks take more than one page.
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     readonly property alias body: col
+    // Two picks to a row, each at most half the body, when at their own widths they would take more rows than that.
+    readonly property bool pair: rows(flow.children) > Math.ceil(picks.count / 2)
+    // The widest a pick may be: the body, or half of it less the gap while picks pair.
+    readonly property real most: pair ? Math.floor((col.width - flow.spacing) / 2) : col.width
+
+    // The rows the picks among `items` take in the body at their own widths, as the Flow lays them.
+    function rows(items) {
+        let n = 0, used = 0;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].natural === undefined)
+                continue;
+            const w = Math.min(items[i].natural, col.width);
+            if (n === 0 || used + flow.spacing + w > col.width) {
+                n++;
+                used = w;
+            } else {
+                used += flow.spacing + w;
+            }
+        }
+        return n;
+    }
 
     height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
 
@@ -66,6 +87,7 @@ Item {
         // The cloud models it may send the recording to, each a tick target; slots stay while the count does, so a
         // tick pops and fades in place.
         Flow {
+            id: flow
             visible: picks.count > 0
             width: parent.width
             spacing: read.pn.filter_gap_px * read.s
@@ -99,7 +121,7 @@ Item {
     }
     // A cloud model to tick (no mock-up of its own, so a list row's tick box and ticked fill, VoiceRow, on a filter
     // chip's big target, WCAG 2.5.8): its tick box, name and service's mark; a click ticks it at let-go (ADR-0024). A
-    // name too wide for the body is shortened, and readers still hear it whole.
+    // name too wide for its room is shortened, and readers still hear it whole.
     component Pick: Rectangle {
         id: pick
         required property int index
@@ -108,6 +130,8 @@ Item {
         readonly property bool hot: read.idle && area.containsMouse
         readonly property bool lit: on || hot
         readonly property var sh: read.pn.filter_px
+        // Its width with the whole name.
+        readonly property real natural: label.implicitWidth + box.width + mark.width + 2 * parts.spacing + 2 * sh[1] * read.s
 
         // Sends the tick click, which the module takes only while the microphone is closed.
         function act() {
@@ -157,8 +181,9 @@ Item {
                 s: read.s
             }
             Label {
-                // The body's width less the chip's padding, tick box, mark and gaps.
-                readonly property real room: read.body.width - 2 * pick.sh[1] * read.s - box.width - mark.width - 2 * parts.spacing
+                id: label
+                // The widest a pick may be less the chip's padding, tick box, mark and gaps.
+                readonly property real room: read.most - 2 * pick.sh[1] * read.s - box.width - mark.width - 2 * parts.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.min(implicitWidth, Math.max(0, room))
                 elide: Text.ElideRight

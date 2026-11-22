@@ -278,7 +278,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 69,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -418,7 +418,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -565,7 +565,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 63,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -712,7 +712,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 65,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -855,7 +855,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 67,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1006,7 +1006,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1153,7 +1153,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1304,7 +1304,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1451,7 +1451,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1598,7 +1598,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 61,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1749,7 +1749,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1896,7 +1896,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 70,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2036,7 +2036,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2183,7 +2183,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 64,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2345,7 +2345,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 66,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2503,7 +2503,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 68,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2665,7 +2665,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2812,7 +2812,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2959,7 +2959,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3106,7 +3106,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3253,7 +3253,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 62,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3400,7 +3400,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3894,7 +3894,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4076,7 +4076,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4198,7 +4198,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4384,7 +4384,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4566,7 +4566,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4688,7 +4688,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5290,7 +5290,109 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 69,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "compareTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "بدء القراءة",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "اقرأ هذا النص بصوت عالٍ مرة واحدة، ثم يكتبه كل نموذج جاهز، واحدًا تلو الآخر.",
+          "is": "ready",
+          "line": "نموذجان جاهزان · تلقائي (المعالج)",
+          "picks": [
+            {
+              "name": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+              "said": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm، عنوان مخصّص",
+              "service": "عنوان مخصّص",
+              "tick": true
+            },
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3، OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo، OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe، Gemini",
+              "service": "Gemini",
+              "tick": true
+            },
+            {
+              "name": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+              "said": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww، OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "سترسل المقارنة صوتك إلى Groq وLemonfox والعنوان الذي تكتبه وOpenRouter وElevenLabs وGemini وAssemblyAI عند الإيقاف.",
+          "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
+        },
+        "sub": "للغة العربية",
+        "ticked": 0,
+        "title": "مقارنة النماذج",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5351,21 +5453,21 @@ var views = {
           "line": "نموذجان جاهزان · تلقائي (المعالج)",
           "picks": [
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo، Groq",
-              "service": "Groq",
-              "tick": true
-            },
-            {
               "name": "Voxtral Mini Transcribe 3",
               "said": "Voxtral Mini Transcribe 3، OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Scribe v2",
-              "said": "Scribe v2، ElevenLabs",
-              "service": "ElevenLabs",
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo، OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe، Gemini",
+              "service": "Gemini",
               "tick": true
             },
             {
@@ -5382,7 +5484,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "سترسل المقارنة صوتك إلى Groq وOpenRouter وElevenLabs وAssemblyAI عند الإيقاف.",
+          "send": "سترسل المقارنة صوتك إلى Groq وLemonfox والعنوان الذي تكتبه وOpenRouter وElevenLabs وGemini وAssemblyAI عند الإيقاف.",
           "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
         },
         "sub": "للغة العربية",
@@ -5392,7 +5494,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -10584,7 +10686,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 69,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10724,7 +10826,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 59,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10871,7 +10973,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 63,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11018,7 +11120,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 65,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11161,7 +11263,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 67,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11312,7 +11414,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 49,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11459,7 +11561,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 57,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11610,7 +11712,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 53,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11757,7 +11859,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 51,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11904,7 +12006,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 61,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12055,7 +12157,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 55,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12202,7 +12304,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 70,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12342,7 +12444,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 60,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12489,7 +12591,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 64,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12651,7 +12753,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 66,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12809,7 +12911,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 68,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12971,7 +13073,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 50,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13118,7 +13220,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 58,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13265,7 +13367,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 54,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13412,7 +13514,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 52,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13559,7 +13661,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 62,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13706,7 +13808,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 56,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14200,7 +14302,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 43,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14382,7 +14484,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 44,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14504,7 +14606,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 45,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14690,7 +14792,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 46,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14872,7 +14974,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 47,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14994,7 +15096,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 48,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15596,7 +15698,109 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 41,
+      "round": 69,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "compareTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Start reading",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "Read this text aloud once. Each ready model then writes it, one after another.",
+          "is": "ready",
+          "line": "2 ready models · Automatic (processor)",
+          "picks": [
+            {
+              "name": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+              "said": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm, Custom address",
+              "service": "Custom address",
+              "tick": true
+            },
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe, Gemini",
+              "service": "Gemini",
+              "tick": true
+            },
+            {
+              "name": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+              "said": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Compare sends your voice to Groq, Lemonfox, the address you type, OpenRouter, ElevenLabs, Gemini and AssemblyAI at Stop.",
+          "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
+        },
+        "sub": "For English",
+        "ticked": 0,
+        "title": "Compare models",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15657,21 +15861,21 @@ var views = {
           "line": "2 ready models · Automatic (processor)",
           "picks": [
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo, Groq",
-              "service": "Groq",
-              "tick": true
-            },
-            {
               "name": "Voxtral Mini Transcribe 3",
               "said": "Voxtral Mini Transcribe 3, OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Scribe v2",
-              "said": "Scribe v2, ElevenLabs",
-              "service": "ElevenLabs",
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe, Gemini",
+              "service": "Gemini",
               "tick": true
             },
             {
@@ -15688,7 +15892,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Compare sends your voice to Groq, OpenRouter, ElevenLabs and AssemblyAI at Stop.",
+          "send": "Compare sends your voice to Groq, Lemonfox, the address you type, OpenRouter, ElevenLabs, Gemini and AssemblyAI at Stop.",
           "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
         },
         "sub": "For English",
@@ -15698,7 +15902,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 42,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -20890,7 +21094,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 69,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21030,7 +21234,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21177,7 +21381,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 63,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21324,7 +21528,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 65,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21467,7 +21671,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 67,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21618,7 +21822,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21765,7 +21969,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21916,7 +22120,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22063,7 +22267,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22210,7 +22414,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 61,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22361,7 +22565,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22508,7 +22712,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 70,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22648,7 +22852,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22795,7 +22999,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 64,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22957,7 +23161,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 66,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23115,7 +23319,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 68,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23277,7 +23481,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23424,7 +23628,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23571,7 +23775,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23718,7 +23922,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23865,7 +24069,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 62,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24012,7 +24216,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24506,7 +24710,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24688,7 +24892,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24810,7 +25014,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24996,7 +25200,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25178,7 +25382,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25300,7 +25504,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25902,7 +26106,109 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 69,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "compareTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Commencer la lecture",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "intro": "Lisez ce texte à voix haute une fois. Chaque modèle prêt l’écrit ensuite, l’un après l’autre.",
+          "is": "ready",
+          "line": "2 modèles prêts · Automatique (processeur)",
+          "picks": [
+            {
+              "name": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+              "said": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm, Adresse personnalisée",
+              "service": "Adresse personnalisée",
+              "tick": true
+            },
+            {
+              "name": "Voxtral Mini Transcribe 3",
+              "said": "Voxtral Mini Transcribe 3, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe, Gemini",
+              "service": "Gemini",
+              "tick": true
+            },
+            {
+              "name": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+              "said": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Comparer enverra votre voix à Groq, Lemonfox, l’adresse que vous saisissez, OpenRouter, ElevenLabs, Gemini et AssemblyAI à l’arrêt.",
+          "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
+        },
+        "sub": "En français",
+        "ticked": 0,
+        "title": "Comparer les modèles",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25963,21 +26269,21 @@ var views = {
           "line": "2 modèles prêts · Automatique (processeur)",
           "picks": [
             {
-              "name": "Whisper Large v3 Turbo",
-              "said": "Whisper Large v3 Turbo, Groq",
-              "service": "Groq",
-              "tick": true
-            },
-            {
               "name": "Voxtral Mini Transcribe 3",
               "said": "Voxtral Mini Transcribe 3, OpenRouter",
               "service": "OpenRouter",
               "tick": true
             },
             {
-              "name": "Scribe v2",
-              "said": "Scribe v2, ElevenLabs",
-              "service": "ElevenLabs",
+              "name": "Whisper Large v3 Turbo",
+              "said": "Whisper Large v3 Turbo, OpenRouter",
+              "service": "OpenRouter",
+              "tick": true
+            },
+            {
+              "name": "Gemini 3.5 Transcribe",
+              "said": "Gemini 3.5 Transcribe, Gemini",
+              "service": "Gemini",
               "tick": true
             },
             {
@@ -25994,7 +26300,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Comparer enverra votre voix à Groq, OpenRouter, ElevenLabs et AssemblyAI à l’arrêt.",
+          "send": "Comparer enverra votre voix à Groq, Lemonfox, l’adresse que vous saisissez, OpenRouter, ElevenLabs, Gemini et AssemblyAI à l’arrêt.",
           "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
         },
         "sub": "En français",
@@ -26004,7 +26310,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "Copié",
