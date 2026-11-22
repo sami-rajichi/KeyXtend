@@ -10,9 +10,9 @@ Item {
     // The wave, for the bar and the tests, and the height the shown part needs, read off the bar's `mode` itself as all
     // that sizes the bar is.
     readonly property alias wave: wave
-    readonly property var states: host.names.states
-    readonly property real need: host.mode === states.listening ? wave.implicitHeight
-        : host.mode === states.transcribing ? shim.height : words.implicitHeight
+    readonly property var named: host.names.states
+    readonly property real need: host.mode === named.listening ? wave.implicitHeight
+        : host.mode === named.transcribing ? shim.height : words.implicitHeight
 
     height: need
 
