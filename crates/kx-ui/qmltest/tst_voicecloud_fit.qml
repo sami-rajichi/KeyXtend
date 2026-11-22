@@ -88,9 +88,17 @@ Item {
             verify(inside.y >= room.y - 0.5, "it starts inside the page: " + inside.h + " of " + room.h);
             verify(inside.y + inside.h <= room.y + room.h + 0.5, "it ends inside the page: " + inside.h + " of " + room.h);
         }
-        // Checks that no text on `box` is cut, drawn past the panel or past its own width.
-        function uncut(box) {
-            const shown = o => o.visible && o.text !== undefined && o.font !== undefined && !!o.text && !typed(o);
+        // Whether `o` lies in a cloud pick, whose name and mark the pick tests measure.
+        function inPick(o) {
+            for (let at = o.parent; at; at = at.parent)
+                if (at.natural !== undefined && at.entry !== undefined)
+                    return true;
+            return false;
+        }
+        // Checks that no text on `box` is cut, drawn past the panel or past its own width, but those `skip` leaves out.
+        function uncut(box, skip) {
+            const shown = o => o.visible && o.text !== undefined && o.font !== undefined && !!o.text && !typed(o)
+                && !(skip && skip(o));
             const said = Board.all(box.contentItem, shown);
             verify(said.length > 0, "texts show");
             const cut = said.filter(o => o.truncated);
@@ -145,11 +153,12 @@ Item {
             return all;
         }
         // T24 re-review 1: the offered picks longest by name plus mark, by the pager, beside a typed id at its most or
-        // beside Custom's and OpenRouter's. The page keeps its height, as picks pair when they would take more rows,
-        // each chip stays in the body, and only a pick past its room is shortened, while readers hear it whole.
+        // beside Custom's and OpenRouter's, under the warning naming every service. The page keeps its height and every
+        // other text shows whole, each chip stays in the body, and only a pick past its room is shortened.
         function test_compares_widest_picks_stay_in_the_body(d) {
             const box = make(d.name, d.t, d.lk);
             keeps(box);
+            uncut(box, inPick);
             const p = page(box);
             verify(p.pager > 0, "the pager beside the picks");
             const picks = Board.all(p.body, o => o.visible && o.Accessible.role === Accessible.CheckBox);
