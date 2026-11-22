@@ -86,6 +86,7 @@ impl<'a> Stock<'a> {
             card,
             why,
             name: Redacted::new(row.id.clone()),
+            short: Redacted::new(row.short.clone()),
             print: row.print,
             bytes: row.bytes,
         })
@@ -128,6 +129,7 @@ impl<'a> Stock<'a> {
             card,
             why,
             name: Redacted::new(file.name.clone()),
+            short: Redacted::new(other.short().to_owned()),
             print,
             bytes: file.bytes,
         })

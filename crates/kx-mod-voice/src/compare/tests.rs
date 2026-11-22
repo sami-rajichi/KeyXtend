@@ -46,6 +46,7 @@ fn entrant(n: u8, card: bool) -> Entrant {
         card,
         why: None,
         name: Redacted::new(format!("m{n}")),
+        short: Redacted::new(format!("M{n}")),
         print: print(n),
         bytes: 1,
     };

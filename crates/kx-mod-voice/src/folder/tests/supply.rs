@@ -85,6 +85,11 @@ fn the_default_in_the_folder_serves_with_its_own_code() {
         (ready.name.expose().as_str(), ready.print),
         (parakeet.id.as_str(), parakeet.print)
     );
+    assert_eq!(
+        ready.short.expose(),
+        &parakeet.short,
+        "its row's, not the file's"
+    );
     assert_eq!((ready.bytes, ready.card), (parakeet.bytes, None));
 }
 
@@ -145,6 +150,11 @@ fn a_picked_other_file_serves_the_languages_its_facts_name() {
     assert_eq!(
         (ready.name.expose().as_str(), ready.print),
         ("ggml-medium.bin", stranger())
+    );
+    assert_eq!(
+        ready.short.expose(),
+        "ggml-medium",
+        "its name without the extension"
     );
 }
 

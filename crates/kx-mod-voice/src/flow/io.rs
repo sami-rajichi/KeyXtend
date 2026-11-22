@@ -181,6 +181,8 @@ pub struct Ready {
     pub why: Option<Why>,
     /// Its row's id or its file's name, for History and the counts.
     pub name: Redacted<String>,
+    /// The bar's name for it: its row's short name, or its file's name without the extension.
+    pub short: Redacted<String>,
     /// Its file's fingerprint, which a card's check goes by.
     pub print: Fingerprint,
     /// The size Download fetches for the language, in bytes, should the file be gone.
