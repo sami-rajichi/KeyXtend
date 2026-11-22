@@ -44,7 +44,7 @@ Decided with the owner on 2026-11-09 and 2026-11-10, from two research rounds re
 - **Switching a service on** shows its card first: where the voice goes, whether the service trains on it or keeps it, what is free and what it costs for light and heavy use, the date these facts were read, and a link to the service's own page. A service that trains on the voice by default carries a warning and names the account switch that stops it. The user confirms once per service.
 - **The key** is typed on the panel's own line (ADR-0040), shown as dots, with Paste; then Test. Remove key deletes it.
 - **Choosing:** on the Models page, each ready service's models appear beside the local ones for the language in front, marked with a cloud icon. "Use for this language" works as for a local model. Local stays the default; a cloud model is never the table's default (owner: off until switched on).
-- **On the bar**, a cloud dictation shows a small cloud mark and the service's name while listening and transcribing, so the user always knows the voice is leaving the PC.
+- **On the bar**, a cloud dictation shows a small cloud mark and the service's name while listening and transcribing, so the user always knows the voice is leaving the PC. The chip shows the service's short name: Custom's own short name, and every other service its name.
 - Compare models can include cloud models: the user ticks which ones, and it says that the recording will be sent to each ticked service (designer).
 
 ## How a cloud dictation runs
