@@ -8,6 +8,8 @@ use kx_module_api::ports::{ClipPart, ImageCodec};
 const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 /// FNV-1a's 64-bit prime.
 const PRIME: u64 = 0x0000_0100_0000_01b3;
+/// A text part's tag; saved hashes hold it, so it never changes.
+const TEXT: u8 = 1;
 
 /// The hash of a copy of `parts`: each part's tag and its length-prefixed bytes.
 #[must_use]
@@ -16,6 +18,15 @@ pub fn of(parts: &[ClipPart]) -> u64 {
     for part in parts {
         h.part(part);
     }
+    h.0
+}
+
+/// The hash `of` gives a copy of `text` alone, made without copying the text.
+#[must_use]
+pub fn of_text(text: &str) -> u64 {
+    let mut h = Fnv(OFFSET);
+    h.eat(&[TEXT]);
+    h.run(text.as_bytes());
     h.0
 }
 
@@ -71,7 +82,7 @@ impl Fnv {
 /// The part's tag; saved hashes hold it, so it never changes.
 fn part_tag(part: &ClipPart) -> u8 {
     match part {
-        ClipPart::Text(_) => 1,
+        ClipPart::Text(_) => TEXT,
         ClipPart::Html(_) => 2,
         ClipPart::Rtf(_) => 3,
         ClipPart::Image { .. } => 4,
@@ -129,6 +140,14 @@ mod tests {
         let rtf = ClipPart::Rtf(Redacted::new(b"x".to_vec()));
         assert_ne!(of(&[html("x")]), of(&[rtf]));
         assert_ne!(of(&[text("x")]), of(&[html("x")]));
+    }
+
+    #[test]
+    fn a_text_alone_hashes_as_a_copy_of_its_one_part() {
+        for s in ["", "sk-zebra-quartz"] {
+            assert_eq!(of_text(s), of(&[text(s)]), "{s}");
+        }
+        assert_ne!(of_text("x"), of(&[text("x"), html("x")]));
     }
 
     #[test]

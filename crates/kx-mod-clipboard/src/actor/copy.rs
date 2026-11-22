@@ -63,7 +63,7 @@ impl Actor {
             if let Some(from) = self.history.raise(id, &now) {
                 self.moved(id, from);
             }
-            return self.kept(id, app);
+            return self.kept(id, app, &parts);
         }
         if let Err(note) = admit(&self.history, &entry, self.free(), &self.limits) {
             return self.say_note(note);
@@ -71,7 +71,7 @@ impl Actor {
         let kind = entry.kind;
         let id = self.history.add(entry);
         if self.put(id, &parts) {
-            self.kept(id, app);
+            self.kept(id, app, &parts);
             self.look_new(id, kind, parts);
             for gone in trim(&mut self.history, &self.limits) {
                 self.forget(&gone);
@@ -113,11 +113,12 @@ impl Actor {
         }
     }
 
-    /// Notes that `id` was kept or moved up for `app`: follow-the-clear watches it, the board holds it, and the note is
-    /// past.
-    fn kept(&mut self, id: u64, app: Option<&AppRef>) {
+    /// Notes that `id` was kept or moved up for `app` with `parts`: follow-the-clear watches it, the board holds it, its
+    /// text may go back again if it had left the history, and the note is past.
+    fn kept(&mut self, id: u64, app: Option<&AppRef>, parts: &[ClipPart]) {
         self.follow.kept(id, app, self.ports.clock.now());
         self.board.kept(id);
+        self.lost.kept(parts);
         self.note = None;
         self.changed();
     }

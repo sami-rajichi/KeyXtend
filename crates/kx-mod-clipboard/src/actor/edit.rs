@@ -20,6 +20,7 @@ impl Actor {
     pub(super) fn forget(&mut self, entry: &Entry) {
         self.board.gone(entry.id);
         self.lent.gone(entry.id);
+        self.lost.gone(entry);
         if let Err(error) = self.store.delete(entry) {
             tracing::warn!(%error, "a clipboard entry's blobs were not all removed");
         }

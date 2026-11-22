@@ -8,6 +8,7 @@ mod days;
 mod edit;
 mod lend;
 mod look;
+mod lost;
 mod paste;
 mod show;
 mod take;
@@ -34,6 +35,7 @@ use crate::settings::ClipSettings;
 use crate::store::{Loaded, Store};
 use board::Board;
 use lend::Lend;
+use lost::Lost;
 use paste::Pasting;
 pub(crate) use watched::Watched;
 
@@ -136,6 +138,8 @@ pub(crate) struct Actor {
     lent: Lend,
     /// The text of the last take that found no entry to forget, wiped once the next copy's note comes.
     missed: Option<Secret>,
+    /// The texts that left the history, never written back until kept again.
+    lost: Lost,
     /// The entries whose thumbnail was asked this run.
     asked: BTreeSet<u64>,
     /// The worker is down until then, so no thumbnail is asked before.
@@ -174,6 +178,7 @@ impl Actor {
             board: Board::default(),
             lent: Lend::default(),
             missed: None,
+            lost: Lost::new(settings.max_entries),
             asked: BTreeSet::new(),
             thumbs_at: None,
             draws: Draws::default(),

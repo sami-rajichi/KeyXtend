@@ -65,6 +65,11 @@ impl Board {
         }
     }
 
+    /// True when the board holds entry `id`, so the watch told the copy that entry keeps.
+    pub(super) fn holds(&self, id: u64) -> bool {
+        self.held == Held::Entry(id)
+    }
+
     /// The copy just told is one a take read, so it never goes back.
     pub(super) fn taken(&mut self) {
         self.held = Held::Gone;
@@ -120,7 +125,7 @@ impl Actor {
                 Found::Moved => {}
             }
         }
-        let gone = held == Held::Gone || text.as_ref().is_some_and(|t| self.was_taken(t));
+        let gone = held == Held::Gone || text.as_ref().is_some_and(|t| self.lost.has(t.expose()));
         let (parts, held) = match (text, held) {
             // The read text is wiped as it drops, and never written.
             (Some(_), _) if gone => {

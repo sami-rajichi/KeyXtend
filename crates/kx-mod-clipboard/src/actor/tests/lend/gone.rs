@@ -3,7 +3,7 @@
 //! clipboard empty. With no text there it is typed, as it may be a picture.
 
 use kx_module_api::ModuleId;
-use kx_module_api::ports::{ClipAct, ClipPart, ClipTake};
+use kx_module_api::ports::{ClipAct, ClipError, ClipNote, ClipPart, ClipTake};
 
 use super::super::super::Msg;
 use super::super::rig::Rig;
@@ -73,6 +73,97 @@ fn a_take_whose_note_is_still_due_never_writes_the_taken_text_back() {
     assert_eq!(pasted(&mut rig), emptied());
 }
 
+/// The lend seed's steps (T24): a copy taken before its note, a lend that times out, the note, another copy, then the
+/// same text copied again, its note still due, and a busy take; that text stays gone until the history keeps it again.
+#[test]
+fn the_same_text_copied_again_after_its_take_stays_gone_until_kept_again() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    lend(&mut rig);
+    rig.fakes.clip.fail_text(ClipError::Busy);
+    rig.advance(rig.settings.paste_wait());
+    assert_eq!(rig.fakes.writer.writes(), emptied(), "the taken key never");
+    rig.text(KEY);
+    rig.fakes.clip.set_text(Some("next"));
+    rig.text("next");
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    assert_eq!(pasted(&mut rig), emptied(), "not kept again yet");
+    rig.text(KEY);
+    assert_eq!(pasted(&mut rig), [vec![text(SAID)], vec![text(KEY)]]);
+}
+
+/// A sibling (T24): a text a take read comes back to the clipboard after another copy was kept, as a mark the board
+/// takes for our echo; it was never kept again, so the lend leaves the clipboard empty.
+#[test]
+fn a_taken_text_back_on_the_clipboard_after_another_copy_never_goes_back() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(KEY));
+    rig.push(ClipNote::Marked { app: None });
+    take(&mut rig, ASKERS[1]);
+    rig.fakes.clip.set_text(Some("next"));
+    rig.text("next");
+    lend(&mut rig);
+    rig.advance(rig.settings.paste_wait());
+    rig.fakes.clip.set_text(Some(KEY));
+    rig.push(ClipNote::Marked { app: None });
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// A sibling (T24): a key taken before its note, an entry inserted and then taken, then the key's late note; that note
+/// does not undo the second take, so the lend leaves the clipboard empty, never the inserted text.
+#[test]
+fn a_late_note_of_an_earlier_take_never_brings_back_a_text_taken_since() {
+    let mut rig = holding(vec![text("older")]);
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    rig.open();
+    rig.tick_row(0);
+    rig.send(Msg::Act(ClipAct::Insert));
+    rig.fakes.clip.set_text(Some("older"));
+    rig.advance(rig.settings.paste_wait());
+    take(&mut rig, ASKERS[1]);
+    rig.text(KEY);
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// A sibling of the lend seed (T24): the text a lend would put back is copied again and taken while the lend runs, its
+/// note not yet come, so the lend ends with the clipboard empty, never that text.
+#[test]
+fn a_take_during_a_lend_of_the_text_it_would_put_back_leaves_the_clipboard_empty() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.fail_text(ClipError::Busy);
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    lend(&mut rig);
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    rig.advance(rig.settings.paste_wait());
+    assert_eq!(rig.fakes.writer.writes(), emptied());
+}
+
+/// Another sibling (T24): a text kept, the clipboard cleared, then the same text copied again and taken before its
+/// note; its older entry goes, and the lend leaves the clipboard empty, never that text.
+#[test]
+fn a_take_of_a_kept_text_copied_again_before_its_note_never_comes_back() {
+    let mut rig = Rig::new();
+    lend(&mut rig);
+    rig.fakes.clip.fail_text(ClipError::Busy);
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    rig.text(KEY);
+    rig.fakes.clip.set_text(None);
+    rig.push(ClipNote::Cleared { app: None });
+    rig.fakes.clip.set_text(Some(KEY));
+    take(&mut rig, ASKERS[1]);
+    assert!(
+        rig.actor.history.entries().is_empty(),
+        "the older entry goes"
+    );
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
 #[test]
 fn the_next_copy_after_a_take_comes_back_whole() {
     let mut rig = holding(vec![text(KEY)]);
@@ -127,6 +218,32 @@ fn an_entry_deleted_during_the_gap_is_never_written_back() {
     lend(&mut rig);
     rig.answer(true);
     delete_row(&mut rig, 0);
+    rig.advance(rig.settings.paste_gap());
+    assert_eq!(rig.fakes.writer.writes(), emptied());
+}
+
+/// A sibling (T24): a kept key is copied again, its note still due, so the board names another entry; deleting the
+/// key's entry before the lend leaves the clipboard empty after the paste, never that key.
+#[test]
+fn a_text_deleted_while_the_board_names_another_entry_never_goes_back() {
+    let mut rig = holding(vec![text(KEY)]);
+    rig.fakes.clip.set_text(Some("next"));
+    rig.text("next");
+    rig.fakes.clip.set_text(Some(KEY));
+    delete_row(&mut rig, 1);
+    assert_eq!(pasted(&mut rig), emptied());
+}
+
+/// The same sibling with the delete while the lend runs, as the seed's steps had it.
+#[test]
+fn a_text_deleted_during_a_lend_that_saved_it_as_unnamed_never_goes_back() {
+    let mut rig = holding(vec![text(KEY)]);
+    rig.fakes.clip.set_text(Some("next"));
+    rig.text("next");
+    rig.fakes.clip.set_text(Some(KEY));
+    lend(&mut rig);
+    delete_row(&mut rig, 1);
+    rig.answer(true);
     rig.advance(rig.settings.paste_gap());
     assert_eq!(rig.fakes.writer.writes(), emptied());
 }

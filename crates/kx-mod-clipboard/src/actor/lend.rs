@@ -1,8 +1,8 @@
 //! Paste at once for another module (owner, 2026-11-17, ADR-0048): the history keeps what the clipboard holds, writes
 //! the text as ours with the presence markers, asks the keyboard for one paste on a round of its own, answers right
 //! after the keyboard does, and puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile;
-//! an entry deleted meanwhile is put back as an empty clipboard. It answers no, writing nothing, while an insert or a
-//! lend runs, past the asker's start, or when `previous` refuses.
+//! an entry deleted or a text that left the history meanwhile is put back as an empty clipboard. It answers no, writing
+//! nothing, while an insert or a lend runs, past the asker's start, or when `previous` refuses.
 
 use std::mem;
 use std::time::Duration;
@@ -14,6 +14,7 @@ use super::Actor;
 use super::board::{Back, Held, own};
 use super::paste::Paste;
 use super::take::wipe;
+use crate::entry::text_of;
 
 /// Where a lent paste is; `back` is `None` once another app changed the clipboard.
 #[derive(Debug, Default)]
@@ -159,10 +160,14 @@ impl Actor {
         self.ports.clock.now().saturating_since(at) <= start
     }
 
-    /// Writes `back` as ours, if another app left the clipboard alone; a failure is logged, as the text pasted then
-    /// stays.
+    /// Writes `back` as ours, if another app left the clipboard alone, or an empty clipboard if its text left the history
+    /// meanwhile; a failure is logged, as the text pasted then stays.
     fn put_back(&mut self, back: Option<Back>) {
-        let Some(back) = back else { return };
+        let Some(mut back) = back else { return };
+        if text_of(&back.parts).is_some_and(|t| self.lost.has(t)) {
+            wipe(mem::take(&mut back.parts));
+            back.held = Held::Empty;
+        }
         match self.ports.writer.write(&back.parts, self.settings.wait()) {
             Ok(()) => self.board.wrote(back.held),
             Err(error) => tracing::warn!(%error, "the clipboard was not put back after a paste"),

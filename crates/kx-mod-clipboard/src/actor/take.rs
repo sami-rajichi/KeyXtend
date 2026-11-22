@@ -1,7 +1,7 @@
 //! Quick-fill's take (ADR-0034, design "Paste"): the clipboard's text, read within the take's cap, goes to Quick-fill,
-//! and the history forgets its newest entry when that entry is this copy and not pinned, else the next copy keeps
-//! nothing if it is that text, as the watch's note can come after the take; either way Paste at once never puts the
-//! text back. Every copy read here is wiped, and none is logged.
+//! and the history forgets its newest entry when it is that text and not pinned; unless the board held that entry, the
+//! next copy also keeps nothing if it is that text, as the watch's note can come after the take. Either way Paste at
+//! once never puts that text back until the history keeps it again; every copy read here is wiped, and none is logged.
 
 use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
 use kx_module_api::{Secret, Zeroizing};
@@ -17,6 +17,7 @@ impl Actor {
         let wait = self.settings.clip_config().wait;
         let text = match self.ports.clip.text(wait, take.cap()) {
             Ok(Some(text)) => {
+                self.lost.taken(text.expose());
                 self.missed = (!self.forget_copy(&text)).then(|| text.clone());
                 ClipText::Text(text)
             }
@@ -30,7 +31,8 @@ impl Actor {
         self.publish(&take.answer(text));
     }
 
-    /// Deletes the newest entry when it is a text not pinned whose text is `text`; true when it did.
+    /// Deletes the newest entry when it is a text not pinned whose text is `text`; true when it did and the board held
+    /// it, so this copy's note already came.
     fn forget_copy(&mut self, text: &Secret) -> bool {
         let newest = self.history.entries().iter().max_by_key(|e| e.seq);
         let texts = |e: &&Entry| !e.pinned() && matches!(e.kind, ClipKind::Text | ClipKind::Link);
@@ -45,12 +47,12 @@ impl Actor {
             }
         };
         let same = holds(&parts, text);
-        let id = entry.id;
+        let (id, noted) = (entry.id, self.board.holds(entry.id));
         wipe(parts);
         if same {
             self.remove(id);
         }
-        same
+        same && noted
     }
 
     /// Ends the wait for the copy the last take missed: `parts` go on, unless they hold that text, so are wiped and
@@ -64,13 +66,6 @@ impl Actor {
             }
             _ => Some(parts),
         }
-    }
-
-    /// True when `text` is the copy the last take read before its note came, so it never goes back.
-    pub(super) fn was_taken(&self, text: &Secret) -> bool {
-        self.missed
-            .as_ref()
-            .is_some_and(|m| m.expose() == text.expose())
     }
 }
 
