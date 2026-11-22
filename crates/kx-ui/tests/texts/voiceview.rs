@@ -29,8 +29,9 @@ const LONG: usize = 3;
 /// The start of a view's name that shows the cloud mark, and the service it names.
 const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
-/// The view of a first dictation to a service whose card warns.
+/// The views of a first dictation to a service whose card warns: Listening, then Transcribing.
 const WARNED: &str = "cloudWarned";
+const WARNED_WRITES: &str = "cloudWarnedTranscribing";
 /// The start of a view's name whose cloud mark names a services table row, then the row's id; each must show whole.
 const ROW: &str = "cloud-";
 /// The start of a view's name whose chip names the model on this PC: the table's longest short name.
@@ -152,7 +153,7 @@ fn mark(name: &str) -> Option<BarMark> {
         return services.get(id).map(|s| BarMark::Cloud(s.shown()));
     }
     match name {
-        WARNED => Some(BarMark::Cloud(warned().0)),
+        WARNED | WARNED_WRITES => Some(BarMark::Cloud(warned().0)),
         OWN => device(OWN_FILE.to_owned()),
         _ if name.starts_with(DEVICE) => device(longest()),
         _ if name.starts_with(CLOUD) => Some(BarMark::Cloud(ServiceName::Named(SERVICE.into()))),
@@ -223,13 +224,14 @@ fn device_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
 /// most acts under its line, and the account note the longest line over its acts.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 9] {
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 10] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
         ("cloudNothing", listening(lang, true, None)),
         ("cloudTranscribing", VoiceBar::Transcribing),
         (WARNED, listening(lang, false, Some(warned().1))),
+        (WARNED_WRITES, VoiceBar::Transcribing),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
         ("cloudOff", cloud(CloudWhy::Off, fetch, true)),

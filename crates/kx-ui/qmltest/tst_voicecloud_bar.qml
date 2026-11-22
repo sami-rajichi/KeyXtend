@@ -2,7 +2,8 @@
 // takes the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's
 // Try again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with
 // Open service for a note the service's pages settle, the longest lines whole; the card's warning in full under the row
-// on the first dictation to its service; and each new state told to readers once, in English, French and Arabic.
+// on the first dictation to its service, kept while it writes; and each new state told to readers once, in English,
+// French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -104,6 +105,29 @@ Item {
             compare(Board.all(plain.contentItem, o => o.visible && o.text === text).length, 0, "no warning");
             verify(plain.height < bar.height, "the warning adds its lines");
             bar.visible = plain.visible = false;
+        }
+
+        function test_the_warning_stays_while_its_service_writes_the_take_data() {
+            return langs_data();
+        }
+        // The voice leaves at Stop, so the warning stays under the row while its service writes; it goes when the model
+        // on this PC writes instead, as for a password box, and on Try again after a note.
+        function test_the_warning_stays_while_its_service_writes_the_take(d) {
+            const cases = [
+                [["cloudWarnedTranscribing"], 1, "while its service writes"],
+                [["deviceTranscribing"], 0, "while the model on this PC writes"],
+                [["cloudNet", "cloudWarnedTranscribing"], 0, "on Try again after a note"]
+            ];
+            for (const [views, shows, why] of cases) {
+                const bar = make("cloudWarned", d.t);
+                const text = bar.view.bar.warn;
+                for (const name of views) {
+                    bar.voice.page = JSON.parse(JSON.stringify(Voice.views[d.t][name]));
+                    waitForRendering(bar.contentItem);
+                }
+                compare(Board.all(bar.contentItem, o => o.visible && o.text === text).length, shows, why);
+                bar.visible = false;
+            }
         }
 
         function test_a_cloud_note_offers_the_local_model_dimmed_with_download_when_none_is_ready_data() {

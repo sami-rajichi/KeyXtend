@@ -42,8 +42,10 @@ Window {
     readonly property bool listens: mode === names.states.listening
     readonly property bool writes: mode === names.states.transcribing
     readonly property bool wide: mode === names.states.text || mode === names.states.note
-    // The card's warning while the first dictation to its service listens, which widens the bar and sits under its row.
-    readonly property string warning: listens ? field("warn", "") : ""
+    // The card's warning while the first dictation to its service listens, kept while that service writes the take; it
+    // widens the bar and sits under its row.
+    readonly property string warning: listens ? field("warn", "")
+        : writes && held && held.by === chipOf(view) ? held.warn : ""
     readonly property bool warns: warning !== ""
     readonly property var cap: lk.shape.caption
     readonly property var p: lk.palette
@@ -62,23 +64,27 @@ Window {
     visible: false
     // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
     width: rescale.keep(Math.ceil(span))
-    // Transcribing keeps the width its take listened at, so Stop and Cancel never move; hiding, a text or a note ends it.
-    readonly property real span: writes ? Math.max(listened, fit) : fit
-    property real listened: 0
-    onFitChanged: if (listens) listened = fit
+    height: rescale.keep(Math.ceil(tall))
+    // Transcribing keeps the size its take listened at, so Stop and Cancel never move; a hide, text or note ends it.
+    readonly property real span: writes && held ? Math.max(held.w, fit) : fit
+    readonly property real tall: writes && held ? Math.max(held.h, stack) : stack
+    // The settled Listening view's width, height, warning and chip, or null.
+    property var held: null
+    onFitChanged: hold()
+    onStackChanged: hold()
     // The text's width for a text, a note or a warning; else the narrow one, widened up to it for the wave's least room.
     readonly property real fit: wide || warns ? broad : Math.min(broad, Math.max(narrow, broad - leadRoom + lead.width))
     readonly property real narrow: lk.shape.voice.bar_px[0] * s
     readonly property real broad: lk.shape.voice.bar_px[1] * s
     // The most the lead may take for the wave's least room within the text's width; a model's name on the chip fits it.
     readonly property real leadRoom: broad - tail.width - lk.shape.voice.wave_room_px * s - 2 * (pad + gap)
-    height: rescale.keep(Math.ceil(row + under))
     // The row's height: one key row, or its parts with their padding.
     readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)
     // What sits under the row: the warning's lines, or a note's acts with the padding under them.
     readonly property real under: warns ? warnLine.height : acts.length > 0 ? actRow.height + pad : 0
-    // How far the row's parts rise from the middle, so what sits under them fits.
-    readonly property real lift: under / 2
+    readonly property real stack: row + under
+    // How far the row's parts rise from the middle, so the row stays at the top over what sits under it.
+    readonly property real lift: (tall - row) / 2
 
     // Keeps the size above across display scale changes, and the place on a new scale.
     Rescale {
@@ -105,8 +111,7 @@ Window {
             return;
         const was = view;
         view = JSON.parse(voice.view());
-        if (!writes)
-            listened = listens ? fit : 0;
+        hold();
         if (!view || mode === names.states.hidden)
             return shut();
         const fresh = !was || was.bar.state !== mode;
@@ -121,6 +126,19 @@ Window {
             follow();
         if (fresh || hintOf(was) !== hintOf(view))
             tell();
+    }
+    // Holds a Listening view's size, warning and chip for its Transcribing view, reading the view itself so a half-made
+    // change never sticks; any other state lets them go.
+    function hold() {
+        const state = view ? view.bar.state : names.states.hidden;
+        if (state === names.states.listening)
+            held = { w: fit, h: stack, warn: view.bar.warn || "", by: chipOf(view) };
+        else if (state !== names.states.transcribing)
+            held = null;
+    }
+    // The chip view `v` shows, as its kind and name; empty for none.
+    function chipOf(v) {
+        return v && v.mark ? v.mark.kind + " " + v.mark.name : "";
     }
     // The start sound as it starts listening, the stop sound as it stops, unless the view has sounds off.
     function chime(was) {
@@ -212,7 +230,7 @@ Window {
         id: body
         width: bar.width
         height: bar.height
-        radius: bar.wide || bar.warns ? bar.cap.words_radius_px * bar.s : height / 2
+        radius: bar.wide || bar.tall > bar.row ? bar.cap.words_radius_px * bar.s : height / 2
         color: bar.p.pop_bg
         border.width: bar.lk.contrast ? bar.lk.shape.line.px : 0
         border.color: bar.p.pop_line

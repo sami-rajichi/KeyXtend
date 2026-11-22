@@ -1,7 +1,7 @@
 // The bar's chip over the hub's views (owner, 2026-11-22): while a model on this PC listens or writes, the processor's
 // picture and the model's short name, which readers hear in a sentence, as the cloud mark names its service whole; a
 // user's own long file name cut in the middle; the bar holding the longest names in all eight looks, in English, French
-// and Arabic; and one width for the whole take, Listening to Transcribing, so Stop and Cancel never move.
+// and Arabic; and one size for the whole take, Listening to Transcribing, warned or not, so Stop and Cancel never move.
 import QtQuick
 import QtTest
 import "../qml"
@@ -33,6 +33,14 @@ Item {
     // Groq's, then each services row's.
     readonly property var device: ["deviceListening", "deviceNothing", "deviceTranscribing"]
     readonly property var cloud: ["cloudListening", "cloudNothing"].concat(Object.keys(Voice.views.en).filter(n => n.startsWith("cloud-")))
+    // Each take's Listening views, then its Transcribing one: a model on this PC, Groq, a first dictation that warns,
+    // and that one sent to the model on this PC at Stop, as a password box does, so its warning goes.
+    readonly property var takes: ({
+        device: [["deviceListening", "deviceNothing"], "deviceTranscribing"],
+        cloud: [["cloudListening", "cloudNothing"], "cloudTranscribing"],
+        warned: [["cloudWarned"], "cloudWarnedTranscribing"],
+        password: [["cloudWarned"], "deviceTranscribing"]
+    })
     // The bundled fonts, so each bar is measured as the app draws it, whichever suites ran before.
     property var bundled: []
 
@@ -54,8 +62,8 @@ Item {
         function langs_data() {
             return ["en", "fr", "ar"].map(t => ({ tag: t, t: t }));
         }
-        // A shown bar over the hub's view `name` in language `tag` and look `lk` (Native light by default).
-        function make(name, tag, lk) {
+        // A shown bar over the hub's view `name` in language `tag`, look `lk` (Native light by default) and `place`.
+        function make(name, tag, lk, place) {
             const look = lk || NL.lk;
             const voice = createTemporaryObject(voiceC, root, { page: null });
             const bar = createTemporaryObject(barC, root, {
@@ -63,10 +71,22 @@ Item {
                 box: () => root.over, logical: (x, y) => ({ x: x, y: y })
             });
             Pointer.through([bar]);
-            voice.page = JSON.parse(JSON.stringify(Voice.views[tag][name]));
+            voice.page = pageOf(name, tag, place);
             tryVerify(() => bar.visible, 2000, "it shows");
             waitForRendering(bar.contentItem);
             return bar;
+        }
+        // A copy of the hub's view `name` in language `tag`, at `place` when given.
+        function pageOf(name, tag, place) {
+            const page = JSON.parse(JSON.stringify(Voice.views[tag][name]));
+            if (place)
+                page.place = place;
+            return page;
+        }
+        // Shows the hub's view `name` on `bar`, as `make` does.
+        function show(bar, name, tag, place) {
+            bar.voice.page = pageOf(name, tag, place);
+            waitForRendering(bar.contentItem);
         }
         // The shown parts readers hear as `name`.
         function heard(bar, name) {
@@ -94,8 +114,7 @@ Item {
                 const mark = bar.view.mark;
                 compare(heard(bar, mark.said).length, 1, name + ": readers hear who writes");
                 const label = chipName(bar);
-                const broad = Math.ceil(NL.lk.shape.voice.bar_px[1] * bar.s);
-                verify(!label.truncated || bar.width === broad, name + ": whole, or cut only for the wave at the text's width");
+                verify(!label.truncated, name + ": whole, " + label.width + " px of " + label.implicitWidth);
                 compare(label.font.family, d.t === "ar" ? fam.arabic : fam.latin, "in the language's own font, as the cloud mark");
                 compare(icons(bar, NL.lk.icons.voice.device).length, 1, name + ": the processor's picture");
                 compare(icons(bar, NL.lk.icons.voice.cloud).length, 0, name + ": no cloud");
@@ -165,31 +184,60 @@ Item {
             bar.visible = false;
         }
 
-        function test_stop_and_cancel_keep_their_place_through_the_whole_take_data() {
-            return every_look(["deviceListening", "cloudListening"]);
+        // Each look's data row for each take at each of `places`, in English, French and Arabic.
+        function every_take(places) {
+            const all = [];
+            for (const [tag, f] of Object.entries(root.looks))
+                for (const [take, views] of Object.entries(root.takes))
+                    for (const place of places)
+                        ["en", "fr", "ar"].forEach(t => all.push({ tag: [tag, take, place, t].join(" "), lk: f.lk, views, place, t }));
+            return all;
         }
-        // One take holds one width from its first Listening view, with the hint or not, to the end of Transcribing, so the
-        // hub places the bar where it was and Stop and Cancel never move; a text starts the next take afresh.
+        // The bar's size, then each shown button's place in it to two decimals.
+        function spots(bar) {
+            const at = b => b.mapToItem(bar.body, 0, 0);
+            const r = v => Math.round(v * 100) / 100;
+            return [bar.width, bar.height].concat(buttons(bar).map(b => b.Accessible.id + " " + r(at(b).x) + " " + r(at(b).y)));
+        }
+
+        function test_stop_and_cancel_keep_their_place_through_the_whole_take_data() {
+            return every_take(["above", "bottom"]);
+        }
+        // One take holds one size from its first Listening view, with the hint, the warning or neither, to the end of
+        // Transcribing, so the hub, asked only for that size on the way, places the bar where it was and nothing moves.
         function test_stop_and_cancel_keep_their_place_through_the_whole_take(d) {
-            const nothing = d.name.replace("Listening", "Nothing");
-            const take = [nothing, d.name, d.name.replace("Listening", "Transcribing")];
-            for (const first of [d.name, nothing]) {
-                const bar = make(first, d.t, d.lk);
-                const x = b => Math.round(b.mapToItem(bar.body, 0, 0).x * 100) / 100;
-                const spots = () => [bar.width].concat(buttons(bar).map(b => b.Accessible.id + " " + x(b)));
-                const show = name => {
-                    bar.voice.page = JSON.parse(JSON.stringify(Voice.views[d.t][name]));
-                    waitForRendering(bar.contentItem);
-                };
-                const held = spots();
-                for (const name of take) {
-                    show(name);
-                    compare(spots(), held, first + " to " + name + ": Stop and Cancel stay");
-                    compare(bar.voice.asks[bar.voice.asks.length - 1].w, held[0], name + ": the hub places the same width");
+            const [firsts, writes] = d.views;
+            for (const first of firsts) {
+                const bar = make(first, d.t, d.lk, d.place);
+                const held = spots(bar);
+                const from = bar.voice.asks.length;
+                for (const name of firsts.concat([writes])) {
+                    show(bar, name, d.t, d.place);
+                    compare(spots(bar), held, first + " to " + name + ": Stop and Cancel stay");
                 }
-                show("text");
-                show(first);
-                compare(bar.width, held[0], "the next take starts afresh");
+                const asked = bar.voice.asks.slice(from).map(a => [a.w, a.h]);
+                verify(asked.length > 0, "the hub is asked where the bar goes");
+                compare(asked.filter(a => a[0] !== held[0] || a[1] !== held[1]), [], "the hub is asked for one size");
+                bar.visible = false;
+            }
+        }
+
+        function test_a_take_after_a_text_or_a_note_starts_afresh_data() {
+            return every_take(["above"]);
+        }
+        // Try again shows Transcribing with no Listening before it, after a text or a note: the bar takes that view's own
+        // size, as a fresh bar on it does.
+        function test_a_take_after_a_text_or_a_note_starts_afresh(d) {
+            const [firsts, writes] = d.views;
+            const fresh = make(writes, d.t, d.lk);
+            const want = [fresh.width, fresh.height];
+            fresh.visible = false;
+            for (const after of ["text", "cloudNet"]) {
+                const bar = make(firsts[0], d.t, d.lk);
+                show(bar, writes, d.t);
+                show(bar, after, d.t);
+                show(bar, writes, d.t);
+                compare([bar.width, bar.height], want, after + " then " + writes + ": its own size");
                 bar.visible = false;
             }
         }
