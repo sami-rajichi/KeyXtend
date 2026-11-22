@@ -160,5 +160,19 @@ Item {
             compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
             verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
         }
+
+        function test_a_short_page_keeps_every_name_whole_data() {
+            const all = [];
+            for (const [tag, f] of Object.entries(looks))
+                ["en", "fr", "ar"].forEach(t => all.push({ tag: tag + " " + t, lk: f.lk, t }));
+            return all;
+        }
+        // T24 re-review 2: a short last page whose picks fit at their own widths never pairs them, so nothing is cut.
+        function test_a_short_page_keeps_every_name_whole(d) {
+            const box = make("compareShort", d.t, d.lk);
+            keeps(box);
+            verify(!page(box).pair, "its picks do not pair");
+            uncut(box);
+        }
     }
 }

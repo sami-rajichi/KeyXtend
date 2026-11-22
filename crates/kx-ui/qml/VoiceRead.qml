@@ -24,8 +24,9 @@ Item {
     // The pager's room beside the body while the picks take more than one page.
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     readonly property alias body: col
-    // Two picks to a row, each at most half the body, when at their own widths they would take more rows than that.
-    readonly property bool pair: rows(flow.children) > Math.ceil(picks.count / 2)
+    // Two picks to a row, each at most half the body, when at their own widths they take more rows than a full page's
+    // picks would paired.
+    readonly property bool pair: rows(flow.children) > Math.ceil(host.per / 2)
     // The widest a pick may be: the body, or half of it less the gap while picks pair.
     readonly property real most: pair ? Math.floor((col.width - flow.spacing) / 2) : col.width
 

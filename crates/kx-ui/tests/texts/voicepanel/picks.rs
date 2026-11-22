@@ -1,5 +1,5 @@
-//! Compare's longest pages of cloud picks, which the fit test measures: its set text with cloud models, the offered
-//! models longest by name plus mark beside a typed Other id, and the same beside Custom's and `OpenRouter`'s typed ids.
+//! Compare's pages of cloud picks, which the fit test measures: its set text with cloud models, the offered models
+//! longest by name plus mark beside one or two typed Other ids, and a short last page that fits whole.
 
 use super::cloud::named;
 use super::long::{per, services};
@@ -96,13 +96,26 @@ fn compare_typed() -> VoiceSheet {
     ready(cloud, every())
 }
 
-/// Compare's longest panels, by name; the wide pages show the pager.
+/// Compare's short last page (T24 re-review 2): `OpenRouter`'s longest model id typed as its Other id, then Gemini's
+/// pick, which fit whole.
+fn compare_short() -> VoiceSheet {
+    let router = row("openrouter");
+    let ids = router.models.iter().map(|m| &m.id);
+    let id = ids.max_by_key(|i| i.len()).expect("listed models");
+    let gemini = row("gemini");
+    let name = &gemini.models.first().expect("a listed model").name;
+    let cloud = vec![pick(id, router.shown()), pick(name, gemini.shown())];
+    ready(cloud, every())
+}
+
+/// Compare's longest panels, by name; the wide pages show the pager, and the short one is the last of two.
 pub fn panels() -> Vec<(String, Shown)> {
     let two = |sheet| paged(shown(sheet, &[]), 0, 2, 0);
     [
         ("compareLong", shown(compare_long(), &[])),
         ("compareWide", two(compare_wide())),
         ("compareTyped", two(compare_typed())),
+        ("compareShort", paged(shown(compare_short(), &[]), 1, 2, 0)),
     ]
     .into_iter()
     .map(|(name, s)| (name.to_owned(), s))
@@ -145,4 +158,14 @@ fn the_typed_compare_page_holds_two_typed_ids_round_the_widest_picks() {
     let ends = [&cloud[0], &cloud[per() - 1]].map(|c| (c.service.clone(), c.name.expose().len()));
     assert_eq!(ends, rows.map(|r| (r.shown(), *TAG_LEN.end())));
     assert_eq!(cloud[1..per() - 1], widest()[..per() - 2]);
+}
+
+/// The short page holds fewer picks than a page, the first a typed id of a row that takes one.
+#[test]
+fn the_short_compare_page_holds_a_typed_id_and_one_pick() {
+    let cloud = picks(compare_short());
+    assert!(cloud.len() < per(), "a short page");
+    let router = row("openrouter");
+    assert!(router.offered && router.other, "it takes a typed id");
+    assert_eq!(cloud[0].service, router.shown());
 }
