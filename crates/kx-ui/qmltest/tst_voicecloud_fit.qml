@@ -30,6 +30,8 @@ Item {
         // each row Off, the cards with each table service's long one, the key pages, also with each line's empty
         // Paste, Models with its Local | Cloud chips, and Compare's set text and run with cloud models and the warning.
         readonly property var pasted: Kit.named("en", "servicePasted-")
+        // The most lines the send warning may take (T24 wave 2 review).
+        readonly property int warnLines: 2
         readonly property var looks: ({ "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD })
         readonly property var cloudPages: ["cloud", "cloudSealed", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cloudLongOff-"),
             Kit.named("en", "cardLong"), pasted, [
@@ -124,6 +126,21 @@ Item {
             verify(lines <= Math.ceil(box.per / d.lk.shape.voice.pick_across), "a full page's rows, paired: " + lines);
             compare(names.filter(n => n.contentWidth > n.width + 0.5).map(n => n.text), [], "each name within its width");
             verify(picks.every(o => o.Accessible.name.indexOf(o.entry.name) >= 0), "readers hear each name whole");
+        }
+
+        function test_the_send_warning_takes_two_lines_at_most_data() {
+            return test_compares_widest_picks_stay_in_the_body_data();
+        }
+        // T24 re-review 3, note 2: the warning naming every service wraps with no line cap, so its lines are counted.
+        function test_the_send_warning_takes_two_lines_at_most(d) {
+            const box = make(d.name, d.t, d.lk);
+            const band = Kit.only(Board.all(box.contentItem, o => o.visible && o.warn === true && o.pieces !== undefined));
+            verify(band, "the send warning shows");
+            const flow = Kit.only(Board.all(band, o => o.visible && o.flow !== undefined));
+            const parts = Board.all(flow, o => o.visible && o.lineCount !== undefined && !!o.text);
+            const one = Math.min(...parts.map(o => o.height / o.lineCount));
+            const lines = Math.round(flow.height / one);
+            verify(lines <= warnLines, "the warning's lines: " + lines);
         }
 
         function test_a_cut_name_keeps_its_least_and_its_end_data() {
