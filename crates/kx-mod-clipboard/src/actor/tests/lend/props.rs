@@ -124,8 +124,8 @@ impl Run {
     }
 
     /// Follows this step's writes, each then on the clipboard: the lend's text keeps whether it was written over an
-    /// echoed numbered copy, only such a copy may come back, and a text gone from the history never does. An `insert`
-    /// writes no put-back, and pastes an entry it read before a delete, as `joins.rs` checks.
+    /// echoed numbered copy, only such a copy may come back, and a text gone from the history never does. Writes that
+    /// are an `insert`'s alone put nothing back and may paste an entry read before a delete, as `joins.rs` checks.
     fn wrote(&mut self, new: &[Vec<ClipPart>], insert: bool) -> Result<(), TestCaseError> {
         let (flags, clip) = (&mut self.numbered, &self.rig.fakes.clip);
         for parts in new {
@@ -169,8 +169,11 @@ impl Run {
         let (writes, before) = (self.rig.fakes.writer.writes().len(), self.titles());
         let marks = matches!(step, Step::Private | Step::Numbered | Step::Marked);
         let (echo, inserted) = (marks && self.due > 0, self.inserting());
+        let (free, asked) = (self.rig.actor.lent.idle(), self.answers().len());
         self.apply(step);
-        let insert = inserted || self.inserting();
+        // Only an insert's own writes skip the gone check: no lend ran or answered in this step.
+        let alone = free && self.rig.actor.lent.idle() && self.answers().len() == asked;
+        let insert = (inserted || self.inserting()) && alone;
         self.note(step, writes, echo, insert)?;
         self.forgot(&before);
         let now = self.rig.fakes.writer.writes();
@@ -198,7 +201,9 @@ impl Run {
     /// Waits until nothing is under way; then every ask was answered, and the text pasted is not left.
     fn drain(&mut self) -> Result<(), TestCaseError> {
         let wait = self.rig.settings.paste_wait();
-        let (writes, insert) = (self.rig.fakes.writer.writes().len(), self.inserting());
+        // No lend starts here, so with none running an insert's writes are its own.
+        let insert = self.inserting() && self.rig.actor.lent.idle();
+        let writes = self.rig.fakes.writer.writes().len();
         for _ in 0..DRAIN {
             self.rig.advance(wait);
         }
