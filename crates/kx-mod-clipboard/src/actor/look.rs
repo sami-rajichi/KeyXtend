@@ -7,9 +7,19 @@ use std::time::Duration;
 use kx_module_api::Mono;
 use kx_module_api::ports::{ClipKind, FileFact, PictureError, Preview};
 
-use super::Actor;
+use super::{Actor, Msg};
 use crate::insert::files_of;
-use crate::media::{Drawn, Facts, Job, Look, Size, Task, Why, job_of};
+use crate::media::{Done, Drawn, Facts, Job, Look, Size, Task, Why, job_of};
+
+/// The media thread's answer, as the actor's message.
+impl From<Done> for Msg {
+    fn from(done: Done) -> Self {
+        match done {
+            Done::Drawn(drawn) => Self::Drawn(drawn),
+            Done::Made(made) => Self::Made(made),
+        }
+    }
+}
 
 impl Actor {
     /// Asks the files thread what is at the paths of every file row, to size them; each look asks for all, so the

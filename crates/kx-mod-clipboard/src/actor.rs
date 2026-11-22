@@ -28,7 +28,7 @@ use kx_module_api::{Bus, Clock, Event, Mono, Notice, keys};
 use crate::ID;
 use crate::follow::Follow;
 use crate::keep::Limits;
-use crate::media::{Done, Drawn, Draws, Facts, Look, Made, Task};
+use crate::media::{Drawn, Draws, Facts, Look, Made, Task};
 use crate::order::History;
 use crate::panel::Panel;
 use crate::settings::ClipSettings;
@@ -68,15 +68,6 @@ pub(crate) enum Msg {
     Facts(Facts),
     /// The module stops.
     Quit,
-}
-
-impl From<Done> for Msg {
-    fn from(done: Done) -> Self {
-        match done {
-            Done::Drawn(drawn) => Self::Drawn(drawn),
-            Done::Made(made) => Self::Made(made),
-        }
-    }
 }
 
 /// The actor's ports, from the module's start or a test.
