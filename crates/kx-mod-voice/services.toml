@@ -275,7 +275,7 @@ id = "openrouter"
 name = "OpenRouter"
 shape = "form"
 form = { lang = "language", list = false }
-# Every ZDR endpoint of its four other models shows `safety_retention` false (ZDR list read 2026-11-22).
+# Every ZDR endpoint of its models other than GPT Transcribe shows `safety_retention` false (ZDR list read 2026-11-22).
 keep = { name = "provider", value = '{"zdr":true}' }
 paywall = true
 host = "openrouter.ai"

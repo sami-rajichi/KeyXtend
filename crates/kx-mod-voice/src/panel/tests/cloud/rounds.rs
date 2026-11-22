@@ -13,7 +13,7 @@ use crate::services::tests::DOMAIN;
 /// The Other model id pasted in these tests.
 const MODEL: &str = "whisper-1";
 
-/// Clicks Test on Groq's key page; gives the test's ticket.
+/// Clicks Test on the shown key page; gives the test's ticket.
 fn test(rig: &mut Rig) -> u32 {
     match rig.click(&VoiceClick::Service(CloudButton::Test))[..] {
         [Do::Test { ticket, .. }] => ticket,
