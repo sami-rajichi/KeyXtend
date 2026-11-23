@@ -27,16 +27,18 @@ Item {
         host: root
 
         // The cloud pages: the Cloud page, also with an Off row ticked, and each page of the table's rows, also with
-        // each row Off, the cards with each table service's long one, the key pages, also with each line's empty
-        // Paste, Models with its Local | Cloud chips, and Compare's set text and run with cloud models and the warning.
+        // each row Off, the cards with each table service's long one, the key pages, also with a management key's
+        // answer and each line's empty Paste, Models with its Local | Cloud chips, and Compare's set text and run with
+        // cloud models and the warning.
         readonly property var pasted: Kit.named("en", "servicePasted-")
         // The most lines the send warning may take (T24 wave 2 review).
         readonly property int warnLines: 2
         readonly property var looks: ({ "native-light": NL, "native-dark": ND, "native-contrast": NH, "native-reduced": NR, "et66-light": EL, "et66-dark": ED, "dolch-light": DL, "dolch-dark": DD })
         readonly property var cloudPages: ["cloud", "cloudSealed", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cloudLongOff-"),
             Kit.named("en", "cardLong"), pasted, [
-            "service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped", "serviceLong", "models", "modelsSlow",
-            "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"])
+            "service", "serviceRouter", "serviceAssembly", "serviceCustom", "serviceTyped", "serviceLong",
+            "serviceAdmin", "models", "modelsSlow", "modelsCloud", "modelsLong",
+            "compareCloud", "comparingCloud", "compareLong"])
 
         // Pick `o`'s service mark.
         function markOf(o) {

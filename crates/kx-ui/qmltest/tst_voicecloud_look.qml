@@ -104,14 +104,16 @@ Item {
             key.visible = custom.visible = false;
         }
 
-        // A used allowance, too many requests and a reply not the service's each warn as a band, never a muted line.
-        function test_the_allowance_rate_and_strange_answers_show_as_the_warning_band_data() {
+        // A used allowance, too many requests, a reply not the service's and a management key each warn as a band,
+        // never a muted line.
+        function test_the_warning_answers_show_as_the_warning_band_data() {
             const all = [];
             for (const t of ["en", "fr", "ar"])
-                ["serviceAllowance", "serviceRate", "serviceStrange"].forEach(n => all.push({ tag: n + " " + t, t: t, name: n }));
+                for (const n of ["serviceAllowance", "serviceRate", "serviceStrange", "serviceAdmin"])
+                    all.push({ tag: n + " " + t, t: t, name: n });
             return all;
         }
-        function test_the_allowance_rate_and_strange_answers_show_as_the_warning_band(d) {
+        function test_the_warning_answers_show_as_the_warning_band(d) {
             const box = make(d.name, d.t);
             const check = box.view.sheet.check;
             verify(check.warns && !check.works, "the hub says it warns");
