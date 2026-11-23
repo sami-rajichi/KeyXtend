@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-23 12:45 — P11: CI's Qt Quick tests get room to finish
+On the pull request, the Qt Quick tests step stopped at its 10-minute hang guard while every test so far passed, as part 2 grew the suite from 915 to 3511 tests (about 12 minutes on the runner). The guard is now 20 minutes, which still stops a hung test long before the job's limit.
+
 ## 2026-11-23 03:30 — P11: the owner's hands-on check of the cloud
 The owner checked all seven offered services with their own keys, and the re-check passed every fix ([test report](test-reports/2026-11-21-p11-voice-cloud.md)); OpenRouter and Custom now ship tested like the other five. G22's local line passed twice with no word wrong. Its cloud line passed Groq, ElevenLabs, Gemini and AssemblyAI, and recorded Lemonfox's Arabic and OpenRouter Turbo's English as readings past the one-word limit. A gate test no longer reads this PC's own gate file.
 
