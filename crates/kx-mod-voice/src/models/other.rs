@@ -28,6 +28,14 @@ impl Other {
         SpeechModel::CPU_MB.contains(&mb).then_some(mb)
     }
 
+    /// The bar's name for it: its file name without the extension.
+    #[must_use]
+    pub fn short(&self) -> &str {
+        self.name
+            .rsplit_once('.')
+            .map_or(&self.name, |(stem, _)| stem)
+    }
+
     /// Its job's memory cap: its size plus `job_mb`.
     #[must_use]
     pub fn cap_mb(&self, job_mb: u32) -> Option<u32> {

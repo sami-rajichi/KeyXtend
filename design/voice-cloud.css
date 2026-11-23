@@ -1,0 +1,105 @@
+/* Part 2 of the voice typing mock-up (design/voice-bar.html): the bar's cloud mark, the Cloud page, a service's card, and
+   the panel's own lines. Tokens are copied from crates/kx-theme/tokens/shape.toml and named after it. Colours are the
+   theme tokens in voice-bar.html, with part 2's warn and warn_ink. */
+:root{--panel-field-px-0:34; --panel-field-px-1:7; --panel-field-px-2:10; --panel-field-px-3:14.5;
+  --panel-line-px-0:15; --panel-line-px-1:2; --panel-line-px-2:2; --panel-line-px-3:2; --press-ring-px:2;
+  --panel-filter-gap-px:4; --panel-filter-px-0:28; --panel-filter-px-1:10; --panel-filter-px-2:12; --panel-filter-px-3:5;
+  --voice-fact-px:200; /* [voice] fact_px: a card's label column */}
+
+/* The bar's cloud mark: the language chip's shape, with a cloud in the ring colour and the service's name. */
+.lc.cm{gap:calc(var(--chip-gap-px) * var(--u))}
+.lc.cm .i{font-size:calc(var(--chip-icon-px) * var(--u)); color:var(--ring)}
+/* The first dictation's warning (VoiceWarn.qml): the bar widens and the card's warning wraps under its row in warn_ink. */
+.vbar.warns{flex-wrap:wrap}
+.vw{flex:1 0 100%; box-sizing:border-box; padding:0 calc(var(--caption-words-pad-px) * var(--u)) calc(var(--caption-words-pad-px) * var(--u)); color:var(--warn-ink);
+  font:400 calc(var(--notice-font-px) * var(--u))/1.35 var(--latin-fonts); text-align:start}
+.vw.ar{font-family:var(--arabic-fonts); font-size:calc(var(--notice-font-px) * var(--arabic-scale) * var(--u))}
+/* A cloud note with Open service (owner, 2026-11-20): its line sits beside the gear and Close, and its three acts take a
+   row under it, as the Windows 11 InfoBar puts its buttons under a long message. */
+.vbar.cn{flex-wrap:wrap}
+.vbar.cn .vtx{font-size:calc(var(--notice-font-px) * var(--u))}
+.vbar.cn .vtx.ar{font-size:calc(var(--notice-font-px) * var(--arabic-scale) * var(--u))}
+.cna{flex:1 0 100%; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:calc(var(--caption-gap-px) * var(--u))}
+
+/* Models' Local | Cloud and Options' Insert the text: the panel's filter chips (PanelChip.qml), the shown one filled and checked. */
+.flt{display:flex; gap:calc(var(--panel-filter-gap-px) * var(--u)); margin:calc(var(--panel-body-gap-px) * var(--u)) calc(var(--panel-body-pad-px-1) * var(--u)) 0}
+.sc .fl{box-sizing:border-box; display:inline-flex; align-items:center; gap:calc(var(--panel-filter-px-3) * var(--u)); height:calc(var(--panel-filter-px-0) * var(--u));
+  padding:0 calc(var(--panel-filter-px-1) * var(--u)); border-radius:999px; border:var(--line-px) solid var(--pop-line); background:transparent; color:var(--pop-ink);
+  font:var(--chip-weight) calc(var(--chip-font-px-0) * var(--u))/1 var(--latin-fonts); cursor:pointer}
+.sc .fl.ar{font-family:var(--arabic-fonts); font-size:calc(var(--chip-font-px-1) * var(--u))}
+.sc .fl[aria-checked="true"]{background:var(--pop-sel); border-color:transparent}
+.sc .fl:not([aria-checked="true"]):hover{box-shadow:inset 0 0 0 999px var(--hover)}
+.sc .fl .i{font-size:calc(var(--panel-filter-px-2) * var(--u))}
+.flt.in{margin:0}
+/* Paste's hint under Insert the text: a full-width muted row that may wrap to a second line. */
+.pr.hint>.i{font-size:calc(var(--clip-button-px-4) * var(--u)); color:var(--pop-muted)}
+.pr.hint .tx>div{white-space:normal; margin-top:0}
+
+/* The Cloud page: the master switch band, and marks or bands in the warning colours. */
+.pn.swb{cursor:pointer}
+.pn.swb:hover{box-shadow:inset 0 0 0 999px var(--hover)}
+/* The Untested tag beside a service's name: a small outlined chip in the muted ink. */
+.tag{display:inline-block; margin-inline-start:calc(var(--chip-gap-px) * var(--u)); padding:0 calc(var(--chip-gap-px) * var(--u)); border:var(--line-px) solid var(--pop-line); border-radius:999px;
+  color:var(--pop-muted); font:var(--chip-weight) calc(var(--panel-hint-px-0) * var(--u))/1.4 var(--latin-fonts); vertical-align:middle}
+.tag.ar{font-family:var(--arabic-fonts); font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.mk.warn,.pn.warn{background:var(--warn); border-color:transparent; color:var(--pop-ink)}
+.mk.warn .i,.pn.warn .i{color:var(--warn-ink)}
+
+/* A card and a service's page take at least the list's height, so the panel keeps its size from page to page. */
+.card,.lines{box-sizing:border-box; flex:1; min-width:0; min-height:calc((var(--panel-row-px-0) * 5 + var(--panel-row-px-1) * 4) * var(--u)); display:flex; flex-direction:column;
+  justify-content:center; gap:calc(var(--panel-body-gap-px) * var(--u)); padding:0 calc(var(--panel-row-px-2) * var(--u))}
+.facts{display:grid; grid-template-columns:calc(var(--voice-fact-px) * var(--u)) minmax(0, 1fr); gap:calc(var(--chip-gap-px) * var(--u)) calc(var(--panel-row-gap-px) * var(--u)); align-items:baseline}
+.facts .fk{color:var(--pop-muted); font-size:calc(var(--panel-hint-px-0) * var(--u))}
+.facts .fv{display:flex; align-items:baseline; gap:calc(var(--chip-gap-px) * var(--u)); font-size:calc(var(--panel-row-text-px-0) * var(--u))}
+.facts .fv.warn{color:var(--warn-ink); font-weight:var(--panel-count-weight)}
+.facts .fv .i{flex:none; align-self:center; font-size:calc(var(--chip-icon-px) * var(--u))}
+.facts.ar .fk{font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.facts.ar .fv{font-size:calc(var(--panel-row-text-px-1) * var(--u))}
+.ro{display:flex; align-items:center; gap:calc(var(--clip-foot-gap-px) * var(--u)); color:var(--pop-muted); font-size:calc(var(--panel-hint-px-0) * var(--u))}
+.facts+.ro{border-top:var(--line-px) solid var(--pop-line); padding-top:calc(var(--panel-body-gap-px) * var(--u))}
+.ro>.i{flex:none; font-size:calc(var(--clip-room-px-2) * var(--u))}
+.ro .x{flex:1; min-width:0}
+.ro.ar .x{font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.ro.old{color:var(--warn-ink); font-weight:var(--panel-count-weight)}
+
+/* A service's page: rows of lines and buttons, where to make a key, and a switch row as Options' switches. */
+.lrow{display:flex; align-items:center; gap:calc(var(--clip-button-px-5) * var(--u)); min-width:0}
+.lrow.ko{color:var(--pop-muted); font-size:calc(var(--panel-hint-px-0) * var(--u))}
+.lrow.ko>.i{flex:none; font-size:calc(var(--clip-room-px-2) * var(--u))}
+.lrow.ko .x{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lrow.ko.ar .x{font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.swr{display:flex; align-items:center; gap:calc(var(--panel-row-gap-px) * var(--u)); height:calc(var(--panel-field-px-0) * var(--u)); padding:0 calc(var(--panel-field-px-2) * var(--u));
+  border-radius:calc(var(--panel-field-px-1) * var(--u)); cursor:pointer}
+.swr:hover{background:var(--pop-hover)}
+.swr .x{flex:1; min-width:0}
+.swr .x.ar{font-size:calc(var(--panel-row-text-px-1) * var(--u))}
+
+/* The panel's own line (PanelLine.qml, shape.toml [panel] field_px and line_px): a hairline box; while it takes the
+   letters, a ring, a caret and a ring-coloured line under it, as WinUI's focused TextBox. A value keeps its end in sight. */
+.pline{position:relative; flex:1; min-width:0; box-sizing:border-box; height:calc(var(--panel-field-px-0) * var(--u)); padding:0 calc(var(--panel-field-px-2) * var(--u));
+  border-radius:calc(var(--panel-field-px-1) * var(--u)); border:var(--line-px) solid var(--pop-line); display:flex; align-items:center; gap:calc(var(--panel-field-px-2) * var(--u)); overflow:hidden; cursor:pointer}
+.pline:hover{background:var(--pop-hover)}
+.pline.on{border:calc(var(--press-ring-px) * var(--u)) solid var(--ring)}
+.pline.on::after{content:""; position:absolute; left:calc(var(--panel-field-px-1) * var(--u)); right:calc(var(--panel-field-px-1) * var(--u)); bottom:0; height:calc(var(--panel-line-px-3) * var(--u)); background:var(--ring)}
+.pline:focus-visible{outline:2px solid var(--ring); outline-offset:1px}
+.pline .lk{flex:none; color:var(--pop-muted); font-size:calc(var(--panel-hint-px-0) * var(--u)); white-space:nowrap}
+.pline .lk.ar{font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.pline .lv{flex:1; min-width:0; overflow:hidden; white-space:nowrap; direction:rtl; text-align:left; font-size:calc(var(--panel-field-px-3) * var(--u)); line-height:1.3}
+.pline .lv.lh{direction:ltr; text-overflow:ellipsis; color:var(--pop-muted)}
+.pline .lv.lh.ar{direction:rtl; text-align:right; font-family:var(--arabic-fonts)}
+.pline .lv.mask{letter-spacing:calc(var(--fill-mask-em) * 1em); color:var(--pop-muted)}
+.crt{display:inline-block; width:calc(var(--panel-line-px-1) * var(--u)); height:calc(var(--panel-field-px-3) * var(--u)); margin-inline-start:calc(var(--panel-line-px-2) * var(--u));
+  background:var(--ring); vertical-align:middle; animation:blink 1.06s steps(1) infinite}
+
+/* A Test's answer: a mark, a moving line while it tests, or a band in the warning colours. */
+.res{display:flex; align-items:center; gap:calc(var(--panel-head-gap-px) * var(--u)); min-height:calc(var(--chip-height-px) * var(--u)); color:var(--pop-muted); font-size:calc(var(--panel-hint-px-0) * var(--u))}
+.res.ar{font-size:calc(var(--panel-hint-px-0) * var(--arabic-scale) * var(--u))}
+.res>.i{flex:none; font-size:calc(var(--clip-button-px-4) * var(--u))}
+.res .prog{flex:1; margin-top:0}
+.res.bad{color:var(--pop-ink); background:var(--warn); border-radius:calc(var(--clip-note-px-1) * var(--u)); padding:calc(var(--clip-note-px-0) * var(--u)) calc(var(--panel-row-px-2) * var(--u));
+  font-size:calc(var(--clip-note-px-2) * var(--u))}
+.res.bad.ar{font-size:calc(var(--clip-note-px-2) * var(--arabic-scale) * var(--u))}
+.res.bad>.i{color:var(--warn-ink)}
+
+/* Reduced motion: the line's caret stands still. */
+.still .crt{animation:none}

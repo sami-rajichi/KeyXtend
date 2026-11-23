@@ -99,10 +99,10 @@ impl Actor {
         self.saved(kept.map(drop));
     }
 
-    /// Counts a written dictation on today's date.
+    /// Counts a written dictation on today's date, its cloud pick named by the run's table.
     pub(super) fn count(&mut self, count: &Count) {
         let today = self.ports.calendar.now().date;
-        self.held.counts.add(today, count);
+        self.held.counts.add_in(today, count, self.held.table);
         self.save_counts();
     }
 

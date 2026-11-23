@@ -111,14 +111,18 @@ Item {
         function test_a_slow_language_says_so_and_its_models_stay_pickable(d) {
             const box = make("modelsSlow", d.t);
             const s = box.view.sheet;
-            compare(heard(box.contentItem, s.slow).length, 1, "the slow line");
+            compare(heard(box.contentItem, s.slow.text).length, 1, "the slow line");
             compare(heard(box.contentItem, s.untested).length, 1, "the untested order");
             const all = rows(box);
             compare(shown(all[0]), want(s.rows[0]), "Default and Not for this PC");
             compare(all[0].Accessible.description, s.rows[0].line);
             mouseClick(all[1]);
             mouseClick(all[0]);
-            compare(acts(box), ["act row  1 " + box.round, "act row  0 " + box.round]);
+            const to = one(box, "voice.cloud");
+            compare(to.Accessible.name, s.slow.button.label, "the slow line leads to the Cloud page");
+            compare(to.icon, N.lk.icons.voice.panel.pages.cloud);
+            mouseClick(to);
+            compare(acts(box), ["act row  1 " + box.round, "act row  0 " + box.round, "act open cloud 0 " + box.round]);
             box.visible = false;
         }
 

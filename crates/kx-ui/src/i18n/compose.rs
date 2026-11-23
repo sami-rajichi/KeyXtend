@@ -1,10 +1,11 @@
-//! Texts built from parts: a notice with its arguments, a list with "and N more", the space bar, the banner's count,
-//! a pager's or the shortcuts layer's page, a chip's name, and the arguments of a counted text.
+//! Texts built from parts: a notice with its arguments, a list with "and N more", a sentence's list ending with "and",
+//! the space bar, the banner's count, a pager's or the shortcuts layer's page, a chip's name, and the arguments of a
+//! counted text.
 
 use super::I18n;
 use super::keys::{
-    BANNER_MORE, CHIP_FORGET_NAME, CHIP_NAME, LAYER_PAGE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE,
-    PAGE_OF, SPACE,
+    BANNER_MORE, CHIP_FORGET_NAME, CHIP_NAME, LAYER_PAGE, LIST_AND, LIST_AND_JOIN, LIST_COUNT,
+    LIST_JOIN, LIST_MORE, MODULE, PAGE_OF, SPACE,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::{Notice, NoticeArg, args, is_hidden};
@@ -27,6 +28,9 @@ const PAGES_VAR: &str = "pages";
 const WORD_VAR: &str = "word";
 /// The variable that plural forms select on.
 pub(super) const FORM_VAR: &str = "form";
+/// The plural form a number with decimals takes, CLDR's for a fraction, for money and factors alike:
+/// `intl_pluralrules` 7.0.2 reads a fraction's few and many by its whole part, so 7.20 would take the plural.
+pub(super) const FRACTION_FORM: &str = "other";
 /// Past this, a count takes the plural form of its last two digits.
 const HUNDRED: usize = 100;
 /// Last two digits below this keep the whole count, whose form past a hundred is the plain plural.
@@ -77,6 +81,20 @@ impl I18n {
         }
         values.set(LIST_VAR, joined);
         self.format(LIST_MORE, Some(&values))
+    }
+
+    /// `items`, already clean, as a sentence's list: joined by `list.and-join` and the last by `list.and`, as CLDR's
+    /// list patterns end; one item stands alone, and none is empty.
+    #[must_use]
+    pub fn and_list(&self, items: &[String]) -> String {
+        let Some((last, rest)) = items.split_last() else {
+            return String::new();
+        };
+        if rest.is_empty() {
+            return last.clone();
+        }
+        let joined = rest.join(&self.text(LIST_AND_JOIN));
+        format!("{joined}{}{last}", self.text(LIST_AND))
     }
 
     /// How many more notices wait behind the one the banner shows; empty when none do.

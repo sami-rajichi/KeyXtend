@@ -1,19 +1,21 @@
-//! Voice typing's grants (ADR-0042, ADR-0046): its feature is a default and the build ships it, the keyboard and the ui
-//! hold `Voice` as an event gate only, the module alone holds the microphone, the network and the folder reveal and asks
-//! for speech, the model files, the session watch and its shelf, speech and the model files reach it alone, its shelf
-//! reaches only the secret store's holders and only the voice module holds it in a run, and the session watch needs no
-//! gate.
+//! Voice typing's grants (ADR-0042, ADR-0046, ADR-0047): its feature is a default and the build ships it, the keyboard
+//! and the ui hold `Voice` as an event gate only, the module alone holds the microphone, the network and the folder
+//! reveal and asks for speech, cloud speech, the model files, the session watch and its shelf, speech, cloud speech and
+//! the model files reach it alone, `OpenLink` and `ReadClipboard` each gain exactly the voice module, its shelf and the
+//! cloud port reach only it in a run, either run, and the session watch needs no gate.
 
+use super::clip::readers;
+use super::sel::linkers;
 use super::{asking, defaults, features, holders, reached};
-use crate::rig::{OS, Rig};
-use keyxtend::boot::modules;
+use crate::rig::{APP, OS, Rig};
+use keyxtend::boot::{Services, modules};
 use keyxtend::hidden::Run;
 use kx_module_api::ports::{
-    ModelFiles, ModelFilesKey, SealedShelf, SessionWatch, SessionWatchKey, Speech, SpeechKey,
-    VoiceShelfKey,
+    CloudSpeech, CloudSpeechKey, ModelFiles, ModelFilesKey, SealedShelf, SessionWatch,
+    SessionWatchKey, Speech, SpeechKey, VoiceShelfKey,
 };
 use kx_module_api::{Capability, ModuleId, ServiceKey};
-use kx_platform_fake::{FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech};
+use kx_platform_fake::{FakeCloud, FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
@@ -57,11 +59,28 @@ fn only_the_voice_module_holds_the_microphone_the_network_and_the_folder_reveal(
 }
 
 #[test]
-fn speech_and_the_model_files_reach_the_voice_module_alone() {
+fn open_link_and_read_clipboard_each_gain_exactly_the_voice_module() {
+    let sets = [
+        (Capability::OpenLink, linkers()),
+        (Capability::ReadClipboard, readers()),
+    ];
+    for (cap, mut was) in sets {
+        assert!(was.remove(&kx_mod_voice::ID), "{cap:?}: voice holds it");
+        let now = holders(cap);
+        let gained: BTreeSet<ModuleId> = now.difference(&was).copied().collect();
+        assert_eq!(gained, voice(), "{cap:?}: ADR-0047 decision 11");
+        assert!(now.is_superset(&was), "{cap:?}: none lost");
+    }
+}
+
+#[test]
+fn speech_cloud_speech_and_the_model_files_reach_the_voice_module_alone() {
     let rig = Rig::new();
     let speech: Arc<dyn Speech> = Arc::new(FakeSpeech::new());
+    let cloud: Arc<dyn CloudSpeech> = Arc::new(FakeCloud::new());
     let files: Arc<dyn ModelFiles> = Arc::new(FakeModelFiles::new());
     assert_eq!(reached::<SpeechKey>(&rig, &speech), voice(), "ADR-0042");
+    assert_eq!(reached::<CloudSpeechKey>(&rig, &cloud), voice(), "ADR-0047");
     assert_eq!(reached::<ModelFilesKey>(&rig, &files), voice(), "ADR-0042");
 }
 
@@ -77,6 +96,15 @@ fn only_the_voice_module_asks_for_speech_the_model_files_the_session_or_its_shel
 }
 
 #[test]
+fn only_the_voice_module_asks_for_cloud_speech() {
+    assert_eq!(
+        asking(&[CloudSpeechKey::ID]),
+        voice(),
+        "ADR-0047 decision 11"
+    );
+}
+
+#[test]
 fn the_voice_shelf_reaches_only_the_secret_store_holders() {
     let shelf: Arc<dyn SealedShelf> = Arc::new(FakeShelf::new());
     let got = reached::<VoiceShelfKey>(&Rig::new(), &shelf);
@@ -84,31 +112,50 @@ fn the_voice_shelf_reaches_only_the_secret_store_holders() {
     assert!(got.contains(&kx_mod_voice::ID), "{got:?}");
 }
 
-/// The voice shelf's holders beyond the test's and the kernel's own, after the shipped app's start, then after its stop,
-/// with module `off` switched off.
-fn shelf_holders(off: Option<ModuleId>) -> (usize, usize) {
+/// The holders of `api`, which `put` sets among the services, beyond the test's and the kernel's own after the
+/// shipped app's start in `run`, then after its stop, with module `off` switched off.
+fn held<T: ?Sized>(
+    api: &Arc<T>,
+    put: impl FnOnce(&mut Services, Arc<T>),
+    run: &Run,
+    off: Option<ModuleId>,
+) -> (usize, usize) {
     let rig = Rig::new();
     if let Some(id) = off {
         let section = format!("[kernel]\ndisabled = [\"{id}\"]\n");
         std::fs::write(rig.files().settings, section).unwrap();
     }
-    let shelf: Arc<dyn SealedShelf> = Arc::new(FakeShelf::new());
     let mut services = rig.services();
-    services.voice_shelf = Arc::clone(&shelf);
-    let mut boot = rig.load_with(&Run::Normal, services);
-    let own = Arc::strong_count(&shelf);
+    put(&mut services, Arc::clone(api));
+    let mut boot = rig.load_with(run, services);
+    let own = Arc::strong_count(api);
     boot.start().unwrap();
-    let running = Arc::strong_count(&shelf) - own;
+    let running = Arc::strong_count(api) - own;
     boot.kernel.stop_all();
-    (running, Arc::strong_count(&shelf) - own)
+    (running, Arc::strong_count(api) - own)
 }
 
 #[test]
 fn only_the_voice_module_gets_its_shelf_and_lets_it_go_at_stop() {
-    let (running, stopped) = shelf_holders(None);
+    let shelf: Arc<dyn SealedShelf> = Arc::new(FakeShelf::new());
+    let put = |s: &mut Services, a| s.voice_shelf = a;
+    let (running, stopped) = held(&shelf, put, &Run::Normal, None);
     assert!(running > 0, "the voice module holds it while it runs");
     assert_eq!(stopped, 0, "and lets it go at stop");
-    let others = shelf_holders(Some(kx_mod_voice::ID));
+    let others = held(&shelf, put, &Run::Normal, Some(kx_mod_voice::ID));
+    assert_eq!(others, (0, 0), "no other shipped module gets it");
+}
+
+#[test]
+fn the_app_hands_cloud_speech_to_the_voice_module_alone_in_either_run() {
+    let cloud: Arc<dyn CloudSpeech> = Arc::new(FakeCloud::new());
+    let put = |s: &mut Services, a| s.cloud = a;
+    for run in [Run::Normal, Run::hidden(APP.into())] {
+        let (running, stopped) = held(&cloud, put, &run, None);
+        assert!(running > 0, "{run:?}: the voice module holds it");
+        assert_eq!(stopped, 0, "{run:?}: and lets it go at stop");
+    }
+    let others = held(&cloud, put, &Run::Normal, Some(kx_mod_voice::ID));
     assert_eq!(others, (0, 0), "no other shipped module gets it");
 }
 

@@ -1,6 +1,6 @@
 //! The module on its own threads: the key opens a dictation and the light follows it, a text goes out on the typer's
-//! thread and a held keyboard never holds the stop, a panic hides the bar and closes the microphone, and with the
-//! feature off nothing starts (edge 36).
+//! thread and a held keyboard never holds the stop, a panic hides the bar, closes the microphone and the keyboard's
+//! panel line, and with the feature off nothing starts (edge 36).
 
 use std::any::Any;
 use std::panic;
@@ -13,8 +13,8 @@ use std::thread;
 use kx_mod_voice::{VoiceModule, VoiceSettings};
 use kx_module_api::ports::{
     Drive, FetchAsk, FetchNote, FetchRun, FieldKind, Fingerprint, FolderScan, LayoutChanged,
-    LayoutId, ModelError, ModelFiles, SpeechDone, SpeechNote, SpeechStage, TextAsk, TextDone,
-    VoiceBar, VoiceKey, VoiceOpen,
+    LayoutId, ModelError, ModelFiles, PanelLine, SpeechDone, SpeechNote, SpeechStage, TextAsk,
+    TextDone, VoiceBar, VoiceKey, VoiceLit, VoiceOpen,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing, keys};
 use kx_platform_fake::{FakeModelFiles, SpeechCall};
@@ -38,7 +38,7 @@ fn listen(fakes: &Fakes, bus: &Bus, heard: &Heard) {
     let open = vec![SpeechNote::Stage(SpeechStage::Open)];
     fakes.speech.on(SpeechCall::Open, open);
     bus.publish(&VoiceKey).unwrap();
-    heard.wait_for(&Said::Lit(true));
+    heard.wait_for(&Said::Lit(VoiceLit::Rec));
 }
 
 #[test]
@@ -192,11 +192,14 @@ fn a_panic_on_the_actors_thread_hides_the_bar_closes_the_microphone_and_tells_th
     let (heard, bus) = (Heard::listen(&host), Bus::new(Arc::clone(&host.core)));
     let mut module = VoiceModule::new();
     start(&mut module, &mut host).unwrap();
+    bus.publish(&VoiceOpen).unwrap();
+    heard.wait_for(&Said::Line(Some(PanelLine::None)));
     listen(&fakes, &bus, &heard);
     armed.store(true, Ordering::SeqCst);
     bus.publish(&VoiceOpen).unwrap();
     heard.wait(|s| matches!(s, Said::View(page) if page.bar == VoiceBar::Hidden).then_some(()));
-    heard.wait_for(&Said::Lit(false));
+    heard.wait_for(&Said::Lit(VoiceLit::Off));
+    heard.wait_for(&Said::Line(None));
     heard.wait_for(&Said::Notice(keys::MODULE_FAILED));
     assert!(
         fakes
@@ -216,7 +219,7 @@ fn with_the_feature_off_no_bar_shows_no_key_lights_and_nothing_starts() {
     start(&mut module, &mut host).unwrap();
     let told = heard.drain();
     assert!(
-        matches!(&told[..], [Said::View(page), Said::Lit(false)] if page.bar == VoiceBar::Hidden && page.panel.is_none())
+        matches!(&told[..], [Said::View(page), Said::Lit(VoiceLit::Off), Said::Line(None)] if page.bar == VoiceBar::Hidden && page.panel.is_none())
     );
     assert_eq!(host.lookups.get(), 0, "no service, so no worker");
     bus.publish(&VoiceKey).unwrap();

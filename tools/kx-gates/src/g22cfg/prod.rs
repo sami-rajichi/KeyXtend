@@ -39,19 +39,20 @@ pub struct G22Product {
     pub settle_ms: u64,
     /// The line the voice gate build logs at start with its clip; without it the copy may hear the microphone.
     pub warn_line: String,
-    /// The line the voice gate build logs with the device id of each dictation it writes.
-    pub wrote_line: String,
     /// The bar's gate-id group (kx-ui `VoiceNames.group`).
     pub group: String,
     /// Stop's id on the bar (kx-ui `bar_button_id`).
     pub stop: String,
-    /// The copy's `[kernel] log_level`.
+    /// The copy's `[kernel] log_level`; it must keep `LINES_LEVEL`'s lines.
     pub log_level: String,
     /// What marks the copy's log lines a failed language prints, each found as written.
     pub why_marks: Vec<String>,
 }
 
 impl G22Product {
+    /// The level of the stage and typed lines, which the copy's log must keep.
+    pub const LINES_LEVEL: &str = "debug";
+
     /// Stop's gate id.
     #[cfg_attr(
         not(feature = "voice"),
@@ -69,6 +70,13 @@ impl G22Product {
     /// The device pick `device` names; none for a name `[voice] device` refuses.
     pub fn pick(&self) -> Option<DevicePick> {
         DevicePick::parse(&self.device)
+    }
+
+    /// Puts `pick`, the run's `--device`, in place of `device` for this run; none keeps the file's.
+    pub fn set_pick(&mut self, pick: Option<&DevicePick>) {
+        if let Some(pick) = pick {
+            pick.name().clone_into(&mut self.device);
+        }
     }
 
     /// The wait before Dictation once a clip's layout is in front: `card_wait_ms` with a card in `device`, else none.
@@ -96,9 +104,7 @@ impl G22Product {
         if self.pick().is_none() {
             return Err("g22_product.device must be one [voice] device takes".into());
         }
-        if kx_kernel::log::level(&self.log_level).is_none() {
-            return Err("g22_product.log_level must be a log level name".into());
-        }
+        self.check_lines()?;
         let waits = [
             self.ready_ms,
             self.card_wait_ms,
@@ -109,13 +115,25 @@ impl G22Product {
         if waits.contains(&0) || self.settle_ms == 0 {
             return Err("g22_product's waits must be above 0".into());
         }
-        let named = [&self.warn_line, &self.wrote_line, &self.group, &self.stop];
+        let named = [&self.warn_line, &self.group, &self.stop];
         if named.iter().any(|t| t.trim().is_empty()) || self.group.contains(SEP) {
             return Err(format!(
-                "g22_product needs a warn_line, a wrote_line, a group without {SEP:?} and stop"
+                "g22_product needs a warn_line, a group without {SEP:?} and stop"
             ));
         }
         self.check_marks()
+    }
+
+    /// Refuses a log level that drops the timing lines.
+    fn check_lines(&self) -> Result<(), String> {
+        let level = kx_kernel::log::level(&self.log_level);
+        if level.is_none() || level < kx_kernel::log::level(Self::LINES_LEVEL) {
+            return Err(format!(
+                "g22_product.log_level must be a log level name that keeps {} lines",
+                Self::LINES_LEVEL
+            ));
+        }
+        Ok(())
     }
 
     /// Refuses an empty `why_marks` or a blank mark in it.

@@ -1,0 +1,206 @@
+//! A service's key page as QML reads it (ADR-0047): the key line as dots with Test and the test's answer, the address
+//! and Other model lines with why one was refused, each line's Paste and Save with why a Paste put nothing, the
+//! keep-nothing switch, and where keys are made.
+//! A typed line shows its text only on the panel's own line (ADR-0040); the key never leaves as text.
+
+use super::acts::{KEEP, PASTE, SAVE};
+use super::cloud::{self, Lead, Switch};
+use super::panel::{Cx, Page, Sheet};
+use super::parts::{Button, Hint, Tone, word};
+use super::sheets::mark_key;
+use crate::I18n;
+use crate::i18n::clean;
+use crate::i18n::keys::vars::SITE;
+use crate::i18n::keys::{
+    VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN, VOICE_ADDRESS_LINE,
+    VOICE_KEEP_NOTHING, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK, VOICE_KEY_SEALED,
+    VOICE_LINE_PASTE, VOICE_LINE_PASTE_NAME, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK,
+    VOICE_MODEL_HINT, VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id,
+    key_check_id, panel_button_id, paste_fault_key, service_mark,
+};
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    CloudButton, CloudLine, CloudWhy, KeyCheck, PanelButton, ServiceName, ServiceSheet, Unavailable,
+};
+use serde::Serialize;
+
+/// The key page's id.
+pub(super) const SERVICE_PAGE: &str = "service";
+/// A typed line: its caption, its hint while empty, its text, or for the key its sealed and typed lengths and the mask
+/// `PanelLine` draws their dots from, whether it takes the letters and its caret there (ADR-0049), why it was refused
+/// or its Paste put nothing, and its buttons, Paste and Save among them.
+#[derive(Serialize)]
+pub(super) struct LineView {
+    id: &'static str,
+    caption: String,
+    hint: String,
+    text: String,
+    dots: u32,
+    typed: u32,
+    mask: Option<String>,
+    typing: bool,
+    at: u32,
+    fault: Option<String>,
+    buttons: Vec<Button>,
+}
+
+impl LineView {
+    /// Line `line` of `s` with `words`, its caption's key and its hint, and `text`; its caret while it takes the letters,
+    /// why its Paste put nothing, that Paste, and its Save, which dims while it has nothing to save. Both name their line
+    /// for readers.
+    fn new(
+        t: &I18n,
+        s: &ServiceSheet,
+        line: CloudLine,
+        words: (&str, String),
+        text: String,
+    ) -> Self {
+        let typing = s.typing == line;
+        let id = cloud_line_id(line);
+        let named = |name: &str| t.text(&format!("{name}{id}"));
+        let paste = Button::new(PASTE, id, 0, t.text(VOICE_LINE_PASTE));
+        let save = Button::new(SAVE, id, 0, t.text(VOICE_LINE_SAVE));
+        let pasted = s.pasted.filter(|&(at, _)| at == line);
+        Self {
+            id,
+            caption: t.text(words.0),
+            hint: words.1,
+            text,
+            dots: 0,
+            typed: 0,
+            mask: None,
+            typing,
+            at: if typing { *s.caret.expose() } else { 0 },
+            fault: pasted.map(|(_, fault)| t.text(paste_fault_key(fault))),
+            buttons: vec![
+                paste.named(named(VOICE_LINE_PASTE_NAME)),
+                save.named(named(VOICE_LINE_SAVE_NAME))
+                    .on(s.saves.contains(&line)),
+            ],
+        }
+    }
+}
+
+/// The key test's answer, lit when the key works or a warning band when it warns, so QML keeps no list of answers.
+#[derive(Serialize)]
+struct Check {
+    #[serde(flatten)]
+    hint: Hint,
+    works: bool,
+    warns: bool,
+}
+
+impl Check {
+    /// The answer `hint` for test state `check`; a test that runs or a row with none is plain.
+    fn new(check: KeyCheck, hint: Hint) -> Self {
+        use KeyCheck as K;
+        let (works, warns) = match check {
+            K::Works => (true, false),
+            K::Untested | K::Testing | K::NoTest => (false, false),
+            K::Refused
+            | K::Admin
+            | K::Failed
+            | K::Credit
+            | K::Account
+            | K::Region
+            | K::Allowance
+            | K::Rate
+            | K::Strange
+            | K::Unfit => (false, true),
+        };
+        Self { hint, works, warns }
+    }
+}
+
+/// The key page's body: the key line with the test's answer under it, the address and model lines, the ids of those
+/// shown in page order (each its field's name), keep-nothing and where keys are made.
+#[derive(Serialize)]
+pub(super) struct KeyPage {
+    key: Option<LineView>,
+    check: Option<Check>,
+    address: Option<LineView>,
+    model: Option<LineView>,
+    order: Vec<&'static str>,
+    keep: Option<Switch>,
+    link: Option<Lead>,
+}
+
+/// The key page: its lines and answers, Facts, Remove key and Switch off, with the line that the key is sealed.
+pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
+    let t = cx.t;
+    let b = |x| cloud::button(t, x, &s.acts);
+    let shows = |line| s.lines.contains(&line);
+    let check = key_check_id(s.check)
+        .zip(t.voice_key_check(s.check, s.renews_at))
+        .map(|(id, text)| Check::new(s.check, Hint::new(id, text)));
+    let link = s.site.as_ref().map(|site| {
+        let text = t.voice_with(VOICE_KEY_LINK, &[(SITE, clean(site))]);
+        let open = t.text(&word(panel_button_id(PanelButton::Open)));
+        Lead::new(text, b(CloudButton::Link).labelled(open))
+    });
+    let keep = |on| Switch::new(t, KEEP, t.text(VOICE_KEEP_NOTHING), on);
+    let sheet = Sheet::Service(Box::new(KeyPage {
+        key: shows(CloudLine::Key).then(|| key(t, s)),
+        check,
+        address: (s.address.as_ref())
+            .filter(|_| shows(CloudLine::Address))
+            .map(|a| address(t, s, a)),
+        model: shows(CloudLine::Model).then(|| model(t, s)),
+        order: s.lines.iter().map(|&l| cloud_line_id(l)).collect(),
+        keep: s.keep.map(keep),
+        link,
+    }));
+    let sub = t.text(&mark_key(service_mark(s.mark)));
+    let mut page = Page::new(SERVICE_PAGE, cloud::service(t, &s.service), sub, sheet);
+    page.line = Some(t.text(VOICE_KEY_SEALED));
+    page.foot = vec![
+        b(CloudButton::Facts),
+        b(CloudButton::Remove).tone(Tone::Danger),
+        b(CloudButton::Off),
+    ];
+    page
+}
+
+/// The key line: the sealed key's dots and the typed key's, never its text, the mask `PanelLine` draws them from, and
+/// Test after Paste and Save, which a row whose first dictation tests the key does not show.
+fn key(t: &I18n, s: &ServiceSheet) -> LineView {
+    let words = (VOICE_KEY_LINE, t.text(VOICE_KEY_HINT));
+    let mut line = LineView::new(t, s, CloudLine::Key, words, String::new());
+    (line.dots, line.typed) = (*s.key.expose(), *s.typed.expose());
+    line.mask = Some(t.text(VOICE_MASK));
+    let test = cloud::button(t, CloudButton::Test, &s.acts);
+    line.buttons.extend(s.tests.then_some(test));
+    line
+}
+
+/// The address line with `a`: the Custom row's hint names an HTTPS host, a service's own its resource; a Paste's note
+/// shows in place of its refusal.
+fn address(t: &I18n, s: &ServiceSheet, a: &Redacted<String>) -> LineView {
+    let hint = if s.service == ServiceName::Custom {
+        VOICE_ADDRESS_HINT
+    } else {
+        VOICE_ADDRESS_HINT_OWN
+    };
+    let fault = s
+        .address_fault
+        .map(|f| t.voice_https(&format!("{VOICE_ADDRESS}{}", address_fault_id(f))));
+    let words = (VOICE_ADDRESS_LINE, t.voice_https(hint));
+    let mut line = LineView::new(t, s, CloudLine::Address, words, clean(a.expose()));
+    line.fault = line.fault.or(fault);
+    line
+}
+
+/// The Other model line: why its Paste put nothing, why its id was refused, or why no host of it keeps nothing (edge
+/// 17).
+fn model(t: &I18n, s: &ServiceSheet) -> LineView {
+    let fault = if s.model_refused {
+        Some(t.text(VOICE_MODEL_REFUSED))
+    } else {
+        let why = CloudWhy::Unavailable(Unavailable::KeepNothing);
+        s.model_na.then(|| t.voice_cloud(&why))
+    };
+    let words = (VOICE_MODEL_LINE, t.text(VOICE_MODEL_HINT));
+    let mut line = LineView::new(t, s, CloudLine::Model, words, clean(s.model.expose()));
+    line.fault = line.fault.or(fault);
+    line
+}

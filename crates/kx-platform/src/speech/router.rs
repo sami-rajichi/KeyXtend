@@ -1,8 +1,9 @@
 //! Which run each note of the dictation job belongs to, and what each run still holds: its ids, its recording, its
-//! worker's life and a `keep` waiting for its pieces. A run's callback is called with the router unlocked and is held
-//! while it hears, so a close waits out a note being told and none comes after it.
+//! worker's life, a `keep` waiting for its pieces and a listen-only run's speech. A run's callback is called with the
+//! router unlocked and is held while it hears, so a close waits out a note being told and none comes after it.
 
 use super::note::{lost, note};
+use super::spoken::Spoken;
 use crate::ear::Ear;
 use crate::worker::Told;
 use kx_ipc::{VoiceFault, VoiceNote, Wiped};
@@ -30,6 +31,8 @@ struct Entry {
     dead: bool,
     /// A `keep` waiting for the recording's pieces.
     keep: Option<Sender<Kept>>,
+    /// Its speech since its newest ask, when it listens alone.
+    spoken: Spoken,
 }
 
 /// Where a run stands, as its calls check it.
@@ -56,15 +59,17 @@ impl Router {
             held: false,
             dead: false,
             keep: None,
+            spoken: Spoken::default(),
         };
         self.runs.insert(self.next, entry);
         self.next
     }
 
-    /// Gives `id` to `run`, whose job then holds a recording for it.
+    /// Gives `id` to `run`, whose job then holds a recording for it; the speech of its asks before goes.
     pub(super) fn map(&mut self, run: u64, id: u32) {
         if let Some(entry) = self.runs.get_mut(&run) {
             (entry.held, entry.dead) = (true, false);
+            entry.spoken = Spoken::default();
             self.ids.insert(id, run);
         }
     }
@@ -84,10 +89,27 @@ impl Router {
         Some(State { held, dead })
     }
 
-    /// Marks `run`'s worker dead after a call found it gone.
+    /// Marks `run`'s worker dead after a call found it gone, which took its speech too.
     pub(super) fn kill(&mut self, run: u64) {
         if let Some(entry) = self.runs.get_mut(&run) {
             (entry.held, entry.dead) = (false, true);
+            entry.spoken = Spoken::default();
+        }
+    }
+
+    /// Fresh copies of `run`'s speech, once its end came.
+    ///
+    /// # Errors
+    /// `NoSound` before its end or once it closed or was wiped, `Internal` when the job broke its order.
+    pub(super) fn spoken(&self, run: u64) -> Result<Vec<SecretBytes>, SpeechError> {
+        let entry = self.runs.get(&run).ok_or(SpeechError::NoSound)?;
+        entry.spoken.give()
+    }
+
+    /// Wipes `run`'s speech, as a Cancel does.
+    pub(super) fn forget(&mut self, run: u64) {
+        if let Some(entry) = self.runs.get_mut(&run) {
+            entry.spoken = Spoken::default();
         }
     }
 
@@ -104,12 +126,14 @@ impl Router {
         self.runs.remove(&run).map(|entry| entry.hearer)
     }
 
-    /// The other runs' recordings went with their job: each that held one is told `Wiped`, all but `except`.
+    /// The other runs' recordings went with their job: each that held one is told `Wiped`, all but `except`, and its
+    /// speech goes too.
     pub(super) fn wipe(&mut self, except: Option<u64>) -> Out {
         let mut out = Out::new();
         for (run, entry) in &mut self.runs {
             if Some(*run) != except && entry.held {
                 entry.held = false;
+                entry.spoken = Spoken::default();
                 out.push((Arc::clone(&entry.hearer), vec![SpeechNote::Wiped]));
             }
         }
@@ -127,8 +151,9 @@ impl Router {
         }
     }
 
-    /// Routes one note to its run, a piece of the recording to the waiting `keep`, and any fault that ends the id to
-    /// that `keep` too, so it never waits on; a job that says it holds no recording dims the run's keep and again.
+    /// Routes one note to its run, a piece of the recording to the waiting `keep`, speech to the run's own, and any
+    /// fault that ends the id to that `keep` too, so it never waits on; a job that says it holds no recording dims the
+    /// run's keep and again.
     fn note(&mut self, voice: VoiceNote) -> Out {
         let Some(entry) = self.ids.get(&voice.id()).and_then(|r| self.runs.get_mut(r)) else {
             return Out::new();
@@ -147,6 +172,14 @@ impl Router {
                     entry.keep = None;
                 }
                 return Out::new();
+            }
+            VoiceNote::Speech { piece, .. } => {
+                entry.spoken.take(piece);
+                return Out::new();
+            }
+            VoiceNote::Done { .. } => {
+                entry.spoken.end();
+                note(voice)
             }
             VoiceNote::Fault { fault, .. }
                 if SpeechError::from(fault).ends() && entry.keep.is_some() =>
@@ -168,6 +201,7 @@ impl Router {
         let mut out = Out::new();
         for entry in self.runs.values_mut() {
             (entry.held, entry.dead) = (false, true);
+            entry.spoken = Spoken::default();
             let _ = entry.keep.take().map(|keep| keep.send(Err(error)));
             out.push((Arc::clone(&entry.hearer), vec![SpeechNote::Fault(error)]));
         }
@@ -181,7 +215,7 @@ fn refuses_keep(fault: VoiceFault) -> bool {
 }
 
 /// A kept piece's bytes as the port's secret, without a copy when the frame kept them.
-fn secret(bytes: Wiped<'_>) -> SecretBytes {
+pub(super) fn secret(bytes: Wiped<'_>) -> SecretBytes {
     match bytes {
         Wiped::Kept(kept) => Redacted::new(kept),
         Wiped::Lent(lent) => Redacted::new(Zeroizing::new(lent.to_vec())),

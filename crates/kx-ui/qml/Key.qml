@@ -1,6 +1,6 @@
-// One key: its shadows, cap, inner shading, legends or icon, LED and pointer feedback. Readers hear its name and a note,
-// also in its tip: when a dimmed key, which never presses, comes, that the language key has only one language, or the
-// keys a shortcut sends.
+// One key: its shadows, cap, inner shading, legends or icon, LED, Preparing's ring in high contrast and pointer
+// feedback. Readers hear its name and a note, also in its tip: when a dimmed key, which never presses, comes, that the
+// language key has only one language, or the keys a shortcut sends.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -38,8 +38,14 @@ Item {
     // This press holds the key instead of clicking it, as `repeats` said when the pointer went down.
     property bool holds: false
     readonly property bool on: ks ? ks.on : false
-    // The Dictation key while the microphone is open, as the state tells it; it glows in the rec paint.
-    readonly property bool rec: ks ? !!ks.rec : false
+    // The Dictation key's light as the state tells it: amber ("prep") while the microphone starts, red ("rec") while it
+    // is open; each glows in its own paint.
+    readonly property string light: ks && ks.lit ? ks.lit : "off"
+    readonly property bool rec: light === "rec"
+    readonly property bool prep: light === "prep"
+    // In high contrast a preparing key keeps a resting key's colours and wears a ring in Highlight, so only Recording
+    // fills (Microsoft: never colour alone).
+    readonly property bool ringed: prep && lk.contrast
     readonly property bool down: area.pressed && !dim
     // The palette tokens for the cap, legend and skirt, which the face picks from the kind and state.
     readonly property var paint: ks ? ks.paint : ({})
@@ -49,18 +55,21 @@ Item {
     property color skirt: p.skirt ? p.skirt[paint.skirt] : p[paint.fill]
     // Legends and icons on a pressed key: high contrast's press text at once, else each keeps its colour.
     readonly property var pressInk: down ? p.press_ink : null
-    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1.
+    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1. High
+    // contrast keeps the system colours, so its cap never brightens.
     readonly property alias sink: cap.sink
     property real lift: 0
+    readonly property bool lifted: lift > 0 && !lk.contrast
     readonly property real glowBy: 1 + (lk.motion.amount.glow_lift - 1) * lift
-    readonly property color capColour: lift > 0 ? Qt.lighter(fillColour, glowBy) : fillColour
-    readonly property color capSkirt: lift > 0 ? Qt.lighter(skirt, glowBy) : skirt
+    readonly property color capColour: lifted ? Qt.lighter(fillColour, glowBy) : fillColour
+    readonly property color capSkirt: lifted ? Qt.lighter(skirt, glowBy) : skirt
     readonly property real radius: look.key_radius_px
     readonly property color onColour: p.on
     // The icon file the theme gives this key; without one the key shows its label.
     readonly property string icon: iconOf(kv.icon)
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
-    readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
+    // The state may give a name readers hear in place of its own, as the Dictation key's while it prepares.
+    readonly property string name: ks && ks.spoken ? res.tr(ks.spoken) : kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
     // What readers hear after its name, also in its tip: when a dimmed key comes, the state's tip, such as a lone
     // language key's, or the shortcuts layer's page on the key that shows its dots.
@@ -69,7 +78,7 @@ Item {
     readonly property string keys: kv.icon_only && icon ? res.keysText(kv.steps) : ""
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
-    // The recording glow runs.
+    // The lit Dictation key's glow runs.
     readonly property bool glowing: glow.running
     // This key showed a tip, which it takes back on leave even when its note went meanwhile.
     property bool tipped: false
@@ -159,10 +168,10 @@ Item {
             move: key.mv.colour
         }
     }
-    // A recording cap glows (mock-up .key.rec .cap); loops never run at 0 ms.
+    // A recording or preparing cap glows (mock-up .key.rec .cap, .key.prep .cap); loops never run at 0 ms.
     SequentialAnimation on lift {
         id: glow
-        running: key.rec && key.mv.glow.ms > 0
+        running: (key.rec || key.prep) && key.mv.glow.ms > 0
         loops: Animation.Infinite
         onStopped: key.lift = 0
 
@@ -216,11 +225,32 @@ Item {
             icon: key.icon
             label: key.label
         }
-        // The light, made only where it shows: on a lit or recording key, or on every key of a theme with off lights.
+        // The light, made only where it shows: on a lit or recording key, or on every key of a theme with off lights. A
+        // ringed key, whose light is off, wears its ring there instead, so no key holds one more item.
         Loader {
-            active: key.rec || key.ledLit > 0 || key.ledColour.a > 0
-            sourceComponent: Led {
+            active: key.ringed || key.rec || key.ledLit > 0 || key.ledColour.a > 0
+            sourceComponent: key.ringed ? ringC : ledC
+        }
+        Component {
+            id: ledC
+            Led {
                 key: key
+            }
+        }
+        // As wide as the hover outline and just inside it.
+        Component {
+            id: ringC
+            Rectangle {
+                readonly property real px: key.lk.shape.hc_outline.px
+                objectName: "prepRing"
+                x: px
+                y: px
+                width: key.width - 2 * px
+                height: key.height - 2 * px
+                radius: Math.max(0, key.radius - px)
+                color: "transparent"
+                border.width: px
+                border.color: key.p.ring
             }
         }
     }

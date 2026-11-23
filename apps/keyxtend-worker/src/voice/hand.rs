@@ -1,16 +1,19 @@
 //! The held recording and its hand-over: `Sound` notes of whole 16-bit little-endian samples, each at most
-//! `MAX_SOUND_BYTES`, and the `Sound` asks a recording moved from another job comes back in, checked piece by piece.
+//! `MAX_SOUND_BYTES`, a listen-only run's packed speech as `Speech` notes at Stop, and the `Sound` asks a recording
+//! moved from another job comes back in, checked piece by piece.
 
 use super::Notes;
 use super::job::Fail;
 use super::wipe::Buf;
 use kx_ipc::{
-    MAX_RECORD_BYTES, MAX_SOUND_BYTES, SAMPLE_BYTES, SoundPiece, VoiceFault, VoiceNote, Wiped,
+    MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SPEECH_PIECES, SAMPLE_BYTES, SoundPiece, VoiceFault,
+    VoiceNote, Wiped,
 };
+use std::ops::Range;
 use zeroize::Zeroizing;
 
 /// Samples in one handed-over piece.
-const PIECE_SAMPLES: usize = MAX_SOUND_BYTES / SAMPLE_BYTES;
+pub const PIECE_SAMPLES: usize = MAX_SOUND_BYTES / SAMPLE_BYTES;
 /// Samples in the longest recording.
 const MOST_SAMPLES: usize = MAX_RECORD_BYTES / SAMPLE_BYTES;
 
@@ -57,7 +60,7 @@ pub fn over(id: u32, sound: &[i16], out: &mut dyn Notes) -> Result<(), Fail> {
         .enumerate()
     {
         let index = u16::try_from(k).map_err(|_| VoiceFault::Internal)?;
-        let bytes = Wiped::Kept(bytes(part)?);
+        let bytes = Wiped::Kept(bytes(&[part])?);
         let piece = SoundPiece {
             index,
             last: k + 1 == count,
@@ -68,12 +71,37 @@ pub fn over(id: u32, sound: &[i16], out: &mut dyn Notes) -> Result<(), Fail> {
     Ok(())
 }
 
-/// `part` as little-endian bytes in a wiped buffer, made in one allocation.
-fn bytes(part: &[i16]) -> Result<Zeroizing<Vec<u8>>, VoiceFault> {
+/// Hands a listen-only run's speech over as run `id`'s `Speech` notes in order, each piece the stretches of `sound` it
+/// joins, the last marked; no speech is no note.
+///
+/// # Errors
+/// `Out` when the pipe fails, `Memory` when a piece's buffer cannot be had, `Internal` for a stretch past `sound` or a
+/// piece past `MAX_SPEECH_PIECES`.
+pub fn speech(
+    id: u32,
+    sound: &[i16],
+    pieces: &[Vec<Range<usize>>],
+    out: &mut dyn Notes,
+) -> Result<(), Fail> {
+    for (k, spans) in pieces.iter().enumerate() {
+        let index = u16::try_from(k).ok().filter(|_| k < MAX_SPEECH_PIECES);
+        let index = index.ok_or(VoiceFault::Internal)?;
+        let parts: Option<Vec<&[i16]>> = spans.iter().map(|s| sound.get(s.clone())).collect();
+        let bytes = Wiped::Kept(bytes(&parts.ok_or(VoiceFault::Internal)?)?);
+        let last = k + 1 == pieces.len();
+        let piece = SoundPiece { index, last, bytes };
+        out.tell(VoiceNote::Speech { id, piece })?;
+    }
+    Ok(())
+}
+
+/// `parts` joined as little-endian bytes in a wiped buffer, made in one allocation.
+fn bytes(parts: &[&[i16]]) -> Result<Zeroizing<Vec<u8>>, VoiceFault> {
     let mut out = Zeroizing::new(Vec::new());
-    out.try_reserve_exact(part.len() * SAMPLE_BYTES)
+    let len: usize = parts.iter().map(|p| p.len()).sum();
+    out.try_reserve_exact(len * SAMPLE_BYTES)
         .map_err(|_| VoiceFault::Memory)?;
-    for s in part {
+    for s in parts.iter().flat_map(|p| p.iter()) {
         out.extend_from_slice(&s.to_le_bytes());
     }
     Ok(out)

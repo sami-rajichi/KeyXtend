@@ -1,0 +1,263 @@
+//! The services table: the shipped rows load Groq first and each is valid, a bad row is refused with its rule, a
+//! request takes the right form, host and limits, and nothing in the table can name a default.
+
+use super::*;
+use kx_module_api::ports::{
+    CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
+};
+
+pub(crate) mod keyed;
+mod langs;
+mod parts;
+mod refuse;
+mod request;
+mod research;
+mod room;
+pub(crate) mod shipped;
+mod split;
+
+use keyed::{field_of, groq_line, head_line, row_edit, row_line, with_field};
+
+/// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.
+pub(crate) const TEXT: &str = include_str!("../../services.toml");
+pub(crate) const OWN: &str = include_str!("../../services-own.toml");
+pub(crate) const LANGS: &str = include_str!("../../langs.toml");
+
+/// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
+pub(crate) const OFFERED: [&str; 7] = [
+    "groq",
+    "lemonfox",
+    "custom",
+    "openrouter",
+    "elevenlabs",
+    "gemini",
+    "assemblyai",
+];
+/// The rows kept in the table, built and tested, but not offered: each needs a card or a payment before any use.
+pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "deepinfra"];
+/// The rows of a shape other than the upload form, after the form rows, in the table's order.
+pub(crate) const SHAPED: [&str; 3] = ["elevenlabs", "gemini", "assemblyai"];
+
+/// The table `text` gives with the shipped second file and language sets.
+pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {
+    Services::parse(text, OWN, LANGS)
+}
+
+/// An `OpenAI` row as the 2026-11-17 pages give it: `gpt-transcribe` takes `languages[]`, `whisper-1` `language`.
+const OPENAI: &str = r#"
+[[services]]
+id = "openai-test"
+name = "OpenAI"
+shape = "form"
+form = { lang = "language", list = false, fixed = [] }
+host = "api.openai.com"
+address = "https://api.openai.com/v1/audio/transcriptions"
+test = "https://api.openai.com/v1/models"
+header = "bearer"
+keys = "https://platform.openai.com/api-keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 50, at_once = 2 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "gpt-transcribe"
+name = "GPT Transcribe"
+langs = { ar = "ar", en = "en", fr = "fr" }
+form = { lang = "languages", list = true }
+
+[[services.models]]
+id = "whisper-1"
+name = "Whisper"
+langs = { ar = "ar", en = "en", fr = "fr" }
+
+[services.facts]
+read = 2026-11-17
+source = "https://developers.openai.com/api/docs/pricing"
+currency = "USD"
+place = { id = "us" }
+trains = { id = "opt-in" }
+keeps = { id = "none" }
+free = { id = "none" }
+light = { id = "plain", money = { price = 4.05 } }
+heavy = { id = "plain", money = { price = 16.20 } }
+"#;
+
+/// A form row whose typed address must be under its domain, with a test path and a model the request names not.
+pub(crate) const DOMAIN: &str = r#"
+[[services]]
+id = "domain-test"
+name = "Domain Test"
+shape = "form"
+form = { lang = "language", list = false }
+host = ".speech.example.com"
+address = "typed"
+test = "/v1/models"
+header = "x-api-key"
+keys = "https://speech.example.com/keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "base"
+name = "Base"
+langs = { ar = "ar-SA", en = "en-US", fr = "fr-FR" }
+unnamed = true
+
+[[services.models]]
+id = "large"
+name = "Large"
+langs = { ar = "ar", en = "en", fr = "fr" }
+
+[services.facts]
+read = 2026-11-17
+source = "https://speech.example.com/data"
+place = { id = "typed" }
+trains = { id = "unknown" }
+keeps = { id = "none" }
+free = { id = "none" }
+light = { id = "unknown" }
+heavy = { id = "unknown" }
+"#;
+
+/// A row like `OpenRouter`'s, with its keep-nothing field and a model whose every host keeps the voice.
+pub(crate) const ROUTER: &str = r#"
+[[services]]
+id = "router-test"
+name = "Router Test"
+shape = "form"
+form = { lang = "language", list = false }
+keep = { name = "provider", value = '{"zdr":true}' }
+host = "openrouter.ai"
+address = "https://openrouter.ai/api/v1/audio/transcriptions"
+test = "https://openrouter.ai/api/v1/key"
+header = "bearer"
+keys = "https://openrouter.ai/settings/keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "openai/whisper-large-v3-turbo"
+name = "Whisper Large v3 Turbo"
+langs = { ar = "ar", en = "en", fr = "fr" }
+
+[[services.models]]
+id = "kept/model"
+name = "Kept"
+langs = { en = "en" }
+keeps = true
+
+[services.facts]
+read = 2026-11-17
+source = "https://openrouter.ai/docs/guides/features/zdr"
+place = { id = "host" }
+trains = { id = "host" }
+keeps = { id = "host" }
+free = { id = "small" }
+light = { id = "unknown" }
+heavy = { id = "unknown" }
+"#;
+
+/// The compiled-in table, which must load.
+fn shipped() -> &'static Services {
+    table().unwrap()
+}
+
+/// The shipped text with `rows` after it.
+pub(crate) fn with_rows(rows: &str) -> Services {
+    parse(&format!("{TEXT}{rows}")).unwrap()
+}
+
+/// `text` with each pair's first `from` replaced by its `to`, in turn.
+pub(crate) fn edits_text(text: &str, pairs: &[(&str, &str)]) -> String {
+    pairs.iter().fold(text.to_owned(), |text, (from, to)| {
+        assert!(text.contains(from), "{from}");
+        text.replacen(from, to, 1)
+    })
+}
+
+/// The table `text` gives with the edits.
+fn edits_of(text: &str, pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
+    parse(&edits_text(text, pairs))
+}
+
+/// The shipped table with the edits.
+fn edits(pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
+    edits_of(TEXT, pairs)
+}
+
+/// The row error one edit of the shipped text gives.
+fn row_err(from: &str, to: &str) -> Option<ServiceError> {
+    match edits(&[(from, to)]) {
+        Err(ServicesError::Row { why, .. }) => Some(why),
+        _ => None,
+    }
+}
+
+#[test]
+fn the_shipped_table_loads_groq_first_with_custom() {
+    let ids: Vec<&str> = shipped().rows().iter().map(|r| r.id.as_str()).collect();
+    assert!(ids.contains(&"custom"), "{ids:?}");
+    let first = shipped().offered().next().map(|r| r.id.as_str());
+    assert_eq!(first, Some("groq"), "edge 24: Groq is listed first");
+    let hours = |key| field_of(head_line(key), key).parse().ok();
+    let read = (hours("light_hours"), hours("heavy_hours"));
+    assert_eq!(
+        read,
+        (Some(shipped().light_hours()), Some(shipped().heavy_hours()))
+    );
+    assert_eq!(parse(TEXT).as_ref(), Ok(shipped()));
+}
+
+#[test]
+fn every_shipped_row_is_https_with_fitting_limits_and_only_custom_is_unnamed() {
+    let unnamed: Vec<&str> = shipped()
+        .rows()
+        .iter()
+        .filter(|r| r.name.is_none())
+        .map(|r| r.id.as_str())
+        .collect();
+    assert_eq!(unnamed, ["custom"], "one unnamed row, the Custom one");
+    for row in shipped().rows() {
+        let id = &row.id;
+        let named = row.name.is_some();
+        match &row.address {
+            Address::Fixed(url) => assert!(url.expose().starts_with(LINK_SCHEME), "{id}"),
+            Address::Typed { under } => assert_eq!(under.is_some(), named, "{id}"),
+        }
+        assert!(row.shape.fits() && row.terms >= 1, "{id}");
+        assert!(row.other || !row.models.is_empty(), "{id}");
+        assert!(row.models.iter().all(|m| !m.langs.is_empty()), "{id}");
+        let l = row.limits;
+        assert!(CloudLimits::MAX_MB.contains(&l.max_mb) && CloudLimits::MAX_S.contains(&l.max_s));
+        assert!(
+            CloudLimits::PER_MIN.contains(&l.per_min) && CloudLimits::AT_ONCE.contains(&l.at_once)
+        );
+        let linked = (row.keys.is_some(), row.facts.source.is_some());
+        assert_eq!(
+            linked,
+            (named, named),
+            "{id}: a named row links its keys and facts pages"
+        );
+    }
+}
+
+#[test]
+fn no_row_can_name_a_default_or_a_field_the_table_does_not_know() {
+    for extra in ["default = true", "lead = true", "pick = \"groq\""] {
+        let to = format!("id = \"groq\"\n{extra}");
+        let refused = edits(&[("id = \"groq\"", &to)]);
+        assert!(matches!(refused, Err(ServicesError::Parse(_))), "{extra}");
+    }
+}
+
+#[test]
+fn a_bad_table_turns_cloud_off_and_never_panics() {
+    for text in ["", "light_hours = 15", "services = []", "\u{0}"] {
+        assert!(parse(text).is_err(), "{text:?}");
+    }
+}

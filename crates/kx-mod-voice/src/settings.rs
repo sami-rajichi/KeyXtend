@@ -1,22 +1,29 @@
 //! The `[voice]` settings (plan "Settings `[voice]`"): the switches, the folder and picks, the device, the listening
-//! and typing numbers, the bar, history and recordings, the card's check and the worker's limits. The worker's ranges
-//! are the ports' own, so a value is never checked twice; the rest are named consts here.
+//! and typing numbers, the bar, history and recordings, the card's check, the worker's limits and the cloud services.
+//! The worker's ranges are the ports' own, so a value is never checked twice; the rest are named consts here.
 
+mod cloud;
+mod drop;
+mod names;
 mod parts;
+mod picks;
 
-use std::collections::{BTreeMap, BTreeSet};
+pub(crate) use cloud::datetime;
+pub use cloud::{FACTS_DAYS, KEEP_START, ServiceOn};
+pub use names::{INSERTS, Insert, PLACES, insert_named, place_name, place_named};
+pub use picks::Picks;
+
+use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
 use std::path::Path;
 
 use kx_module_api::ports::{
-    BarPlace, CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, fits_iso, path_ok,
+    CLIP_ANSWER_MIN_MS, CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, path_ok,
 };
 use kx_module_api::{
     Settings, SettingsError, SettingsSpec, is_hidden, refuse_if, validate_as, within,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::models::table;
 
 /// Seconds without speech before the bar hints that nothing is heard.
 pub const NOTHING_S: RangeInclusive<u8> = 2..=60;
@@ -46,18 +53,17 @@ pub const READ_MS: RangeInclusive<u32> = 50..=1_000;
 pub const COPY_MS: RangeInclusive<u32> = 10..=2_000;
 /// How often Copy tries again within that wait, in ms.
 pub const COPY_POLL_MS: RangeInclusive<u32> = 1..=100;
-/// Each bar place's name in the setting.
-pub const PLACES: [(&str, BarPlace); 3] = [
-    ("above", BarPlace::Above),
-    ("bottom", BarPlace::Bottom),
-    ("top", BarPlace::Top),
-];
+/// The longest wait for the clipboard history to paste a text, in ms.
+pub const PASTE_MS: RangeInclusive<u32> = 500..=10_000;
+/// How long the key page's Paste waits for the clipboard's text, in ms: past the clipboard history's longest read.
+pub const TAKE_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=10_000;
 
 /// Why a value or a pair was refused.
 const BAD_RESTART: &str = "restart_ms must not pass restart_max_ms";
 const BAD_POLL: &str = "copy_poll_ms must not pass copy_ms";
 const BAD_DEVICE: &str = "device must be auto, cpu or a card's id";
 const BAD_PLACE: &str = "place must be above, bottom or top";
+const BAD_INSERT: &str = "insert must be type or paste";
 const BAD_DIR: &str = "models_dir must be empty or an absolute drive path";
 const BAD_SUFFIX: &str =
     "type_suffix must stay within its length and hold only characters that show";
@@ -66,6 +72,12 @@ const BAD_JOIN: &str =
 
 /// The picks' key in the section, which also names a dropped pick in the settings notice.
 pub(crate) const PICKS: &str = "picks";
+/// The switched-on services' key in the section, which also names a dropped entry in the settings notice.
+pub(crate) const SERVICES: &str = "services";
+/// The switched-off services' key in the section, named in the settings notice as `services` is.
+pub(crate) const PARKED: &str = "parked";
+/// The cloud switch's key in the section, which the Cloud page's switch writes.
+pub(crate) const CLOUD: &str = "cloud";
 /// The device's key in the section, which the Device page's Use writes.
 pub(crate) const DEVICE: &str = "device";
 /// The models folder's key in the section, which the first download's folder question writes.
@@ -91,8 +103,20 @@ pub struct VoiceSettings {
     pub on: bool,
     /// The models folder; empty until the first download asks for it.
     pub models_dir: String,
-    /// The user's model per language, by row id or file name.
-    pub picks: BTreeMap<String, String>,
+    /// The user's model per language, by row id or file name, or a service's id and model joined by `PICK_MARK`.
+    pub picks: Picks,
+    /// Cloud services may be switched on; off, none is offered and every language uses its local model.
+    pub cloud: bool,
+    /// The services the user switched on, by row id.
+    pub services: BTreeMap<String, ServiceOn>,
+    /// The services the user switched off, by row id, kept as they were until each one's Confirm; never sent to.
+    pub parked: BTreeMap<String, ServiceOn>,
+    /// The longest silence a cloud request may keep, in seconds; a piece may take several of these.
+    pub net_wait_s: u16,
+    /// Tries per piece before a cloud note.
+    pub net_tries: u8,
+    /// Days after which a card's facts show as old.
+    pub facts_days: u16,
     /// Where models run: `auto`, `cpu` or a card's id.
     pub device: String,
     /// Processor threads; 0 means the real cores.
@@ -119,6 +143,12 @@ pub struct VoiceSettings {
     pub history_join: String,
     /// The wait between typed pieces, in ms.
     pub type_gap_ms: u16,
+    /// How a text goes in, by its name in `INSERTS`.
+    pub insert: String,
+    /// The longest wait for the clipboard history to paste a text, in ms; then it is typed.
+    pub paste_ms: u32,
+    /// How long the key page's Paste waits for the clipboard's text, in ms; then the clipboard counts as busy.
+    pub take_ms: u32,
     /// How long the bar shows the text, in ms.
     pub done_ms: u32,
     /// The wave's smoothing, in ms.
@@ -226,46 +256,31 @@ impl VoiceSettings {
         within("read_ms", self.read_ms, &READ_MS)?;
         within("copy_ms", self.copy_ms, &COPY_MS)?;
         within("copy_poll_ms", self.copy_poll_ms, &COPY_POLL_MS)?;
+        within("paste_ms", self.paste_ms, &PASTE_MS)?;
+        within("take_ms", self.take_ms, &TAKE_MS)?;
         refuse_if(self.copy_poll_ms > self.copy_ms, BAD_POLL)
     }
 
-    /// The named values: the device, the place, the folder, the suffix and the join.
+    /// The named values: the device, the place, the way a text goes in, the folder, the suffix and the join.
     fn check_names(&self) -> Result<(), SettingsError> {
         refuse_if(DevicePick::parse(&self.device).is_none(), BAD_DEVICE)?;
         refuse_if(place_named(&self.place).is_none(), BAD_PLACE)?;
+        refuse_if(insert_named(&self.insert).is_none(), BAD_INSERT)?;
         let dir = &self.models_dir;
         refuse_if(!dir.is_empty() && !path_ok(Path::new(dir)), BAD_DIR)?;
         refuse_if(!shows(&self.type_suffix, TYPE_SUFFIX_CHARS), BAD_SUFFIX)?;
         refuse_if(!shows(&self.history_join, HISTORY_JOIN_CHARS), BAD_JOIN)
     }
-
-    /// Drops each pick that is not a language code naming a row that knows it or a model file, alone (edge case 19),
-    /// and names the dropped ones as `picks.<lang>`. Nothing drops while the models table does not load.
-    pub fn drop_bad_picks(&mut self) -> Vec<String> {
-        let Ok(table) = table() else {
-            return Vec::new();
-        };
-        let mut dropped = BTreeSet::new();
-        self.picks.retain(|lang, pick| {
-            let iso = fits_iso(lang);
-            let good = iso && table.pick(lang, pick).is_some();
-            let name = || iso.then(|| format!("{PICKS}.{lang}"));
-            if !good {
-                dropped.insert(name().unwrap_or_else(|| PICKS.to_owned()));
-            }
-            good
-        });
-        dropped.into_iter().collect()
-    }
 }
 
 impl Settings for VoiceSettings {
-    /// Each range, the restart pair's order, then the named values; a bad pick is left for `drop_bad_picks`, so the
-    /// kernel never resets the other languages' picks with it.
+    /// Each range, the restart pair's order, then the named values; a bad pick or service entry is left for
+    /// `drop_bad`, so the kernel never resets the other languages' picks or services with it.
     fn check(&self) -> Result<(), SettingsError> {
         self.check_listening()?;
         self.check_job()?;
         self.check_own()?;
+        self.check_cloud()?;
         self.check_names()
     }
 }
@@ -273,24 +288,6 @@ impl Settings for VoiceSettings {
 /// True when `text` is at most `chars` characters, each one that shows.
 fn shows(text: &str, chars: usize) -> bool {
     text.chars().count() <= chars && !text.chars().any(is_hidden)
-}
-
-/// The bar place `name` names in the setting; `None` for any other text.
-#[must_use]
-pub fn place_named(name: &str) -> Option<BarPlace> {
-    PLACES
-        .iter()
-        .find(|(n, _)| *n == name)
-        .map(|(_, place)| *place)
-}
-
-/// The setting's name for `place`, which also names its text.
-#[must_use]
-pub fn place_name(place: BarPlace) -> &'static str {
-    PLACES
-        .iter()
-        .find(|(_, p)| *p == place)
-        .map_or(PLACES[0].0, |(name, _)| name)
 }
 
 #[cfg(test)]

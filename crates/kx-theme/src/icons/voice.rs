@@ -1,4 +1,4 @@
-//! The dictation bar's icons (design/voice-bar.html `bar()`): its buttons by id, each state's mark and each note's.
+//! The dictation bar's icons (design/voice-bar.js `bar()`): its buttons by id, each state's mark and each note's.
 
 use std::collections::BTreeMap;
 
@@ -25,10 +25,22 @@ pub struct VoiceIcons {
     pub undo: String,
     /// Transcribe anyway.
     pub anyway: String,
+    /// Try again, after a cloud service failed.
+    pub again: String,
     /// Listen again.
     pub listen: String,
     /// Download.
     pub download: String,
+    /// Open service, on a cloud note its card or key page settles.
+    pub service: String,
+    /// Open service on the key note, which opens the key page.
+    pub service_key: String,
+    /// "Use the local model", after a cloud note.
+    pub local: String,
+    /// The chip's picture beside the language while a cloud service takes the voice.
+    pub cloud: String,
+    /// The chip's picture while a model on this PC takes the voice.
+    pub device: String,
     /// Before Transcribing.
     pub transcribing: String,
     /// Before a text.
@@ -55,8 +67,14 @@ impl VoiceIcons {
             ("voice.copied", &self.copied),
             ("voice.undo", &self.undo),
             ("voice.anyway", &self.anyway),
+            ("voice.again", &self.again),
             ("voice.listen", &self.listen),
             ("voice.download", &self.download),
+            ("voice.service", &self.service),
+            ("voice.service_key", &self.service_key),
+            ("voice.local", &self.local),
+            ("voice.cloud", &self.cloud),
+            ("voice.device", &self.device),
             ("voice.transcribing", &self.transcribing),
             ("voice.text", &self.text),
             ("voice.password", &self.password),

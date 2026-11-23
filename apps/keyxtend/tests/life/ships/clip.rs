@@ -1,21 +1,28 @@
 //! The clipboard history's grants (ADR-0034): its feature is a default and the build ships it, it holds the three
-//! gates, the keyboard adds both clipboard gates, the ui and Quick-fill the read one, voice typing the write one for
-//! Copy, and the watch, the writer and the shelf each reach only the modules holding their gate.
+//! gates, the keyboard adds both clipboard gates, the ui the read one, Quick-fill the read one for Paste's take, voice
+//! typing both for Copy and the key page's Paste (ADR-0047), the clipboard alone asks for the watch, and the watch, the
+//! writer and the shelf each reach only the modules holding their gate.
 
-use super::{defaults, features, holders, reached};
+use super::{asking, defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
 use keyxtend::hidden::Run;
 use kx_module_api::ports::{
     Clipboard, ClipboardKey, ClipboardWriter, ClipboardWriterKey, SealedShelf, SealedShelfKey,
 };
-use kx_module_api::{Capability, ModuleId};
+use kx_module_api::{Capability, ModuleId, ServiceKey};
 use kx_platform_fake::{FakeClipboard, FakeClipboardWriter, FakeShelf};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
 /// The clipboard module's feature.
 const CLIP_FEATURE: &str = "mod-clipboard";
+
+/// The modules holding `ReadClipboard`: the panel's events and the Paste takes, written once for every test.
+pub(super) fn readers() -> BTreeSet<ModuleId> {
+    let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
+    BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID, kx_mod_voice::ID])
+}
 
 #[test]
 fn mod_clipboard_is_a_default_feature_and_the_default_build_ships_it() {
@@ -37,12 +44,11 @@ fn the_clipboard_holds_read_write_and_the_secret_store() {
 
 #[test]
 fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predict_and_voice() {
-    let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
-    let read = BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID]);
+    let (clip, keyboard) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID);
     assert_eq!(
         holders(Capability::ReadClipboard),
-        read,
-        "the panel's events and Paste's take"
+        readers(),
+        "the panel's events and the Paste takes"
     );
     let write = BTreeSet::from([clip, keyboard, kx_mod_voice::ID]);
     assert_eq!(
@@ -52,6 +58,12 @@ fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predic
     );
     let secret = BTreeSet::from([clip, kx_mod_predict::ID, kx_mod_voice::ID]);
     assert_eq!(holders(Capability::SecretStore), secret, "the sealed files");
+}
+
+#[test]
+fn only_the_clipboard_asks_for_the_watch_so_the_takes_read_through_it() {
+    let watch = asking(&[ClipboardKey::ID]);
+    assert_eq!(watch, BTreeSet::from([kx_mod_clipboard::ID]), "ADR-0047");
 }
 
 #[test]

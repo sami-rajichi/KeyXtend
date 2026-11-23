@@ -1,8 +1,9 @@
 //! The clicks the bar and the Voice panel send: a bar button, the pointer over the bar, a page, a row, a download's
-//! button, an option, a panel button, Compare's start with its set text, and an answer.
+//! button, an option, a panel button, Compare's start with its set text, an answer, and the cloud pages' switches,
+//! buttons and typed lines, whose text stays redacted.
 
-use super::panel::VoiceTab;
-use crate::Redacted;
+use super::panel::{CloudLine, ModelSide, VoiceTab};
+use crate::{Redacted, Secret};
 
 listed! {
     /// A button on the bar; the gear sends `VoiceOpen` instead.
@@ -17,10 +18,14 @@ listed! {
         Undo,
         /// Write the recording a Cancel left.
         Anyway,
+        /// Try again: send the held recording to the cloud again, after a cloud note.
+        Again,
         /// Listen again after Nothing heard.
         Listen,
         /// Download the language's model.
         Download,
+        /// Open service: a cloud note's service opens on its card, or on its key page for the key note.
+        Service,
         /// Close the bar, wiping the recording.
         Close,
     }
@@ -76,6 +81,26 @@ listed! {
     }
 }
 
+listed! {
+    /// A button of the Cloud page, a service's card or its key page (ADR-0047).
+    pub enum CloudButton ("Every cloud button.") {
+        /// Switch the ticked service on: its card shows first, to confirm.
+        On,
+        /// Switch the ticked or shown service off.
+        Off,
+        /// Show the ticked or shown service's card.
+        Facts,
+        /// Open the ticked service's key page.
+        Lines,
+        /// Test the key.
+        Test,
+        /// Remove the ticked or shown service's sealed key, also while it is off.
+        Remove,
+        /// Open the shown page's link in the browser: the facts' page, or where keys are made.
+        Link,
+    }
+}
+
 /// What a click on the bar or the panel names.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VoiceClick {
@@ -83,8 +108,10 @@ pub enum VoiceClick {
     Bar(BarButton),
     /// The pointer came over the bar, or left it; while over it, the bar stays.
     Over(bool),
-    /// A home row: open its page.
+    /// A home row: open its page; the Models page's Cloud band and slow line open the Cloud page too.
     Open(VoiceTab),
+    /// Show the Models page's Local or Cloud side.
+    Side(ModelSide),
     /// A row of the shown page: tick or untick it, or open a folder in the folder list.
     Row(u8),
     /// Turn a page, from the panel's arrows or a scroll pad page tap, which the ui turns into this.
@@ -112,8 +139,33 @@ pub enum VoiceClick {
     Button(PanelButton),
     /// Start Compare models with the set text the ui shows, from its translations; empty when the language has none.
     Compare(Redacted<String>),
-    /// Answer the shown question: yes on true.
+    /// Answer the shown question, a card's switch-on among them: yes on true.
     Confirm(bool),
     /// The ui's rows per page (`page_rows`); the module pages by the last one heard.
     Rows(u8),
+    /// Turn cloud services on, or off on false (`cloud`).
+    Cloud(bool),
+    /// A button of the cloud pages.
+    Service(CloudButton),
+    /// The key line's text, set as the shown service's key.
+    SetKey(Secret),
+    /// The address line's text, set as the shown service's address.
+    SetAddress(Redacted<String>),
+    /// The Other model line's text, set as the shown service's model id.
+    SetModel(Redacted<String>),
+    /// Save a typed line's text as the shown service's key, address or model id, as Enter on it does (ADR-0049).
+    Save(CloudLine),
+    /// Put the clipboard history's text on a typed line: the key as dots, an address or model id as text to save.
+    Paste(CloudLine),
+    /// A click on a typed line: it takes the letters, with its caret `at` into what it draws.
+    Caret {
+        /// The line.
+        line: CloudLine,
+        /// UTF-16 units of its text, or dots on the key line; it may tell a secret's length.
+        at: Redacted<u32>,
+    },
+    /// Ask only for hosts that keep nothing, or not on false: `OpenRouter`'s switch.
+    KeepNothing(bool),
+    /// Use the local model: write the held recording with the language's local model, after a cloud fault.
+    Local,
 }

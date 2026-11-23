@@ -1,29 +1,21 @@
 use super::*;
-use kx_kernel::KernelSettings;
+use crate::played::logged;
+use crate::played::stage::{
+    self, INDEX, LOAD, OPEN, PIECE, STAGE, STAGE_LINE, START, STOP, TOOK_MS,
+};
 use kx_module_api::ports::SpeechDone;
-use kx_settings::Files;
-use kx_test_support::tempdir::TempDir;
+
+/// The level the stage lines take.
+const DEBUG: Option<&str> = Some("debug");
 
 /// What this run's log file holds, at the kernel's default level, once `f` has logged.
 fn logged(f: impl FnOnce()) -> String {
-    let dir = TempDir::new("played-told").unwrap();
-    let files = Files::new(dir.path());
-    let settings = KernelSettings::from_defaults().unwrap();
-    let log = crate::log::open(&settings, &files).unwrap();
-    tracing::dispatcher::with_default(&log.dispatch, f);
-    std::fs::read_to_string(&files.log).unwrap()
+    logged::at(None, f)
 }
 
 /// The device ids of `text`'s written-dictation lines, in order.
 fn devices(text: &str) -> Vec<String> {
-    let device = |l: &str| {
-        let word = l.split_whitespace().find_map(|w| w.strip_prefix("device="));
-        word.map(str::to_owned)
-    };
-    text.lines()
-        .filter(|l| l.contains(WROTE_LINE))
-        .filter_map(device)
-        .collect()
+    logged::values(text, WROTE_LINE, kx_ipc::gate::DEVICE)
 }
 
 fn card(id: &str) -> CardId {
@@ -48,11 +40,10 @@ fn the_line_holds_the_device_id_as_one_word_at_the_default_level() {
     assert_eq!(devices(&text), ["Vulkan0"], "{text}");
 }
 
-#[cfg(feature = "mod-voice")]
 mod runs {
     use super::*;
-    use kx_module_api::Redacted;
-    use kx_module_api::ports::{CardUse, SpeechModel};
+    use kx_module_api::ports::{CardUse, SpeechModel, SpeechStage};
+    use kx_module_api::{Redacted, Zeroizing};
     use kx_platform_fake::FakeSpeech;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -113,5 +104,76 @@ mod runs {
         let want = ["Vulkan0", "Vulkan1", "Vulkan1", DevicePick::CPU];
         assert_eq!(devices(&text), want, "{text}");
         assert_eq!(heard.load(Ordering::SeqCst), 5, "every note goes on");
+    }
+
+    #[test]
+    fn a_listen_only_run_hands_its_speech_on_and_logs_no_device() {
+        let fake = FakeSpeech::new();
+        fake.set_speech(vec![vec![1, 0, 2, 0]]);
+        let told = Told(fake.clone());
+        let mut lone = ask(None);
+        lone.model = None;
+        let text = logged(|| {
+            let mut run = told.open(lone, Box::new(|_| {})).unwrap();
+            assert!(fake.tell(done(false)));
+            let pieces = run.pieces().expect("its speech for the service");
+            let bytes: Vec<&[u8]> = pieces.iter().map(|p| p.expose().as_slice()).collect();
+            assert_eq!(bytes, [[1, 0, 2, 0].as_slice()]);
+        });
+        assert!(devices(&text).is_empty(), "no model wrote it: {text}");
+    }
+
+    /// What the stage test's piece says, which no line may hold.
+    const SAID: &str = "Tunis in spring";
+    /// The stage test's load time, in ms.
+    const LOAD_MS: u32 = 1234;
+
+    /// A local run's end after a load of `load_ms`.
+    fn loaded(load_ms: u32) -> SpeechNote {
+        let SpeechNote::Done(done) = done(false) else {
+            unreachable!("done is an end")
+        };
+        SpeechNote::Done(SpeechDone { load_ms, ..done })
+    }
+
+    #[test]
+    fn each_stage_of_a_dictation_logs_one_debug_line_and_never_its_text() {
+        let fake = FakeSpeech::new();
+        let told = Told(fake.clone());
+        let text = logged::at(DEBUG, || {
+            let mut run = told.open(ask(None), Box::new(|_| {})).unwrap();
+            assert!(fake.tell(SpeechNote::Stage(SpeechStage::Open)));
+            run.stop().unwrap();
+            let said = Redacted::new(Zeroizing::new(SAID.to_owned()));
+            assert!(fake.tell(SpeechNote::Piece {
+                index: 0,
+                text: said
+            }));
+            assert!(fake.tell(loaded(LOAD_MS)));
+        });
+        let stages = logged::values(&text, STAGE_LINE, STAGE);
+        assert_eq!(stages, [START, OPEN, STOP, PIECE, LOAD], "{text}");
+        assert_eq!(logged::values(&text, STAGE_LINE, INDEX), ["0"]);
+        let took = logged::values(&text, STAGE_LINE, TOOK_MS);
+        assert_eq!(took, [LOAD_MS.to_string()]);
+        assert!(!text.contains(SAID), "never the text: {text}");
+        let quiet = logged(|| stage::stage(START));
+        assert!(!quiet.contains(STAGE_LINE), "debug lines only: {quiet}");
+    }
+
+    #[test]
+    fn a_listen_only_run_logs_its_start_open_and_stop_but_no_load() {
+        let fake = FakeSpeech::new();
+        let told = Told(fake.clone());
+        let mut lone = ask(None);
+        lone.model = None;
+        let text = logged::at(DEBUG, || {
+            let mut run = told.open(lone, Box::new(|_| {})).unwrap();
+            assert!(fake.tell(SpeechNote::Stage(SpeechStage::Open)));
+            run.stop().unwrap();
+            assert!(fake.tell(loaded(LOAD_MS)));
+        });
+        let stages = logged::values(&text, STAGE_LINE, STAGE);
+        assert_eq!(stages, [START, OPEN, STOP], "{text}");
     }
 }

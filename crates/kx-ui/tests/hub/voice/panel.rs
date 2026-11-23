@@ -6,7 +6,7 @@ use crate::Rig;
 use crate::texts::rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarHint, Date, DeviceLabel, DeviceName, Pages, PanelButton, VoiceHome, VoiceSheet,
+    BarHint, Date, DeviceLabel, DeviceName, Pages, PanelButton, VoiceHome, VoiceSheet, VoiceTab,
 };
 use kx_ui::i18n::keys::{VOICE_AGAIN_HINT, WINDOW_VOICE_PANEL};
 use serde_json::{Value, json};
@@ -44,10 +44,10 @@ fn the_home_list_names_each_page_with_its_value() {
     assert_eq!(p["back"], Value::Null, "home has no Back");
     let expected = want([
         ("models", "Models", "No model ready"),
+        ("cloud", "Cloud services", "Off"),
         ("device", "Device", "Automatic (processor)"),
         ("compare", "Compare models", "Not run yet"),
         ("history", "History", "12 texts"),
-        ("options", "Options", "All at defaults"),
     ]);
     assert_eq!(rows(&p), expected);
 }
@@ -62,6 +62,8 @@ fn home_values_name_the_model_the_card_the_last_run_and_the_changes() {
         compared: Date::new(2026, 11, 12),
         history: 1,
         changed: 3,
+        cloud: None,
+        tabs: VoiceTab::ALL.to_vec(),
     });
     let values: Vec<String> = rows(&panel_json(&rig, &heard, panel(sheet)))
         .into_iter()
@@ -69,6 +71,7 @@ fn home_values_name_the_model_the_card_the_last_run_and_the_changes() {
         .collect();
     let expected = [
         "Whisper small",
+        "Off",
         "Automatic (Radeon 780M)",
         "Last run: 12/11/2026",
         "1 text",
@@ -91,9 +94,11 @@ fn a_device_picked_by_hand_reads_as_itself() {
             compared: None,
             history: 0,
             changed: 0,
+            cloud: None,
+            tabs: VoiceTab::ALL.to_vec(),
         });
         let p = panel_json(&rig, &heard, panel(sheet));
-        assert_eq!(rows(&p)[1].2, word);
+        assert_eq!(rows(&p)[2].2, word);
     }
 }
 

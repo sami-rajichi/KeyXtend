@@ -19,6 +19,8 @@ use crate::models::{Row, table};
 use crate::panel::rig::{card, cpu};
 use crate::store::Store;
 
+mod langs;
+
 /// The card the rig's devices hold, as `device` names it.
 pub(super) const CARD: &str = "Vulkan0";
 /// A second card, which only the tests that list it hold.
@@ -73,6 +75,17 @@ pub(super) fn passed() -> CheckDone {
     }
 }
 
+/// A check where the card wrote two words the processor did not, past `card_diff`.
+pub(super) fn differs() -> CheckDone {
+    CheckDone {
+        card_text: secret("hello there world"),
+        ..passed()
+    }
+}
+
+/// Cohere Arabic serving English too, as `picks` reads it.
+pub(super) const BOTH: &str = "en = \"cohere-arabic-q8\"";
+
 /// A begun rig with `device` set, `kept` on the shelf from an earlier run, the three clips, Arabic's model beside
 /// English's and each card's check answering `check`; `devices` answer the reads when given.
 pub(super) fn build(
@@ -81,8 +94,22 @@ pub(super) fn build(
     check: Result<CheckDone, SpeechError>,
     kept: Vec<Checked>,
 ) -> Rig {
+    build_picked(device, devices, check, kept, None)
+}
+
+/// As `build`, with `picks` set from a settings table's text when given.
+pub(super) fn build_picked(
+    device: &str,
+    devices: Option<Vec<Device>>,
+    check: Result<CheckDone, SpeechError>,
+    kept: Vec<Checked>,
+    picks: Option<&str>,
+) -> Rig {
     Rig::build(|fake, host| {
         host.put("device", device.into());
+        if let Some(picks) = picks {
+            host.put("picks", toml::Value::Table(picks.parse().unwrap()));
+        }
         if let Some(devices) = devices {
             fake.speech.set_devices(Ok(devices));
         }

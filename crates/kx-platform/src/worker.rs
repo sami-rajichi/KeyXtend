@@ -9,7 +9,7 @@ mod piped;
 mod session;
 mod stream;
 
-pub use frames::{FetchFrames, MediaFrames, VaultFrames, VoiceFrames};
+pub use frames::{FetchFrames, MediaFrames, NetFrames, VaultFrames, VoiceFrames};
 pub(crate) use host::Host;
 pub use piped::{Child, Piped};
 pub(crate) use session::Session;

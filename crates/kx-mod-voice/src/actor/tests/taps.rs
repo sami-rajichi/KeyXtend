@@ -5,7 +5,8 @@ use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 use kx_module_api::ports::{
-    LayoutAsk, PressesWanted, TextAsk, VoiceLevel, VoiceLit, VoicePage, VoiceView,
+    ClipTake, LayoutAsk, PanelLine, PasteText, PressesWanted, TextAsk, VoiceLevel, VoiceLine,
+    VoiceLit, VoicePage, VoiceView,
 };
 use kx_module_api::{Bus, Event, Notice, Subscription};
 
@@ -57,23 +58,32 @@ pub(super) fn typist(asks: &Arc<Mutex<Vec<TextAsk>>>) -> Typist {
 )]
 pub(super) enum Heard {
     View(VoicePage),
-    Lit(bool),
+    Lit(VoiceLit),
     Level(u8),
     Presses(bool),
     Notice(&'static str),
     /// An ask for another part's state, by its event name.
     Ask(&'static str),
+    /// A text for the clipboard history to paste.
+    Paste(PasteText),
+    /// An ask for the clipboard's text, for the key page's Paste.
+    Take(ClipTake),
+    /// The line the panel shows, for the keyboard.
+    Line(Option<PanelLine>),
 }
 
 /// Listens on `bus` for everything the actor publishes, into `heard`.
 pub(super) fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
     vec![
         ear(bus, heard, |e: &VoiceView| Heard::View((*e.0).clone())),
-        ear(bus, heard, |e: &VoiceLit| Heard::Lit(e.rec)),
+        ear(bus, heard, |e: &VoiceLit| Heard::Lit(*e)),
         ear(bus, heard, |e: &VoiceLevel| Heard::Level(e.level)),
         ear(bus, heard, |e: &PressesWanted| Heard::Presses(e.on)),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.key)),
         ear(bus, heard, |_: &LayoutAsk| Heard::Ask(LayoutAsk::NAME)),
+        ear(bus, heard, |e: &PasteText| Heard::Paste(e.clone())),
+        ear(bus, heard, |e: &ClipTake| Heard::Take(*e)),
+        ear(bus, heard, |e: &VoiceLine| Heard::Line(e.0.clone())),
     ]
 }
 

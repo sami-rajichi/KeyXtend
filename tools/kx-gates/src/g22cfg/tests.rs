@@ -15,10 +15,14 @@ const VOICE_NAMES: &str = include_str!("../../../../crates/kx-ui/qml/VoiceNames.
 const BAR_IDS: &str = include_str!("../../../../crates/kx-ui/src/i18n/keys/voice/ids.rs");
 /// The app's run, which logs the voice gate build's warning.
 const APP_RUN: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
-/// The voice gate build's speech, which logs each written dictation's device.
-const APP_TOLD: &str = include_str!("../../../../apps/keyxtend/src/played/told.rs");
+/// The voice gate build's stage lines.
+const APP_STAGE: &str = include_str!("../../../../apps/keyxtend/src/played/stage.rs");
+/// The voice module's typing, which logs each text sent to the keyboard.
+const MOD_TYPING: &str = include_str!("../../../../crates/kx-mod-voice/src/actor/typing.rs");
 /// The root manifest, whose stage settings G22's staged edges read.
 const ROOT_MANIFEST: &str = include_str!("../../../../Cargo.toml");
+
+mod cloud;
 
 fn shipped() -> GatesConfig {
     load().expect("the settings load")
@@ -52,7 +56,6 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
     let bad: [fn(&mut G22Product); 21] = [
         |g| g.card_wait_ms = 0,
-        |g| g.wrote_line = " ".into(),
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
         |g| g.program = "../../target/gate-input/release/keyxtend.exe".into(),
         |g| drop(g.layouts.pop_first()),
@@ -72,6 +75,7 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
         |g| g.log_level = "loud".into(),
         |g| g.why_marks.clear(),
         |g| g.why_marks.push(" ".into()),
+        |g| g.log_level = "info".into(),
     ];
     for (i, spoil) in bad.iter().enumerate() {
         let mut g = c.g22_product.clone();
@@ -99,10 +103,19 @@ fn the_product_runs_names_are_kx_uis_and_the_apps() {
         APP_RUN.contains(&format!("\"{}\"", g.warn_line)),
         "the app's warning"
     );
-    assert!(
-        APP_TOLD.contains(&format!("\"{}\"", g.wrote_line)),
-        "the app's written-dictation line"
-    );
+}
+
+#[test]
+fn the_timing_lines_are_the_apps_and_the_voice_modules_at_the_level_the_run_keeps() {
+    let g = shipped().g22_product;
+    let level = G22Product::LINES_LEVEL;
+    assert!(APP_STAGE.contains(&format!("tracing::{level}!({{ STAGE }}")));
+    let typed = format!("tracing::{level}!(\"{{TYPED_LINE}}\")");
+    assert!(MOD_TYPING.contains(&typed), "{typed}");
+    let mut trace = g;
+    trace.log_level = "trace".into();
+    let c = shipped();
+    assert_eq!(trace.check(&c.g22_bench), Ok(()), "trace keeps debug lines");
 }
 
 #[test]
@@ -120,6 +133,27 @@ fn only_a_card_in_device_waits_after_the_layout_before_dictation() {
     assert_eq!(g.dictate_wait_ms(), g.card_wait_ms, "a card");
     g.device = "card with space".into();
     assert_eq!((g.pick(), g.dictate_wait_ms()), (None, 0), "no pick");
+}
+
+#[test]
+fn a_device_flags_pick_replaces_the_files_for_the_run_and_none_keeps_it() {
+    let mut g = shipped().g22_product;
+    let kept = g.clone();
+    g.set_pick(None);
+    assert_eq!(
+        (g.device.as_str(), g.pick()),
+        (kept.device.as_str(), kept.pick())
+    );
+    let card = DevicePick::parse("Vulkan1");
+    g.set_pick(card.as_ref());
+    assert_eq!(g.pick(), card, "the flag wins");
+    assert_eq!(
+        g.dictate_wait_ms(),
+        g.card_wait_ms,
+        "a card's wait follows it"
+    );
+    g.set_pick(Some(&DevicePick::Cpu));
+    assert_eq!((g.pick(), g.dictate_wait_ms()), (Some(DevicePick::Cpu), 0));
 }
 
 #[test]
@@ -181,7 +215,13 @@ fn each_g22_section_sits_in_one_file_and_the_spike_run_is_gone() {
                 .unwrap()
         })
         .collect();
-    for section in ["g22_bench", "g22_product", "g22_staged", "boxed"] {
+    for section in [
+        "g22_bench",
+        "g22_product",
+        "g22_cloud",
+        "g22_staged",
+        "boxed",
+    ] {
         let files = tables.iter().filter(|t| t.contains_key(section)).count();
         assert_eq!(files, 1, "[{section}]");
     }
@@ -228,6 +268,8 @@ fn each_g22_and_box_section_refuses_an_unknown_key() {
         refused::<G22Staged>(with_stray("g22_staged", &[])),
         "[g22_staged]"
     );
+    let cloud = with_stray("g22_cloud", &[]);
+    assert!(refused::<G22Cloud>(cloud), "[g22_cloud]");
     let boxed = with_stray("boxed", &[]);
     assert!(refused::<crate::boxed::BoxProofs>(boxed), "[boxed]");
 }

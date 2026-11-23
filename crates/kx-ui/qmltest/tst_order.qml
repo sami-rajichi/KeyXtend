@@ -1,7 +1,7 @@
 // Texts without bidi marks read in their UI's order (ADR-0022): the space bar puts the language first, a reset notice
-// names its settings in order, before the count, and a shortcut's tip keeps its keys in order after its name. Text
-// items give no character places, so a twin of the drawn text, with the part to find as a link, shows through `linkAt`
-// where Qt lays that part out.
+// names its settings in order, before the count, a shortcut's tip keeps its keys in order after its name, and an Arabic
+// cloud line keeps each Latin run, such as a web address, left to right. Text items give no character places, so a twin
+// of the drawn text, with the part to find as a link, shows through `linkAt` where Qt lays that part out.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
@@ -178,6 +178,25 @@ Item {
             const rtl = row.ui.lang.rtl;
             const edge = rtl ? keys[keys.length - 1] : keys[0];
             verify(before(placeOf(label, e.name), edge, rtl), "the name reads first");
+        }
+
+        function test_an_arabic_cloud_lines_latin_runs_read_left_to_right_data() {
+            const each = e => [{ tag: e.tag + " one line", entry: e, wrap: false }, { tag: e.tag + " wrapped", entry: e, wrap: true }];
+            return rows((t, tag) => Order.texts[tag].runs.reduce((all, e) => all.concat(each(e)), []));
+        }
+        // A web address, a service's own words or a number keeps its characters left to right inside an Arabic line or a
+        // card's part, so no mark at its end, such as the slashes of https://, shows on its other side.
+        function test_an_arabic_cloud_lines_latin_runs_read_left_to_right(row) {
+            const e = row.entry;
+            const label = createTemporaryObject(noteC, root, { lk: row.lk, res: Board.resOf(row.lk, row.ui), wrap: row.wrap, text: e.text });
+            for (const run of e.runs) {
+                const from = e.text.indexOf(run);
+                verify(from >= 0, run + " is drawn");
+                const marks = [...run].map((c, i) => ({ c: c, at: from + i })).filter(m => m.c.trim().length > 0);
+                const places = marks.map(m => placeAt(label, m.at, 1));
+                for (let i = 1; i < places.length; i++)
+                    verify(before(places[i - 1], places[i], false), run + ": " + marks[i - 1].c + " reads before " + marks[i].c);
+            }
         }
     }
 }

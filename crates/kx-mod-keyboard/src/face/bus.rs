@@ -12,7 +12,7 @@ use kx_module_api::ports::{
     FillLive, FillPanel, FillType, HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged,
     LatchesUsed, PanelPressesWanted, PasteAsk, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
     PressesAsk, Scan, ScrollAsk, ScrollChanged, TextAsk, Toggle, TypeWord, TypingMode,
-    TypingModeAsk, VoiceAsk, VoiceLit,
+    TypingModeAsk, VoiceAsk, VoiceLine, VoiceLit,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -149,7 +149,7 @@ impl Face {
     }
 
     /// Forgets the mouse, scroll, power, clipboard, vault and voice modules' states, as each may have changed unheard
-    /// while the keyboard was down: their keys and the pad dim, both panels count as shut, the history chord as
+    /// while the keyboard was down: their keys and the pad dim, every panel counts as shut, the history chord as
     /// unwanted and the Dictation key as unlit until told again; the next live peek also tells a pointer that left.
     fn forget(&self) {
         {
@@ -158,9 +158,10 @@ impl Face {
             inner.heard_scroll(ScrollChanged::OFF);
             inner.heard_power(PowerChanged::OFF);
             inner.panel_shut(Panel::Clip);
+            inner.panel_shut(Panel::Voice);
             inner.heard_fill(FillLive::OFF);
             inner.heard_history(false);
-            inner.heard_voice(VoiceLit::OFF);
+            inner.heard_voice(VoiceLit::Off);
         }
         self.pour();
         self.peek_again();
@@ -200,7 +201,8 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     cx.bus().publish(&FillAsk)
 }
 
-/// Hears our panels' states and lines, the history chord's wish, and the paste, edit and fill requests for `face`.
+/// Hears our panels' states and lines, the Voice panel's too, the history chord's wish, and the paste, edit and fill
+/// requests for `face`.
 ///
 /// # Errors
 /// `EventError::NotGranted` as for `listen`.
@@ -226,6 +228,9 @@ fn panels(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     })?;
     on(cx, face, |f, e: &FillLine| {
         f.heard_line(Panel::Fill, &e.0);
+    })?;
+    on(cx, face, |f, e: &VoiceLine| {
+        f.heard_voice_line(e.0.as_ref());
     })?;
     on(cx, face, |f, e: &FillType| f.fill(e))
 }

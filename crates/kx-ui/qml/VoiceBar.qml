@@ -1,7 +1,7 @@
-// The dictation bar (design "The bar"; design/voice-bar.html .vbar): one key row tall, a pill in the keyboard's theme
-// where the hub places it. It listens with the red dot, its language, the wave and the timer, writes with the shimmer,
-// then shows the text or a note, each state's buttons in one order in every language (ADR-0020). It takes clicks but
-// never focus, plays the start and stop sounds, and tells the module when the pointer is over it.
+// The dictation bar (design "The bar"; design/voice-bar.css .vbar): a pill in the keyboard's theme where the hub
+// places it, one key row tall, taller by a card's warning or a note's acts under the row. It listens, writes, then
+// shows the text or a note with each state's buttons in one order in every language (ADR-0020), taking clicks but
+// never focus, playing the start and stop sounds and telling the module when the pointer is over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -18,6 +18,8 @@ Window {
     required property var box
     required property var logical
     property var now: () => Date.now()
+    // Hands a line to screen readers; a test puts its own in place to hear what is told.
+    property var announce: said => body.Accessible.announce(said)
 
     // The view as the hub writes it (null before any), the pointer over the bar as last told, the round Copy was
     // clicked on, and when the listening view came on the clock.
@@ -40,6 +42,11 @@ Window {
     readonly property bool listens: mode === names.states.listening
     readonly property bool writes: mode === names.states.transcribing
     readonly property bool wide: mode === names.states.text || mode === names.states.note
+    // The card's warning while the first dictation to its service listens, and while that service writes it, as the hub
+    // words it; it widens the bar and sits under its row.
+    readonly property string warning: mode === names.states.listening || mode === names.states.transcribing
+        ? field("warn", "") : ""
+    readonly property bool warns: warning !== ""
     readonly property var cap: lk.shape.caption
     readonly property var p: lk.palette
     readonly property real gap: cap.gap_px * s
@@ -48,14 +55,40 @@ Window {
     // Cancel leads while it listens or writes; the rest end the bar, the gear before the last.
     readonly property var front: listens || writes ? buttons.slice(0, 1) : []
     readonly property var back: gearIn(listens || writes ? buttons.slice(1) : buttons)
+    // A note the service's own pages settle: its acts under the line, Open service last (design/voice-cloud.js .cna).
+    readonly property var acts: shown && shown.acts ? shown.acts : []
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     title: view ? view.words.window : ""
     color: "transparent"
     visible: false
-    // Whole units up, as a window's size is whole.
-    width: rescale.keep(Math.ceil(lk.shape.voice.bar_px[wide ? 1 : 0] * s))
-    height: rescale.keep(Math.ceil(Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)))
+    // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
+    width: rescale.keep(Math.ceil(span))
+    height: rescale.keep(Math.ceil(tall))
+    // Transcribing keeps the width its take listened at and never grows shorter, so Stop and Cancel never move; a hide,
+    // text or note ends it.
+    readonly property real span: kept() ? held.w : fit
+    readonly property real tall: kept() ? Math.max(held.h, stack) : stack
+    // The settled Listening view's width and height, or null.
+    property var held: null
+    onFitChanged: hold()
+    onStackChanged: hold()
+    // The text's width for a text, a note or a warning; else the narrow one, widened up to it for the wave's least room.
+    readonly property real fit: wide || warns ? broad : Math.min(broad, Math.max(narrow, lead.width + rest))
+    readonly property real narrow: lk.shape.voice.bar_px[0] * s
+    readonly property real broad: lk.shape.voice.bar_px[1] * s
+    // What the row needs beside the lead: the tail, the wave's least room and the padding.
+    readonly property real rest: tail.width + lk.shape.voice.wave_room_px * s + 2 * (pad + gap)
+    // The most the lead may take: the text's width, or the take's held width while it writes, less the rest; a model's
+    // name on the chip gives way to it.
+    readonly property real leadRoom: (kept() ? held.w : broad) - rest
+    // The row's height: one key row, or its parts with their padding.
+    readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)
+    // What sits under the row: the warning's lines, or a note's acts with the padding under them.
+    readonly property real under: warns ? warnLine.height : acts.length > 0 ? actRow.height + pad : 0
+    readonly property real stack: row + under
+    // How far the row's parts rise from the middle, so the row stays at the top over what sits under it.
+    readonly property real lift: (tall - row) / 2
 
     // Keeps the size above across display scale changes, and the place on a new scale.
     Rescale {
@@ -82,6 +115,7 @@ Window {
             return;
         const was = view;
         view = JSON.parse(voice.view());
+        hold();
         if (!view || mode === names.states.hidden)
             return shut();
         const fresh = !was || was.bar.state !== mode;
@@ -96,6 +130,20 @@ Window {
             follow();
         if (fresh || hintOf(was) !== hintOf(view))
             tell();
+    }
+    // True while Transcribing keeps its take's size. It reads `mode` and `held` themselves, as all that sizes the bar
+    // does, never `writes`, so a half-made change of state never sizes it.
+    function kept() {
+        return mode === names.states.transcribing && !!held;
+    }
+    // Holds a Listening view's size for its Transcribing view, reading the view itself so a half-made change never
+    // sticks; any other state lets it go.
+    function hold() {
+        const state = view ? view.bar.state : names.states.hidden;
+        if (state === names.states.listening)
+            held = { w: fit, h: stack };
+        else if (state !== names.states.transcribing)
+            held = null;
     }
     // The start sound as it starts listening, the stop sound as it stops, unless the view has sounds off.
     function chime(was) {
@@ -170,20 +218,24 @@ Window {
         const h = v && v.bar.hint;
         return !h ? "" : (h.id || h);
     }
-    // Screen readers hear each new state and line, since the bar never takes focus.
+    // Screen readers hear each new state and line, since the bar never takes focus; Listening's sentence is the hub's.
     function tell() {
+        const said = spoken();
+        if (said)
+            announce(said);
+    }
+    // What readers hear of the shown bar: Listening's sentence, else its line, else its word or its text.
+    function spoken() {
         const h = shown.hint;
         const line = !h ? "" : (h.text || h);
-        const said = listens || writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
-        if (said)
-            body.Accessible.announce(said);
+        return listens ? shown.said : writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
     }
 
     Rectangle {
         id: body
         width: bar.width
         height: bar.height
-        radius: bar.wide ? bar.cap.words_radius_px * bar.s : height / 2
+        radius: bar.wide || bar.tall > bar.row ? bar.cap.words_radius_px * bar.s : height / 2
         color: bar.p.pop_bg
         border.width: bar.lk.contrast ? bar.lk.shape.line.px : 0
         border.color: bar.p.pop_line
@@ -199,11 +251,14 @@ Window {
             id: lead
             x: bar.pad
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             spacing: bar.gap
             layoutDirection: Qt.LeftToRight
             Repeater {
                 model: bar.front
-                delegate: BarButton {}
+                delegate: VoiceBarButton {
+                    host: bar
+                }
             }
             VoiceStatus {
                 visible: bar.listens || bar.writes
@@ -221,6 +276,7 @@ Window {
             x: lead.x + lead.width + bar.gap
             width: Math.max(0, tail.x - bar.gap - x)
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             host: bar
         }
         // The timer while it listens, then the buttons, the gear before the last.
@@ -228,6 +284,7 @@ Window {
             id: tail
             x: bar.width - bar.pad - width
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             spacing: bar.gap
             layoutDirection: Qt.LeftToRight
             VoiceTimer {
@@ -243,28 +300,23 @@ Window {
             }
             Repeater {
                 model: bar.back
-                delegate: BarButton {}
+                delegate: VoiceBarButton {
+                    host: bar
+                }
             }
+        }
+        VoiceWarn {
+            id: warnLine
+            y: body.height - height
+            host: bar
+        }
+        VoiceActs {
+            id: actRow
+            host: bar
         }
         PressWatch {
             onTouched: bar.touched()
         }
-    }
-
-    // One of the hub's buttons: round when it leads or ends the bar, or for the gear; a pill with its word otherwise.
-    component BarButton: VoiceButton {
-        required property var modelData
-        required property int index
-        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-        button: modelData
-        round: bar.front.indexOf(modelData) >= 0 || modelData.id === bar.names.gear || index === bar.back.length - 1
-        lk: bar.lk
-        res: bar.res
-        s: bar.s
-        ar: bar.ar
-        uid: bar.res.uid(bar.names.group, modelData.id)
-        done: modelData.id === bar.names.copy && bar.view && bar.copiedAt === bar.view.round ? bar.view.words.copied : ""
-        onClicked: bar.press(modelData)
     }
 
     // Each new state pops in (mock-up .vbar.in, @keyframes rise).

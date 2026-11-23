@@ -7,7 +7,8 @@ use kx_module_api::ports::{LayoutChanged, SpeechAsk, VoiceLang, VoiceText};
 use kx_module_api::text::SPACE;
 use kx_module_api::{LINE_BREAKS, Redacted, Secret, Zeroizing, is_arabic, is_hidden, is_rtl};
 
-use super::{Out, Ready, RunCall, State};
+use super::net::{Engine, Wire};
+use super::{Out, RunCall, State};
 
 /// A keyboard language as the bar and its notes show it, with its ISO 639 code.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -75,8 +76,11 @@ pub(super) struct Take {
     pub(super) id: u32,
     /// The language, fixed at Start.
     pub(super) lang: Lang,
-    /// The model and device that write it, Try again's choice once it ran.
-    pub(super) ready: Ready,
+    /// The local model or the cloud service that writes it, Try again's or "Use the local model"'s once it ran.
+    pub(super) engine: Engine,
+    /// The cloud side, while the dictation's run still listens alone for a cloud service; gone once a model wrote it
+    /// and its hand-over came.
+    pub(super) wire: Option<Wire>,
     /// The ask the recording was last written with, which Transcribe anyway writes again.
     pub(super) ask: SpeechAsk,
     /// Its run is open: opened and not yet closed.
@@ -91,7 +95,8 @@ pub(super) struct Take {
     pub(super) fell: bool,
     /// The recording was asked for Keep recordings.
     pub(super) kept: bool,
-    /// A text of it went to a password box, so each later one stays dots and is never kept.
+    /// It went to a password box, or one was in front when it would upload: each later text stays dots, is never kept
+    /// and never goes to a cloud service.
     pub(super) masked: bool,
     /// The pieces written, by their place.
     pub(super) pieces: BTreeMap<u16, Secret>,
@@ -104,12 +109,14 @@ pub(super) struct Take {
 }
 
 impl Take {
-    /// Dictation `id` in `lang`, opened with `ask` from `ready`.
-    pub(super) fn new(id: u32, lang: Lang, ready: Ready, ask: SpeechAsk) -> Self {
+    /// Dictation `id` in `lang`, opened with `ask` for `engine`; a cloud one listens only, so it gets a cloud side.
+    pub(super) fn new(id: u32, lang: Lang, engine: Engine, ask: SpeechAsk) -> Self {
+        let wire = engine.net().map(|_| Wire::default());
         Self {
             id,
             lang,
-            ready,
+            engine,
+            wire,
             ask,
             open: true,
             held: true,
@@ -131,6 +138,19 @@ impl Take {
         Out::Run {
             take: self.id,
             call,
+        }
+    }
+
+    /// An upload of it runs.
+    pub(super) fn sending(&self) -> bool {
+        self.wire.as_ref().is_some_and(|w| w.sending)
+    }
+
+    /// Drops its running upload, if any, so nothing more of it is heard.
+    pub(super) fn halt(&mut self, out: &mut Vec<Out>) {
+        if let Some(wire) = self.wire.as_mut().filter(|w| w.sending) {
+            wire.sending = false;
+            out.push(Out::Halt { take: self.id });
         }
     }
 

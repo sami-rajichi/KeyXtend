@@ -28,8 +28,10 @@ struct Log {
     current: usize,
     stops: usize,
     checks: usize,
-    /// The text the clipboard holds now, the next take's failure, how many takes were asked and the last one's cap.
+    /// The text the clipboard holds now and whether a private marker is on it, the next take's failure, how many takes
+    /// were asked and the last one's cap.
     text: Option<Zeroizing<String>>,
+    marked: bool,
     take_fail: Option<ClipError>,
     takes: usize,
     take_cap: Option<usize>,
@@ -122,9 +124,22 @@ impl FakeClipboard {
         lock(&self.shared.log).checks
     }
 
-    /// Makes the clipboard hold `text` from now on, or no text, whatever the pushed notes say.
+    /// Makes the clipboard hold `text` from now on, or no text, with no private marker, whatever the pushed notes say.
     pub fn set_text(&self, text: Option<&str>) {
-        lock(&self.shared.log).text = text.map(|t| Zeroizing::new(t.to_owned()));
+        self.hold(text, false);
+    }
+
+    /// Makes the clipboard hold `text` with a private marker, as a password manager's copy, so an unmarked read
+    /// refuses it.
+    pub fn set_marked(&self, text: Option<&str>) {
+        self.hold(text, true);
+    }
+
+    /// Holds `text`, `marked` or not.
+    fn hold(&self, text: Option<&str>, marked: bool) {
+        let mut log = lock(&self.shared.log);
+        log.text = text.map(|t| Zeroizing::new(t.to_owned()));
+        log.marked = marked;
     }
 
     /// Refuses the next take with `error`.
@@ -201,6 +216,17 @@ impl Clipboard for FakeClipboard {
             Some(t) if t.chars().count() > max_chars => Err(ClipError::TooLong),
             held => Ok(held.clone().map(Redacted::new)),
         }
+    }
+
+    /// Refuses a marked clipboard as `Marked`, counting no take, unless a scripted failure comes first, as the open
+    /// does; otherwise reads as `text`.
+    fn unmarked_text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError> {
+        let log = lock(&self.shared.log);
+        if log.marked && log.take_fail.is_none() {
+            return Err(ClipError::Marked);
+        }
+        drop(log);
+        self.text(wait, max_chars)
     }
 }
 

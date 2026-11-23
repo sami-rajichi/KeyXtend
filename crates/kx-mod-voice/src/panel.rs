@@ -3,18 +3,25 @@
 //! and says what the actor does next, as `Do`s; `view` draws it with the facts the actor holds.
 
 mod act;
+mod cloud;
 mod device;
 mod folders;
 mod history;
+mod lines;
 mod models;
 pub mod options;
+mod pages;
 mod rows;
+mod sides;
 mod trial;
+mod typing;
 
 pub use act::{Check, Do};
+pub(crate) use cloud::Clouds;
 
 use std::path::PathBuf;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, BarHint, CardId, DevicePick, Fingerprint, PanelButton, VoiceAct, VoiceClick,
     VoicePage, VoiceTab,
@@ -36,6 +43,10 @@ pub enum Page {
     Tab(VoiceTab),
     /// The folder list, to pick the models folder.
     Folders,
+    /// The shown service's card.
+    Card,
+    /// The shown service's key page.
+    Lines,
 }
 
 /// A model on the Models page: a row of the table by its id, or an other file by its name.
@@ -56,6 +67,13 @@ pub(crate) enum Key {
     Text(u64),
     Opt(usize),
     Dir(PathBuf),
+    /// A service on the Cloud page, by its id.
+    Service(String),
+    /// A cloud model, by its service's id and the id a pick names, redacted as a typed Other id is the user's.
+    Cloud {
+        service: String,
+        model: Redacted<String>,
+    },
     /// A row a click does nothing on, as a model's turn while Compare runs.
     Plain,
 }
@@ -66,8 +84,11 @@ pub struct Panel {
     pub(crate) page: Option<Page>,
     /// Rows a page shows, the ui's `page_rows` once it tells them; 0 counts as 1.
     pub(crate) rows: usize,
-    /// The shown page of the list.
+    /// The shown page of the list, or the one holding `hold`.
     pub(crate) at: usize,
+    /// The row kept on screen until the page turns, the side switches or another page opens: an option a stepper or
+    /// chip click moved, or the cloud pick Models opened on.
+    pub(crate) hold: Option<Key>,
     pub(crate) ticks: Vec<Key>,
     /// What each row of the last view stands for.
     pub(crate) shown: Vec<Key>,
@@ -94,6 +115,7 @@ pub struct Panel {
     pub(crate) folder: Folder,
     pub(crate) fetches: Fetches,
     pub(crate) compare: Compare,
+    pub(crate) cloud: Clouds,
 }
 
 impl Panel {
@@ -146,6 +168,7 @@ impl Panel {
             folder: &self.folder,
             devices: facts.devices,
             checks: facts.checks,
+            clips: facts.clips,
         }
     }
 
@@ -162,16 +185,9 @@ impl Panel {
         self.rounds.1 = page.round;
     }
 
-    /// True when `round` lies between the drawn rows' last change and the latest view, wrapping.
-    fn fresh(&self, round: u32) -> bool {
-        let (since, latest) = self.rounds;
-        latest.wrapping_sub(round) <= latest.wrapping_sub(since)
-    }
-
-    /// A click on the panel, or the bar's Stop or Cancel that the flow gave Compare (`Out::Lent`). A click on a row of
-    /// a view whose rows changed since is dropped.
-    pub fn click(&mut self, act: &VoiceAct, facts: &Facts<'_>) -> Vec<Do> {
-        let row = |r: &u8| usize::from(*r);
+    /// True for a click on a row of a view whose rows changed since: its round lies outside the drawn rows' last change
+    /// and the latest view, wrapping.
+    fn stale(&self, act: &VoiceAct) -> bool {
         let at_row = matches!(
             act.click,
             VoiceClick::Row(_)
@@ -179,13 +195,32 @@ impl Panel {
                 | VoiceClick::Flip(_)
                 | VoiceClick::Step { .. }
         );
-        if at_row && !self.fresh(act.round) {
+        let (since, latest) = self.rounds;
+        at_row && latest.wrapping_sub(act.round) > latest.wrapping_sub(since)
+    }
+
+    /// A click on the panel, or the bar's Stop or Cancel that the flow gave Compare (`Out::Lent`). A click on a row of
+    /// a view whose rows changed since is dropped.
+    pub fn click(&mut self, act: &VoiceAct, facts: &Facts<'_>) -> Vec<Do> {
+        let row = |r: &u8| usize::from(*r);
+        if self.stale(act) {
             return Vec::new();
         }
         match &act.click {
             VoiceClick::Rows(rows) => self.rows = row(rows),
+            VoiceClick::Open(VoiceTab::Cloud)
+            | VoiceClick::Cloud(_)
+            | VoiceClick::Service(_)
+            | VoiceClick::SetKey(_)
+            | VoiceClick::SetAddress(_)
+            | VoiceClick::SetModel(_)
+            | VoiceClick::Save(_)
+            | VoiceClick::Paste(_)
+            | VoiceClick::Caret { .. }
+            | VoiceClick::KeepNothing(_)
+            | VoiceClick::Side(_) => return self.cloud_click(&act.click, facts),
             VoiceClick::Open(tab) if self.page == Some(Page::Home) => {
-                return self.go(Page::Tab(*tab));
+                return self.open_tab(*tab, facts);
             }
             VoiceClick::Page { back } => self.turn(*back),
             VoiceClick::Row(at) => return self.row(row(at)),
@@ -197,7 +232,8 @@ impl Panel {
             VoiceClick::Confirm(yes) => return self.confirm(*yes, facts),
             VoiceClick::Bar(BarButton::Stop) => return wrap(self.compare.stop()),
             VoiceClick::Bar(BarButton::Cancel) => return wrap(self.compare.cancel()),
-            VoiceClick::Open(_) | VoiceClick::Bar(_) | VoiceClick::Over(_) => {}
+            // "Use the local model" is the flow's.
+            VoiceClick::Open(_) | VoiceClick::Bar(_) | VoiceClick::Over(_) | VoiceClick::Local => {}
         }
         Vec::new()
     }
@@ -217,11 +253,12 @@ impl Panel {
         vec![Do::Scan]
     }
 
-    /// Closes the panel, stopping Compare.
+    /// Closes the panel, stopping Compare; a Paste or key test waited for is dropped.
     pub fn close(&mut self) -> Vec<Do> {
         let mut out = wrap(self.compare.cancel());
         self.compare.reset();
         (self.page, self.offer, self.asked) = (None, None, None);
+        self.cloud.reset();
         out.push(Do::Close);
         out
     }
@@ -232,6 +269,9 @@ impl Panel {
             return Vec::new();
         }
         self.note = None;
+        if let (PanelButton::Use, Some((service, model))) = (button, self.cloud_ticked()) {
+            return self.cloud_pick(&service, model.expose(), facts);
+        }
         match (button, self.page) {
             (PanelButton::Back, _) => self.back(),
             (PanelButton::Close, _) => self.close(),
@@ -242,36 +282,6 @@ impl Panel {
             (_, Some(Page::Tab(VoiceTab::Compare))) => self.compare_button(button, facts),
             (_, Some(Page::Tab(VoiceTab::History))) => self.history_button(button, facts),
             _ => Vec::new(),
-        }
-    }
-
-    /// Back: up one folder in the folder list, else home; leaving Compare stops it.
-    fn back(&mut self) -> Vec<Do> {
-        match self.page {
-            Some(Page::Folders) => self.up(),
-            Some(Page::Tab(_)) => {
-                let mut out = wrap(self.compare.cancel());
-                self.compare.reset();
-                out.extend(self.go(Page::Home));
-                out
-            }
-            Some(Page::Home) | None => Vec::new(),
-        }
-    }
-
-    /// Shows `page` afresh, with what it needs read.
-    fn go(&mut self, page: Page) -> Vec<Do> {
-        self.page = Some(page);
-        (self.at, self.note, self.asked) = (0, None, None);
-        self.ticks.clear();
-        match page {
-            Page::Tab(VoiceTab::Models) => vec![Do::Scan],
-            Page::Tab(VoiceTab::Device | VoiceTab::Options) => vec![Do::Devices],
-            Page::Folders => {
-                (self.browse, self.dirs) = (None, Vec::new());
-                Vec::new()
-            }
-            Page::Home | Page::Tab(_) => Vec::new(),
         }
     }
 }

@@ -1,17 +1,25 @@
-//! The Voice panel's pages (design "The gear and the Voice panel"): the home list, Models, Device, Compare, History,
-//! Options and the folder list, each list paged as the ui's `page_rows` says, tick then act. Texts, folder names and
-//! model names, which may be the user's own file names, stay redacted.
+//! The Voice panel's pages (design "The gear and the Voice panel"): the home list, Models, Cloud with its cards and key
+//! pages, Device, Compare, History, Options and the folder list, each list paged as the ui's `page_rows` says, tick
+//! then act. Texts, folder names, model names and typed lines, which may be the user's own, stay redacted.
 
+mod cloud;
 mod compare;
 mod device;
 mod history;
 mod models;
 mod options;
 
-pub use compare::{CompareRow, CompareRun, CompareSheet, RunStep};
+pub use cloud::{
+    AddressFault, CardPart, CloudCard, CloudLine, CloudSheet, Fact, FactArg, FactValue, KeyCheck,
+    PasteFault, ServiceMark, ServiceName, ServiceRow, ServiceSheet, UsePrice,
+};
+pub use compare::{CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};
 pub use history::{HistoryRow, HistorySheet};
-pub use models::{FetchState, FolderLine, ModelRow, ModelState, ModelsSheet};
+pub use models::{
+    CloudBand, CloudRow, FetchState, FolderLine, ModelRow, ModelSide, ModelState, ModelsSheet,
+    Unavailable,
+};
 pub use options::{Ends, OptionRow, OptionUnit, OptionValue};
 
 use super::act::PanelButton;
@@ -24,6 +32,8 @@ listed! {
     pub enum VoiceTab ("Every page, in the home list's order.") {
         /// The models that know the language in front.
         Models,
+        /// The cloud services, each with its card and key page (ADR-0047).
+        Cloud,
         /// Automatic, the processor and each card.
         Device,
         /// Compare models on the user's own voice.
@@ -55,7 +65,7 @@ pub enum DeviceLabel {
     Card(String),
 }
 
-/// The home list's present values, one per page.
+/// The home list's present values, one per page, and the pages its shown page lists.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VoiceHome {
     /// The model used for the language in front; `None` when none is ready.
@@ -68,6 +78,10 @@ pub struct VoiceHome {
     pub history: u32,
     /// How many options differ from their defaults; 0 reads All at defaults.
     pub changed: u16,
+    /// The Cloud row's value: how many services are ready while cloud services are on; `None` while off.
+    pub cloud: Option<u16>,
+    /// The pages the shown page of the list holds, `page_rows` to a page, in `VoiceTab::ALL`'s order.
+    pub tabs: Vec<VoiceTab>,
 }
 
 /// The folder list, to pick the models folder: the drives, then a folder's subfolders.
@@ -86,6 +100,12 @@ pub enum VoiceSheet {
     Home(VoiceHome),
     /// The models.
     Models(ModelsSheet),
+    /// The cloud services.
+    Cloud(CloudSheet),
+    /// A cloud service's card, boxed as it holds many facts.
+    Card(Box<CloudCard>),
+    /// A cloud service's key page.
+    Service(ServiceSheet),
     /// The devices.
     Device(DeviceSheet),
     /// Compare models.

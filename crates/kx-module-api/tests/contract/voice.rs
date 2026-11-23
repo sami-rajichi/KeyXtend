@@ -6,9 +6,10 @@ use kx_module_api::Capability::{
     Microphone, Network, OpenFolder, ReadFocusedText, SecretStore, Voice, WriteClipboard,
 };
 use kx_module_api::ports::{
-    BarPlace, FolderError, FolderPath, FolderRevealKey, JobLimits, ModelFilesKey, SessionWatchKey,
-    SpeechAsk, SpeechError, SpeechKey, TextAsk, TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick,
-    VoiceKey, VoiceLevel, VoiceLit, VoiceOpen, VoicePage, VoiceView,
+    BarPlace, FolderError, FolderPath, FolderRevealKey, JobLimits, ModelFilesKey, PanelKey,
+    PanelLine, SessionWatchKey, SpeechAsk, SpeechError, SpeechKey, TextAsk, TextDone, VoiceAct,
+    VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceKey, VoiceLevel, VoiceLine, VoiceLineKey,
+    VoiceLit, VoiceOpen, VoicePage, VoiceView,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -77,6 +78,7 @@ fn page() -> VoicePage {
         panel: None,
         place: BarPlace::Above,
         sounds: true,
+        mark: None,
     }
 }
 
@@ -92,14 +94,14 @@ fn ask() -> TextAsk {
 }
 
 /// Publishes one of each gated voice event on `bus`.
-fn sends(bus: &Bus) -> [Result<(), EventError>; 8] {
+fn sends(bus: &Bus) -> [Result<(), EventError>; 11] {
     let act = VoiceAct {
         round: 1,
         click: VoiceClick::Over(true),
     };
     [
         bus.publish(&VoiceKey),
-        bus.publish(&VoiceLit { rec: true }),
+        bus.publish(&VoiceLit::Prep),
         bus.publish(&VoiceOpen),
         bus.publish(&VoiceAsk),
         bus.publish(&VoiceView::new(page())),
@@ -110,6 +112,9 @@ fn sends(bus: &Bus) -> [Result<(), EventError>; 8] {
             count: 5,
             ok: true,
         }),
+        bus.publish(&VoiceLineKey(PanelKey::Enter)),
+        bus.publish(&VoiceLine(Some(PanelLine::Private))),
+        bus.publish(&VoiceClose),
     ]
 }
 
@@ -129,6 +134,9 @@ fn without_voice_no_voice_event_travels() {
         refused::<VoiceAct>(),
         refused::<TextAsk>(),
         refused::<TextDone>(),
+        refused::<VoiceLineKey>(),
+        refused::<VoiceLine>(),
+        refused::<VoiceClose>(),
     ];
     assert_eq!(sends(&host(OTHERS).bus()), want);
     let bus = host(OTHERS).bus();
@@ -141,7 +149,7 @@ fn without_voice_no_voice_event_travels() {
 #[test]
 fn with_voice_a_text_ask_reaches_its_listener_whole() {
     let bus = host(&[Voice]).bus();
-    assert_eq!(sends(&bus), [Ok(()); 8]);
+    assert_eq!(sends(&bus), [Ok(()); 11]);
     let (tx, rx) = std::sync::mpsc::channel();
     let _sub = bus
         .subscribe(move |a: &TextAsk| tx.send(a.clone()).unwrap())

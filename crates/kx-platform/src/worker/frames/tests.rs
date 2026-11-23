@@ -21,6 +21,17 @@ fn sound(last: bool) -> VoiceNote {
     VoiceNote::Sound { id: ID, piece }
 }
 
+/// A listen-only run's last piece of speech, which the run's end still follows.
+fn speech() -> VoiceNote {
+    let bytes = Wiped::Kept(Zeroizing::new(Vec::new()));
+    let piece = SoundPiece {
+        index: 0,
+        last: true,
+        bytes,
+    };
+    VoiceNote::Speech { id: ID, piece }
+}
+
 /// A model file's facts, naming no language.
 fn facts() -> VoiceNote {
     let (runner, langs) = (RUNNER.to_owned(), Vec::new());
@@ -69,6 +80,7 @@ fn a_voice_watch_ends_at_an_answer_a_runs_end_the_last_sound_or_a_fault_that_end
         piece(ID),
         card_failed(ID),
         sound(false),
+        speech(),
     ];
     let goes_on = going().into_iter().chain(notes);
     let ended = goes_on.into_iter().any(|note| VoiceFrames::last(&note));
@@ -126,4 +138,20 @@ fn only_a_runs_end_takes_the_jobs_peak_and_never_lowers_its_own() {
     let mut level = level(ID);
     VoiceFrames::stamp(&mut level, &mut || panic!("a level reads no peak"));
     assert_eq!(level, crate::worker::fake::voice::level(ID));
+}
+
+#[test]
+fn a_net_watch_ends_at_done_or_a_fault_and_a_text_goes_on() {
+    let fault = kx_ipc::NetFault::Network;
+    let text = Zeroizing::new(String::new());
+    let ends = [NetNote::Done { id: ID }, NetNote::Fault { id: ID, fault }];
+    assert!(ends.iter().all(NetFrames::last));
+    let said = NetNote::Text {
+        id: ID,
+        index: 0,
+        text,
+    };
+    assert!(!NetFrames::last(&said), "the next text still comes");
+    assert_eq!(NetFrames::ask_id(&NetAsk::Cancel { id: ID }), ID);
+    assert_eq!(NetFrames::JOB, kx_ipc::NET_JOB);
 }

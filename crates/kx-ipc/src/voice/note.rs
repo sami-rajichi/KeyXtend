@@ -1,10 +1,11 @@
 //! What the voice job sends on its own: levels, speech heard, stages, warm-up progress, each piece's text, the end of a
-//! run, a fault, the devices, a file's facts, a card's check result and pieces of its recording.
+//! run, a fault, the devices, a file's facts, a card's check result, pieces of its recording and a listen-only run's
+//! speech.
 
 mod read;
 
 use super::body::{put_devices, put_sound, put_tag};
-use super::wire::{LANGS, PERCENT, TEXT};
+use super::wire::{HELD, LANGS, PERCENT, SPOKEN, TEXT};
 use super::{Device, SoundPiece, Stage, VoiceFault};
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
@@ -109,8 +110,16 @@ pub enum VoiceNote {
         /// The processor's text.
         cpu_text: Zeroizing<String>,
     },
-    /// A piece of the held recording, after `Keep` or a listen-only Stop.
+    /// A piece of the held recording, after `Keep`.
     Sound {
+        /// The run.
+        id: u32,
+        /// The piece.
+        piece: SoundPiece<'static>,
+    },
+    /// A listen-only run's speech at Stop: cut at pauses, trimmed and packed within `piece_s`, its index below
+    /// `MAX_SPEECH_PIECES`; the held recording stays whole.
+    Speech {
         /// The run.
         id: u32,
         /// The piece.
@@ -131,6 +140,7 @@ pub(crate) const KINDS: &[Kind] = &[
     Kind::FileFacts,
     Kind::CardChecked,
     Kind::SoundOut,
+    Kind::SpeechOut,
 ];
 
 impl VoiceNote {
@@ -210,7 +220,8 @@ impl VoiceNote {
                 s.field(TEXT, card_text.as_bytes())?;
                 s.field(TEXT, cpu_text.as_bytes())
             }
-            Self::Sound { piece, .. } => put_sound(s, piece),
+            Self::Sound { piece, .. } => put_sound(s, piece, HELD),
+            Self::Speech { piece, .. } => put_sound(s, piece, SPOKEN),
         }
     }
 
@@ -249,6 +260,7 @@ impl VoiceNote {
             Self::Facts { .. } => Kind::FileFacts,
             Self::Checked { .. } => Kind::CardChecked,
             Self::Sound { .. } => Kind::SoundOut,
+            Self::Speech { .. } => Kind::SpeechOut,
         }
     }
 
@@ -266,7 +278,8 @@ impl VoiceNote {
             | Self::Devices { id, .. }
             | Self::Facts { id, .. }
             | Self::Checked { id, .. }
-            | Self::Sound { id, .. } => *id,
+            | Self::Sound { id, .. }
+            | Self::Speech { id, .. } => *id,
         }
     }
 }

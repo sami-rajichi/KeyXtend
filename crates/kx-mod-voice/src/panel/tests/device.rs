@@ -1,16 +1,17 @@
 //! The Device page through the panel: Automatic, the processor and the cards; Use writes `device` and checks a card
 //! not checked for the model in use; the check's warm-up shows on its row and its verdict is kept.
 
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarHint, CardCheck, CardId, CheckDone, DeviceItem, DeviceSheet, PanelButton, SpeechError,
     Verdict, VoiceClick, VoiceSheet, VoiceTab,
 };
-use kx_module_api::{Secret, Zeroizing};
 
 use super::super::rig::{Rig, card, row};
 use super::{Check, Do, Panel};
+use crate::compare::tests::secret;
 use crate::settings::DEVICE;
+
+pub(super) mod clips;
 
 /// The Device page as shown.
 fn device(rig: &mut Rig) -> DeviceSheet {
@@ -39,10 +40,6 @@ fn check_card(rig: &mut Rig) -> Check {
         panic!("{out:?}");
     };
     (**check).clone()
-}
-
-fn secret(text: &str) -> Secret {
-    Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
 #[test]
@@ -78,12 +75,7 @@ fn built_in_graphics_shows_its_mark_from_the_port() {
 }
 
 #[test]
-fn a_check_reads_the_first_shipped_clip_the_model_knows() {
-    let mut rig = on_device();
-    rig.clips = vec!["ar".into(), "fr".into(), "en".into()];
-    let check = check_card(&mut rig);
-    let langs = (check.clip.as_str(), check.ask.model.lang.as_str());
-    assert_eq!(langs, ("fr", "fr"), "Parakeet knows no Arabic");
+fn a_model_knowing_no_shipped_clip_is_not_checked() {
     let mut rig = on_device();
     rig.clips = vec!["ar".into()];
     rig.click(&VoiceClick::Row(2));

@@ -3,19 +3,19 @@
 
 use std::path::Path;
 
-use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
     BarHint, FetchAsk, FetchButton, FetchNote, FetchRun, TextAsk, VoiceLevel,
 };
+use kx_module_api::{Redacted, Zeroizing};
 
 use super::lanes::Owner;
 use super::typing::Source;
 use super::{Actor, Back, Msg};
-use crate::VoiceSettings;
 use crate::compare::Act;
 use crate::flow::{In, suffixed};
 use crate::models::table;
 use crate::panel::Do;
+use crate::{Insert, VoiceSettings};
 
 /// The round a text names until the typer gives it its own.
 const UNSENT: u32 = 0;
@@ -38,6 +38,7 @@ impl Actor {
             Do::Browse(dir) => self.browse(&dir),
             Do::Make(dir) => self.make(&dir),
             Do::Set(key, value) => self.set(key, value),
+            Do::SetAll(values) => self.set_all(values),
             Do::Fetch { row, ask } => self.fetch(row, ask),
             Do::FetchCall { row, button } => self.fetch_call(&row, button),
             Do::Remove(file) => self.remove(&file),
@@ -50,6 +51,12 @@ impl Actor {
             Do::Insert(ids) => self.insert(&ids),
             Do::Copy(ids) => self.copy_texts(&ids),
             Do::Compare(act) => self.compare(act),
+            key @ (Do::SetKey { .. }
+            | Do::RemoveKey(_)
+            | Do::Dots(_)
+            | Do::Test { .. }
+            | Do::Take { .. }
+            | Do::Link(_)) => self.key_do(key),
             edit @ (Do::Pin(_) | Do::Unpin(_) | Do::Delete(_) | Do::DeleteAll(_)) => {
                 self.edit(edit);
             }
@@ -81,11 +88,17 @@ impl Actor {
     }
 
     /// Writes `[voice]` key `key`, then follows the settings after it; a refused write shows the fault band.
-    fn set(&mut self, key: &'static str, value: toml::Value) {
-        let Some(next) = self.held.settings.with(key, value.clone()) else {
+    pub(super) fn set(&mut self, key: &'static str, value: toml::Value) {
+        self.set_all(toml::Table::from_iter([(key.to_owned(), value)]));
+    }
+
+    /// Writes `values` to `[voice]` in one save, all or none, then follows the settings after them; a refused write
+    /// shows the fault band.
+    fn set_all(&mut self, values: toml::Table) {
+        let Some(next) = self.held.settings.with_all(&values) else {
             return;
         };
-        if let Err(error) = self.ports.handle.set(key, value) {
+        if let Err(error) = self.ports.handle.set_all(values) {
             tracing::warn!(kind = error.kind(), "a voice setting could not be written");
             if !error.holds() {
                 self.panel.note = Some(BarHint::Fault);
@@ -148,7 +161,7 @@ impl Actor {
     }
 
     /// Types History's texts `ids`, in order, joined by the join, the suffix after the last; their answers never reach
-    /// the flow.
+    /// the flow. With Paste at once they go as one text, but into a password box.
     fn insert(&mut self, ids: &[u64]) {
         let s = &self.held.settings;
         let (suffix, join, gap_ms) = (&s.type_suffix, &s.history_join, s.type_gap_ms);
@@ -157,6 +170,24 @@ impl Actor {
         let texts: Vec<_> = (entries.iter().enumerate())
             .map(|(at, e)| suffixed(e.text.expose(), if at == last { suffix } else { join }))
             .collect();
+        if s.way() == Insert::Paste && !self.flow.password() && !texts.is_empty() {
+            // Reserved up front, so no copy of the text is left behind by a growing buffer.
+            let room = texts.iter().map(|t| t.expose().len()).sum();
+            let mut all = Zeroizing::new(String::with_capacity(room));
+            for t in &texts {
+                all.push_str(t.expose());
+            }
+            let (round, erase, text) = (UNSENT, 0, Redacted::new(all));
+            return self.paste_text(
+                Source::History,
+                TextAsk {
+                    round,
+                    erase,
+                    text,
+                    gap_ms,
+                },
+            );
+        }
         for text in texts {
             let ask = TextAsk {
                 round: UNSENT,
@@ -190,6 +221,8 @@ impl Actor {
                 }
             }
             Act::Fell { card, model } => self.fell(&card, &model),
+            Act::Send { take, lang, to } => self.trial(take, &lang, &to),
+            Act::Halt(take) => self.halt_trials(take),
         }
     }
 }

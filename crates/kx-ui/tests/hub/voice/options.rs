@@ -38,6 +38,14 @@ const fn number(key: &'static str, value: u32, unit: OptionUnit) -> OptionRow {
     )
 }
 
+/// The insert row, Paste at once chosen when `second`.
+const fn pair(second: bool) -> OptionValue {
+    OptionValue::Pair {
+        names: ["type", "paste"],
+        second,
+    }
+}
+
 /// The Options page QML reads for `rows`, in English.
 fn page(rows: Vec<OptionRow>) -> Value {
     let rig = Rig::new();
@@ -60,30 +68,37 @@ fn shipped() -> Vec<(&'static str, String, Option<OptionUnit>)> {
         .collect()
 }
 
+/// A row of `kind` for `key`, as the module would show it; only a number has a `unit`.
+fn shipped_row(key: &'static str, kind: &str, unit: Option<OptionUnit>) -> OptionRow {
+    match kind {
+        "switch" => row(key, OptionValue::Switch(true)),
+        "factor" => row(
+            key,
+            OptionValue::Factor {
+                value: Hundredths(150),
+                ends: MID,
+            },
+        ),
+        "place" => row(
+            key,
+            OptionValue::Choice {
+                name: "above",
+                ends: MID,
+            },
+        ),
+        "insert" => row(key, pair(true)),
+        _ => number(key, 1, unit.expect("a number names its unit")),
+    }
+}
+
 #[test]
 fn every_shipped_row_has_its_label_and_reads_in_every_language() {
-    let rows: Vec<OptionRow> = shipped()
+    let mut rows: Vec<OptionRow> = shipped()
         .into_iter()
-        .map(|(key, kind, unit)| match kind.as_str() {
-            "switch" => row(key, OptionValue::Switch(true)),
-            "factor" => row(
-                key,
-                OptionValue::Factor {
-                    value: Hundredths(150),
-                    ends: MID,
-                },
-            ),
-            "place" => row(
-                key,
-                OptionValue::Choice {
-                    name: "above",
-                    ends: MID,
-                },
-            ),
-            _ => number(key, 1, unit.expect("a number names its unit")),
-        })
+        .map(|(key, kind, unit)| shipped_row(key, &kind, unit))
         .collect();
     assert!(rows.len() > 20, "the table is read: {}", rows.len());
+    rows.push(row("insert", OptionValue::Hint));
     for tag in ["en", "fr", "ar"] {
         let (rig, _face, _host) = rig("en", tag, "auto");
         let heard = heard(&rig);
@@ -94,6 +109,12 @@ fn every_shipped_row_has_its_label_and_reads_in_every_language() {
             assert!(!label.starts_with("voice."), "{tag} {}: {label}", r.key);
             let value = shown["value"].as_str().unwrap_or_default();
             assert!(!value.starts_with("voice."), "{tag} {}: {value}", r.key);
+            let chips = shown["chips"].as_array().into_iter().flatten();
+            let chips: Vec<&str> = chips.filter_map(|c| c["label"].as_str()).collect();
+            assert!(
+                chips.iter().all(|c| !c.starts_with("voice.")),
+                "{tag}: {chips:?}"
+            );
         }
     }
 }
@@ -188,7 +209,7 @@ fn a_switch_reads_on_and_a_stepper_names_its_ends() {
     let p = page(vec![row("history", OptionValue::Switch(true)), dim]);
     let rows = &p["sheet"]["rows"];
     let switch = json!({"key": "history", "label": "Keep a history of texts", "kind": "switch", "value": "On",
-        "on": true, "live": true, "steps": null});
+        "on": true, "live": true, "steps": null, "chips": null});
     assert_eq!(rows[0], switch);
     assert_eq!(
         (&rows[1]["kind"], &rows[1]["live"]),
@@ -219,4 +240,30 @@ fn a_place_is_a_choice_with_chevrons() {
         (&json!("choice"), &json!("Above the keyboard"))
     );
     assert_eq!(shown["label"], "Bar position");
+}
+
+#[test]
+fn the_insert_row_is_two_chips_and_its_hint_takes_a_row_of_its_own() {
+    let p = page(vec![
+        row("insert", pair(true)),
+        row("insert", OptionValue::Hint),
+    ]);
+    let (pick, hint) = (&p["sheet"]["rows"][0], &p["sheet"]["rows"][1]);
+    let chips = json!([{"label": "Type it", "on": false}, {"label": "Paste at once", "on": true}]);
+    assert_eq!((&pick["kind"], &pick["chips"]), (&json!("pair"), &chips));
+    assert_eq!(
+        (&pick["label"], &pick["value"]),
+        (&json!("Insert the text"), &json!("Paste at once"))
+    );
+    assert_eq!(
+        (&hint["kind"], &hint["steps"]),
+        (&json!("hint"), &json!(null))
+    );
+    let line = "Uses the clipboard, then puts yours back; a password box is always typed.";
+    assert_eq!(hint["label"], line);
+    let p = page(vec![row("insert", pair(false))]);
+    assert_eq!(
+        p["sheet"]["rows"][0]["chips"][0]["on"], true,
+        "Type it is the default"
+    );
 }

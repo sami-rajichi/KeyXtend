@@ -58,7 +58,8 @@ capabilities! {
     /// Carry the selection chips' events; the selection module, the keyboard and the ui hold it as an event gate
     /// (ADR-0041).
     Selection => "selection",
-    /// Hand a link to the user's browser through the desktop shell; the selection module alone holds it (ADR-0041).
+    /// Hand a link to the user's browser through the desktop shell; the selection and voice modules hold it (ADR-0041,
+    /// ADR-0047).
     OpenLink => "open-link",
     /// Carry voice typing's events: the key, its light, the bar's view, its clicks and the text to type; the voice
     /// module, the keyboard and the ui hold it as an event gate (ADR-0042).

@@ -193,10 +193,8 @@ impl Actor {
             Msg::Act(act) => self.act(act),
             Msg::Typed(typed) => self.typed(typed),
             Msg::Taken(taken) => self.taken(&taken),
-            Msg::Names(names) => {
-                self.panel.set_names(names);
-                self.redraw = true;
-            }
+            // The same names again, as each `FillAsk` brings, draw nothing, so a click on the shown view counts.
+            Msg::Names(names) => self.redraw |= self.panel.set_names(names),
             Msg::Done(done) => self.job_done(done),
             Msg::Answered { key, yes } => self.answered(key, yes),
             Msg::Quit => self.quit(),

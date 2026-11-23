@@ -1,48 +1,53 @@
-//! A Compare run's turns ending: a model's numbers, a fault that skips a model or ends the run, and the end that
-//! keeps the numbers.
+//! A Compare run's turns ending: a model's numbers, a fault that skips a model or ends the run, the run's close, and
+//! the finish that keeps the numbers.
 
-use kx_module_api::Redacted;
-use kx_module_api::Zeroizing;
 use kx_module_api::ports::{BarHint, RunStep, SpeechDone, SpeechError};
+use kx_module_api::{Redacted, Secret, Zeroizing};
 
-use super::{Act, Compare, Line, Stage, Turn};
+use super::{Act, Compare, Line, Plan, Stage, Turn};
 use crate::counts::{Board, Score};
-use crate::flow::mic_hint;
+use crate::flow::{RunCall, mic_hint};
 use crate::score::wrong;
 
 impl Compare {
     /// Model `at`'s numbers from its pieces, which are wiped; its text stays only with no set text.
     pub(super) fn score(&mut self, at: usize, done: &SpeechDone) {
-        let text = Zeroizing::new(
-            self.pieces
-                .values()
-                .map(|p| p.expose().as_str())
-                .collect::<Vec<_>>()
-                .join(" "),
-        );
-        self.pieces.clear();
+        let pieces = std::mem::take(&mut self.pieces);
         let (Some(turn), Some(plan)) = (self.turns.get_mut(at), self.plan.as_ref()) else {
             return;
         };
         turn.step = RunStep::Done {
             wait_ms: done.wait_ms,
         };
-        let set = plan.set.expose();
-        let count = (!set.is_empty())
-            .then(|| wrong(set, &text, &plan.lang))
-            .flatten();
-        let shown = count.is_none().then(|| Redacted::new(text));
         let card = (turn.ask.card.as_ref()).filter(|_| done.card);
+        let marked = line(
+            plan,
+            pieces.values(),
+            turn.entrant.name.clone(),
+            done.wait_ms,
+        );
         self.lines.push(Line {
-            name: turn.entrant.name.clone(),
-            print: turn.entrant.ready.print,
-            wrong: count.map(|c| c.words),
-            words: count.map_or(0, |c| c.total),
-            wait_ms: done.wait_ms,
+            print: Some(turn.entrant.ready.print),
             mb: done.memory_mb,
             card: card.map(|c| c.id.clone()),
-            text: shown,
+            ..marked
         });
+    }
+
+    /// Ends the run, cancelled first when `cancel`, which drops the cloud uploads; the page goes back to the set text.
+    pub(super) fn end(&mut self, cancel: bool) -> Vec<Act> {
+        let mut acts = Vec::new();
+        if cancel {
+            acts.push(self.call(RunCall::Cancel));
+        }
+        acts.push(self.call(RunCall::Close));
+        if cancel && !self.remotes.is_empty() {
+            acts.push(Act::Halt(self.take));
+        }
+        self.texts.clear();
+        self.pieces.clear();
+        self.stage = Stage::Ready;
+        acts
     }
 
     /// A fault: a card's lets the processor go on; a model's marks it failed and skips it; the recording's ends the
@@ -84,36 +89,72 @@ impl Compare {
         }
     }
 
-    /// The recording is gone: the run ends with the models already written or failed.
+    /// The recording is gone: the run ends with the local models already written or failed, once the cloud ones end.
     pub(super) fn lost(&mut self) -> Vec<Act> {
         let ended = |t: &Turn| matches!(t.step, RunStep::Done { .. } | RunStep::Failed);
         self.turns.retain(ended);
-        self.finish()
+        self.settle()
     }
 
-    /// Every model ran: the run closes and the numbers are kept, if any.
+    /// Every model ran: the run closes and the local models' numbers are kept, if any.
     pub(super) fn finish(&mut self) -> Vec<Act> {
         let mut acts = self.end(false);
         let Some(plan) = self.plan.as_ref().filter(|_| !self.lines.is_empty()) else {
             self.hint.get_or_insert(BarHint::Fault);
             return acts;
         };
-        let score = |l: &Line| Score {
-            model: l.print,
-            wrong: l.wrong,
-            words: l.words,
-            wait_ms: l.wait_ms,
-            mb: l.mb,
+        let score = |l: &Line| {
+            Some(Score {
+                model: l.print?,
+                wrong: l.wrong,
+                words: l.words,
+                wait_ms: l.wait_ms,
+                mb: l.mb,
+            })
         };
         let board = Board {
             lang: plan.lang.clone(),
             day: plan.day,
             auto: plan.auto,
             card: self.served().cloned(),
-            scores: self.lines.iter().map(score).collect(),
+            scores: self.lines.iter().filter_map(score).collect(),
         };
-        acts.push(Act::Save(board));
+        // A cloud model's numbers are shown, never kept, so a run of cloud models alone keeps nothing.
+        if !board.scores.is_empty() {
+            acts.push(Act::Save(board));
+        }
         self.stage = Stage::Results;
         acts
+    }
+}
+
+/// A model's line from its text's `pieces` in order, joined in a wiped buffer: the set text's words wrong, or the text
+/// itself with no set text. Where it ran is left to the caller.
+pub(super) fn line<'p>(
+    plan: &Plan,
+    pieces: impl Iterator<Item = &'p Secret>,
+    name: Redacted<String>,
+    wait_ms: u32,
+) -> Line {
+    let text = Zeroizing::new(
+        pieces
+            .map(|p| p.expose().as_str())
+            .collect::<Vec<_>>()
+            .join(" "),
+    );
+    let set = plan.set.expose();
+    let count = (!set.is_empty())
+        .then(|| wrong(set, &text, &plan.lang))
+        .flatten();
+    Line {
+        name,
+        print: None,
+        wrong: count.map(|c| c.words),
+        words: count.map_or(0, |c| c.total),
+        wait_ms,
+        mb: 0,
+        card: None,
+        cloud: None,
+        text: count.is_none().then(|| Redacted::new(text)),
     }
 }

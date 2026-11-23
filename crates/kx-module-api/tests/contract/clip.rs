@@ -4,15 +4,14 @@
 
 use kx_module_api::Capability::{InjectInput, ReadClipboard, SecretStore, WriteClipboard};
 use kx_module_api::ports::{
-    BlobName, Calendar, CalendarKey, ClipAct, ClipConfig, ClipError, ClipKey, ClipNote, ClipOpen,
-    ClipPage, ClipPanel, ClipPart, ClipRun, ClipView, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, DibAsk, FileFact, Filter, HistoryAsk, HistoryWanted,
-    LocalTime, Pages, PanelKey, PasteAsk, Pasted, PictureAsk, PictureConfig, PictureError,
-    PictureRun, Pictures, PicturesKey, Pixels, Room, SealedError, SealedShelf, SealedShelfKey,
+    CalendarKey, ClipAct, ClipConfig, ClipError, ClipKey, ClipNote, ClipOpen, ClipPage, ClipPanel,
+    ClipView, ClipWait, ClipboardKey, ClipboardWriterKey, FileFact, Filter, HistoryAsk,
+    HistoryWanted, Pages, PanelKey, PasteAsk, Pasted, PicturesKey, Room, SealedError,
+    SealedShelfKey,
 };
 use kx_module_api::{
-    Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, Secret,
-    ServiceError, ServiceKey,
+    Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
+    ServiceKey,
 };
 use kx_test_support::host::FakeHost;
 use std::path::PathBuf;
@@ -34,91 +33,9 @@ static CLIP: Manifest = Manifest {
     settings: None,
 };
 
-/// A platform whose clipboard is always busy, whose shelf is locked and whose worker is gone.
-struct Stuck;
+mod stuck;
 
-/// A watch that hears nothing.
-struct Deaf;
-
-impl ClipRun for Deaf {}
-
-impl Clipboard for Stuck {
-    fn watch(
-        &self,
-        _: ClipConfig,
-        tell: Box<dyn Fn(ClipNote) + Send>,
-    ) -> Result<Box<dyn ClipRun>, ClipError> {
-        tell(ClipNote::Busy);
-        Ok(Box::new(Deaf))
-    }
-
-    fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
-        paths.expose().iter().map(|_| FileFact::Gone).collect()
-    }
-
-    fn text(&self, _: ClipWait, _: usize) -> Result<Option<Secret>, ClipError> {
-        Err(ClipError::Busy)
-    }
-}
-
-impl ClipboardWriter for Stuck {
-    fn write(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
-        Err(ClipError::Busy)
-    }
-}
-
-impl SealedShelf for Stuck {
-    fn load(&self, _: &BlobName, _: &BlobName) -> Result<Option<Vec<u8>>, SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn save(&self, _: &BlobName, _: &BlobName, _: &[u8]) -> Result<(), SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn remove(&self, _: &BlobName, _: &BlobName) -> Result<(), SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn drop_folder(&self, _: &BlobName) -> Result<(), SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn folders(&self) -> Result<Vec<BlobName>, SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn names(&self, _: &BlobName) -> Result<Vec<BlobName>, SealedError> {
-        Err(SealedError::Locked)
-    }
-
-    fn room(&self) -> Result<Room, SealedError> {
-        Err(SealedError::Locked)
-    }
-}
-
-impl PictureRun for Stuck {
-    fn draw(&mut self, _: PictureAsk) -> Result<Pixels, PictureError> {
-        Err(PictureError::Gone)
-    }
-
-    fn dib(&mut self, _: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
-        Err(PictureError::Gone)
-    }
-}
-
-impl Pictures for Stuck {
-    fn open(&self, _: PictureConfig) -> Box<dyn PictureRun> {
-        Box::new(Stuck)
-    }
-}
-
-impl Calendar for Stuck {
-    #[allow(clippy::unwrap_used, reason = "the epoch, at UTC, is a date")]
-    fn now(&self) -> LocalTime {
-        LocalTime::at(0, 0).unwrap()
-    }
-}
+use stuck::Stuck;
 
 /// Puts `api` into `host` under `K`'s id and gate.
 fn put<K: ServiceKey>(host: &mut FakeHost, api: Arc<K::Api>) {
@@ -303,8 +220,10 @@ fn ports_reached_through_their_gates_answer() {
     let gone = clipboard.files(&Redacted::new(vec![PathBuf::from("a.txt")]));
     assert_eq!(gone, [FileFact::Gone]);
     assert_eq!(clipboard.text(wait, 1), Err(ClipError::Busy));
+    assert_eq!(clipboard.unmarked_text(wait, 1), Err(ClipError::Busy));
     let writer = cx.service::<ClipboardWriterKey>().unwrap();
     assert_eq!(writer.write(&[], wait), Err(ClipError::Busy));
+    assert_eq!(writer.write_lent(&[], wait), Err(ClipError::Busy));
     let shelf = cx.service::<SealedShelfKey>().unwrap();
     assert_eq!(shelf.room(), Err(SealedError::Locked));
 }

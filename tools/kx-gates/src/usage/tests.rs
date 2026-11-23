@@ -156,18 +156,51 @@ fn p11_lists_g22s_runs_and_says_which_move_nothing() {
             .find(|l| l.starts_with(&format!("g22 {name} ")))
     };
     let still = |l: &str| l.contains("moves nothing");
+    let build = |l: &str| l.contains(&g22::worker_build()) && l.contains(g22::CARD_SDK);
     assert!(
-        told(g22::BENCH).is_some_and(|l| still(l) && l.contains("--features gate")),
+        told(g22::BENCH).is_some_and(|l| still(l) && build(l)),
         "{text}"
     );
     assert!(told(g22::STAGED).is_some_and(still), "{text}");
-    let product =
-        told(NAME).is_some_and(|l| l.contains("--features gate-voice") && l.contains("close"));
+    let product = told(NAME).is_some_and(|l| l.contains(&g22::app_build()) && l.contains("close"));
     assert!(product, "{text}");
     let voiced = format!("g22 {NAME} and g22 {} ", g22::BENCH);
     let hint = text.lines().find(|l| l.starts_with(&voiced));
     assert!(
-        hint.is_some_and(|l| l.contains("--features voice")),
+        hint.is_some_and(|l| l.contains(&g22::voice_build())),
         "{text}"
     );
+}
+
+#[test]
+fn g22_on_the_product_says_its_cloud_line_borrows_keys_and_uses_the_allowance() {
+    let text = usage();
+    let cloud = text
+        .lines()
+        .find(|l| l.starts_with(&format!("g22 {NAME} with {DAILY} ")));
+    let says =
+        |l: &str| l.contains(LOCAL_FILE) && l.contains("sealed key") && l.contains("allowance");
+    assert!(cloud.is_some_and(says), "{text}");
+}
+
+#[test]
+fn only_g22_on_the_product_takes_a_device_in_place_of_its_setting() {
+    let text = usage();
+    let flag = g22::DEVICE_FLAG;
+    let offered: Vec<&str> = text.lines().filter(|l| l.contains(flag)).collect();
+    let form = format!("{PROG} g22 {NAME} [{flag} <");
+    let forms: Vec<&&str> = offered
+        .iter()
+        .filter(|l| l.contains(&format!("{PROG} g22")))
+        .collect();
+    assert!(
+        forms.len() == 1 && forms[0].contains(&form),
+        "only {NAME}'s form: {text}"
+    );
+    let device = offered
+        .iter()
+        .find(|l| l.starts_with(&format!("g22 {NAME} {flag} ")));
+    let names = format!("{}, {} or", DevicePick::CPU, DevicePick::AUTO);
+    let instead = |l: &&str| l.contains("[g22_product] device") && l.contains(&names);
+    assert!(device.is_some_and(instead), "{text}");
 }

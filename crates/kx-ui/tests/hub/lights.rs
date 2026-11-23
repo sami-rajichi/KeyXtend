@@ -1,11 +1,13 @@
-//! The keyboard's wake from the bus: a mouse mode change, a used latch, a scroll change, a power change or the vault's
-//! state wakes it once, only while a face is attached, and only after the face's own handler ran, so the window reads
-//! the new state.
+//! The keyboard's wake from the bus: a mouse mode change, a used latch, a scroll change, a power change, the vault's
+//! state or the Dictation key's light wakes it once, only while a face is attached, and only after the face's own
+//! handler ran, so the window reads the new state.
 
 use crate::assist::{RCLICK, heard, woke};
 use crate::scroll::DOWN;
 use crate::{FakeFace, Rig};
-use kx_module_api::ports::{AssistChanged, FillLive, LatchesUsed, PowerChanged, ScrollChanged};
+use kx_module_api::ports::{
+    AssistChanged, FillLive, LatchesUsed, PowerChanged, ScrollChanged, VoiceLit,
+};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_test_support::host::FakeHost;
 use kx_ui::{MANIFEST, Wake};
@@ -23,13 +25,14 @@ fn attach(rig: &Rig) -> FakeHost {
     host
 }
 
-/// Sends a mode change, a used latch, a scroll change, a power change and the vault's state on `bus`.
+/// Sends a mode change, a used latch, a scroll change, a power change, the vault's state and the light on `bus`.
 fn all(bus: &Bus) {
     bus.publish(&RCLICK).unwrap();
     bus.publish(&LatchesUsed).unwrap();
     bus.publish(&DOWN).unwrap();
     bus.publish(&POWER).unwrap();
     bus.publish(&FILL).unwrap();
+    bus.publish(&VoiceLit::Prep).unwrap();
 }
 
 /// A stand-in for the face's handler of `E`, subscribed now as the keyboard's start does: each run notes whether the
@@ -53,6 +56,7 @@ fn the_keyboard_wakes_only_after_the_faces_own_handler_ran() {
         face_on::<ScrollChanged>(&rig, &bus, &early),
         face_on::<PowerChanged>(&rig, &bus, &early),
         face_on::<FillLive>(&rig, &bus, &early),
+        face_on::<VoiceLit>(&rig, &bus, &early),
     ];
     let _host = attach(&rig);
     rig.wakes();
@@ -70,7 +74,13 @@ fn the_keyboard_wakes_only_after_the_faces_own_handler_ran() {
         1,
         "the fill key dims or lights at once"
     );
-    assert_eq!(*early.lock().unwrap(), [false; 5], "the face ran first");
+    bus.publish(&VoiceLit::Prep).unwrap();
+    assert_eq!(
+        woke(&rig, Wake::Keys),
+        1,
+        "amber at once, never a relabel later"
+    );
+    assert_eq!(*early.lock().unwrap(), [false; 6], "the face ran first");
 }
 
 #[test]
@@ -83,7 +93,7 @@ fn the_keyboard_wakes_once_per_change_and_only_while_a_face_is_attached() {
     all(&bus);
     assert_eq!(
         woke(&rig, Wake::Keys),
-        5,
+        6,
         "one each, after a second attach too"
     );
     rig.hub.detach();

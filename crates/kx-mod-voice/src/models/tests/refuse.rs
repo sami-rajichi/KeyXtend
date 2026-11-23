@@ -99,6 +99,12 @@ fn a_bad_field_is_refused_with_its_rule() {
         ("cpu_mb = 1344", "cpu_mb = 0", RowError::Memory),
         ("card_mb = 384", "card_mb = 70000", RowError::Memory),
         ("name = \"Whisper Small\"", "name = \"\"", RowError::Name),
+        ("short = \"Whisper Small\"", "short = \"\"", RowError::Name),
+        (
+            "short = \"Whisper Small\"",
+            "short = \"a\u{202E}b\"",
+            RowError::Name,
+        ),
         ("credit = \"OpenAI\"", "credit = \"\"", RowError::Credit),
         (origin, "origin = \"http://x\"", RowError::Credit),
     ];

@@ -2,14 +2,15 @@
 //! gets, which the actor answers from the models table, the device rule and the folder.
 
 use kx_module_api::ports::{
-    BarButton, CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, SessionNote, SpeechAsk,
-    SpeechDone, SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit,
-    VoicePanel, VoiceView,
+    BarButton, CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, Renewal, SessionNote,
+    SpeechAsk, SpeechDone, SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel,
+    VoiceLit, VoicePanel, VoiceView,
 };
 use kx_module_api::{Redacted, Secret};
 
-use super::Lend;
+use super::{Lend, Net, Sent, Upload};
 use crate::VoiceSettings;
+use crate::device::Why;
 
 /// One input to the flow, from the bus, a port or the clock.
 #[derive(Clone, Debug)]
@@ -22,6 +23,8 @@ pub enum In {
     Ask,
     /// The panel to draw above the bar, or `None` once it closed; an open panel keeps the bar.
     Panel(Option<Box<VoicePanel>>),
+    /// The gear or the tray opens the panel (`VoiceOpen`); a running dictation or Compare's recording ends first.
+    Opening,
     /// A note from dictation `take`'s run, or a call's error told as a fault; an older take's notes are dropped.
     Note {
         /// The dictation the run belongs to, as `Out::Open` named it.
@@ -47,6 +50,19 @@ pub enum In {
     Tick,
     /// Compare models holds the microphone's run, or lets it go (`Compare::lend`).
     Lend(Lend),
+    /// Dictation `take`'s upload of round `round` tells `sent`; an older round's are dropped.
+    Sent {
+        /// The dictation, as `Out::Send` named it.
+        take: u32,
+        /// The upload's round.
+        round: u32,
+        /// What it tells.
+        sent: Sent,
+        /// When a used allowance renews, which the actor reads on the calendar as the fault comes.
+        renews: Option<Renewal>,
+    },
+    /// A service's key was set or removed, so a running cloud dictation checks its own.
+    Keys,
     /// The module stops: the microphone closes and the sound is wiped.
     Quit,
 }
@@ -75,16 +91,16 @@ pub struct Kept {
     pub text: Secret,
     /// The language it was dictated in, an ISO 639 code.
     pub lang: String,
-    /// The model that wrote it, as `Ready::name` names it.
+    /// The model that wrote it, as `Ready::name` names it, or the cloud pick, `service:model`.
     pub model: Redacted<String>,
 }
 
 /// A written dictation's numbers for the counts; never its content.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Count {
-    /// The model that wrote it.
+    /// The model that wrote it, or the cloud pick, `service:model`.
     pub model: Redacted<String>,
-    /// The card that wrote it to the end; `None` for the processor.
+    /// The card that wrote it to the end; `None` for the processor or a cloud service.
     pub card: Option<CardId>,
     /// Its times and memory.
     pub done: SpeechDone,
@@ -109,12 +125,14 @@ pub enum Out {
     },
     /// Tell the bar and the panel (`VoiceView`).
     View(VoiceView),
-    /// Light the key, or not (`VoiceLit`).
+    /// The key's light: off, amber or red (`VoiceLit`).
     Lit(VoiceLit),
     /// Tell the sound level while listening (`VoiceLevel`).
     Level(VoiceLevel),
     /// Ask the keyboard to erase, then type (`TextAsk`).
     Type(TextAsk),
+    /// Erase as `Type` does, then put the text in at once through the clipboard history; typed should that fail.
+    Paste(TextAsk),
     /// Put this text on the clipboard (Copy).
     Copy(Secret),
     /// Keep this text in History, whose `Rules` drop it while `history` is off.
@@ -134,6 +152,22 @@ pub enum Out {
     },
     /// Compare holds the run: give it this Stop or Cancel (`Panel::click` with `VoiceClick::Bar`).
     Lent(BarButton),
+    /// Send the dictation's speech, which its run hands over, to the service the upload names.
+    Send(Upload),
+    /// Drop dictation `take`'s running upload: nothing more is sent or heard of it.
+    Halt {
+        /// The dictation.
+        take: u32,
+    },
+    /// The first dictation to this service at its row's terms number showed the card's warning: note it as seen.
+    Warned(String),
+    /// Open service on a cloud note: the panel opens on this service's card, or on its key page when `key`.
+    Settle {
+        /// The service's row id.
+        service: String,
+        /// The key note, so its key page opens.
+        key: bool,
+    },
 }
 
 /// The model and device that serve a language now.
@@ -143,8 +177,12 @@ pub struct Ready {
     pub model: SpeechModel,
     /// The card that runs it; `None` runs it on the processor.
     pub card: Option<CardUse>,
+    /// Why the processor runs it although a card is picked; `None` otherwise.
+    pub why: Option<Why>,
     /// Its row's id or its file's name, for History and the counts.
     pub name: Redacted<String>,
+    /// The bar's name for it: its row's short name, or its file's name without the extension.
+    pub short: Redacted<String>,
     /// Its file's fingerprint, which a card's check goes by.
     pub print: Fingerprint,
     /// The size Download fetches for the language, in bytes, should the file be gone.
@@ -176,6 +214,21 @@ pub trait Supply {
     /// # Errors
     /// The `Lack` the bar's note names.
     fn supply(&self, iso: &str) -> Result<Ready, Lack>;
+
+    /// The cloud service the user picked for keyboard language `iso`, while cloud services and that service are on.
+    fn cloud(&self, _iso: &str) -> Option<Net> {
+        None
+    }
+
+    /// True while `service` is switched on with cloud services on, so a pick that left it moved rather than went off.
+    fn on(&self, _service: &str) -> bool {
+        false
+    }
+
+    /// The service switched Off that `iso`'s pick waits for, which Start names in the Off note (owner, 2026-11-21).
+    fn off(&self, _iso: &str) -> Option<String> {
+        None
+    }
 }
 
 impl<F: Fn(&str) -> Result<Ready, Lack>> Supply for F {

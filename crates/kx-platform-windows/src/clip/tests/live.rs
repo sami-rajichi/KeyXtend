@@ -85,7 +85,10 @@ impl Watch {
                 Err(_) => break,
             }
         }
-        eprintln!("heard instead: {other:?}");
+        eprintln!(
+            "heard instead: {other:?}; images by codec and bytes: {:?}",
+            images(&other)
+        );
         None
     }
 
@@ -94,6 +97,19 @@ impl Watch {
         let found = self.hear(|n| matches!(n, ClipNote::Copied { parts, .. } if parts == want));
         found.is_some()
     }
+}
+
+/// Each image part's codec and length in `notes`, which a failure shows to compare with what was written.
+fn images(notes: &[ClipNote]) -> Vec<(ImageCodec, usize)> {
+    let parts = |n: &ClipNote| match n {
+        ClipNote::Copied { parts, .. } => parts.clone(),
+        _ => Vec::new(),
+    };
+    let size = |p: ClipPart| match p {
+        ClipPart::Image { codec, bytes } => Some((codec, bytes.expose().len())),
+        _ => None,
+    };
+    notes.iter().flat_map(parts).filter_map(size).collect()
 }
 
 fn text(t: &str) -> ClipPart {

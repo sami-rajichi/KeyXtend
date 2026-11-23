@@ -48,3 +48,13 @@ pub const WHEN: &str = "when";
 pub const MINUTES: &str = "minutes";
 /// The listening timer's seconds past the minute.
 pub const SECONDS: &str = "seconds";
+/// How many cloud services are ready, worded.
+pub const READY: &str = "ready";
+/// A use's hours a month, worded.
+pub const HOURS: &str = "hours";
+/// A web page's host, such as groq.com.
+pub const SITE: &str = "site";
+/// Services' names, joined.
+pub const NAMES: &str = "names";
+/// The scheme every typed address starts with.
+pub const HTTPS: &str = "https";

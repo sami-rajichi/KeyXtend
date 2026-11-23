@@ -6,6 +6,7 @@ use crate::settings::{KeyboardSettings, Modifiers};
 use crate::spec::{BoardSpec, Latch, Nav};
 use kx_module_api::ports::{
     AssistChanged, KeyChars, LangLabel, LayoutId, LayoutTable, Scan, ScrollChanged, ShortcutId,
+    VoiceLit,
 };
 use std::collections::{BTreeMap, HashSet};
 
@@ -135,7 +136,7 @@ fn state_with(
         fill: others.fill,
         panel: others.panel,
         aimed: false,
-        rec: false,
+        voice: VoiceLit::Off,
     })
 }
 

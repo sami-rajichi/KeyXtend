@@ -92,7 +92,7 @@ pub(super) struct Inner {
     unshown: bool,
     /// A fill waiting its gap after a Tab; our keys reach only the open panel meanwhile.
     fill: Option<Waiting>,
-    /// The voice module's light, as the bus last told it, so the Dictation key glows while the microphone is open.
+    /// The voice module's light, as the bus last told it, so the Dictation key glows amber or red.
     voice: VoiceLit,
     /// The module runs, so a picked word may type.
     running: bool,
@@ -134,7 +134,7 @@ impl Inner {
             lines: Lines::default(),
             unshown: false,
             fill: None,
-            voice: VoiceLit::OFF,
+            voice: VoiceLit::Off,
             running: false,
         }
     }
@@ -261,7 +261,7 @@ impl Inner {
             fill: self.vault,
             panel: self.open,
             aimed: self.aimed(),
-            rec: self.voice.rec,
+            voice: self.voice,
         })
     }
 }

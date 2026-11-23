@@ -51,7 +51,7 @@ mod tests {
         EditAsk, EditDone, FillAsk, FillClose, FillKey, FillLine, FillLive, FillOpen, FillPanel,
         FillType, FillTyped, PanelPressesWanted, PasteAsk, Pasted, PlacesKey, PressesAsk,
         SpeechKey, TextAsk, TextDone, TypeWord, Typed, TypingMode, TypingModeAsk, VaultStoreKey,
-        VoiceAsk, VoiceKey, VoiceLit,
+        VoiceAsk, VoiceClose, VoiceKey, VoiceLine, VoiceLineKey, VoiceLit,
     };
 
     #[test]
@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn the_voice_gate_covers_the_key_its_light_and_the_texts_and_no_microphone() {
+    fn the_voice_gate_covers_the_key_its_light_the_texts_and_the_panels_line_and_no_microphone() {
         assert!(MANIFEST.capabilities.contains(&Capability::Voice));
         let voice = [
             VoiceKey::CAPABILITY,
@@ -161,8 +161,11 @@ mod tests {
             VoiceAsk::CAPABILITY,
             TextAsk::CAPABILITY,
             TextDone::CAPABILITY,
+            VoiceLine::CAPABILITY,
+            VoiceLineKey::CAPABILITY,
+            VoiceClose::CAPABILITY,
         ];
-        assert_eq!(voice, [Some(Capability::Voice); 5]);
+        assert_eq!(voice, [Some(Capability::Voice); 8]);
         assert!(!MANIFEST.requires.contains(&SpeechKey::ID));
         assert!(!MANIFEST.capabilities.contains(&Capability::Microphone));
     }

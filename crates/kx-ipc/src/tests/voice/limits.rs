@@ -1,13 +1,17 @@
-//! The voice and fetch limits: the settings' ranges the asks carry, and the hand-over's sizes against the longest
-//! dictation (edge 31).
+//! The voice, fetch and cloud limits: the settings' ranges the asks carry, and the hand-over's sizes against the
+//! longest dictation (edge 31).
 
 use crate::limits::MIB;
 use crate::voice::wire as voice_wire;
 use crate::{
-    LEVEL_HZ, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SOUND_MS, MAX_SOUND_PIECES,
-    MAX_TEXT_BYTES, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
+    LEVEL_HZ, MAX_FIXED, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SOUND_MS,
+    MAX_SOUND_PIECES, MAX_SPEECH_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN,
+    NET_TRIES, NET_WAIT_S, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
     SOUND_HZ, STALL_S, THREADS,
 };
+
+/// A made-up large cap on one file in MB, as a service may name.
+const LARGE_MB: u32 = 5_000;
 
 /// Seconds in ten minutes, the dictation edge 31 names.
 const TEN_MIN_S: usize = 600;
@@ -55,6 +59,17 @@ fn the_pieces_cover_the_longest_dictation_at_the_shortest_piece() {
 }
 
 #[test]
+fn speech_pieces_packed_two_past_the_shortest_cover_the_longest_dictation() {
+    let shortest = usize::from(*RECORD_MAX_S.end() / u16::from(*PIECE_S.start()));
+    assert!(
+        MAX_SPEECH_PIECES > 2 * shortest,
+        "two in a row hold more than one"
+    );
+    const { assert!(MAX_SPEECH_PIECES > MAX_SOUND_PIECES) };
+    assert!(u16::try_from(MAX_SPEECH_PIECES).is_ok());
+}
+
+#[test]
 fn a_piece_holds_a_long_text_in_any_script() {
     let arabic = "مرحبا ".repeat(MAX_TEXT_BYTES / "مرحبا ".len());
     assert!(arabic.len() <= MAX_TEXT_BYTES && arabic.chars().count() > 5_000);
@@ -64,4 +79,19 @@ fn a_piece_holds_a_long_text_in_any_script() {
 fn the_part_name_is_a_lower_case_extension() {
     assert!(PART_EXT.starts_with('.'));
     assert!(PART_EXT[1..].bytes().all(|b| b.is_ascii_lowercase()));
+}
+
+#[test]
+fn the_cloud_ranges_are_the_plans_and_never_zero() {
+    assert_eq!(NET_WAIT_S, 5..=300, "the plan's net_wait_s bound");
+    assert_eq!(NET_TRIES, 1..=5, "the plan's net_tries bound");
+    let starts: [u32; 3] = [
+        *NET_MAX_MB.start(),
+        (*NET_PER_MIN.start()).into(),
+        (*NET_AT_ONCE.start()).into(),
+    ];
+    assert_eq!(starts, [1; 3], "a row's limit is never zero");
+    assert!(NET_MAX_MB.contains(&LARGE_MB), "{NET_MAX_MB:?}");
+    // The key's and the fixed fields' widths are the net frames' own (`tests/net.rs`).
+    const { assert!(MAX_FIXED >= 1, "a keep-nothing switch's field") };
 }

@@ -17,25 +17,45 @@ pub struct WinClipboardWriter;
 
 impl ClipboardWriter for WinClipboardWriter {
     fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
-        let table = table()?;
-        let formats = read::ids(table)?;
-        let open = open::open(wait)?;
-        open::empty(&open)?;
-        // The marker goes first, so a part that fails never leaves a half copy that becomes a row.
-        mark(&open, table)?;
-        let encoded = formats.encode_all(parts);
-        encoded
-            .iter()
-            .try_for_each(|(format, bytes)| open::put(&open, *format, bytes))
+        put_all(parts, wait, false)
+    }
+
+    fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+        put_all(parts, wait, true)
     }
 }
 
-/// Sets our marker and the cloud switch to 0 on the open clipboard.
-fn mark(open: &Open, table: &Table) -> Result<(), ClipError> {
-    for name in [&table.marker, &table.cloud_off] {
-        open::put(open, open::format_id(name)?, &OFF)?;
+/// Sets the clipboard to `parts` with the markers `marks` names for a write, `lent` or not.
+fn put_all(parts: &[ClipPart], wait: ClipWait, lent: bool) -> Result<(), ClipError> {
+    let table = table()?;
+    let formats = read::ids(table)?;
+    let open = open::open(wait)?;
+    open::empty(&open)?;
+    // The markers go first, so a part that fails never leaves a half copy that becomes a row.
+    mark(&open, table, lent)?;
+    let encoded = formats.encode_all(parts);
+    encoded
+        .iter()
+        .try_for_each(|(format, bytes)| open::put(&open, *format, bytes))
+}
+
+/// Sets each marker `marks` names for a write, `lent` or not, to 0 on the open clipboard.
+fn mark(open: &Open, table: &Table, lent: bool) -> Result<(), ClipError> {
+    for name in marks(table, lent) {
+        open::put(open, open::format_id(&name)?, &OFF)?;
     }
     Ok(())
+}
+
+/// The markers a write sets: our marker and the cloud switch, and for a `lent` text the presence markers too, whose
+/// mere presence keeps other clipboard tools away from a text that is never written back.
+pub(crate) fn marks(table: &Table, lent: bool) -> Vec<String> {
+    let present = table.marks().presence();
+    let lent_ones = present.names().filter(|_| lent).map(str::to_owned);
+    [table.marker.clone(), table.cloud_off.clone()]
+        .into_iter()
+        .chain(lent_ones)
+        .collect()
 }
 
 /// Puts `text` on the clipboard for a test tool, or only empties it for `None`, in one change; each format in `zero`

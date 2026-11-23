@@ -3,7 +3,7 @@
 
 use super::acts::{BAR, BUTTON};
 use crate::I18n;
-use crate::i18n::keys::{VOICE_WORD, bar_button_id, bar_hint_id, panel_button_id};
+use crate::i18n::keys::{VOICE_JOIN, VOICE_WORD, bar_button_id, bar_hint_id, panel_button_id};
 use kx_module_api::ports::{BarButton, BarHint, PanelButton, VoiceLang};
 use serde::Serialize;
 
@@ -23,8 +23,14 @@ pub(super) struct Button {
     id: &'static str,
     arg: i32,
     label: String,
+    /// What readers hear when the label alone cannot tell it from its neighbours.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     on: bool,
     tone: Tone,
+    /// The bar icon it wears in place of its id's, by its name in the theme's `[voice]` icons.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon: Option<&'static str>,
 }
 
 impl Button {
@@ -35,8 +41,10 @@ impl Button {
             id,
             arg,
             label,
+            name: None,
             on: true,
             tone: Tone::Plain,
+            icon: None,
         }
     }
 
@@ -65,6 +73,18 @@ impl Button {
     /// This button in `tone`.
     pub(super) const fn tone(mut self, tone: Tone) -> Self {
         self.tone = tone;
+        self
+    }
+
+    /// This button heard by readers as `name`, its label still shown.
+    pub(super) fn named(mut self, name: String) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    /// This button wearing bar icon `icon` in place of its id's.
+    pub(super) const fn icon(mut self, icon: &'static str) -> Self {
+        self.icon = Some(icon);
         self
     }
 
@@ -141,4 +161,9 @@ impl Top {
 /// The voice key of word `id`.
 pub(super) fn word(id: &str) -> String {
     format!("{VOICE_WORD}{id}")
+}
+
+/// The line readers hear of `first` then `then`, joined in `t`'s language.
+pub(super) fn heard(t: &I18n, first: &str, then: &str) -> String {
+    [first, then].join(&t.text(VOICE_JOIN))
 }

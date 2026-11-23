@@ -253,6 +253,14 @@ fn answer_notes() -> Vec<VoiceNote> {
                 bytes: Wiped::Kept(Zeroizing::new(SPOKEN.to_vec())),
             },
         },
+        VoiceNote::Speech {
+            id: 8,
+            piece: SoundPiece {
+                index: 1,
+                last: true,
+                bytes: Wiped::Kept(Zeroizing::new(SPOKEN.to_vec())),
+            },
+        },
     ]
 }
 

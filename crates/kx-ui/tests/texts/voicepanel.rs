@@ -1,6 +1,7 @@
 //! The Voice panel's views the Qt Quick tests draw (`qmltest/fixtures/voicepanel.js`), as the hub writes them in each
 //! language: every page, a second page of models with a note, the model in use ticked, a slow language, the folder
-//! question, Compare's steps, History with two ticks, its question and empty, two pages of Options and the drives.
+//! question, Compare's steps, History with two ticks, its question and empty, three pages of Options, Paste at once
+//! chosen on the third, the drives, the cloud pages, and the fewest rows a page may show.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::ports::{
@@ -12,7 +13,11 @@ use kx_test_support::host::FakeCore;
 use serde_json::{Map, Value};
 use std::sync::Arc;
 
+mod cloud;
 mod device;
+mod keys;
+mod long;
+mod picks;
 mod sheets;
 
 /// The fixture's file name.
@@ -100,6 +105,21 @@ fn options_second() -> VoiceSheet {
     ])
 }
 
+/// Options' third page: Paste at once chosen, its hint on the row below.
+fn options_insert() -> VoiceSheet {
+    let pair = OptionValue::Pair {
+        names: ["type", "paste"],
+        second: true,
+    };
+    VoiceSheet::Options(vec![
+        opt("debounce_ms", number(400, OptionUnit::Ms, false, false)),
+        opt("insert", pair),
+        opt("insert", OptionValue::Hint),
+        opt("type_suffix", OptionValue::Switch(true)),
+        opt("type_gap_ms", number(5, OptionUnit::Ms, false, false)),
+    ])
+}
+
 /// The drives, to pick the models folder.
 fn drives() -> VoiceSheet {
     let rows = [r"C:\", r"D:\"].map(|d| Redacted::new(d.to_owned()));
@@ -176,13 +196,26 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
         ("historyEmpty", history(false, true, &[], 1, 0)),
         ("options", paged(shown(options_first(), &[]), 0, 5, 0)),
         ("optionsMore", paged(shown(options_second(), &[]), 1, 5, 0)),
+        (
+            "optionsInsert",
+            paged(shown(options_insert(), &[]), 2, 5, 0),
+        ),
         ("folders", shown(drives(), &[])),
     ]
 }
 
-/// Every panel the tests draw, by name.
-fn panels() -> Vec<(&'static str, Shown)> {
-    model_panels().into_iter().chain(other_panels()).collect()
+/// Every panel the tests draw in language `tag`, by name.
+fn panels(tag: &str) -> Vec<(String, Shown)> {
+    let fixed = model_panels()
+        .into_iter()
+        .chain(other_panels())
+        .chain(cloud::panels())
+        .map(|(name, s)| (name.to_owned(), s));
+    fixed
+        .chain(keys::panels(tag))
+        .chain(long::panels())
+        .chain(picks::panels())
+        .collect()
 }
 
 /// Every view in language `tag`, by name, each its own round from 1, the bar hidden.
@@ -190,7 +223,7 @@ fn views(tag: &str) -> Value {
     let (hub, _host) = hub(tag);
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let _heard = hub.listen(&bus).expect("the hub listens");
-    let shown = (1..).zip(panels()).map(|(round, (name, s))| {
+    let shown = (1..).zip(panels(tag)).map(|(round, (name, s))| {
         let panel = VoicePanel {
             sheet: s.sheet,
             lang: front(tag),
@@ -208,11 +241,12 @@ fn views(tag: &str) -> Value {
             panel: Some(panel),
             place: BarPlace::Above,
             sounds: true,
+            mark: None,
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");
         let v: Value = serde_json::from_str(&hub.voice_json()).expect("voice JSON");
-        (name.to_owned(), v)
+        (name, v)
     });
     Value::Object(shown.collect::<Map<_, _>>())
 }
@@ -220,6 +254,7 @@ fn views(tag: &str) -> Value {
 #[test]
 fn the_voice_panel_fixture_matches_the_hub() {
     let all: Map<String, Value> = LANGS.iter().map(|t| ((*t).to_owned(), views(t))).collect();
-    let text = format!("{HEAD}{}", var("views", &Value::Object(all), true));
+    let fewest = var("fewest", &Value::from(picks::fewest()), true);
+    let text = format!("{HEAD}{}{fewest}", var("views", &Value::Object(all), true));
     fixture(FILE.to_owned(), &text);
 }

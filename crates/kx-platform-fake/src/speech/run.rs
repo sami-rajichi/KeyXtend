@@ -63,6 +63,14 @@ impl SpeechRun for FakeSpeechRun {
         })
     }
 
+    /// A listen-only run's speech as set, in fresh copies, once its `Done` was told.
+    fn pieces(&mut self) -> Result<Vec<SecretBytes>, SpeechError> {
+        self.act(SpeechCall::Pieces, |log, id| {
+            log.runs[id].pieces += 1;
+            log.speech.clone()
+        })
+    }
+
     /// Waits out a note being told on another thread, so none comes after it returns.
     fn close(&mut self) {
         let mut log = lock(&self.shared.log);

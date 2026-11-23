@@ -9,6 +9,7 @@ use std::thread::{self, ThreadId};
 
 mod info;
 mod life;
+mod pieces;
 
 /// How long a test waits for another thread; it never sleeps.
 const WITHIN: Duration = Duration::from_secs(10);

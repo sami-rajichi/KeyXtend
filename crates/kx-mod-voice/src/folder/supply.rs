@@ -2,14 +2,16 @@
 //! the devices and their checks. A pick's file that is gone takes the default; a model too big for this PC never runs.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CardUse, Device, DeviceKind, Fingerprint, Memory, SpeechModel};
+use kx_module_api::ports::{
+    CardUse, Device, DeviceKind, DevicePick, Fingerprint, Memory, SpeechModel,
+};
 
 use super::{File, Folder, Print};
 use crate::VoiceSettings;
 use crate::counts::Checks;
-use crate::device::{Seen, Serve, serve};
+use crate::device::{Seen, Serve, Why, clip, serve};
 use crate::flow::{Lack, Ready, Supply};
-use crate::models::{Other, Pick, Row, table};
+use crate::models::{Other, Pick, Row, code_in, table};
 
 /// What serves a language: the settings, the folder, the devices as last read and the cards' checks.
 #[derive(Copy, Clone, Debug)]
@@ -20,8 +22,10 @@ pub struct Stock<'a> {
     pub folder: &'a Folder,
     /// The processor and the cards; empty before they are read, when every model fits and no card serves.
     pub devices: &'a [Device],
-    /// Each card's check by driver and file.
+    /// Each card's check by driver, file and clip language.
     pub checks: &'a Checks,
+    /// The check clips' languages the speech port ships, in order.
+    pub clips: &'a [String],
 }
 
 impl Supply for Stock<'_> {
@@ -72,10 +76,17 @@ impl<'a> Stock<'a> {
         // A file served by its name and size before its fingerprint is read stays on the processor, as each card's
         // check goes by the fingerprint.
         let read = file.print == Print::Known(row.print);
+        let (card, why) = if read {
+            self.card(row.card_mb, &row.print, iso)
+        } else {
+            (None, self.held(Why::Unread))
+        };
         Ok(Ready {
             model,
-            card: read.then(|| self.card(row.card_mb, &row.print)).flatten(),
+            card,
+            why,
             name: Redacted::new(row.id.clone()),
+            short: Redacted::new(row.short.clone()),
             print: row.print,
             bytes: row.bytes,
         })
@@ -112,19 +123,36 @@ impl<'a> Stock<'a> {
             return Err(Lack::NoFit);
         }
         let model = other.model(dir, facts, iso).ok_or(Lack::Stranger)?;
+        let (card, why) = self.card(need, &print, iso);
         Ok(Ready {
             model,
-            card: self.card(need, &print),
+            card,
+            why,
             name: Redacted::new(file.name.clone()),
+            short: Redacted::new(other.short().to_owned()),
             print,
             bytes: file.bytes,
         })
     }
 
-    /// The card that runs a model needing `need_mb` on it, by `device`'s rule and each card's check of file `print`.
-    fn card(&self, need_mb: u32, print: &Fingerprint) -> Option<CardUse> {
+    /// The clip a card's check of file `print` reads with `iso` in front, with the model's code for its language
+    /// (ADR-0052): by its row, else by its facts; `None` when the model knows no shipped clip.
+    #[must_use]
+    pub fn clip(&self, print: &Fingerprint, iso: &str) -> Option<(&'a str, String)> {
+        let owned = |(clip, code): (&'a str, &str)| (clip, code.to_owned());
+        if let Some(row) = table().ok()?.printed(print) {
+            return clip(iso, self.clips, |c| row.code(c)).map(owned);
+        }
+        let facts = self.folder.facts(print)?;
+        clip(iso, self.clips, |c| code_in(facts, c)).map(owned)
+    }
+
+    /// The card that runs a model needing `need_mb` on it for `iso`, by `device`'s rule and each card's check of file
+    /// `print` on the clip `iso` reads; else why the processor serves, when a card is picked.
+    fn card(&self, need_mb: u32, print: &Fingerprint, iso: &str) -> (Option<CardUse>, Option<Why>) {
+        let lang = self.clip(print, iso).map(|(clip, _)| clip);
         let check = |d: &Device| match &d.kind {
-            DeviceKind::Card(id) => self.checks.verdict(id, &d.driver, print),
+            DeviceKind::Card(id) => lang.and_then(|l| self.checks.verdict(id, &d.driver, print, l)),
             DeviceKind::Cpu => None,
         };
         let seen: Vec<Seen<'_>> = (self.devices.iter())
@@ -135,9 +163,14 @@ impl<'a> Stock<'a> {
             .collect();
         let margin = self.settings.card_margin_mb;
         match serve(&self.settings.device(), &seen, need_mb, margin) {
-            Serve::Card(card) => Some(card),
-            Serve::Cpu(_) => None,
+            Serve::Card(card) => (Some(card), None),
+            Serve::Cpu(why) => (None, self.held(why)),
         }
+    }
+
+    /// `why` the processor serves, kept only while a card is picked.
+    fn held(&self, why: Why) -> Option<Why> {
+        matches!(self.settings.device(), DevicePick::Card(_)).then_some(why)
     }
 
     /// The processor's memory, once the devices were read.

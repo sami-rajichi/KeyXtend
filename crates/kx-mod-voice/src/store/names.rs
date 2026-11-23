@@ -1,5 +1,5 @@
-//! The shelf's folders and blob names: `texts/<id>`, `sounds/<id>-<n>` and `numbers/{counts,checks,scores}`. Ids are
-//! plain decimal, so a name reads back to one number only.
+//! The shelf's folders and blob names: `texts/<id>`, `sounds/<id>-<n>` and
+//! `numbers/{counts,checks,check-langs,scores}`. Ids are plain decimal, so a name reads back to one number only.
 
 use kx_module_api::ports::{BlobName, SealedError};
 
@@ -13,6 +13,8 @@ pub(super) const NUMBERS: &str = "numbers";
 pub(super) const COUNTS: &str = "counts";
 /// The card checks' blob.
 pub(super) const CHECKS: &str = "checks";
+/// The blob of the card checks' languages, beside theirs, which older builds never open (ADR-0052).
+pub(super) const LANGS: &str = "check-langs";
 /// Compare's results' blob.
 pub(super) const SCORES: &str = "scores";
 /// What parts a recording's id from its blob's number.

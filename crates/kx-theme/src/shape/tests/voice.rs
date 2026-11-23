@@ -9,7 +9,7 @@ fn the_voice_bar_takes_the_mock_up_sizes() {
     let v = &s.voice;
     assert_eq!(
         v.bar_px,
-        [500.0, 640.0],
+        [500.0, 650.0],
         "--voice-bar-w, --voice-bar-w-text"
     );
     assert_eq!(
@@ -35,6 +35,19 @@ fn the_voice_panel_takes_the_mock_up_sizes() {
     assert_eq!(v.value_px, 92.0, "--voice-value-px");
     assert_eq!(v.col_px, 84.0, "--voice-col-px");
     assert_eq!(v.panel_px, 600.0, ".vp: 600 wide");
+    assert_eq!(v.fact_px, 200.0, "voice-cloud.css --voice-fact-px");
+    assert_eq!(v.pick_across, 2, "Compare's picks pair, two to a row");
+    assert_eq!(
+        v.pick_name_px, 96.0,
+        "a cut pick's name keeps about 15 characters"
+    );
+    assert_eq!(
+        v.chip_name_px, 128.0,
+        "the bar's chip shows about 20 characters whole"
+    );
+    assert_eq!(v.wave_room_px, 48.0, "the wave keeps about seven bars");
+    let [width, gap, _, _] = v.wave_px;
+    assert!(v.wave_room_px >= width + gap, "a bar and its gap at least");
     assert_eq!(
         v.run_share,
         [0.4, 0.5],
@@ -54,7 +67,7 @@ fn an_odd_voice_size_is_refused_by_name() {
         ("voice", "bar_px = [500.0", "bar_px = [0.0", "voice.bar_px"),
         (
             "voice",
-            "bar_px = [500.0, 640.0]",
+            "bar_px = [500.0, 650.0]",
             "bar_px = [500.0, 400.0]",
             "voice.bar_px",
         ),
@@ -95,11 +108,36 @@ fn an_odd_panel_size_is_refused_by_name() {
             "panel_px = 0.0",
             "voice.panel_px",
         ),
+        ("voice", "fact_px = 200.0", "fact_px = 0.0", "voice.fact_px"),
+        (
+            "voice",
+            "pick_across = 2",
+            "pick_across = 0",
+            "voice.pick_across",
+        ),
+        (
+            "voice",
+            "pick_name_px = 96.0",
+            "pick_name_px = 0.0",
+            "voice.pick_name_px",
+        ),
         (
             "voice",
             "run_share = [0.4, 0.5]",
             "run_share = [0.4, 1.5]",
             "voice.run_share",
+        ),
+        (
+            "voice",
+            "chip_name_px = 128.0",
+            "chip_name_px = 0.0",
+            "voice.chip_name_px",
+        ),
+        (
+            "voice",
+            "wave_room_px = 48.0",
+            "wave_room_px = -1.0",
+            "voice.wave_room_px",
         ),
     ]);
 }

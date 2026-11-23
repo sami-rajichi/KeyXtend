@@ -39,7 +39,24 @@ impl Clip {
     pub fn wrong(&self, heard: &str, lang: &str) -> Option<Wrong> {
         fewest(&self.sentence, &self.also, heard, lang)
     }
+
+    /// Whether a row of `credits`, the credits file's table, starts with this clip's file and ends with its sentence.
+    fn credited(&self, credits: &str) -> bool {
+        let name = format!("`{}`", self.file);
+        let row = |line: &str| {
+            let cells: Vec<&str> = line
+                .split('|')
+                .map(str::trim)
+                .filter(|c| !c.is_empty())
+                .collect();
+            cells.first() == Some(&name.as_str()) && cells.last() == Some(&self.sentence.as_str())
+        };
+        credits.lines().any(row)
+    }
 }
+
+/// The voice folder's credits file, whose table names each clip's sentence.
+const CREDITS: &str = "README.md";
 
 /// Words wrong in `heard` against the closest of `sentence` and its other readings `also`, by `lang`'s rules: the
 /// one count the bench, the product run and the staged edges judge by.
@@ -93,6 +110,27 @@ impl G22Bench {
         self.check_rule(&settings)?;
         self.check_clips(table)?;
         self.check_asks(&settings, table)
+    }
+
+    /// Refuses a clip whose sentence is not the one the voice folder's credits give its file, the folder found from
+    /// the settings folder `dir`; every G22 run judges by these sentences.
+    pub fn credited(&self, dir: &Path) -> Result<(), String> {
+        let file = dir.join(&self.voice_dir).join(CREDITS);
+        let credits = std::fs::read_to_string(file)
+            .map_err(|e| format!("the voice folder's {CREDITS} could not be read: {e}"))?;
+        self.check_credits(&credits)
+    }
+
+    /// Refuses a clip whose sentence is not the one `credits`, the credits file's text, gives its file, naming only
+    /// its language.
+    pub fn check_credits(&self, credits: &str) -> Result<(), String> {
+        match self.clips.iter().find(|(_, c)| !c.credited(credits)) {
+            Some((lang, _)) => Err(format!(
+                "the {lang} clip's sentence is not the one the voice folder's {CREDITS} credits, so the settings file \
+                 may have been re-encoded"
+            )),
+            None => Ok(()),
+        }
     }
 
     /// The models folder.

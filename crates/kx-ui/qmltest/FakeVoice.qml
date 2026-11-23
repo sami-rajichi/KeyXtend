@@ -7,8 +7,9 @@ QtObject {
     property var page: null
     // The sound level, 0 to 1; setting it sends `levelChanged`.
     property real heard: 0
-    // Where `barAt` puts the bar's top-left for each place, in physical pixels; with the keyboard hidden it goes to the
-    // bottom spot, as the hub puts it at the bottom centre of the main screen.
+    // Where `barAt` puts the bar for each place, in physical pixels: above the keyboard and at the bottom by its bottom
+    // edge, as the hub keeps that edge whatever the bar's height, at the top by its top-left. With the keyboard hidden
+    // it goes to the bottom spot, as the hub puts it at the bottom centre of the main screen.
     property var spots: ({ above: { x: 300, y: 500 }, bottom: { x: 300, y: 900 }, top: { x: 300, y: 10 } })
     // Each `barAt` ask as `{over, w, h}`, and each call as `act kind id arg round`, `chime true|false` or `open`.
     property var asks: []
@@ -47,7 +48,8 @@ QtObject {
         const box = JSON.parse(over);
         asks = asks.concat([{ over: box, w: w, h: h }]);
         const place = box && page ? page.place : "bottom";
-        return JSON.stringify(spots[place]);
+        const spot = spots[place];
+        return JSON.stringify(place === "top" ? spot : { x: spot.x, y: spot.y - h });
     }
     function panelAt(over, bar, w, h) {
         panelAsks = panelAsks.concat([{ over: JSON.parse(over), bar: JSON.parse(bar), w: w, h: h }]);

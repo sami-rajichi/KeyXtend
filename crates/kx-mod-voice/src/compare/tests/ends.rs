@@ -134,7 +134,16 @@ fn a_microphone_fault_while_recording_names_the_microphone() {
 fn the_lend_follows_the_run_and_a_card_fallback_names_the_processor() {
     let mut compare = Compare::default();
     assert_eq!(compare.lend(), Lend::Off);
-    compare.start(plan(SET, vec![entrant(1, true)]), &settings());
+    let acts = compare.start(plan(SET, vec![entrant(1, true)]), &settings());
+    assert_eq!(
+        compare.lend(),
+        Lend::Prep,
+        "no Listening until its microphone opens"
+    );
+    let Some(Act::Open { take, .. }) = acts.first().cloned() else {
+        panic!("no open");
+    };
+    compare.note(take, SpeechNote::Stage(SpeechStage::Open));
     assert_eq!(compare.lend(), Lend::Listen);
     let (mut compare, take) = recorded(vec![entrant(1, true)], SET);
     assert_eq!(compare.lend(), Lend::Write);
@@ -159,4 +168,24 @@ fn the_lend_follows_the_run_and_a_card_fallback_names_the_processor() {
     ran.card = true;
     on_card.note(take, SpeechNote::Done(ran));
     assert_eq!(on_card.served(), Some(&CardId::new("Vulkan0").unwrap()));
+}
+
+#[test]
+fn a_done_while_recording_with_no_speech_heard_sends_nothing_and_runs_no_model() {
+    let mut compare = Compare::default();
+    let plan = Plan {
+        clouds: vec![remote(1)],
+        ..plan(SET, vec![entrant(1, false)])
+    };
+    let acts = compare.start(plan, &settings());
+    let Some(Act::Open { take, .. }) = acts.first().cloned() else {
+        panic!("no open");
+    };
+    let end = compare.note(take, done(0, 0));
+    assert!(
+        !end.iter().any(|a| matches!(a, Act::Send { .. })),
+        "{end:?}"
+    );
+    assert_eq!(compare.note_shown(), Some(BarHint::Nothing));
+    assert!(!compare.busy());
 }

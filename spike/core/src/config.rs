@@ -17,26 +17,8 @@ pub struct SpikeConfig {
     pub keyboard: KeyboardConfig,
     /// The tools row and snip.
     pub tools: ToolsConfig,
-    /// The opt-in cloud speech engine, kept for P11 part 2; the local voice parts moved to the product.
-    pub cloud: CloudConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
-}
-
-/// The opt-in cloud speech engine (an OpenAI-style transcription API).
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CloudConfig {
-    /// Host, reached over HTTPS.
-    pub host: String,
-    /// Request path.
-    pub path: String,
-    /// Model name.
-    pub model: String,
-    /// Environment variable that holds the API key.
-    pub key_env: String,
-    /// Longest wait for one answer, in ms.
-    pub timeout_ms: u64,
 }
 
 /// The face's title and stage-1 geometry; the keyboard itself is kx-mod-keyboard's since P3.
@@ -229,13 +211,6 @@ mod tests {
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
         let size = &cfg.tools.snip_size;
         assert!(size.contains("{w}") && size.contains("{h}"), "{size}");
-    }
-
-    #[test]
-    fn spike_toml_keeps_the_cloud_settings_for_part_2() {
-        let c = load().expect("spike.toml loads").cloud;
-        assert!(!c.host.is_empty() && c.path.starts_with('/'));
-        assert!(!c.key_env.is_empty() && c.timeout_ms > 0);
     }
 
     #[test]

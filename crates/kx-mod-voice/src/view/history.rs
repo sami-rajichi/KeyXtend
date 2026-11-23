@@ -1,12 +1,12 @@
-//! The History page: the texts, pinned first then newest first, each with its time, language and model, ticked in
-//! order; the counts its header, Pin and Delete all need. It lists what is stored even with `history` off.
+//! The History page: the texts, pinned first then newest first, each with its time, language, model and service,
+//! ticked in order; the counts its header, Pin and Delete all need. It lists what is stored even with `history` off.
 
 use kx_module_api::ports::{
     HistoryRow, HistorySheet, LocalTime, Pages, PanelButton, VoiceSheet, When,
 };
 use kx_module_api::{is_arabic, is_rtl};
 
-use super::{Facts, shown_name};
+use super::{Facts, service_of, shown_name};
 use crate::history::{Asked, Entry, Stamp};
 use crate::panel::{Key, Panel};
 
@@ -18,7 +18,7 @@ impl Panel {
         let list = history.entries().iter().map(|e| {
             let key = Key::Text(e.id);
             let tick = ticks.iter().position(|k| *k == key);
-            (key, row(e, tick, &facts.now))
+            (key, row(e, tick, facts))
         });
         let (rows, pages) = self.paged(list.collect());
         let unpinned = self.asked.as_ref().map_or(history.unpinned(), Asked::count);
@@ -67,17 +67,18 @@ impl Panel {
     }
 }
 
-/// The row of `entry`, at place `tick` of the tick order, as seen `now`.
-fn row(entry: &Entry, tick: Option<usize>, now: &LocalTime) -> HistoryRow {
+/// The row of `entry`, at place `tick` of the tick order, as seen at `facts`' time, its pick named by their table.
+fn row(entry: &Entry, tick: Option<usize>, facts: &Facts<'_>) -> HistoryRow {
     let text = entry.text.expose();
     HistoryRow {
         id: entry.id,
         text: entry.text.clone(),
         rtl: is_rtl(text),
         arabic: is_arabic(text),
-        when: when(entry.at, now),
+        when: when(entry.at, &facts.now),
         lang: entry.lang.clone(),
-        model: shown_name(&entry.model),
+        model: shown_name(&entry.model, facts.services()),
+        cloud: service_of(&entry.model, facts.services()),
         pinned: entry.pinned,
         tick: tick.map(|n| u16::try_from(n + 1).unwrap_or(u16::MAX)),
     }

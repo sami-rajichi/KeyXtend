@@ -1,9 +1,11 @@
 //! A gate's copy of the test build, started from the plain kx-gates while no other product copy runs, on the data
 //! folder beside it that the gate made and marks as G20 does; the folder goes at the end, after a panic too once no
-//! copy runs.
+//! copy runs. Files lent into it, such as G22's borrowed key, go at the end even while the copy may still run.
 #![cfg(windows)]
 
-use std::path::{Path, PathBuf};
+use std::cell::RefCell;
+use std::io::ErrorKind;
+use std::path::{Component, Path, PathBuf};
 
 use kx_platform_windows::uiaccess;
 
@@ -22,6 +24,8 @@ pub struct Fresh<'a> {
     data: PathBuf,
     /// Set by `close`, so the drop guard leaves the folder to it.
     closed: bool,
+    /// Files lent into the data folder, which go at the end even while the copy may still run.
+    lent: RefCell<Vec<PathBuf>>,
 }
 
 /// Refuses gate `gate` under uiAccess, which the copy would inherit, or beside a running product, whose keys it could
@@ -73,6 +77,49 @@ fn marker<'c>(ctx: &'c Ctx) -> &'c str {
     &ctx.cfg.g20_product.marker
 }
 
+/// Refuses a lent `file` that does not lie inside the copy's data folder `data`, never naming either.
+fn inside(data: &Path, file: &Path) -> Result<(), String> {
+    let up = file.components().any(|c| c == Component::ParentDir);
+    if up || !file.starts_with(data) {
+        return Err("a lent file lies outside the copy's data folder".into());
+    }
+    Ok(())
+}
+
+/// Removes each lent file in `files`; one already gone is fine, and a failure names its kind, never a path.
+fn forget(files: &[PathBuf]) -> Result<(), String> {
+    let mut failed = None;
+    for file in files {
+        match std::fs::remove_file(file) {
+            Err(e) if e.kind() != ErrorKind::NotFound => failed = Some(e.kind()),
+            _ => {}
+        }
+    }
+    failed.map_or(Ok(()), |kind| {
+        Err(format!("a lent file did not go: {kind:?}"))
+    })
+}
+
+/// The end of the copy's data folder: its lent files go by `forget` first, then the whole folder by `finish` once the
+/// copy is `over`; while it may still run, the folder stays and the error says so, naming no path.
+fn end(
+    over: bool,
+    finish: impl FnOnce() -> Result<(), String>,
+    forget: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    let lent_gone = forget();
+    if over {
+        return finish();
+    }
+    let stays = format!(
+        "the copy's data folder stays, as the copy may still run: remove it once {NAME} has ended"
+    );
+    Err(match lent_gone {
+        Ok(()) => format!("{stays}; its lent files are gone"),
+        Err(e) => format!("{stays}; {e}"),
+    })
+}
+
 impl<'a> Fresh<'a> {
     /// Readies the test build's data folder for gate `gate`, made and marked by the gate; refused under uiAccess,
     /// beside a running copy, or on a folder the gate did not make.
@@ -91,7 +138,19 @@ impl<'a> Fresh<'a> {
             program,
             data,
             closed: false,
+            lent: RefCell::default(),
         })
+    }
+
+    /// Marks `file`, inside the data folder, as lent, so the end removes it even while the copy may still run.
+    #[cfg_attr(
+        not(feature = "voice"),
+        allow(dead_code, reason = "Only the voice gates lend files.")
+    )]
+    pub fn lend(&self, file: PathBuf) -> Result<(), String> {
+        inside(&self.data, &file)?;
+        self.lent.borrow_mut().push(file);
+        Ok(())
     }
 
     /// Refuses a copy that logged no `warn` line, when one is due, so it may not run as the gate asks.
@@ -147,64 +206,36 @@ impl<'a> Fresh<'a> {
         (got, Some(ended))
     }
 
-    /// Removes the data folder once the copy that went as `ended` no longer runs.
+    /// The copy's data folder, which the gate made and removes at the end.
+    #[cfg_attr(
+        not(feature = "voice"),
+        allow(dead_code, reason = "Only the voice gates call it.")
+    )]
+    pub fn data(&self) -> &Path {
+        &self.data
+    }
+
+    /// Removes the lent files, then the data folder once the copy that went as `ended` no longer runs.
     pub fn close(mut self, ended: Option<&Ended>) -> Result<(), String> {
         self.closed = true;
-        if !copyend::may_follow(ended.map(|e| e.gone)) {
-            return Err(format!(
-                "{} stays, as the copy may still run: remove it once {NAME} has ended",
-                self.data.display()
-            ));
-        }
-        clipdata::finish(&self.data, marker(self.ctx))
+        let over = copyend::may_follow(ended.map(|e| e.gone));
+        let lent = self.lent.take();
+        let finish = || clipdata::finish(&self.data, marker(self.ctx));
+        end(over, finish, || forget(&lent))
     }
 }
 
 impl Drop for Fresh<'_> {
-    /// After a panic or an early return, removes the gate's folder once no product copy runs.
+    /// After a panic or an early return, removes the lent files, then the gate's folder once no product copy runs.
     fn drop(&mut self) {
-        if !self.closed && !owncopy::runs() {
-            let _ = clipdata::finish(&self.data, marker(self.ctx));
+        if !self.closed {
+            let _ = forget(&self.lent.take());
+            if !owncopy::runs() {
+                let _ = clipdata::finish(&self.data, marker(self.ctx));
+            }
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_run_under_ui_access_or_beside_a_running_copy_is_refused() {
-        assert_eq!(refuse("G19", Ok(false), false), Ok(()));
-        let e = refuse("G19", Ok(true), false).expect_err("uiAccess");
-        assert!(e.contains("uiAccess") && e.contains("cargo run"), "{e}");
-        let e = refuse("G23", Ok(false), true).expect_err("a copy runs");
-        assert!(
-            e.contains(&format!("close {NAME}")) && e.contains("G23"),
-            "{e}"
-        );
-        let e = refuse("G19", Err("no token".into()), false).expect_err("unknown");
-        assert!(e.contains("no token"), "{e}");
-    }
-
-    #[test]
-    fn only_a_copy_owing_a_warning_has_its_log_read_and_it_must_hold_it() {
-        let unread = || -> Result<String, String> { panic!("the log was read") };
-        assert_eq!(heard(None, unread, 0), Ok(()));
-        let quiet = heard(Some("gate input"), || Ok(String::new()), 0);
-        assert!(quiet.is_err_and(|e| e.contains("no gate warning")));
-        let gone = heard(Some("gate input"), || Err("no folder".into()), 0);
-        assert_eq!(gone, Err("no folder".into()));
-    }
-
-    #[test]
-    fn only_a_data_folder_the_gate_made_is_used() {
-        let data = Path::new(r"D:\build\data");
-        assert_eq!(ours("G23", data, true), Ok(()));
-        let e = ours("G19", data, false).expect_err("someone else's folder");
-        assert!(
-            e.contains(r"D:\build\data") && e.contains("G19") && e.contains("remove"),
-            "{e}"
-        );
-    }
-}
+mod tests;

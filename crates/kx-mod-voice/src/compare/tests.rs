@@ -5,22 +5,22 @@ use super::*;
 use crate::flow::Ready;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardId, CardUse, Date, Fingerprint, RunStep, SpeechError, SpeechModel, SpeechStage,
+    CardId, CardUse, Date, Fingerprint, RunStep, ServiceName, SpeechError, SpeechModel, SpeechStage,
 };
 use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
 
+mod cloud;
 mod ends;
 mod props;
 
 /// The set text the tests read, nine words.
-const SET: &str = "The evening train leaves at a quarter past seven.";
-
+pub(crate) const SET: &str = "The evening train leaves at a quarter past seven.";
 fn settings() -> VoiceSettings {
     VoiceSettings::from_defaults().unwrap()
 }
 
-fn secret(text: &str) -> Secret {
+pub(crate) fn secret(text: &str) -> Secret {
     Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
@@ -44,7 +44,9 @@ fn entrant(n: u8, card: bool) -> Entrant {
     let ready = Ready {
         model,
         card,
+        why: None,
         name: Redacted::new(format!("m{n}")),
+        short: Redacted::new(format!("M{n}")),
         print: print(n),
         bytes: 1,
     };
@@ -54,19 +56,30 @@ fn entrant(n: u8, card: bool) -> Entrant {
     }
 }
 
+/// Cloud model `n` of Groq.
+fn remote(n: u8) -> Remote {
+    Remote {
+        name: Redacted::new(format!("Cloud {n}")),
+        shown: ServiceName::Named("Groq".into()),
+        service: "groq".into(),
+        model: Redacted::new(format!("m{n}")),
+    }
+}
+
 /// A run of `models` over `set` in English.
 fn plan(set: &str, models: Vec<Entrant>) -> Plan {
     Plan {
         lang: "en".into(),
         set: Redacted::new(set.to_owned()),
         entrants: models,
+        clouds: Vec::new(),
         day: Date::new(2026, 11, 14).unwrap(),
         auto: true,
     }
 }
 
 /// A model's end, `wait_ms` after Stop, at `mb`.
-fn done(wait_ms: u32, mb: u32) -> SpeechNote {
+pub(crate) fn done(wait_ms: u32, mb: u32) -> SpeechNote {
     SpeechNote::Done(SpeechDone {
         pieces: 1,
         sound_ms: 4_000,

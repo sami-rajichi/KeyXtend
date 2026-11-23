@@ -1,4 +1,4 @@
-//! Press shade tests against the shipped `themes.toml`: a pressed key reads unlike a hovered or resting one.
+//! Press shade tests against the shipped `themes/*.toml`: a pressed key reads unlike a hovered or resting one.
 
 use super::*;
 use crate::Themes;
@@ -22,9 +22,9 @@ fn with(line: &str) -> String {
 }
 
 /// Every key colour of `p` that a hover or press lies on.
-fn fills(p: &Palette) -> [Rgba; 8] {
+fn fills(p: &Palette) -> [Rgba; 9] {
     [
-        p.key, p.key_mod, p.key_act, p.enter, p.danger, p.on, p.lock, p.rec,
+        p.key, p.key_mod, p.key_act, p.enter, p.danger, p.on, p.lock, p.rec, p.prep,
     ]
 }
 

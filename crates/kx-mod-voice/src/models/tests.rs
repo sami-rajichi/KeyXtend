@@ -6,6 +6,7 @@ mod fit;
 mod orders;
 mod refuse;
 mod rows;
+mod short;
 mod tested;
 
 /// The compiled-in table, which must load.

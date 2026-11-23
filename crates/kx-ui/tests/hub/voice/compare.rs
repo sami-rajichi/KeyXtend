@@ -5,19 +5,21 @@ use super::{acting, button, buttons, coded, english_text, heard, panel, panel_js
 use crate::Rig;
 use crate::texts::rig;
 use kx_module_api::ports::{
-    CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, PanelButton, RunStep,
-    VoiceSheet,
+    CompareMic, CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, PanelButton,
+    RunStep, VoiceSheet,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 use kx_ui::i18n::keys::{VOICE_INTRO, VOICE_INTRO_FREE, VOICE_KEPT, VOICE_READ_TEXT};
 use serde_json::{Value, json};
 
-/// Compare's set text, ready on `models` models.
-fn ready(models: u16, recording: bool) -> VoiceSheet {
+/// Compare's set text, ready on `models` models, its microphone at `mic`.
+fn ready(models: u16, mic: CompareMic) -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording,
+        mic,
+        cloud: Vec::new(),
+        send: Vec::new(),
     })
 }
 
@@ -35,18 +37,19 @@ fn spoken(text: &str) -> Secret {
 fn the_set_text_shows_with_its_models_and_start() {
     let (rig, _face, _host) = rig("en", "en", "auto");
     let heard = heard(&rig);
-    let p = panel_json(&rig, &heard, panel(ready(6, false)));
+    let p = panel_json(&rig, &heard, panel(ready(6, CompareMic::Closed)));
     assert_eq!(
         (&p["page"], &p["title"]),
         (&json!("compare"), &json!("Compare models"))
     );
     assert_eq!(p["sub"], "For English");
     let sheet = json!({"is": "ready", "intro": english_text(VOICE_INTRO),
-        "text": english_text(VOICE_READ_TEXT), "line": "6 ready models · Automatic (processor)", "recording": null});
+        "text": english_text(VOICE_READ_TEXT), "line": "6 ready models · Automatic (processor)", "recording": null,
+        "picks": [], "send": null});
     assert_eq!(p["sheet"], sheet);
     let start = button("compare", "", "Start reading", true, "primary");
     assert_eq!(buttons(&p["foot"]), [start]);
-    let none = panel_json(&rig, &heard, panel(ready(0, false)));
+    let none = panel_json(&rig, &heard, panel(ready(0, CompareMic::Closed)));
     assert_eq!(buttons(&none["foot"])[0][3], "false", "no ready model");
     assert_eq!(
         none["sheet"]["line"],
@@ -58,7 +61,11 @@ fn the_set_text_shows_with_its_models_and_start() {
 fn while_the_user_reads_start_goes_and_cancel_stays() {
     let (rig, _face, _host) = rig("en", "en", "auto");
     let heard = heard(&rig);
-    let p = panel_json(&rig, &heard, acting(ready(1, true), &[PanelButton::Cancel]));
+    let p = panel_json(
+        &rig,
+        &heard,
+        acting(ready(1, CompareMic::Reading), &[PanelButton::Cancel]),
+    );
     assert_eq!(
         p["sheet"]["recording"],
         "Read the text now, then press Stop on the bar."
@@ -70,11 +77,28 @@ fn while_the_user_reads_start_goes_and_cancel_stays() {
     );
 }
 
+#[test]
+fn while_its_microphone_opens_start_goes_and_nothing_asks_to_read() {
+    let (rig, _face, _host) = rig("en", "en", "auto");
+    let heard = heard(&rig);
+    let preparing = ready(1, CompareMic::Opening);
+    let p = panel_json(&rig, &heard, acting(preparing, &[PanelButton::Cancel]));
+    assert_eq!(
+        p["sheet"]["recording"],
+        Value::Null,
+        "no bar yet, so no ask to read"
+    );
+    assert_eq!(
+        buttons(&p["foot"]),
+        [button("button", "cancel", "Cancel", true, "plain")]
+    );
+}
+
 /// The set text's sheet on a panel for code `iso`, with `[ui] language` `setting` and a German layout on the face.
 fn read_for(iso: &str, setting: &str) -> Value {
     let (rig, _face, _host) = rig("en", "de", setting);
     let heard = heard(&rig);
-    let mut panel = panel(ready(6, false));
+    let mut panel = panel(ready(6, CompareMic::Closed));
     panel.lang = coded(iso);
     panel_json(&rig, &heard, panel)["sheet"].clone()
 }
@@ -100,6 +124,7 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     let run = |n: &str, step| CompareRun {
         name: name(n),
         step,
+        why: None,
     };
     let rows = vec![
         run("Whisper small", RunStep::Done { wait_ms: 2100 }),
@@ -119,17 +144,15 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     let rows = &p["sheet"]["rows"];
     assert_eq!(
         rows[0],
-        json!({"name": "Whisper small", "mark": {"id": "done", "text": "Done · 2.1 s"}})
+        json!({"name": "Whisper small", "mark": {"id": "done", "text": "Done · 2.1 s"}, "why": null})
     );
-    assert_eq!(
-        rows[1]["mark"],
-        json!({"id": "run-failed", "text": "Failed"})
-    );
-    assert_eq!(
-        rows[2]["mark"],
-        json!({"id": "writing", "text": "Writing…"})
-    );
-    assert_eq!(rows[3]["mark"]["id"], "waiting");
+    let marks: Vec<_> = (1..4).map(|at| rows[at]["mark"].clone()).collect();
+    let want = [
+        json!({"id": "run-failed", "text": "Failed"}),
+        json!({"id": "writing", "text": "Writing…"}),
+    ];
+    assert_eq!(marks[..2], want);
+    assert_eq!(marks[2]["id"], "waiting");
     assert_eq!(
         buttons(&p["foot"]),
         [button("button", "cancel", "Cancel", true, "plain")],
@@ -147,6 +170,7 @@ fn results() -> VoiceSheet {
         mb: 512,
         text: None,
         tick: true,
+        cloud: None,
     };
     let free = CompareRow {
         wrong: None,

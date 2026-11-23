@@ -3,15 +3,20 @@
 //! The home list lives here; the other pages build their own part.
 
 use super::acts::CONFIRM;
+use super::card::{self, FactView, Read};
+use super::cloud::{self, Lead, ServiceView, Switch};
 use super::parts::{Button, Hint, Lang, Tone, Top, word};
+use super::service;
 use super::{device, lists, options, sheets};
 use crate::I18n;
+use crate::i18n::Said;
 use crate::i18n::clean;
-use crate::i18n::keys::vars::{DATE, DEVICE, LANG};
+use crate::i18n::keys::vars::{DATE, DEVICE, LANG, READY};
 use crate::i18n::keys::{
-    VOICE_AGAIN_HINT, VOICE_AUTO_CPU, VOICE_AUTO_ON, VOICE_CHANGED, VOICE_CPU, VOICE_DEFAULTS,
-    VOICE_FOR_LANG, VOICE_LANG, VOICE_LAST_RUN, VOICE_NEVER, VOICE_NO, VOICE_NO_MODEL, VOICE_TEXTS,
-    VOICE_TITLE, VOICE_YES, WINDOW_VOICE_PANEL, voice_tab_id,
+    VOICE_AGAIN_HINT, VOICE_AUTO_CPU, VOICE_AUTO_ON, VOICE_CHANGED, VOICE_CLOUD_HOME,
+    VOICE_CLOUD_READY, VOICE_CPU, VOICE_DEFAULTS, VOICE_FOR_LANG, VOICE_LANG, VOICE_LAST_RUN,
+    VOICE_NEVER, VOICE_NO, VOICE_NO_MODEL, VOICE_OFF, VOICE_TEXTS, VOICE_TITLE, VOICE_YES,
+    WINDOW_VOICE_PANEL, voice_tab_id,
 };
 use kx_module_api::ports::{
     DeviceLabel, DeviceName, PanelButton, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
@@ -60,7 +65,9 @@ pub(super) enum Sheet {
     Models {
         rows: Vec<sheets::ModelView>,
         untested: Option<String>,
-        slow: Option<String>,
+        slow: Option<Lead>,
+        sides: sheets::Sides,
+        band: Option<Lead>,
         room: Option<sheets::Room>,
     },
     Device {
@@ -71,6 +78,8 @@ pub(super) enum Sheet {
         text: Option<String>,
         line: String,
         recording: Option<String>,
+        picks: Vec<cloud::PickView>,
+        send: Option<String>,
     },
     Running {
         rows: Vec<lists::RunView>,
@@ -88,6 +97,18 @@ pub(super) enum Sheet {
     Options {
         rows: Vec<options::OptionView>,
     },
+    Cloud {
+        switch: Switch,
+        off: Option<String>,
+        rows: Vec<ServiceView>,
+    },
+    Card {
+        facts: Vec<FactView>,
+        read: Read,
+        untested: Option<String>,
+        warn: Option<Said>,
+    },
+    Service(Box<service::KeyPage>),
     Folders {
         rows: Vec<String>,
     },
@@ -194,6 +215,9 @@ pub(super) fn of(panel: &VoicePanel, t: &I18n, read: Option<&str>) -> Panel {
         VoiceSheet::Compare(c) => lists::compare(&cx, c),
         VoiceSheet::History(h) => lists::history(&cx, h),
         VoiceSheet::Options(rows) => options::page(&cx, rows),
+        VoiceSheet::Cloud(c) => cloud::page(&cx, c),
+        VoiceSheet::Card(c) => card::card(&cx, c),
+        VoiceSheet::Service(s) => service::page(&cx, s),
     };
     // Back and Close always act: the module names only the buttons that may dim.
     let header = |b| Button::panel(t, b, &[b]);
@@ -235,14 +259,24 @@ fn home(cx: &Cx<'_>, h: &VoiceHome) -> Page {
         VoiceTab::History => t.counted(VOICE_TEXTS, count(h.history)),
         VoiceTab::Options if h.changed == 0 => t.text(VOICE_DEFAULTS),
         VoiceTab::Options => t.counted(VOICE_CHANGED, usize::from(h.changed)),
+        VoiceTab::Cloud => h.cloud.map_or_else(
+            || t.text(VOICE_OFF),
+            |n| {
+                let ready = t.counted(VOICE_CLOUD_READY, usize::from(n));
+                t.voice_with(VOICE_CLOUD_HOME, &[(READY, ready)])
+            },
+        ),
     };
-    let rows = VoiceTab::ALL.map(|tab| HomeRow {
+    let row = |tab| HomeRow {
         tab: voice_tab_id(tab),
         label: cx.tab(tab),
         value: value(tab),
-    });
+    };
+    let rows = h.tabs.iter().copied();
     let sub = t.voice_with(VOICE_LANG, &[(LANG, cx.lang())]);
-    let sheet = Sheet::Home { rows: rows.into() };
+    let sheet = Sheet::Home {
+        rows: rows.map(row).collect(),
+    };
     let mut page = Page::new(HOME, t.text(VOICE_TITLE), sub, sheet);
     page.line = Some(t.text(VOICE_AGAIN_HINT));
     page.foot = vec![cx.button(PanelButton::Again).tone(Tone::Primary)];

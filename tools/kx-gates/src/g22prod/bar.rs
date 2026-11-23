@@ -1,9 +1,10 @@
-//! The copy's dictation bar: found by Stop's gate id among the copy's shown windows, its look checked as the voice
-//! design asks (never activated, on top, above the keyboard and beside it), and Stop clicked with the real pointer.
+//! The copy's dictation bar: found by Stop's gate id among the copy's shown windows, never a click-through one, its
+//! look checked as the voice design asks (never activated, on top, above the keyboard and beside it), and Stop clicked
+//! with the real pointer.
 #![cfg(windows)]
 
 use windows::Win32::Foundation::{HWND, POINT, RECT};
-use windows::Win32::UI::WindowsAndMessaging::{WS_EX_NOACTIVATE, WS_EX_TOPMOST};
+use windows::Win32::UI::WindowsAndMessaging::{WS_EX_NOACTIVATE, WS_EX_TOPMOST, WS_EX_TRANSPARENT};
 
 use crate::apps::Opened;
 use crate::g23::live;
@@ -67,24 +68,46 @@ pub(super) fn find(
     kb: HWND,
     id: &str,
 ) -> Result<Option<(HWND, RECT)>, String> {
-    for w in product::shown_by(pid).into_iter().filter(|&w| w != kb) {
+    let shown = product::shown_by(pid).into_iter().filter(|&w| w != kb);
+    let windows: Vec<(HWND, u32)> = shown.map(|w| (w, g9win::ex_of(w))).collect();
+    chosen(&windows, |w| {
         let boxes = live::kept(live::boxes(reader, w, id), || live::shown(w))?;
-        if let Some(stop) = boxes.and_then(|b| b.first().copied()) {
-            return Ok(Some((w, stop)));
+        Ok(boxes.and_then(|b| b.first().copied()))
+    })
+}
+
+/// The first of `windows`, each a key and its extended style, topmost first, that is not click-through and on which
+/// `holds` finds Stop, with what it found; a click-through window, such as the bar's shadow, is never asked.
+pub(super) fn chosen<K: Copy, T, E>(
+    windows: &[(K, u32)],
+    mut holds: impl FnMut(K) -> Result<Option<T>, E>,
+) -> Result<Option<(K, T)>, E> {
+    for &(w, ex) in windows {
+        if ex & WS_EX_TRANSPARENT.0 != 0 {
+            continue;
+        }
+        if let Some(found) = holds(w)? {
+            return Ok(Some((w, found)));
         }
     }
     Ok(None)
 }
 
-/// The bar's look now, beside the keyboard `kb`.
-pub(super) fn look(bar: HWND, kb: HWND) -> Result<BarLook, String> {
+/// The bar's look now, beside the keyboard `kb`, and the class of the window over its box when one covers it.
+pub(super) fn look(bar: HWND, kb: HWND) -> Result<(BarLook, Option<String>), String> {
     let order: Vec<isize> = win::seen_windows().into_iter().map(win::key).collect();
     let (b, k) = (
         (win::key(bar), win::rect(bar)?),
         (win::key(kb), win::rect(kb)?),
     );
-    let top = winfind::over(bar).map(win::key);
-    Ok(BarLook::of(g9win::ex_of(bar), &order, b, k, top))
+    let over = winfind::over(bar);
+    let look = BarLook::of(g9win::ex_of(bar), &order, b, k, over.map(win::key));
+    Ok((look, top_class(look, || over.map(win::class))))
+}
+
+/// The class `class` reads of the window over the bar's box, only when `look` says one covers it.
+pub(super) fn top_class(look: BarLook, class: impl FnOnce() -> Option<String>) -> Option<String> {
+    (!look.uncovered).then(class).flatten()
 }
 
 /// Clicks the middle of Stop's box `stop` on `bar`, only while `app` is in front and the bar is on top there.

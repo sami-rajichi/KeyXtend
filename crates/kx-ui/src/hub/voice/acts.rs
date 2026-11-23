@@ -1,8 +1,14 @@
 //! The kinds of click QML names to `Hub::voice_act`, and what each one sends. A button, page or download button goes by
 //! the id the view gives it; a row's place, a page's way or an answer is the argument.
 
-use crate::i18n::keys::{bar_button_id, fetch_button_id, panel_button_id, voice_tab_id};
-use kx_module_api::ports::{BarButton, FetchButton, PanelButton, VoiceClick, VoiceTab};
+use crate::i18n::keys::{
+    bar_button_id, cloud_button_id, cloud_line_id, fetch_button_id, model_side_id, panel_button_id,
+    voice_tab_id,
+};
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    BarButton, CloudButton, CloudLine, FetchButton, ModelSide, PanelButton, VoiceClick, VoiceTab,
+};
 use std::cmp::Ordering;
 
 /// The bar button `id`.
@@ -33,12 +39,31 @@ pub const MINUS: &str = "minus";
 pub const BUTTON: &str = "button";
 /// Start Compare models with the set text.
 pub const COMPARE: &str = "compare";
-/// Answer the shown question: 1 is yes, 0 is no.
+/// Answer the shown question, a card's switch-on among them: 1 is yes, 0 is no.
 pub const CONFIRM: &str = "confirm";
+/// The `cloud` switch: 1 turns cloud services on, 0 off.
+pub const CLOUD: &str = "cloud";
+/// The cloud button `id`.
+pub const SERVICE: &str = "service";
+/// The keep-nothing switch: 1 asks only for hosts that keep nothing, 0 not.
+pub const KEEP: &str = "keep";
+/// Show the Models page's side `id`.
+pub const SIDE: &str = "side";
+/// Use the local model after a cloud note.
+pub const LOCAL: &str = "local";
+/// Save the key page's line `id` (ADR-0049).
+pub const SAVE: &str = "save";
+/// Put the clipboard history's text on the key page's line `id`.
+pub const PASTE: &str = "paste";
+/// A press on the key page's line `id`, which picks it with its caret at the argument and sounds as a key does.
+pub const PICK: &str = "pick";
+/// The place a click puts the caret on the key page's line `id` after its pick, in what the line draws, as the
+/// argument.
+pub const CARET: &str = "caret";
 
-/// True for a click that plays no key sound: the pointer's move and the wheel.
+/// True for a click that plays no key sound: the pointer's move, the wheel, and a caret, as the pick before it sounded.
 pub(super) fn silent(kind: &str) -> bool {
-    matches!(kind, OVER | WHEEL)
+    matches!(kind, OVER | WHEEL | CARET)
 }
 
 /// A click QML should never send: an unknown kind or id, or an argument or round out of range.
@@ -82,6 +107,17 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         },
         BUTTON => VoiceClick::Button(by_id(PanelButton::ALL, panel_button_id, id)?),
         CONFIRM => VoiceClick::Confirm(switch(arg)?),
+        CLOUD => VoiceClick::Cloud(switch(arg)?),
+        SERVICE => VoiceClick::Service(by_id(CloudButton::ALL, cloud_button_id, id)?),
+        KEEP => VoiceClick::KeepNothing(switch(arg)?),
+        SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
+        LOCAL => VoiceClick::Local,
+        SAVE => VoiceClick::Save(by_id(CloudLine::ALL, cloud_line_id, id)?),
+        PASTE => VoiceClick::Paste(by_id(CloudLine::ALL, cloud_line_id, id)?),
+        CARET | PICK => VoiceClick::Caret {
+            line: by_id(CloudLine::ALL, cloud_line_id, id)?,
+            at: Redacted::new(u32::try_from(arg).map_err(|_| Bad)?),
+        },
         _ => return Err(Bad),
     };
     Ok(Click::Send(click))

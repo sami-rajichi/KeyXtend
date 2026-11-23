@@ -9,7 +9,7 @@ mod spawn;
 mod table;
 mod take;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -23,6 +23,7 @@ use kx_platform_windows::{QpcClock, WinHardware, WinSpawner};
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
+use crate::config::GatesConfig;
 use crate::g22::{self, BENCH};
 use crate::g22cfg::{Clip, G22Bench};
 use crate::out;
@@ -62,7 +63,7 @@ struct Bench<'a> {
 
 /// Runs the bench: both modes of each clip, then the table on stdout and the numbers in the result line.
 pub fn run(ctx: &Ctx) -> Result<Value, String> {
-    let bench = Bench::of(&ctx.cfg.g22_bench, ctx.cfg.weak, &ctx.cfg.dir)?;
+    let bench = Bench::of(ctx.cfg)?;
     let rule = bench.rule();
     let mut rows = Vec::new();
     for (lang, clip) in &bench.g.clips {
@@ -82,18 +83,18 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
 }
 
 impl<'a> Bench<'a> {
-    /// The bench `g` describes on the weak PC `weak`, its paths from the settings folder `dir`; a missing file is an
-    /// error naming it.
-    fn of(g: &'a G22Bench, weak: Weak, dir: &Path) -> Result<Self, String> {
-        let file = |rel: &str| out::plain(&dir.join(rel));
-        let worker = file(&g.worker).map_err(|e| format!("{e}; build it with --features gate"))?;
+    /// The bench `cfg` describes, with its weak PC and its paths from the settings folder; a missing file is an error
+    /// naming it.
+    fn of(cfg: &'a GatesConfig) -> Result<Self, String> {
+        let (g, card) = (&cfg.g22_bench, &cfg.g22_staged.card_part);
+        let file = |rel: &str| out::plain(&cfg.dir.join(rel));
+        let worker =
+            file(&g.worker).map_err(|e| format!("{e}; build it with {}", g22::worker_build()))?;
+        let parts = &g.weak_parts;
         let weak_worker = file(&g.weak_worker).map_err(|e| {
-            format!(
-                "{e}; copy the gate worker's folder there with only {:?}",
-                g.weak_parts
-            )
+            format!("{e}; copy the gate worker's folder there with only {parts:?} and no {card}")
         })?;
-        spawn::plain_parts(&weak_worker, &g.part_prefix, &g.weak_parts)?;
+        spawn::plain_parts(&weak_worker, &g.part_prefix, &g.weak_parts, card)?;
         let models = PathBuf::from(g.models()?);
         if !models.is_dir() {
             return Err(format!(
@@ -104,7 +105,7 @@ impl<'a> Bench<'a> {
         let voice = file(&g.voice_dir)?;
         Ok(Self {
             g,
-            weak,
+            weak: cfg.weak,
             worker,
             weak_worker,
             detector: out::plain(&voice.join(&g.detector))?,

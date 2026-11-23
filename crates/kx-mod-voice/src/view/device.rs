@@ -1,5 +1,6 @@
 //! The Device page: Automatic, the processor with its cores and memory, and each card with its memory and its check for
-//! the model in use; the latest failed check in the note band; and the device label the home list and Compare show.
+//! the model in use in the language in front; the latest failed check in the note band; and the device label the home
+//! list and Compare show.
 
 use kx_module_api::ports::{
     CardCheck, CardId, Device, DeviceItem, DeviceKind, DeviceLabel, DeviceName, DevicePick,
@@ -13,13 +14,13 @@ use crate::panel::{Key, Panel};
 impl Panel {
     /// The Device page's shown rows.
     pub(super) fn device_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
-        let print = self.used_print(facts);
+        let used = self.used(facts);
         let pick = facts.settings.device();
         let auto = (DevicePick::Auto, DeviceItem::Auto);
         let items = facts
             .devices
             .iter()
-            .map(|d| (pick_of(d), self.item(d, facts, print.as_ref())));
+            .map(|d| (pick_of(d), self.item(d, facts, used.as_ref())));
         let list = std::iter::once(auto).chain(items).map(|(p, item)| {
             let key = Key::Device(p.clone());
             let row = DeviceRow {
@@ -43,20 +44,28 @@ impl Panel {
         let mut acts = Vec::new();
         acts.extend((*pick != facts.settings.device()).then_some(PanelButton::Use));
         let card = matches!(pick, DevicePick::Card(_));
-        let free = self.checking.is_none() && self.used_print(facts).is_some();
+        let free = self.checking.is_none() && self.used(facts).is_some();
         acts.extend((card && free).then_some(PanelButton::Check));
         acts
     }
 
-    /// The fingerprint of the model used for the language in front, which the cards' checks go by, once its file was
-    /// read.
-    pub(crate) fn used_print(&self, facts: &Facts<'_>) -> Option<Fingerprint> {
-        let print = self.stock(facts).supply(facts.iso()).ok().map(|r| r.print);
-        print.filter(|p| self.folder.known(p))
+    /// What the cards' checks go by for the language in front (ADR-0052): the used model's fingerprint, once its file
+    /// was read, and the language of the clip its check reads.
+    pub(crate) fn used(&self, facts: &Facts<'_>) -> Option<(Fingerprint, String)> {
+        let stock = self.stock(facts);
+        let print = stock.supply(facts.iso()).ok().map(|r| r.print);
+        let print = print.filter(|p| self.folder.known(p))?;
+        let (clip, _) = stock.clip(&print, facts.iso())?;
+        Some((print, clip.to_owned()))
     }
 
-    /// What device `d`'s row shows.
-    fn item(&self, d: &Device, facts: &Facts<'_>, print: Option<&Fingerprint>) -> DeviceItem {
+    /// What device `d`'s row shows: its check for the model in use in the language in front.
+    fn item(
+        &self,
+        d: &Device,
+        facts: &Facts<'_>,
+        used: Option<&(Fingerprint, String)>,
+    ) -> DeviceItem {
         let DeviceKind::Card(id) = &d.kind else {
             return DeviceItem::Cpu {
                 cores: d.cores,
@@ -64,7 +73,7 @@ impl Panel {
             };
         };
         let running = self.checking.as_ref().filter(|(c, _)| c == id);
-        let verdict = print.and_then(|p| facts.checks.verdict(id, &d.driver, p));
+        let verdict = used.and_then(|(p, lang)| facts.checks.verdict(id, &d.driver, p, lang));
         let check = match (running, verdict) {
             (Some((_, percent)), _) => CardCheck::Running { percent: *percent },
             (None, Some(v)) => CardCheck::Done(v),

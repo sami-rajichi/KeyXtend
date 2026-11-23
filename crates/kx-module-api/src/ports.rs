@@ -20,10 +20,15 @@ macro_rules! listed {
 /// written once.
 macro_rules! first_bad {
     ($value:expr, $($field:ident: $range:expr),+ $(,)?) => {
-        [$(($range.contains(&$value.$field), stringify!($field))),+]
-            .into_iter()
-            .find_map(|(fits, name)| (!fits).then_some(name))
+        $crate::ports::first_odd([$(($range.contains(&$value.$field), stringify!($field))),+])
     };
+}
+
+/// The name of the first rule that does not hold, if any; `first_bad!` hands it its fields' ranges.
+fn first_odd<const N: usize>(rules: [(bool, &'static str); N]) -> Option<&'static str> {
+    rules
+        .into_iter()
+        .find_map(|(fits, name)| (!fits).then_some(name))
 }
 
 mod assist;
@@ -31,6 +36,7 @@ mod boxes;
 mod calendar;
 mod clip;
 mod clips;
+mod cloud;
 mod code;
 mod face;
 mod field;
@@ -76,9 +82,15 @@ pub use clip::{
     ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, probe_ok,
 };
 pub use clips::{
-    ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipTake,
-    ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted, MB, Pages, PanelKey,
-    PanelLine, PanelNote, PasteAsk, Pasted, Preview, When,
+    CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage,
+    ClipPanel, ClipRow, ClipTake, ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted,
+    MB, Pages, PanelKey, PanelLine, PanelNote, PasteAsk, PasteText, Pasted, Preview, TextPasted,
+    When,
+};
+pub use cloud::{
+    CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,
+    CloudSpeechKey, CloudTest, FormField, FormFields, HttpsUrl, KeyHeader, MAX_ADMIN,
+    MAX_FIELD_VALUE, MAX_FIXED, MAX_KEY_BYTES, OwnFields,
 };
 pub use code::CodeError;
 pub use face::{
@@ -146,16 +158,20 @@ pub use shortcut::{
 pub use speech::{
     CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, FactsAsk, Hundredths,
     JobLimits, LEVEL_FULL, MAX_PERCENT, MAX_SOUND_BYTES, Memory, ModelFacts, SAMPLE_BYTES,
-    SOUND_HZ, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechKey, SpeechModel, SpeechNote,
-    SpeechRun, SpeechStage, TAG_LEN, Verdict,
+    SOUND_BYTES_PER_S, SOUND_HZ, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechKey,
+    SpeechModel, SpeechNote, SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CompareRow, CompareRun,
-    CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, FailedCheck,
-    FetchButton, FetchState, FolderLine, FolderList, HistoryRow, HistorySheet, Listening, ModelRow,
-    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, TextAsk,
-    TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel,
-    VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
+    AddressFault, BarButton, BarHint, BarMark, BarNote, BarPlace, BarText, CardCheck, CardPart,
+    CloudBand, CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet, CloudWhy, CompareCloud,
+    CompareMic, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
+    DeviceRow, DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState,
+    FolderLine, FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow,
+    ModelSide, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton,
+    PasteFault, Renewal, RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk,
+    TextDone, Unavailable, UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose,
+    VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen,
+    VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

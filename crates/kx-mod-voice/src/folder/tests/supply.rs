@@ -7,6 +7,8 @@ use crate::counts::{Checked, Checks};
 use crate::flow::{Lack, Supply};
 use kx_module_api::ports::{CardId, Date, Device, DeviceKind, Hundredths, Memory, Verdict};
 
+mod langs;
+
 /// The processor with `total_mb` of memory and a card `Vulkan0` with `card_free_mb` free.
 fn devices(total_mb: u32, card_free_mb: u32) -> Vec<Device> {
     let memory = |total_mb, free_mb| Memory { total_mb, free_mb };
@@ -49,13 +51,20 @@ fn supplied(
     checks: &Checks,
     iso: &str,
 ) -> Result<Ready, Lack> {
+    let clips = shipped();
     let stock = Stock {
         settings,
         folder,
         devices,
         checks,
+        clips: &clips,
     };
     stock.supply(iso)
+}
+
+/// The shipped clips' languages, in their order.
+fn shipped() -> Vec<String> {
+    ["en", "fr", "ar"].map(String::from).to_vec()
 }
 
 use crate::flow::Ready;
@@ -75,6 +84,11 @@ fn the_default_in_the_folder_serves_with_its_own_code() {
     assert_eq!(
         (ready.name.expose().as_str(), ready.print),
         (parakeet.id.as_str(), parakeet.print)
+    );
+    assert_eq!(
+        ready.short.expose(),
+        &parakeet.short,
+        "its row's, not the file's"
     );
     assert_eq!((ready.bytes, ready.card), (parakeet.bytes, None));
 }
@@ -137,6 +151,11 @@ fn a_picked_other_file_serves_the_languages_its_facts_name() {
         (ready.name.expose().as_str(), ready.print),
         ("ggml-medium.bin", stranger())
     );
+    assert_eq!(
+        ready.short.expose(),
+        "ggml-medium",
+        "its name without the extension"
+    );
 }
 
 #[test]
@@ -180,6 +199,7 @@ fn automatic_runs_on_a_card_once_its_check_passed_and_it_has_room() {
         card: card(),
         driver: "1.0".into(),
         model: parakeet.print,
+        lang: Some("en".into()),
         verdict: Verdict::Passed {
             gain: Hundredths(900),
         },
@@ -214,6 +234,7 @@ fn download_fetches_the_pick_else_the_default() {
             folder: &folder,
             devices: &[],
             checks: &checks,
+            clips: &[],
         };
         stock.wanted("en").map(|r| r.id.clone())
     };

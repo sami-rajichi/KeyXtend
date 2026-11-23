@@ -1,0 +1,131 @@
+//! A typed row's lines, the Other model id and the address (edge 13): the row is neither ready nor picked until its
+//! address is typed, and a typed line's change drops the picks that named it, so none comes back by itself. Its Other
+//! id never prints.
+
+use super::*;
+use kx_module_api::REDACTED_MARKER;
+
+/// Custom confirmed with cloud on.
+fn custom_on() -> VoiceSettings {
+    let mut s = on();
+    assert!(rules().confirm(&mut s, "custom", today()));
+    s
+}
+
+#[test]
+fn an_other_model_is_typed_then_picked_and_its_change_drops_its_picks() {
+    let mut s = on();
+    let not_on = rules().type_model(&mut s, "custom", "my-model");
+    assert!(!not_on, "not switched on yet");
+    let mut s = custom_on();
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    assert!(!rules().type_model(&mut s, "custom", "a//b"));
+    assert!(rules().type_model(&mut s, "custom", "my-model"));
+    let other = rules().pick(&mut s, "en", "custom", "other-model");
+    assert!(!other, "only the typed id");
+    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
+    let c = rules().choice(&s, "en").unwrap();
+    assert_eq!(
+        (c.code.as_str(), c.model),
+        ("en", Chosen::Typed("my-model"))
+    );
+    assert!(rules().type_model(&mut s, "custom", "other-model"));
+    let gone = rules().choice(&s, "en").is_none() && s.picks.is_empty();
+    assert!(gone, "no pick follows a new id by itself");
+}
+
+#[test]
+fn a_typed_address_is_kept_only_when_https_on_a_host_name() {
+    let mut s = custom_on();
+    assert!(rules().confirm(&mut s, "groq", today()));
+    for bad in [
+        "http://stt.example.com/v1",
+        "http://192.168.1.20",
+        "https://192.168.1.20/v1",
+        "stt",
+    ] {
+        assert!(!rules().type_address(&mut s, "custom", bad), "{bad}");
+    }
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    assert_eq!(s.services["custom"].address, ADDRESS);
+    let fixed = rules().type_address(&mut s, "groq", ADDRESS);
+    assert!(!fixed, "a row with its own address takes none");
+}
+
+#[test]
+fn a_typed_row_is_neither_ready_nor_picked_until_its_address_is_typed() {
+    let mut s = custom_on();
+    let custom = row("custom");
+    assert!(rules().type_model(&mut s, "custom", "my-model"));
+    assert_eq!(rules().mark(&s, custom, false), ServiceMark::NeedsKey);
+    assert_eq!(
+        rules().mark(&s, custom, true),
+        ServiceMark::NeedsAddress,
+        "a user with a key is never told to add one"
+    );
+    assert!(!rules().pick(&mut s, "en", "custom", "my-model") && s.picks.is_empty());
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    assert_eq!(rules().mark(&s, custom, true), ServiceMark::Ready);
+    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
+    assert!(rules().type_address(&mut s, "custom", ""));
+    assert!(s.picks.is_empty(), "a cleared address drops its picks");
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    let back = rules().choice(&s, "en");
+    assert!(back.is_none(), "typing it again brings no pick back");
+}
+
+#[test]
+fn a_listed_model_sends_its_id_unless_its_request_names_none_and_a_typed_id_goes_as_it_is() {
+    let listed = row("groq").model(turbo()).unwrap();
+    assert_eq!(Chosen::Listed(listed).sent(), Some(turbo()));
+    let mut all = table().unwrap().rows().iter().flat_map(|r| &r.models);
+    let unnamed = all.find(|m| m.unnamed).unwrap();
+    assert_eq!(
+        Chosen::Listed(unnamed).sent(),
+        None,
+        "a model whose request names none"
+    );
+    assert_eq!(Chosen::Typed("my-model").sent(), Some("my-model"));
+}
+
+#[test]
+fn a_typed_id_a_listed_model_has_adds_no_second_row_where_it_knows_the_language_nor_a_dead_one_where_not()
+ {
+    let mut s = on();
+    assert!(rules().confirm(&mut s, "groq", today()));
+    let groq = table().unwrap().get("groq").unwrap();
+    let listed = &groq.models[0];
+    assert!(rules().type_model(&mut s, "groq", &listed.id));
+    let (knows, lacks) = ("en", "tlh");
+    assert!(listed.code(knows).is_some() && listed.code(lacks).is_none());
+    let ids = |lang| {
+        let all = rules().models(&s, lang);
+        let groq = all.iter().filter(|o| o.service.id == "groq");
+        groq.map(|o| o.id().to_owned()).collect::<Vec<_>>()
+    };
+    let shown: Vec<String> = groq.models.iter().map(|m| m.id.clone()).collect();
+    assert_eq!(ids(knows), shown, "the listed rows alone");
+    assert_eq!(
+        ids(lacks),
+        Vec::<String>::new(),
+        "no row that cannot be picked"
+    );
+}
+
+#[test]
+fn a_typed_other_id_never_prints_in_a_choice_an_offer_or_the_settings() {
+    let mut s = custom_on();
+    assert!(rules().type_address(&mut s, "custom", ADDRESS));
+    assert!(rules().type_model(&mut s, "custom", "my-model"));
+    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
+    let choice = rules().choice(&s, "en").unwrap();
+    let offered = Offered::from(&choice);
+    for shown in [
+        format!("{choice:?}"),
+        format!("{offered:?}"),
+        format!("{s:?}"),
+    ] {
+        let hidden = !shown.contains("my-model") && shown.contains(REDACTED_MARKER);
+        assert!(hidden, "{shown}");
+    }
+}

@@ -1,5 +1,5 @@
-//! What the module tests share: the fakes behind its services, a host holding them, an ear on the bus that hears from
-//! any thread, and a models folder holding English's default model.
+//! What the module tests share: the fakes behind its services, the cloud port among them, a host holding them, an
+//! ear on the bus that hears from any thread, and a models folder holding English's default model.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -9,17 +9,18 @@ use std::time::Duration;
 use kx_mod_voice::models::table;
 use kx_mod_voice::{MANIFEST, VoiceModule};
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, Date, Drive, FieldWatchKey, FolderRevealKey, MB, ModelFiles,
-    ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey, VoiceLit, VoicePage, VoiceShelfKey,
-    VoiceView,
+    CalendarKey, ClipboardWriterKey, CloudButton, CloudSpeechKey, Date, Drive, FieldWatchKey,
+    FolderRevealKey, MB, ModelFiles, ModelFilesKey, PanelLine, PressesWanted, SessionWatchKey,
+    SpeechKey, VoiceAct, VoiceClick, VoiceLine, VoiceLit, VoiceOpen, VoicePage, VoiceSheet,
+    VoiceShelfKey, VoiceTab, VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted, ServiceId, ServiceKey,
     Subscription,
 };
 use kx_platform_fake::{
-    FakeCalendar, FakeClipboardWriter, FakeClock, FakeFieldWatch, FakeFolderReveal, FakeModelFiles,
-    FakeSessionWatch, FakeShelf, FakeSpeech,
+    FakeCalendar, FakeClipboardWriter, FakeClock, FakeCloud, FakeFieldWatch, FakeFolderReveal,
+    FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
 use kx_test_support::host::{FakeHost, Stored};
 
@@ -39,6 +40,8 @@ pub struct Fakes {
     pub reveal: Arc<FakeFolderReveal>,
     pub shelf: FakeShelf,
     pub calendar: FakeCalendar,
+    pub link: Arc<FakeWebLink>,
+    pub cloud: FakeCloud,
     pub clock: FakeClock,
 }
 
@@ -54,6 +57,8 @@ impl Fakes {
             reveal: Arc::new(FakeFolderReveal::new()),
             shelf: FakeShelf::new(),
             calendar: FakeCalendar::new(Date::new(2026, 11, 15).unwrap(), 12, 0, 60),
+            link: Arc::new(FakeWebLink::new()),
+            cloud: FakeCloud::new(),
             clock: FakeClock::new(Mono::from_us(1_000)),
         };
         fakes.files.set_drives(vec![Drive {
@@ -87,6 +92,8 @@ impl Fakes {
             stored::<FolderRevealKey>(self.reveal.clone()),
             stored::<VoiceShelfKey>(Arc::new(self.shelf.clone())),
             stored::<CalendarKey>(Arc::new(self.calendar.clone())),
+            stored::<WebLinkKey>(self.link.clone()),
+            stored::<CloudSpeechKey>(Arc::new(self.cloud.clone())),
         ]);
         host
     }
@@ -116,9 +123,11 @@ pub fn stop(module: &mut VoiceModule, host: &mut FakeHost) {
 )]
 pub enum Said {
     View(VoicePage),
-    Lit(bool),
+    Lit(VoiceLit),
     Presses(bool),
     Notice(&'static str),
+    /// The panel's line, for the keyboard.
+    Line(Option<PanelLine>),
 }
 
 /// What the module publishes, heard on the host's bus from any thread.
@@ -134,9 +143,10 @@ impl Heard {
         let bus = Bus::new(Arc::clone(&host.core));
         let ears = vec![
             ear(&bus, &tx, |e: &VoiceView| Said::View((*e.0).clone())),
-            ear(&bus, &tx, |e: &VoiceLit| Said::Lit(e.rec)),
+            ear(&bus, &tx, |e: &VoiceLit| Said::Lit(*e)),
             ear(&bus, &tx, |e: &PressesWanted| Said::Presses(e.on)),
             ear(&bus, &tx, |e: &Notice| Said::Notice(e.key)),
+            ear(&bus, &tx, |e: &VoiceLine| Said::Line(e.0.clone())),
         ];
         Self { said, _ears: ears }
     }
@@ -170,4 +180,37 @@ fn ear<E: Event>(
 ) -> Subscription {
     let tx = tx.clone();
     bus.subscribe(move |e: &E| drop(tx.send(make(e)))).unwrap()
+}
+
+/// Clicks `click` on the view of round `round`, then waits for a view whose page `shows`; its round.
+pub fn click(
+    bus: &Bus,
+    heard: &Heard,
+    round: u32,
+    click: VoiceClick,
+    shows: fn(&VoiceSheet) -> bool,
+) -> u32 {
+    bus.publish(&VoiceAct { round, click }).unwrap();
+    heard.wait(|s| match s {
+        Said::View(page) => page
+            .panel
+            .as_ref()
+            .is_some_and(|p| shows(&p.sheet))
+            .then_some(page.round),
+        _ => None,
+    })
+}
+
+/// Opens the panel on the Cloud page with its first service ticked; the round of that view.
+pub fn first_service(bus: &Bus, heard: &Heard) -> u32 {
+    bus.publish(&VoiceOpen).unwrap();
+    let round = heard.wait(|s| match s {
+        Said::View(page) if page.panel.is_some() => Some(page.round),
+        _ => None,
+    });
+    let cloud = |s: &VoiceSheet| matches!(s, VoiceSheet::Cloud(_));
+    let round = click(bus, heard, round, VoiceClick::Open(VoiceTab::Cloud), cloud);
+    let ticked =
+        |s: &VoiceSheet| matches!(s, VoiceSheet::Cloud(c) if c.acts.contains(&CloudButton::Facts));
+    click(bus, heard, round, VoiceClick::Row(0), ticked)
 }

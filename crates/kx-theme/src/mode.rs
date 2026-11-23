@@ -16,7 +16,7 @@ impl Mode {
     /// Both modes, light first.
     pub const ALL: [Mode; 2] = [Mode::Light, Mode::Dark];
 
-    /// The table name of this mode in `themes.toml`.
+    /// The table name of this mode in `themes/*.toml`.
     #[must_use]
     pub fn key(self) -> &'static str {
         match self {

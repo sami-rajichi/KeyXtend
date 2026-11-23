@@ -3,6 +3,7 @@
 
 mod acts;
 mod bar;
+mod cloud;
 mod compare;
 mod device;
 mod gate;
@@ -17,11 +18,13 @@ mod place;
 #[cfg(feature = "qt")]
 mod sounds;
 mod wakes;
+mod warned;
 
 use crate::Rig;
 use kx_module_api::ports::{
     BarPlace, DeviceLabel, DeviceName, Listening, Pages, PanelButton, VoiceAct, VoiceAsk, VoiceBar,
-    VoiceHome, VoiceLang, VoiceLevel, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceView,
+    VoiceHome, VoiceLang, VoiceLevel, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab,
+    VoiceView,
 };
 use kx_module_api::{Bus, Subscription};
 use kx_test_support::host::FakeCore;
@@ -162,6 +165,7 @@ pub fn listening_bar() -> VoiceBar {
         elapsed_ms: 1200,
         nothing: false,
         wave_ms: 300,
+        warn: None,
     })
 }
 
@@ -173,6 +177,7 @@ pub fn page(round: u32, bar: VoiceBar, panel: Option<VoicePanel>) -> VoicePage {
         panel,
         place: BarPlace::Above,
         sounds: true,
+        mark: None,
     }
 }
 
@@ -224,6 +229,8 @@ pub fn home() -> VoiceSheet {
         compared: None,
         history: 12,
         changed: 0,
+        cloud: None,
+        tabs: VoiceTab::ALL[..5].to_vec(),
     })
 }
 

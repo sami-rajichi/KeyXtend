@@ -2,16 +2,17 @@
 //! on a ticked result; and the notes of Compare's run.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{DevicePick, PanelButton, SpeechNote, VoiceTab};
+use kx_module_api::ports::{CloudNote, DevicePick, PanelButton, Renewal, SpeechNote, VoiceTab};
 
 use super::{Choice, Do, Key, Page, Panel, wrap};
-use crate::compare::{Entrant, Plan};
+use crate::compare::{Entrant, Plan, Remote};
 use crate::folder::Print;
 use crate::models::table;
 use crate::view::Facts;
 
 impl Panel {
-    /// Start: the set text is read aloud once, then each ready model writes it; nothing while a dictation runs.
+    /// Start: the set text is read aloud once, then each ticked cloud model gets it and each ready model writes it, as
+    /// the send warning above Start said; nothing while a dictation runs.
     pub(super) fn start(&mut self, set: &Redacted<String>, facts: &Facts<'_>) -> Vec<Do> {
         if self.page != Some(Page::Tab(VoiceTab::Compare)) || facts.dictating {
             return Vec::new();
@@ -20,6 +21,7 @@ impl Panel {
             lang: facts.iso().to_owned(),
             set: set.clone(),
             entrants: self.entrants(facts),
+            clouds: self.remotes(facts),
             day: facts.now.date,
             auto: facts.settings.device() == DevicePick::Auto,
         };
@@ -67,6 +69,33 @@ impl Panel {
             }
             _ => Vec::new(),
         }
+    }
+
+    /// The ticked cloud models Compare may send to now, ready and usable, in the page's order.
+    fn remotes(&self, facts: &Facts<'_>) -> Vec<Remote> {
+        let (list, _) = self.compare_clouds(facts);
+        let remote = |(key, row): (Key, kx_module_api::ports::CompareCloud)| match key {
+            Key::Cloud { service, model } if row.tick => Some(Remote {
+                name: row.name,
+                shown: row.service,
+                service,
+                model,
+            }),
+            _ => None,
+        };
+        list.into_iter().filter_map(remote).collect()
+    }
+
+    /// A note from cloud model `at` of Compare's run `take`, `wait_ms` after the send, a used allowance with `renews`.
+    pub fn compare_net(
+        &mut self,
+        take: u32,
+        at: usize,
+        note: CloudNote,
+        wait_ms: u32,
+        renews: Option<Renewal>,
+    ) -> Vec<Do> {
+        wrap(self.compare.net(take, at, note, wait_ms, renews))
     }
 
     /// A note from Compare's run `take`.

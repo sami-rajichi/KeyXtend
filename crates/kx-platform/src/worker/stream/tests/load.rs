@@ -1,5 +1,5 @@
 //! A stream under load: a flooding worker waits once `IN_FLIGHT` of its frames wait for the stream, and a note the
-//! reader took before its wait ended is told though the stream's thread was held up past it.
+//! reader took before its wait ended is told though the stream's thread, or the reader's hand-over, came after it.
 
 use super::*;
 use crate::worker::fake::Frame;
@@ -69,7 +69,8 @@ impl Spawner<VoiceFrames> for Gushes {
     }
 }
 
-/// A clock that says each time the stream's reader reads it, as it stamps a frame.
+/// A clock that says each time the stream's reader has read it, as it stamps a frame; the time is read first, so a
+/// test that moves the clock once told moves it past the stamp.
 struct Spied {
     hands: Hands,
     stamps: Sender<()>,
@@ -77,10 +78,36 @@ struct Spied {
 
 impl Clock for Spied {
     fn now(&self) -> Mono {
+        let now = self.hands.now();
         if thread::current().name().is_some_and(|n| n.ends_with(NOTES)) {
             let _ = self.stamps.send(());
         }
-        self.hands.now()
+        now
+    }
+}
+
+/// A clock that holds the stream's reader in its second stamp, the time read, until `free` says go.
+struct Held {
+    hands: Hands,
+    stamps: Sender<()>,
+    reads: AtomicUsize,
+    free: Mutex<Receiver<()>>,
+}
+
+impl Clock for Held {
+    fn now(&self) -> Mono {
+        let now = self.hands.now();
+        if thread::current().name().is_some_and(|n| n.ends_with(NOTES)) {
+            let _ = self.stamps.send(());
+            if self.reads.fetch_add(1, Ordering::SeqCst) == 1 {
+                let _ = self
+                    .free
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .recv();
+            }
+        }
+        now
     }
 }
 
@@ -149,4 +176,40 @@ fn a_note_taken_before_its_wait_ended_is_told_though_the_thread_was_held_past_it
     go.send(()).unwrap();
     let next = heard.recv_timeout(LONG).expect("told in time");
     assert_eq!(next, Told::Note(level(FIRST)), "not late");
+}
+
+#[test]
+fn a_note_stamped_in_time_is_waited_for_though_its_reader_hands_it_over_after_the_wait() {
+    let (script, hands) = (Script::<VoiceFrames>::default(), Hands::default());
+    let ((stamps, stamped), (free, freed)) = (mpsc::channel(), mpsc::channel());
+    let clock = Arc::new(Held {
+        hands: hands.clone(),
+        stamps,
+        reads: AtomicUsize::new(0),
+        free: Mutex::new(freed),
+    });
+    let ((said, heard), (go, gate)) = (mpsc::channel(), mpsc::channel::<()>());
+    let tell = move |told: Told<VoiceNote>| {
+        let held = told == Told::Note(open(FIRST));
+        drop(said.send(told));
+        if held {
+            let _ = gate.recv();
+        }
+    };
+    let spawner = Arc::new(script.clone());
+    let stream = Stream::open(THREAD, spawner, clock, TIMES, launch(), tell);
+    script.act(VoiceAct::Say(vec![open, level]));
+    assert_eq!(stream.begin(start, Wait::Each(WAIT)), Ok(FIRST));
+    let first = heard.recv_timeout(LONG).expect("held in its tell");
+    assert_eq!(first, Told::Note(open(FIRST)));
+    for _ in 0..2 {
+        stamped.recv_timeout(LONG).expect("each frame stamped");
+    }
+    hands.advance(WAIT * 2);
+    go.send(()).unwrap();
+    // The stream's thread passes its wait while the reader still holds the stamped frame.
+    stream.poke();
+    free.send(()).unwrap();
+    let next = heard.recv_timeout(LONG).expect("told in time");
+    assert_eq!(next, Told::Note(level(FIRST)), "waited for, not late");
 }

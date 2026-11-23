@@ -1,0 +1,68 @@
+//! The card's warning as a reminder (ruling 11): a row with `warn` carries it on its first dictation at the row's terms
+//! number, not on the next, again once newer terms are confirmed; a row without one never does, and any row with one
+//! does.
+
+use super::*;
+use crate::services::tests::{LANGS, OWN};
+
+/// The defaults with cloud on, `ElevenLabs` confirmed under `rules` and picked for English.
+fn eleven_for_english(rules: Cloud<'_>) -> VoiceSettings {
+    let mut s = on();
+    assert!(rules.confirm(&mut s, "elevenlabs", today()));
+    assert!(rules.pick(&mut s, "en", "elevenlabs", first_model("elevenlabs")));
+    s
+}
+
+/// The id of the warning that `lang`'s choice carries under `rules`.
+fn warns(rules: Cloud<'_>, s: &VoiceSettings, lang: &str) -> Option<String> {
+    rules.choice(s, lang).and_then(|c| c.warn).map(|w| w.id)
+}
+
+#[test]
+fn the_first_dictation_carries_the_cards_warning_and_the_next_does_not() {
+    let mut s = eleven_for_english(rules());
+    let card = rules().card(&s, row("elevenlabs"), today()).warn;
+    let choice = rules().choice(&s, "en").and_then(|c| c.warn);
+    assert_eq!(choice, card, "the card's own warning");
+    assert!(rules().warned(&mut s, "elevenlabs"));
+    let terms = row("elevenlabs").terms;
+    let seen = s.services["elevenlabs"].warned;
+    assert_eq!(seen, terms, "seen at its terms number");
+    assert_eq!(warns(rules(), &s, "en"), None, "the next dictation");
+    assert!(!rules().warned(&mut on(), "elevenlabs"), "a service not on");
+}
+
+#[test]
+fn newer_terms_confirmed_bring_the_warning_back() {
+    let mut s = eleven_for_english(rules());
+    assert!(rules().warned(&mut s, "elevenlabs"));
+    let newer = Services::parse(TEXT, &raised(OWN, "elevenlabs"), LANGS).unwrap();
+    let rules = Cloud::new(&newer, false);
+    assert!(rules.choice(&s, "en").is_some_and(|c| c.ask), "asks first");
+    assert!(rules.confirm(&mut s, "elevenlabs", today()));
+    assert_eq!(
+        warns(rules, &s, "en").as_deref(),
+        Some(warn_id("elevenlabs"))
+    );
+    assert!(rules.warned(&mut s, "elevenlabs"));
+    let terms = newer.get("elevenlabs").unwrap().terms;
+    assert_eq!(
+        s.services["elevenlabs"].warned, terms,
+        "at the newer number"
+    );
+}
+
+#[test]
+fn a_row_without_a_warning_never_carries_one_and_any_row_with_one_does() {
+    let warn = "warn = { id = \"trains\", text = { switch = \"Data use\" } }\n";
+    for (extra, want) in [("", None), (warn, Some("trains"))] {
+        let table = with_rows(&format!("{ROUTER}{extra}"));
+        let rules = Cloud::new(&table, false);
+        let mut s = on();
+        assert!(rules.confirm(&mut s, "router-test", today()));
+        let model = &table.get("router-test").unwrap().models[0].id;
+        assert!(rules.pick(&mut s, "fr", "router-test", model));
+        let said = warns(rules, &s, "fr");
+        assert_eq!(said.as_deref(), want, "from its row alone");
+    }
+}

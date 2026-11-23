@@ -93,6 +93,16 @@ impl Clipboard for WinClipboard {
         let text = read::read_text(wait, max_chars)?;
         Ok(text.map(|t| Redacted::new(Zeroizing::new(t))))
     }
+
+    /// Reads as `text` does once the presence markers are checked in the same open; our own number markers pass.
+    fn unmarked_text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError> {
+        let marks = match &self.marks {
+            Some(marks) => marks.presence(),
+            None => table()?.marks().presence(),
+        };
+        let text = read::unmarked_text(wait, max_chars, &marks)?;
+        Ok(text.map(|t| Redacted::new(Zeroizing::new(t))))
+    }
 }
 
 /// A running watch; dropping it removes the listener and ends its thread.

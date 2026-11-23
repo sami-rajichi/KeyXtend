@@ -1,5 +1,6 @@
 //! Every text the hub fills in for QML holds no bidi control, which could make Qt search every font (ADR-0022), QML
-//! draws OS names only through the hub's cleaning, and the filled texts the Quick reading-order test draws.
+//! draws OS names only through the hub's cleaning, and the filled texts the Quick reading-order test draws, Arabic cloud
+//! lines with their Latin runs among them.
 
 use crate::combo;
 use crate::files::keys_of;
@@ -120,7 +121,7 @@ fn tips(t: &I18n) -> Vec<Value> {
 }
 
 /// The texts the Quick reading-order test draws, per language tag: each space-bar text with its parts and face state,
-/// a reset notice naming settings and leaving some out, and shortcut tips.
+/// a reset notice naming settings and leaving some out, shortcut tips, and the Arabic cloud lines with their Latin runs.
 pub fn order() -> Value {
     let mut by_lang = serde_json::Map::new();
     for l in &LANGS {
@@ -134,9 +135,10 @@ pub fn order() -> Value {
         let more = count_words(&t, &names, LEFT_OUT);
         let reset = json!({ "names": names, "more": more, "text": reset });
         let tips = tips(&t);
+        let runs = crate::voice::own::runs(&t);
         by_lang.insert(
             l.tag.to_owned(),
-            json!({ "spaces": space, "reset": reset, "tips": tips }),
+            json!({ "spaces": space, "reset": reset, "tips": tips, "runs": runs }),
         );
     }
     Value::Object(by_lang)

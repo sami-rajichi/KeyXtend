@@ -10,11 +10,17 @@ use super::engine::{self, Engine, Writer};
 use super::hand::{self, HandIn, Held};
 use super::listen::{Replay, Run};
 use super::mic::{Mic, Source};
+use super::pack::Packer;
+use super::wipe::Buf;
 use super::{Event, Feed, Notes, Tell, span};
 use asks::{answer, stage};
 use kx_ipc::{IpcError, Setup, Stage, VoiceAsk, VoiceFault, VoiceNote};
 use notes::listened;
+use std::ops::Range;
 use std::sync::mpsc::Sender;
+
+/// The shortest piece a listen-only run's cutter makes: none, so it cuts at every pause.
+const EVERY_PAUSE: usize = 0;
 
 /// The job's parts: the sound source, the voice detector and the engine.
 pub struct Parts {
@@ -171,21 +177,35 @@ impl Job {
             return Ok(());
         };
         let id = run.id;
-        let (sound, writer) = run.end(out)?;
+        let (sound, writer, pack) = run.end(out)?;
         out.tell(stage(id, why))?;
-        let heard = span::heard_ms(sound.len());
-        if let Some(mut writer) = writer {
-            writer.end(heard);
-            self.writing = Some(Writing {
-                id,
-                writer,
-                replay: None,
-            });
-        } else {
-            hand::over(id, &sound, out)?;
-            out.tell(listened(id, heard))?;
-        }
+        let Some(mut writer) = writer else {
+            let pieces = pack.map(Packer::pieces).unwrap_or_default();
+            return self.hand_speech(id, sound, &pieces, out);
+        };
+        writer.end(span::heard_ms(sound.len()));
+        self.writing = Some(Writing {
+            id,
+            writer,
+            replay: None,
+        });
         self.held = Some(Held::new(id, sound));
+        Ok(())
+    }
+
+    /// Holds run `id`'s recording first, then hands its speech `pieces` over and ends the run, so a failed hand-over
+    /// still leaves it for Try again and the local model.
+    fn hand_speech(
+        &mut self,
+        id: u32,
+        sound: Buf<i16>,
+        pieces: &[Vec<Range<usize>>],
+        out: &mut dyn Notes,
+    ) -> Result<(), Fail> {
+        let heard = span::heard_ms(sound.len());
+        let held = self.held.insert(Held::new(id, sound));
+        hand::speech(id, held.sound(), pieces, out)?;
+        out.tell(listened(id, heard))?;
         Ok(())
     }
 
@@ -197,7 +217,7 @@ impl Job {
         let id = run.id;
         run.mute();
         match run.end(out) {
-            Ok((sound, _)) => self.held = Some(Held::new(id, sound)),
+            Ok((sound, ..)) => self.held = Some(Held::new(id, sound)),
             Err(Fail::Out(e)) => return Err(e),
             Err(Fail::Fault(_)) => {}
         }
@@ -216,10 +236,15 @@ impl Job {
         Run::new(id, self.epoch, opened, setup, cut, writer)
     }
 
-    /// A cutter over the setup's detector, or `None` when this build has no detector.
+    /// A cutter over the setup's detector, or `None` when this build has no detector. A listen-only run cuts at every
+    /// pause, and its packer joins the stretches within `piece_s`.
     fn cutter(&mut self, setup: &Setup<'_>) -> Result<Option<Cutter>, VoiceFault> {
         let det = self.parts.detectors.open(&setup.detector)?;
-        let (piece, pad) = (span::secs(setup.piece_s.into()), span::millis(setup.pad_ms));
+        let piece = match setup.model {
+            Some(_) => span::secs(setup.piece_s.into()),
+            None => EVERY_PAUSE,
+        };
+        let pad = span::millis(setup.pad_ms);
         Ok(det.map(|det| Cutter::new(det, piece, pad)))
     }
 

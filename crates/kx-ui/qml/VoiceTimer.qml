@@ -1,5 +1,5 @@
-// How long the bar has listened (design/voice-bar.html .tm): minutes and two-digit seconds in the language's order, as
-// it counts on from the module's time, ticking at each whole second, in the panel's count style at a steady width.
+// How long the bar has listened (design/voice-bar.css .tm): minutes and two-digit seconds in the language's order, as
+// it counts on from the module's time, ticking at each whole second, in the panel's count style at one width to 99:59.
 import QtQuick
 
 Label {
@@ -18,7 +18,7 @@ Label {
     // The time shown in ms, and the tick, for the tests.
     property real elapsed: from
     readonly property alias tick: tick
-    // Units of time and the digits of the seconds.
+    // Units of time, and the digits of the seconds and of the widest minutes the timer is measured at.
     readonly property int msPerS: 1000
     readonly property int sPerMin: 60
     readonly property int digits: 2
@@ -50,11 +50,11 @@ Label {
             tick.restart();
     }
 
-    // Each digit as wide as a 0, so the text never moves as it counts.
+    // Two-digit minutes and seconds, each digit as wide as a 0, so the text never moves or widens as it counts.
     TextMetrics {
         id: widest
         font: t.font
-        text: t.text.replace(/[0-9]/g, "0")
+        text: t.format === "" ? "" : t.format.arg("0".repeat(t.digits)).arg("0".repeat(t.digits))
     }
     Timer {
         id: tick

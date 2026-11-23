@@ -2,6 +2,7 @@
 //! recording's room, which ends after `idle_min`; a model change hands the recording over in wiped buffers, and the
 //! devices, a file's facts and a card's check each run in a job of their own. Text and sound stay redacted.
 
+mod begin;
 mod frame;
 mod job;
 mod note;
@@ -9,6 +10,7 @@ mod once;
 mod router;
 mod run;
 mod shipped;
+mod spoken;
 
 use crate::worker::{Spawner, Split, Stream, VoiceFrames};
 use job::{Key, Live};

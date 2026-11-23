@@ -30,11 +30,23 @@ pub enum VoiceMark {
     Waiting,
     /// A model Compare could not run, or skipped after its fault.
     RunFailed,
+    /// A cloud service not switched on.
+    Off,
+    /// A cloud service, or its model, with no key yet.
+    NeedsKey,
+    /// A typed cloud service with a key and no address yet.
+    NeedsAddress,
+    /// A cloud service ready to send to.
+    On,
+    /// A connection no real key checked yet.
+    Untested,
+    /// A cloud model that cannot be used now.
+    Unavailable,
 }
 
 impl VoiceMark {
     /// Every mark.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 18] = [
         Self::Used,
         Self::Default,
         Self::Ready,
@@ -47,6 +59,12 @@ impl VoiceMark {
         Self::Writing,
         Self::Waiting,
         Self::RunFailed,
+        Self::Off,
+        Self::NeedsKey,
+        Self::NeedsAddress,
+        Self::On,
+        Self::Untested,
+        Self::Unavailable,
     ];
 }
 
@@ -66,6 +84,12 @@ pub const fn mark_id(mark: VoiceMark) -> &'static str {
         VoiceMark::Writing => "writing",
         VoiceMark::Waiting => "waiting",
         VoiceMark::RunFailed => "run-failed",
+        VoiceMark::Off => "off",
+        VoiceMark::NeedsKey => "needs-key",
+        VoiceMark::NeedsAddress => "needs-address",
+        VoiceMark::On => "on",
+        VoiceMark::Untested => "untested",
+        VoiceMark::Unavailable => "unavailable",
     }
 }
 
@@ -97,6 +121,7 @@ pub const fn bar_hint_id(hint: &BarHint) -> &'static str {
         BarHint::Full => "full",
         BarHint::Folder => "folder",
         BarHint::Net => "net",
+        BarHint::Cloud { .. } => "cloud",
     }
 }
 
@@ -109,11 +134,16 @@ pub const fn bar_button_id(button: BarButton) -> &'static str {
         BarButton::Copy => "copy",
         BarButton::Undo => "undo",
         BarButton::Anyway => "anyway",
+        BarButton::Again => "again",
         BarButton::Listen => "listen",
         BarButton::Download => "download",
+        BarButton::Service => "service",
         BarButton::Close => "close",
     }
 }
+
+/// The bar icon Open service wears on the key note, as it opens the key page; on any other note it wears its id's.
+pub const SERVICE_KEY_ICON: &str = "service_key";
 
 /// A panel button's id, which QML sends back on a click.
 #[must_use]
@@ -153,6 +183,7 @@ pub const fn fetch_button_id(button: FetchButton) -> &'static str {
 pub const fn voice_tab_id(tab: VoiceTab) -> &'static str {
     match tab {
         VoiceTab::Models => "models",
+        VoiceTab::Cloud => "cloud",
         VoiceTab::Device => "device",
         VoiceTab::Compare => "compare",
         VoiceTab::History => "history",

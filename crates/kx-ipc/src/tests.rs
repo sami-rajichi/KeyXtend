@@ -4,6 +4,8 @@ mod boxes;
 mod command;
 mod dib;
 mod fetch;
+mod gate;
+mod net;
 mod props;
 mod refuse;
 mod vault;

@@ -33,7 +33,8 @@ pub fn contrast_palette(base: &Palette, s: &SysColors, edge_px: f32) -> Palette 
     p
 }
 
-/// The plate, every key face and its legends, dimmed keys in `GrayText`, the LED at rest, chips and the hover tint.
+/// The plate, every key face and its legends, the preparing key's too, as its ring marks it, dimmed keys in
+/// `GrayText`, the LED at rest, chips and the hover tint.
 fn keys(p: &mut Palette, s: &SysColors) {
     let (face, ink): (Rgba, Rgba) = (s.button.into(), s.button_text.into());
     p.plate = s.window.into();
@@ -44,6 +45,7 @@ fn keys(p: &mut Palette, s: &SysColors) {
         &mut p.key_act,
         &mut p.danger,
         &mut p.dim,
+        &mut p.prep,
     ] {
         *c = face;
     }
@@ -53,6 +55,7 @@ fn keys(p: &mut Palette, s: &SysColors) {
         &mut p.legend_2,
         &mut p.legend_act,
         &mut p.danger_ink,
+        &mut p.prep_ink,
     ] {
         *c = ink;
     }
@@ -61,7 +64,8 @@ fn keys(p: &mut Palette, s: &SysColors) {
     p.hover = Rgba { a: 0, ..face };
 }
 
-/// Enter, every key that is on, locked or recording, and a pressed key, in `Highlight` with `HighlightText`.
+/// Enter, every on, locked or recording key, and a pressed key, in `Highlight` with `HighlightText`, and the ring in
+/// `Highlight` that marks a preparing key, so only Recording fills (never colour alone).
 fn states(p: &mut Palette, s: &SysColors) {
     let (sel, sel_ink): (Rgba, Rgba) = (s.highlight.into(), s.highlight_text.into());
     p.press = sel;
@@ -88,8 +92,8 @@ fn states(p: &mut Palette, s: &SysColors) {
     }
 }
 
-/// Panels and text on the plate in `Window` and `WindowText`, with `Highlight` on the row under the pointer and the
-/// selected one.
+/// Panels and text on the plate in `Window` and `WindowText`, with `Highlight` on the row under the pointer, the
+/// selected one and a warning band; a warning's words on the panel take `WindowText`.
 fn panels(p: &mut Palette, s: &SysColors) {
     let text: Rgba = s.window_text.into();
     p.pop_bg = s.window.into();
@@ -103,6 +107,8 @@ fn panels(p: &mut Palette, s: &SysColors) {
     }
     p.pop_hover = s.highlight.into();
     p.pop_sel = s.highlight.into();
+    p.warn = s.highlight.into();
+    p.warn_ink = text;
 }
 
 /// The outline of a key under the pointer in high contrast: `Highlight`, as Windows marks hover.

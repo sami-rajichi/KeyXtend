@@ -14,6 +14,7 @@ use kx_module_api::ports::{FileFact, PanelNote, Pasted};
 use super::Actor;
 use crate::insert::{Insert, Sorted, files_of, sort};
 use crate::media::{Look, Why};
+pub(super) use dib::wants_dib;
 use step::Run;
 
 /// Where an insert is.
@@ -73,10 +74,19 @@ pub(super) struct Pasting {
     dib: u32,
 }
 
+impl Pasting {
+    /// A new paste request's round, shared by inserts and lent pastes so their answers never mix.
+    pub(super) const fn next_round(&mut self) -> u32 {
+        self.round = self.round.wrapping_add(1);
+        self.round
+    }
+}
+
 impl Actor {
-    /// Starts inserting `ids` in tick order once their files are looked at; one under way goes on alone.
+    /// Starts inserting `ids` in tick order once their files are looked at; one under way, or a lent paste, goes on
+    /// alone.
     pub(super) fn insert(&mut self, ids: Vec<u64>) {
-        if !matches!(self.paste.state, Paste::Idle) {
+        if !matches!(self.paste.state, Paste::Idle) || !self.lent.idle() {
             return;
         }
         self.redraw |= self.note.take().is_some();
@@ -109,8 +119,12 @@ impl Actor {
         self.step(Run::new(Insert::new(ids, sorted)));
     }
 
-    /// Takes the keyboard's answer: a paste that went out moves its entry up and waits the gap; one that did not stops.
+    /// Takes the keyboard's answer, a lent paste's first: a paste that went out moves its entry up and waits the gap;
+    /// one that did not stops.
     pub(super) fn pasted(&mut self, pasted: Pasted) {
+        if self.lend_pasted(pasted) {
+            return;
+        }
         let asked = matches!(self.paste.state, Paste::Asked { round, .. } if round == pasted.round);
         if !asked {
             return;

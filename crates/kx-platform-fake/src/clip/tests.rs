@@ -1,5 +1,6 @@
 //! The fake clipboard, held to the port: notes reach the live watch at once, the watch and its config are recorded, a
-//! refusal on cue, and files answer as scripted, a path off a drive unchecked.
+//! refusal on cue, files answer as scripted, a path off a drive unchecked, and a marked clipboard is never read
+//! unmarked.
 
 use super::*;
 use kx_module_api::ports::{AppRef, ClipPart, ClipWait};
@@ -228,4 +229,28 @@ fn debug_never_prints_the_held_text() {
     let clip = FakeClipboard::new();
     clip.set_text(Some("zebra-quartz"));
     assert!(!format!("{clip:?}").contains("zebra"));
+}
+
+#[test]
+fn an_unmarked_read_refuses_a_marked_clipboard_unread_and_reads_like_a_take_otherwise() {
+    let clip = FakeClipboard::new();
+    clip.set_marked(Some("hunter2"));
+    assert_eq!(clip.unmarked_text(CFG.wait, 9), Err(ClipError::Marked));
+    assert_eq!(clip.takes(), 0, "nothing read");
+    assert!(
+        clip.text(CFG.wait, 9).is_ok_and(|t| t.is_some()),
+        "a take reads it"
+    );
+    clip.set_text(Some("plain"));
+    let held = clip.unmarked_text(CFG.wait, 9).unwrap();
+    assert_eq!(held.as_ref().map(|t| t.expose().as_str()), Some("plain"));
+    assert_eq!(clip.unmarked_text(CFG.wait, 4), Err(ClipError::TooLong));
+    clip.set_marked(Some("hunter2"));
+    clip.fail_text(ClipError::Busy);
+    assert_eq!(
+        clip.unmarked_text(CFG.wait, 9),
+        Err(ClipError::Busy),
+        "the open fails first"
+    );
+    assert_eq!((clip.takes(), clip.take_cap()), (4, Some(9)));
 }

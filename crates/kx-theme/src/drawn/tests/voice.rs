@@ -20,6 +20,22 @@ fn every_dictation_pair_reads_in_every_theme_and_mode_and_in_high_contrast() {
 }
 
 #[test]
+fn the_amber_dictation_keys_label_and_icon_are_checked_in_every_state() {
+    let t = themes();
+    for sys in [SysLook::default(), hc()] {
+        for (at, v) in views(&t, &sys) {
+            let all = drawn(&v, TEST_ROW_PX);
+            for state in STATES {
+                for name in ["prep_ink on prep", "prep_ink icon on prep"] {
+                    let name = format!("{name}, {state}");
+                    assert!(all.iter().any(|d| d.name == name), "{at}: {name}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn the_dot_meter_and_chip_take_the_mock_ups_colours_and_system_ones_in_high_contrast() {
     let t = themes();
     for sys in [SysLook::default(), hc()] {

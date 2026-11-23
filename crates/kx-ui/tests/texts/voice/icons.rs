@@ -1,9 +1,10 @@
-//! The bar's icons agree with the hub's ids: each bar button has its icon, and each note's icon names a hint.
+//! The bar's icons agree with the hub's ids: each bar button has its icon, as does the key note's Open service, and
+//! each note's icon names a hint.
 
 use super::hints;
 use kx_module_api::ports::BarButton;
 use kx_theme::Themes;
-use kx_ui::i18n::keys::{bar_button_id, bar_hint_id};
+use kx_ui::i18n::keys::{SERVICE_KEY_ICON, bar_button_id, bar_hint_id};
 
 #[test]
 fn every_bar_button_has_its_icon_and_every_note_icon_names_a_hint() {
@@ -12,6 +13,7 @@ fn every_bar_button_has_its_icon_and_every_note_icon_names_a_hint() {
     let ids = BarButton::ALL.map(bar_button_id);
     let missing: Vec<&str> = ids
         .into_iter()
+        .chain([SERVICE_KEY_ICON])
         .filter(|id| !icons.contains_key(*id))
         .collect();
     assert!(missing.is_empty(), "icons.toml [voice] lacks {missing:?}");

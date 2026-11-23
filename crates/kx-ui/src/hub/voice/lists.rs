@@ -2,6 +2,7 @@
 //! and each dictated text with its line and the name readers hear, then each page's footer.
 
 use super::acts::COMPARE;
+use super::cloud;
 use super::panel::{Cx, Page, Sheet, count};
 use super::parts::{Button, Hint, TOP_KEPT, TOP_STEP, Tone, Top, word};
 use super::sheets::{mark, mark_key, tab_id};
@@ -17,16 +18,17 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    CompareRow, CompareRun, CompareSheet, DeviceLabel, HistoryRow, HistorySheet, PanelButton,
-    RunStep, VoiceTab,
+    CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, DeviceLabel, HistoryRow,
+    HistorySheet, PanelButton, RunStep, ServiceName, VoiceTab,
 };
 use serde::Serialize;
 
-/// A model's row while Compare runs.
+/// A model's row while Compare runs, with why a cloud model failed.
 #[derive(Serialize)]
 pub(super) struct RunView {
     name: String,
     mark: Hint,
+    why: Option<String>,
 }
 
 /// A model's row in the results' table; `wrong` is `None`, and `text` shows, wiped on drop, with no set text.
@@ -64,8 +66,10 @@ pub(super) fn compare(cx: &Cx<'_>, c: &CompareSheet) -> Page {
         CompareSheet::Ready {
             models,
             device,
-            recording,
-        } => ready(cx, *models, device, *recording),
+            mic,
+            cloud,
+            send,
+        } => ready(cx, *models, device, *mic, (cloud, send)),
         CompareSheet::Running { at, of, name, rows } => {
             let sheet = Sheet::Running {
                 rows: rows.iter().map(|r| run(t, r)).collect(),
@@ -99,8 +103,15 @@ fn compare_page(cx: &Cx<'_>, sub: String, sheet: Sheet) -> Page {
     Page::new(tab_id(tab), cx.tab(tab), sub, sheet)
 }
 
-/// The set text with the `models` it runs on `device`, and Start, or Cancel while the user reads it.
-fn ready(cx: &Cx<'_>, models: u16, device: &DeviceLabel, recording: bool) -> Page {
+/// The set text with the `models` it runs on `device`, its cloud models and where they send the voice, and Start, or
+/// Cancel while its microphone `mic` opens or reads; only reading asks to read.
+fn ready(
+    cx: &Cx<'_>,
+    models: u16,
+    device: &DeviceLabel,
+    mic: CompareMic,
+    (picks, send): (&[CompareCloud], &[ServiceName]),
+) -> Page {
     let t = cx.t;
     let line = t.voice_counted(
         VOICE_READY,
@@ -116,19 +127,21 @@ fn ready(cx: &Cx<'_>, models: u16, device: &DeviceLabel, recording: bool) -> Pag
         intro: t.text(intro),
         text: cx.read.map(str::to_owned),
         line,
-        recording: recording.then(|| t.text(VOICE_RECORDING)),
+        recording: (mic == CompareMic::Reading).then(|| t.text(VOICE_RECORDING)),
+        picks: picks.iter().map(|p| cloud::pick(t, p)).collect(),
+        send: cloud::send(t, send),
     };
     let mut page = compare_page(cx, cx.for_lang(), sheet);
     let start = Button::new(COMPARE, "", 0, t.text(VOICE_START)).on(models > 0);
-    page.foot = if recording {
-        vec![cx.button(PanelButton::Cancel)]
-    } else {
+    page.foot = if mic == CompareMic::Closed {
         vec![start.tone(Tone::Primary)]
+    } else {
+        vec![cx.button(PanelButton::Cancel)]
     };
     page
 }
 
-/// A model's turn while Compare runs.
+/// A model's turn while Compare runs, with why a cloud model failed.
 fn run(t: &I18n, r: &CompareRun) -> RunView {
     let mark = match r.step {
         RunStep::Done { wait_ms } => {
@@ -143,6 +156,7 @@ fn run(t: &I18n, r: &CompareRun) -> RunView {
     RunView {
         name: clean(r.name.expose()),
         mark,
+        why: r.why.as_ref().map(|w| t.voice_cloud(w)),
     }
 }
 

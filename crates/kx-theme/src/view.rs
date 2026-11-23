@@ -22,7 +22,7 @@ use crate::theme::Theme;
 /// What the user chose for the look: the `[ui]` settings the look view reads.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LookChoice {
-    /// Theme id from `themes.toml`.
+    /// Theme id from `themes/*.toml`.
     pub theme: String,
     /// Light, soft dark or following the system.
     pub mode: ModeChoice,

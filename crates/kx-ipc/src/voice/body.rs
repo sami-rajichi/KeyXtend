@@ -1,14 +1,11 @@
 //! The bodies both voice sides send: names, paths, a model and its target, a setup, a sound piece and a device. Each
 //! field's length is checked first, then its content and range.
 
-use super::wire::{DEVICES, NAME, PATH, SILENCE_OFF, SOUND, TAG};
+use super::wire::{DEVICES, NAME, PATH, Pieces, SILENCE_OFF, TAG};
 use super::{Device, DeviceKind, Model, Setup, SoundPiece, Target};
 use crate::code::Code;
 use crate::error::IpcError;
-use crate::limits::{
-    LEVEL_HZ, MAX_SOUND_PIECES, PAD_MS, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
-    THREADS,
-};
+use crate::limits::{LEVEL_HZ, PAD_MS, PIECE_S, RECORD_MAX_S, SILENCE_STOP_S, THREADS};
 use crate::rules::{self, ok_if, within};
 use crate::wiped::Wiped;
 use crate::wire::{Payload, Sink};
@@ -146,29 +143,31 @@ pub(crate) fn read_setup<R: Read + ?Sized>(
     })
 }
 
-/// `index` when it is below `MAX_SOUND_PIECES`.
-fn sound_index(index: u16) -> Result<u16, IpcError> {
-    ok_if(usize::from(index) < MAX_SOUND_PIECES)?;
+/// `index` when it is below `most`, as every sound piece's index is.
+pub(crate) fn sound_index(index: u16, most: usize) -> Result<u16, IpcError> {
+    ok_if(usize::from(index) < most)?;
     Ok(index)
 }
 
-/// Sends a sound piece: its index, whether it is the last, then its whole samples.
-pub(crate) fn put_sound(s: &mut dyn Sink, piece: &SoundPiece<'_>) -> Result<(), IpcError> {
-    s.u16(sound_index(piece.index)?)?;
+/// Sends a piece of `run`: its index, whether it is the last, then its whole samples.
+pub(crate) fn put_sound(
+    s: &mut dyn Sink,
+    piece: &SoundPiece<'_>,
+    run: Pieces,
+) -> Result<(), IpcError> {
+    s.u16(sound_index(piece.index, run.most)?)?;
     s.byte(u8::from(piece.last))?;
-    s.field(SOUND, &piece.bytes)?;
-    ok_if(piece.bytes.len().is_multiple_of(SAMPLE_BYTES))
+    s.samples(run.spec, &piece.bytes)
 }
 
-/// Reads a sound piece into a wiped buffer, refusing a part sample before its bytes are read.
+/// Reads a piece of `run` into a wiped buffer, refusing a part sample before its bytes.
 pub(crate) fn read_sound<R: Read + ?Sized>(
     p: &mut Payload<'_, R>,
+    run: Pieces,
 ) -> Result<SoundPiece<'static>, IpcError> {
-    let index = sound_index(p.u16()?)?;
+    let index = sound_index(p.u16()?, run.most)?;
     let last = p.flag()?;
-    let n = p.count(SOUND)?;
-    ok_if(n.is_multiple_of(SAMPLE_BYTES))?;
-    let bytes = Wiped::Kept(p.wiped(n)?);
+    let bytes = Wiped::Kept(p.samples(run.spec)?);
     Ok(SoundPiece { index, last, bytes })
 }
 

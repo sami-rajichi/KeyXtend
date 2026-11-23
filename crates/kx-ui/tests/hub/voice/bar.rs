@@ -1,11 +1,13 @@
 //! The bar as QML reads it: each state's words in the keyboard's language, its buttons in one order in every language
-//! with the dimmed ones in place, its text with its direction or dots, and a note with the action it names.
+//! with the dimmed ones in place, its text with its direction or dots, a note with the action it names, and a
+//! service's card warning while the first dictation to it listens.
 
 use super::{arabic, button, buttons, english, heard, json, listening_bar, page};
 use crate::Rig;
 use crate::texts::{rig, switch};
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceText,
+    BarButton, BarHint, BarNote, BarPlace, BarText, Fact, FactArg, FactValue, Listening, VoiceBar,
+    VoiceText,
 };
 use kx_module_api::{Redacted, Zeroizing};
 use kx_ui::VoiceWake;
@@ -43,6 +45,12 @@ fn listening_shows_the_language_and_the_timer_between_cancel_and_stop() {
     assert_eq!(bar["elapsedMs"], 1200);
     assert_eq!(bar["waveMs"], 300);
     assert_eq!(bar["hint"], Value::Null);
+    let quiet = "Nothing heard yet";
+    assert_eq!(
+        bar["quiet"], quiet,
+        "the hint's words, so the bar holds one width"
+    );
+    assert_eq!(bar["said"], "Listening…", "what readers hear");
     assert_eq!(ids(&bar), want(&[("cancel", true), ("stop", true)]));
     let [cancel, stop] = [0, 1].map(|i| buttons(&bar["buttons"])[i].clone());
     assert_eq!(cancel, button("bar", "cancel", "Cancel", true, "plain"));
@@ -60,13 +68,42 @@ fn listening_that_hears_nothing_yet_says_so_and_keeps_listening() {
         elapsed_ms: 6000,
         nothing: true,
         wave_ms: 0,
+        warn: None,
     }));
     assert_eq!(bar["hint"], "Nothing heard yet");
+    assert_eq!(bar["said"], "Nothing heard yet", "readers hear the hint");
     assert_eq!(bar["lang"]["rtl"], true);
     assert_eq!(
         bar["lang"]["name"], "Arabic",
         "named in the keyboard's words"
     );
+}
+
+#[test]
+fn listening_carries_the_cards_warning_in_full_while_the_first_dictation_to_its_service_listens() {
+    let switch = FactArg {
+        name: "switch".to_owned(),
+        value: FactValue::Text("Data use".to_owned()),
+    };
+    let warn = Fact {
+        id: "trains".to_owned(),
+        args: vec![switch],
+        warn: true,
+    };
+    let VoiceBar::Listening(plain) = listening_bar() else {
+        panic!("a listening bar")
+    };
+    let warned = VoiceBar::Listening(Listening {
+        warn: Some(warn),
+        ..plain
+    });
+    let text =
+        "Trains its models on your voice by default. To stop it, turn off this switch: Data use";
+    let bar = bar_json(warned);
+    assert_eq!(bar["warn"], text);
+    let said = format!("Listening…, {text}");
+    assert_eq!(bar["said"], said.as_str(), "readers hear it after the word");
+    assert_eq!(bar_json(listening_bar())["warn"], Value::Null, "none");
 }
 
 #[test]

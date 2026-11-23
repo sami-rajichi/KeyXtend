@@ -2,15 +2,15 @@
 //! hands each message to the actor as its thread would and runs the helpers' jobs on its own thread, so no test needs
 //! a thread or a sleep.
 
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, PanelNote, PasteAsk, Pasted,
-    PictureRun, Pictures, SealedShelf,
+    AppRef, BlobName, ClipAct, ClipNote, ClipPart, PanelNote, Pasted, PictureRun, Pictures,
+    SealedShelf,
 };
-use kx_module_api::{Bus, ModuleCx, Subscription};
+use kx_module_api::{Bus, Clock, ModuleCx, Subscription};
 use kx_test_support::host::FakeHost;
 
 use super::super::paste::Paste;
@@ -23,6 +23,8 @@ use crate::media::{self, Look, Task};
 use crate::settings::ClipSettings;
 use crate::store::Store;
 
+mod heard;
+
 /// The rows the tests' ui shows.
 pub(super) const ROWS: u8 = 5;
 
@@ -30,7 +32,7 @@ pub(super) const ROWS: u8 = 5;
 pub(super) struct Rig {
     pub fakes: Fakes,
     pub settings: ClipSettings,
-    actor: Actor,
+    pub actor: Actor,
     notes: Receiver<Msg>,
     tasks: Receiver<Task>,
     looks: Receiver<Look>,
@@ -59,20 +61,7 @@ impl Rig {
         let mut store = Store::new(Arc::new(fakes.shelf.clone()), settings.store_config());
         let loaded = store.load().unwrap();
         let (tx, notes) = mpsc::channel();
-        let (watch, copies) = Watched::start(&fakes.clip, &settings, &tx).unwrap();
-        let ((media, tasks), (files, looks)) = (mpsc::channel(), mpsc::channel());
-        let ports = Ports {
-            bus: ModuleCx::new(&mut host).bus(),
-            clip: Arc::new(fakes.clip.clone()),
-            clock: Arc::new(fakes.clock.clone()),
-            calendar: Arc::new(fakes.calendar.clone()),
-            shelf: Arc::new(fakes.shelf.clone()),
-            writer: Arc::new(fakes.writer.clone()),
-            media,
-            files,
-            copies,
-            watch: Some(watch),
-        };
+        let (ports, tasks, looks) = ports(&fakes, &mut host, &settings, &tx);
         let heard = Arc::default();
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);
         let mut rig = Self {
@@ -204,75 +193,6 @@ impl Rig {
         self.send(Msg::Quit);
     }
 
-    /// Everything published so far.
-    pub fn all(&self) -> Vec<Heard> {
-        self.heard.lock().unwrap().clone()
-    }
-
-    /// Every published event `pick` takes, as it says.
-    fn picked<T>(&self, pick: impl Fn(Heard) -> Option<T>) -> Vec<T> {
-        self.all().into_iter().filter_map(pick).collect()
-    }
-
-    /// Every view published.
-    pub fn views(&self) -> Vec<ClipView> {
-        self.picked(|h| match h {
-            Heard::View(v) => Some(v),
-            _ => None,
-        })
-    }
-
-    /// The last page published.
-    pub fn page(&self) -> ClipPage {
-        self.views().last().unwrap().0.as_ref().clone()
-    }
-
-    /// The last page's titles.
-    pub fn titles(&self) -> Vec<String> {
-        let rows = self.page().rows;
-        rows.iter().map(|r| r.title.expose().clone()).collect()
-    }
-
-    /// Every `ClipPanel` published, as its flag.
-    pub fn panels(&self) -> Vec<bool> {
-        self.picked(|h| match h {
-            Heard::Panel(p) => Some(p.open),
-            _ => None,
-        })
-    }
-
-    /// Every `ClipLine` published, as its line.
-    pub fn lines(&self) -> Vec<kx_module_api::ports::PanelLine> {
-        self.picked(|h| match h {
-            Heard::Line(l) => Some(l),
-            _ => None,
-        })
-    }
-
-    /// Every `HistoryWanted` published, as its flag.
-    pub fn wanted(&self) -> Vec<bool> {
-        self.picked(|h| match h {
-            Heard::Wanted(w) => Some(w.on),
-            _ => None,
-        })
-    }
-
-    /// Every paste request.
-    pub fn pastes(&self) -> Vec<PasteAsk> {
-        self.picked(|h| match h {
-            Heard::Paste(p) => Some(p),
-            _ => None,
-        })
-    }
-
-    /// Every notice key published.
-    pub fn notices(&self) -> Vec<&'static str> {
-        self.picked(|h| match h {
-            Heard::Notice(n) => Some(n.key),
-            _ => None,
-        })
-    }
-
     /// The blob names in `folder`.
     pub fn names(&self, folder: &str) -> Vec<String> {
         let folder = BlobName::new(folder).unwrap();
@@ -291,6 +211,31 @@ impl Rig {
     pub fn lose_files(&mut self) {
         self.looks = mpsc::channel().1;
     }
+}
+
+/// The actor's ports on `fakes` and `host`'s bus, its watch telling `tx`, with the queues of its media tasks and looks.
+fn ports(
+    fakes: &Fakes,
+    host: &mut FakeHost,
+    settings: &ClipSettings,
+    tx: &Sender<Msg>,
+) -> (Ports, Receiver<Task>, Receiver<Look>) {
+    let clock: Arc<dyn Clock> = Arc::new(fakes.clock.clone());
+    let (watch, copies) = Watched::start(&fakes.clip, settings, tx, &clock).unwrap();
+    let ((media, tasks), (files, looks)) = (mpsc::channel(), mpsc::channel());
+    let ports = Ports {
+        bus: ModuleCx::new(host).bus(),
+        clip: Arc::new(fakes.clip.clone()),
+        clock,
+        calendar: Arc::new(fakes.calendar.clone()),
+        shelf: Arc::new(fakes.shelf.clone()),
+        writer: Arc::new(fakes.writer.clone()),
+        media,
+        files,
+        copies,
+        watch: Some(watch),
+    };
+    (ports, tasks, looks)
 }
 
 /// The name of today's folder in the rig.

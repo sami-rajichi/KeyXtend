@@ -4,11 +4,11 @@
 use super::*;
 use crate::drawn::voicepanel::{
     BAND, BAND_ICON, LIT_PROGRESS, MARK, MARK_ICON, MARK_LIT, MARK_OUT, PROGRESS, SWITCH_OFF,
-    SWITCH_ON,
+    SWITCH_ON, WARN_BAND, WARN_WORDS,
 };
 
 /// Every pair the panel adds.
-const PAIRS: [&str; 10] = [
+const PAIRS: [&str; 12] = [
     BAND,
     BAND_ICON,
     LIT_PROGRESS,
@@ -19,6 +19,8 @@ const PAIRS: [&str; 10] = [
     PROGRESS,
     SWITCH_OFF,
     SWITCH_ON,
+    WARN_BAND,
+    WARN_WORDS,
 ];
 
 #[test]
@@ -56,6 +58,28 @@ fn a_mark_takes_the_chip_colours_and_high_contrast_draws_it_in_button_text() {
                 assert_eq!(find(PROGRESS).bg, p.pop_bg, "{at}: a window track");
             }
             assert_eq!(find(PROGRESS).ink, p.ring, "{at}");
+        }
+    }
+}
+
+#[test]
+fn a_warning_band_reads_in_the_panels_ink_and_its_words_in_warn_ink() {
+    let t = themes();
+    for sys in [SysLook::default(), hc()] {
+        for (at, v) in views(&t, &sys) {
+            let (all, p) = (drawn(&v, TEST_ROW_PX), &v.palette);
+            let find = |n: &str| all.iter().find(|d| d.name == n).cloned().expect(n);
+            let ink = if v.contrast { v.sel_ink } else { p.pop_ink };
+            assert_eq!(
+                (find(WARN_BAND).ink, find(WARN_BAND).bg),
+                (ink, p.warn),
+                "{at}"
+            );
+            assert_eq!(
+                (find(WARN_WORDS).ink, find(WARN_WORDS).bg),
+                (p.warn_ink, p.pop_bg),
+                "{at}"
+            );
         }
     }
 }

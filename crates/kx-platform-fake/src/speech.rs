@@ -6,7 +6,7 @@ use kx_module_api::ports::{
     CheckAsk, CheckDone, Device, FactsAsk, JobLimits, ModelFacts, Speech, SpeechAsk, SpeechError,
     SpeechNote, SpeechRun,
 };
-use kx_module_api::{Redacted, Zeroizing};
+use kx_module_api::{Redacted, SecretBytes, Zeroizing};
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -39,17 +39,20 @@ pub enum SpeechCall {
     Again,
     /// `SpeechRun::keep`.
     Keep,
+    /// `SpeechRun::pieces`.
+    Pieces,
 }
 
 impl SpeechCall {
     /// Whether the port lets this call return `error`, besides its ask's own refusals.
     fn returns(self, error: SpeechError) -> bool {
-        use SpeechError::{Down, Gone, NoSound, Timeout};
+        use SpeechError::{Down, Gone, Internal, NoSound, Timeout};
         match self {
             Self::Open => matches!(error, Down { .. }),
             Self::Stop | Self::Cancel => matches!(error, Gone | Timeout),
             Self::Again => matches!(error, NoSound | Gone | Timeout | Down { .. }),
             Self::Keep => matches!(error, NoSound | Gone | Timeout),
+            Self::Pieces => matches!(error, NoSound | Internal),
         }
     }
 }
@@ -67,6 +70,12 @@ pub struct RunLog {
     pub cancels: usize,
     /// `keep` calls.
     pub keeps: usize,
+    /// `pieces` calls that handed the speech over.
+    pub pieces: usize,
+    /// `pieces` calls refused as no `Done` was told yet, which asked for the speech too early.
+    pub early: usize,
+    /// `Done` notes told; after one, a listen-only run's speech can be handed over.
+    pub dones: usize,
     /// The recording is held: from the open until a close, a `Wiped` note or a death.
     pub held: bool,
     /// The worker died: a `Gone` or `Timeout` was told as a fault or returned by a call.
@@ -84,6 +93,9 @@ impl RunLog {
             stops: 0,
             cancels: 0,
             keeps: 0,
+            pieces: 0,
+            early: 0,
+            dones: 0,
             held: true,
             dead: false,
             closed: false,
@@ -93,6 +105,13 @@ impl RunLog {
     /// Whether the run still hears notes.
     fn live(&self) -> bool {
         !self.closed && !self.dead
+    }
+
+    /// Whether `pieces` hands the speech over: a listen-only run that never took `again` or Cancel, after its `Done`,
+    /// still holding the recording.
+    fn hands_over(&self) -> bool {
+        let alone = self.ask.model.is_none() && self.agains.is_empty();
+        alone && self.dones > 0 && self.cancels == 0 && self.held
     }
 }
 
@@ -141,8 +160,13 @@ impl FakeSpeech {
 
     /// Sets the recording `keep` hands back, in these pieces; none until set.
     pub fn set_sound(&self, pieces: Vec<Vec<u8>>) {
-        let sound = pieces.into_iter().map(|p| Redacted::new(Zeroizing::new(p)));
-        lock(&self.shared.log).sound = sound.collect();
+        lock(&self.shared.log).sound = secret_bytes(pieces);
+    }
+
+    /// Sets the speech a listen-only run's `pieces` hands over once its `Done` was told, in these pieces; none until
+    /// set, as a run that heard no speech.
+    pub fn set_speech(&self, pieces: Vec<Vec<u8>>) {
+        lock(&self.shared.log).speech = secret_bytes(pieces);
     }
 
     /// Each run opened, in order, with what it was asked.
@@ -159,6 +183,12 @@ impl FakeSpeech {
         let (log, _) = waited.unwrap_or_else(PoisonError::into_inner);
         until(&log.runs)
     }
+}
+
+/// `pieces` as secret bytes, wiped on drop.
+fn secret_bytes(pieces: Vec<Vec<u8>>) -> Vec<SecretBytes> {
+    let wiped = pieces.into_iter().map(|p| Redacted::new(Zeroizing::new(p)));
+    wiped.collect()
 }
 
 /// Shows the counts, never a text or the sound.

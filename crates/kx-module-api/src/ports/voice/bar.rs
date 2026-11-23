@@ -1,9 +1,10 @@
-//! What the dictation bar shows (design "The bar"): its place, its state, its hint and its text. Text stays redacted
-//! and is wiped on drop, and a password box's text never reaches the ui.
+//! What the dictation bar shows (design "The bar"): its place, its state, its hint, its text and the chip naming what
+//! takes the voice. Text stays redacted and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
-use super::panel::VoicePanel;
-use crate::Secret;
+use super::panel::{Fact, ServiceName, Unavailable, VoicePanel};
+use crate::ports::LocalTime;
+use crate::{Redacted, Secret};
 use serde::{Deserialize, Serialize};
 
 listed! {
@@ -60,6 +61,8 @@ pub struct Listening {
     pub nothing: bool,
     /// How long the wave smooths the level over, in ms (`wave_ms`).
     pub wave_ms: u16,
+    /// The service's card warning, a reminder while the first dictation to it at its terms number listens.
+    pub warn: Option<Fact>,
 }
 
 /// The Text state: the text, a hint under it, and Undo insert, which stays in its place dimmed once it cannot act.
@@ -155,6 +158,99 @@ pub enum BarHint {
     Folder,
     /// A download failed, stalled or met a host its row does not list.
     Net,
+    /// A cloud dictation's voice brought no text back, or never left (ADR-0047): the recording stays for Try again and
+    /// "Use the local model".
+    Cloud {
+        /// Why.
+        why: CloudWhy,
+        /// "Use the local model".
+        local: LocalUse,
+    },
+}
+
+/// When a used free allowance renews: its local wall time, and whether that falls on the day the note came.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Renewal {
+    /// The local wall time, in the offset in force then, so a summer-time change between shows its own hour.
+    pub at: LocalTime,
+    /// It falls on the day the note came, so the clock time alone names it.
+    pub today: bool,
+}
+
+/// Why a cloud dictation's voice brought no text back, or never left; each names one line of the bar's cloud note.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CloudWhy {
+    /// The network failed, the service is down, or it gave no answer within `net_wait_s`.
+    Net,
+    /// The service refused the key, or none could be read, as one removed or damaged.
+    Key,
+    /// The account has no credit left.
+    Credit,
+    /// The service asks for a step on its site first, such as a verification, a payment method or a spending cap.
+    Account,
+    /// The free allowance is used up.
+    Allowance {
+        /// When it renews, from when the fault came, when the service tells.
+        renews_at: Option<Renewal>,
+    },
+    /// Too many requests, still after one wait.
+    Rate,
+    /// A piece was too big for the service.
+    TooBig,
+    /// The service's model does not take this language's code, such as a regional one.
+    Language(VoiceLang),
+    /// The service is not offered in the user's country or region.
+    Region,
+    /// The service sent no text.
+    Empty,
+    /// The reply was not the service's, such as a hotspot's sign-in page.
+    Strange,
+    /// The service's terms changed since they were confirmed, so nothing is sent until they are confirmed again.
+    Terms,
+    /// The service was switched off, so nothing was sent.
+    Off,
+    /// The language's pick moved to another service or to a local model, so nothing was sent.
+    Moved,
+    /// A password box never goes to a cloud service, and no local model is ready for it.
+    NoLocal,
+    /// The cloud worker failed.
+    Fault,
+    /// The pick's model cannot be used now, for this reason, so nothing is sent until the user changes it.
+    Unavailable(Unavailable),
+}
+
+impl CloudWhy {
+    /// True for a note the service's own card or key page settles, so its bar offers Open service (owner, 2026-11-20).
+    #[must_use]
+    pub const fn opens(&self) -> bool {
+        matches!(
+            self,
+            Self::Key | Self::Terms | Self::Account | Self::Allowance { .. } | Self::Off
+        )
+    }
+}
+
+/// "Use the local model" on a cloud note, which writes the held recording with the language's local model.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum LocalUse {
+    /// A local model is ready, so the button acts.
+    Ready,
+    /// None is ready: the button stays dimmed, and Download fetches the language's model.
+    Download {
+        /// The download's size, in bytes.
+        bytes: u64,
+    },
+    /// None is ready, or the recording is gone, so the button stays dimmed.
+    Dimmed,
+}
+
+/// The bar's chip while a dictation prepares, listens or writes: what takes the voice.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BarMark {
+    /// The cloud service the voice goes to at Stop, which a cloud note keeps naming.
+    Cloud(ServiceName),
+    /// The model on this PC that writes it, by its short name; a user's own file name stays redacted.
+    Device(Redacted<String>),
 }
 
 /// Everything the bar and the panel draw.
@@ -170,4 +266,6 @@ pub struct VoicePage {
     pub place: BarPlace,
     /// The start and stop sounds play (`sounds`).
     pub sounds: bool,
+    /// What takes the voice; while set, the bar shows its chip with its picture and name.
+    pub mark: Option<BarMark>,
 }

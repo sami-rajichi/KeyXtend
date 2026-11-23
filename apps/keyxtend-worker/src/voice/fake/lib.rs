@@ -4,6 +4,7 @@
 use crate::voice::library::{Failed, Found, Library, Loaded, Place, Stop};
 use kx_ipc::DeviceKind;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use zeroize::Zeroizing;
 
@@ -27,6 +28,8 @@ pub struct Script {
     pub card_text: Option<String>,
     /// A load panics, as a broken library might.
     pub panic: bool,
+    /// The next load waits for one message here, as a slow first load does; a test sends it, so nothing sleeps.
+    pub gate: Option<Receiver<()>>,
     /// Its starts, loads with their threads, and runs with their length and language.
     pub starts: usize,
     pub loads: Vec<(Place, usize)>,
@@ -75,6 +78,10 @@ impl Library for FakeLib {
     }
 
     fn load(&self, _: &Path, place: &Place, threads: usize) -> Result<FakeModel, Failed> {
+        let gate = self.script().gate.take();
+        if let Some(gate) = gate {
+            let _ = gate.recv();
+        }
         let mut s = self.script();
         s.loads.push((place.clone(), threads));
         assert!(!s.panic, "the fake library panics");

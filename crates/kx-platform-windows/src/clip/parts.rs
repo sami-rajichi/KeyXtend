@@ -181,6 +181,45 @@ pub(crate) fn until_nul(bytes: &[u8]) -> &[u8] {
     bytes.split(|&b| b == 0).next().unwrap_or(bytes)
 }
 
+/// The signature every PNG starts with.
+pub(crate) const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+/// The type of the chunk that ends a PNG.
+pub(crate) const PNG_END: &[u8] = b"IEND";
+/// Bytes in a PNG chunk's length, before its type.
+const CHUNK_LEN: usize = 4;
+/// Bytes in a PNG chunk's type, before its data.
+const CHUNK_TYPE: usize = 4;
+/// Bytes in a PNG chunk's check, after its data.
+pub(crate) const CHUNK_CHECK: usize = 4;
+
+/// `bytes` up to the end of their PNG's end chunk, as the clipboard's memory may run past it; all of them when they
+/// do not read as a whole PNG.
+pub(crate) fn png_end(bytes: &[u8]) -> &[u8] {
+    png_len(bytes).map_or(bytes, |len| &bytes[..len])
+}
+
+/// Where the PNG in `bytes` ends, walking its chunks; `None` without its signature, or when a chunk runs past the
+/// bytes before the end chunk.
+fn png_len(bytes: &[u8]) -> Option<usize> {
+    let mut at = PNG_SIGNATURE.len();
+    if !bytes.starts_with(PNG_SIGNATURE) {
+        return None;
+    }
+    loop {
+        let type_at = at + CHUNK_LEN;
+        let len: [u8; CHUNK_LEN] = bytes.get(at..type_at)?.try_into().ok()?;
+        let data = usize::try_from(u32::from_be_bytes(len)).ok()?;
+        let next = data.checked_add(type_at + CHUNK_TYPE + CHUNK_CHECK)?;
+        if next > bytes.len() {
+            return None;
+        }
+        if bytes.get(type_at..type_at + CHUNK_TYPE)? == PNG_END {
+            return Some(next);
+        }
+        at = next;
+    }
+}
+
 /// `text` in UTF-16 with a closing NUL, as native-order bytes.
 pub(crate) fn wide_z(text: &str) -> Vec<u8> {
     text.encode_utf16()

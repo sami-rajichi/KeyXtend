@@ -6,18 +6,23 @@ mod act;
 mod bar;
 mod panel;
 
-pub use act::{BarButton, FetchButton, PanelButton, VoiceClick};
+pub use act::{BarButton, CloudButton, FetchButton, PanelButton, VoiceClick};
 pub use bar::{
-    BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceLang, VoicePage, VoiceText,
+    BarHint, BarMark, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, Renewal, VoiceBar,
+    VoiceLang, VoicePage, VoiceText,
 };
 pub use panel::{
-    CardCheck, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
-    DeviceRow, DeviceSheet, Ends, FailedCheck, FetchState, FolderLine, FolderList, HistoryRow,
-    HistorySheet, ModelRow, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, RunStep,
-    VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
+    AddressFault, CardCheck, CardPart, CloudBand, CloudCard, CloudLine, CloudRow, CloudSheet,
+    CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel,
+    DeviceName, DeviceRow, DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchState,
+    FolderLine, FolderList, HistoryRow, HistorySheet, KeyCheck, ModelRow, ModelSide, ModelState,
+    ModelsSheet, OptionRow, OptionUnit, OptionValue, PasteFault, RunStep, ServiceMark, ServiceName,
+    ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
 };
 
+use super::{PanelKey, PanelLine};
 use crate::{Capability, Event, Secret};
+use serde::Serialize;
 use std::sync::Arc;
 
 /// The gate of every event here but `VoiceLevel`.
@@ -32,17 +37,18 @@ impl Event for VoiceKey {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the voice module: whether the microphone is open, so the keyboard lights the key; told at each change and on
-/// `VoiceAsk`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct VoiceLit {
-    /// The microphone is open.
-    pub rec: bool,
-}
-
-impl VoiceLit {
-    /// The key unlit: before the module speaks, and after it stops or fails.
-    pub const OFF: Self = Self { rec: false };
+/// From the voice module: the Dictation key's light, so the keyboard draws it; told at each change and on `VoiceAsk`.
+/// The face's state writes it by its lowercase name.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceLit {
+    /// Unlit: before the module speaks, and after a dictation stops, ends or fails.
+    #[default]
+    Off,
+    /// Amber: a dictation started and the microphone is not open yet.
+    Prep,
+    /// Red: the microphone is open.
+    Rec,
 }
 
 impl Event for VoiceLit {
@@ -133,6 +139,36 @@ pub struct TextDone {
 
 impl Event for TextDone {
     const NAME: &'static str = "text-done";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the keyboard: a key clicked while the Voice panel's line is aimed at, which goes to that line instead of the
+/// app (ADR-0049).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceLineKey(pub PanelKey);
+
+impl Event for VoiceLineKey {
+    const NAME: &'static str = "voice-line-key";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the voice module: the line the Voice panel's page shows, `None` while the panel is closed, told after the view
+/// as it changes and on `VoiceAsk`. A key, address or model line is `PanelLine::Private`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceLine(pub Option<PanelLine>);
+
+impl Event for VoiceLine {
+    const NAME: &'static str = "voice-line";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the keyboard: the clipboard or Quick-fill panel opened, so the Voice panel closes as its Close does; it never
+/// opens one, so a late one is harmless.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct VoiceClose;
+
+impl Event for VoiceClose {
+    const NAME: &'static str = "voice-close";
     const CAPABILITY: Option<Capability> = GATE;
 }
 

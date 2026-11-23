@@ -7,17 +7,18 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, FieldRun, FieldWatchKey, FolderRevealKey, LayoutChanged,
-    ModelFilesKey, PointerPressed, PressAsker, PressesAsk, PressesWanted, SessionRun,
-    SessionWatchKey, SpeechKey, TextDone, Typed, VoiceAct, VoiceAsk, VoiceBar, VoiceKey, VoiceLit,
-    VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
+    CalendarKey, ClipTaken, ClipboardWriterKey, CloudSpeechKey, FieldRun, FieldWatchKey,
+    FolderRevealKey, LayoutChanged, ModelFilesKey, PointerPressed, PressAsker, PressesAsk,
+    PressesWanted, SessionRun, SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct,
+    VoiceAsk, VoiceBar, VoiceClose, VoiceKey, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen,
+    VoicePage, VoiceShelfKey, VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, NoticeArg, args, keys,
 };
 
 use crate::actor::{Actor, Job, Msg, Ports, typer};
-use crate::settings::{PICKS, VoiceSettings};
+use crate::settings::{PARKED, PICKS, SERVICES, VoiceSettings};
 use crate::{ID, MANIFEST};
 
 /// The actor thread's name, as a debugger shows it.
@@ -105,23 +106,44 @@ impl Drop for VoiceModule {
     }
 }
 
-/// `[voice]` with each bad pick dropped alone (edge case 19): the settings notice names it, and the rest is written
-/// back so the next start finds it gone.
-fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
+/// `[voice]` with each bad service entry and pick dropped alone (edge case 19): the settings notice names it, and the
+/// rest is written back so the next start finds it gone.
+pub(crate) fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     let mut settings = cx.settings::<VoiceSettings>()?;
-    let dropped = settings.drop_bad_picks();
+    let before = (
+        settings.services.len(),
+        settings.parked.len(),
+        settings.picks.len(),
+    );
+    let dropped = settings.drop_bad();
     if dropped.is_empty() {
         return Ok(settings);
     }
-    if let Ok(picks) = toml::Value::try_from(&settings.picks) {
-        // A failed save keeps the repair for this run, and the kernel tells the user about the file.
-        let _ = cx.settings_handle().set(PICKS, picks);
+    let mut kept = toml::Table::new();
+    if before.0 != settings.services.len() {
+        keep(&mut kept, SERVICES, settings.services_value());
     }
+    if before.1 != settings.parked.len() {
+        keep(&mut kept, PARKED, settings.parked_value());
+    }
+    if before.2 != settings.picks.len() {
+        let picks = toml::Value::try_from(&settings.picks).ok();
+        keep(&mut kept, PICKS, picks);
+    }
+    // One save, so a stop never leaves half the repair; a failed one keeps it for this run, and the kernel tells the user.
+    let _ = cx.settings_handle().set_all(kept);
     let mut notice = Notice::about(keys::SETTINGS_RESET, ID);
     notice.args.push((args::KEYS, NoticeArg::List(dropped)));
     // A notice needs no gate, so none is refused.
     let _ = cx.bus().publish(&notice);
     Ok(settings)
+}
+
+/// Adds `value` under `key` to the keys the repair writes back.
+fn keep(kept: &mut toml::Table, key: &str, value: Option<toml::Value>) {
+    if let Some(value) = value {
+        kept.insert(key.to_owned(), value);
+    }
 }
 
 /// The actor's ports: every service through the manifest's gates, the watches telling the inbox, and the typer.
@@ -136,6 +158,14 @@ fn ports(
     let reveal = cx.service::<FolderRevealKey>()?;
     let shelf = cx.service::<VoiceShelfKey>()?;
     let calendar = cx.service::<CalendarKey>()?;
+    // The app provides cloud speech, which the manifest requires; a host that refuses the lookup still dictates with
+    // local models, and each upload then ends with the fault note.
+    let cloud = cx.service::<CloudSpeechKey>();
+    let cloud = cloud.inspect_err(|error| tracing::warn!(%error, "cloud speech is not available"));
+    let cloud = cloud.ok();
+    let link = cx.service::<WebLinkKey>();
+    let link = link.inspect_err(|error| tracing::warn!(%error, "links cannot be opened"));
+    let link = link.ok();
     let field = field_watch(cx, settings, tx)?;
     let session = session_watch(cx, tx)?;
     let typist = typer(cx.bus()).ok_or(ModuleError::Start(NO_TYPER))?;
@@ -148,6 +178,8 @@ fn ports(
         clip,
         reveal,
         shelf,
+        cloud,
+        link,
         field,
         session,
         handle: cx.settings_handle(),
@@ -185,7 +217,7 @@ fn session_watch(
     Ok(run.ok())
 }
 
-/// Shows no bar and a dark key, as an idle or failed module does.
+/// Shows no bar, a dark key and no panel line, as an idle or failed module does.
 fn hide(bus: &Bus, settings: &VoiceSettings) {
     let page = VoicePage {
         round: HIDDEN_ROUND,
@@ -193,10 +225,12 @@ fn hide(bus: &Bus, settings: &VoiceSettings) {
         panel: None,
         place: settings.bar_place(),
         sounds: settings.sounds,
+        mark: None,
     };
     // The module holds `Voice`, which these events need, or its start would have failed.
     let _ = bus.publish(&VoiceView::new(page));
-    let _ = bus.publish(&VoiceLit::OFF);
+    let _ = bus.publish(&VoiceLit::Off);
+    let _ = bus.publish(&VoiceLine(None));
 }
 
 /// The actor's thread. A panic there hides the bar, darkens the key, lets presses go and tells the user; the runs it
@@ -221,15 +255,22 @@ fn detached(job: Job) -> bool {
         .is_ok()
 }
 
-/// Hands the keyboard's, the ui's, the layouts' and the mouse module's events to the actor; a typed key or a click
-/// outside our windows reaches it only as that, never with its text.
+/// Hands the keyboard's, the ui's, the layouts', the clipboard history's and the mouse module's events to the actor; a
+/// typed key or a click outside our windows reaches it only as that, never with its text, and a clipboard answer only
+/// when it names this module. A key for the panel's line keeps its letters redacted (ADR-0049).
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &VoiceKey| Some(Msg::Key))?;
     relay(cx, tx, |e: &VoiceAct| Some(Msg::Act(e.clone())))?;
     relay(cx, tx, |_: &VoiceOpen| Some(Msg::Open))?;
     relay(cx, tx, |_: &VoiceAsk| Some(Msg::Ask))?;
+    relay(cx, tx, |e: &VoiceLineKey| Some(Msg::LineKey(e.0.clone())))?;
+    relay(cx, tx, |_: &VoiceClose| Some(Msg::Close))?;
     relay(cx, tx, |e: &LayoutChanged| Some(Msg::Layout(e.clone())))?;
     relay(cx, tx, |e: &TextDone| Some(Msg::Typed(*e)))?;
+    relay(cx, tx, |e: &TextPasted| Some(Msg::Pasted(*e)))?;
+    relay(cx, tx, |e: &ClipTaken| {
+        (e.asker == ID).then(|| Msg::Taken(e.clone()))
+    })?;
     relay(cx, tx, |_: &Typed| Some(Msg::Elsewhere))?;
     relay(cx, tx, |e: &PointerPressed| {
         (!e.ours).then_some(Msg::Elsewhere)

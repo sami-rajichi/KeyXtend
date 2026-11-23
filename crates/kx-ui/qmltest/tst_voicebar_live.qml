@@ -1,5 +1,5 @@
 // The dictation bar as it lives over the stand-in Voice object: the wave follows the smoothed level and ripples, reduced
-// motion draws a plain meter instead, the timer counts on from the module's time, the start and stop sounds play as it
+// motion draws a plain meter instead, the timer counts on at one width, the start and stop sounds play as it
 // starts and stops listening unless sounds are off, the pointer coming over the bar and leaving is told once each, and
 // the bar is placed where the hub says by the keyboard's box: above it, at the bottom or top for those places, at the
 // bottom centre while the keyboard hides (edge 15, Stop still acting), and it stays while the panel is open.
@@ -114,6 +114,17 @@ Item {
             compare(timer.tick.interval, 800, "the next whole second");
         }
 
+        // The minutes are measured two digits wide, so ten minutes in widens nothing.
+        function test_the_timer_holds_its_width_past_ten_minutes() {
+            const bar = make(view("listening"));
+            const timer = Board.all(bar.contentItem, o => o.elapsed !== undefined && o.font !== undefined)[0];
+            const width = timer.width;
+            root.clock += 10 * 60 * 1000;
+            timer.tick.triggered();
+            compare(timer.text, "10:01");
+            compare(timer.width, width, "the same width");
+        }
+
         // The minutes and seconds go where the language's words put them.
         function test_the_timer_takes_its_order_from_the_words() {
             const v = view("listening");
@@ -164,9 +175,9 @@ Item {
             const ask = bar.voice.asks[bar.voice.asks.length - 1];
             compare(JSON.stringify(ask.over), root.over, "by the keyboard");
             compare([ask.w, ask.h], [bar.width, bar.height], "its own size");
-            compare([bar.x, bar.y], [300, 500], "above it");
+            compare([bar.x, bar.y], [300, 500 - bar.height], "above it, by its bottom edge");
             bar.voice.page = view("listening", { place: "bottom" });
-            compare([bar.x, bar.y], [300, 900], "the bottom centre");
+            compare([bar.x, bar.y], [300, 900 - bar.height], "the bottom centre");
             bar.voice.page = view("listening", { place: "top" });
             compare([bar.x, bar.y], [300, 10], "the top centre");
             bar.voice.page = view("text");
@@ -182,7 +193,7 @@ Item {
             bar.follow();
             verify(bar.visible, "it stays");
             compare(bar.voice.asks[bar.voice.asks.length - 1].over, null, "with no keyboard");
-            compare([bar.x, bar.y], [300, 900], "at the bottom centre");
+            compare([bar.x, bar.y], [300, 900 - bar.height], "at the bottom centre");
             mouseClick(withId(bar, "voice.stop"));
             compare(bar.voice.calls, ["act bar stop 0 " + v.round]);
         }

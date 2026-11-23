@@ -1,12 +1,14 @@
-//! The bar and the light as the flow tells them: once per change, each view with a new round, and a click taken only
-//! while the bar it saw keeps its face.
+//! The bar, its chip and the light as the flow tells them: once per change, each view with a new round, and a click
+//! taken only while the bar it saw keeps its face.
 
 use std::mem::{Discriminant, discriminant};
 
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarText, Listening, VoiceBar, VoiceLit, VoicePage, VoiceView,
+    BarButton, BarHint, BarMark, BarNote, BarText, CloudWhy, Listening, VoiceBar, VoiceLit,
+    VoicePage, VoiceView,
 };
 
+use super::net::Engine;
 use super::{Flow, Out, State};
 
 /// A bar's kind, its take and a note's line; a click made on another face is dropped.
@@ -16,7 +18,7 @@ type Face = (Discriminant<VoiceBar>, Option<u32>, Option<BarHint>);
 #[derive(Debug, Default)]
 pub(super) struct Told {
     page: Option<VoicePage>,
-    lit: Option<bool>,
+    lit: Option<VoiceLit>,
     /// The last view's round.
     round: u32,
     /// The round since which the bar has kept its face.
@@ -58,14 +60,27 @@ impl Flow {
             panel: self.panel.clone(),
             place: self.settings.bar_place(),
             sounds: self.settings.sounds,
+            mark: self.mark(),
         };
         if !self.told.page.as_ref().is_some_and(|p| same(p, &page)) {
             let take = self.take.as_ref().map(|t| t.id);
             self.told.show(page, take, out);
         }
-        if self.told.lit != Some(self.lit) {
-            self.told.lit = Some(self.lit);
-            out.push(Out::Lit(VoiceLit { rec: self.lit }));
+        let light = self.light();
+        if self.told.lit != Some(light) {
+            self.told.lit = Some(light);
+            out.push(Out::Lit(light));
+        }
+    }
+
+    /// The key's light: red while the microphone is open, amber while a dictation or Compare waits for it, else off.
+    fn light(&self) -> VoiceLit {
+        if self.lit {
+            VoiceLit::Rec
+        } else if matches!(self.state, State::Preparing) || self.lent_prep() {
+            VoiceLit::Prep
+        } else {
+            VoiceLit::Off
         }
     }
 
@@ -88,7 +103,7 @@ impl Flow {
             return lent;
         }
         match &self.state {
-            State::Idle => VoiceBar::Hidden,
+            State::Idle | State::Preparing => VoiceBar::Hidden,
             State::Listening { since, nothing } => self.listening(*since, *nothing),
             State::Transcribing => VoiceBar::Transcribing,
             State::Text {
@@ -104,13 +119,35 @@ impl Flow {
             }),
             State::Note { hint, act, .. } => VoiceBar::Note(BarNote {
                 hint: hint.clone(),
-                act: act.filter(|a| *a != BarButton::Anyway || self.anyway_ok()),
+                act: act.filter(|a| {
+                    !matches!(a, BarButton::Anyway | BarButton::Again) || self.anyway_ok()
+                }),
                 mic: false,
             }),
         }
     }
 
-    /// The Listening bar, with the time listened so far.
+    /// The bar's chip: the service a cloud dictation goes to, from Start to its text or its note; or the model on this
+    /// PC that writes a local one, while it prepares, listens or writes (owner, 2026-11-22).
+    fn mark(&self) -> Option<BarMark> {
+        let live = matches!(
+            self.state,
+            State::Preparing | State::Listening { .. } | State::Transcribing
+        );
+        let noted = match &self.state {
+            State::Note {
+                hint: BarHint::Cloud { why, .. },
+                ..
+            } => *why != CloudWhy::NoLocal,
+            _ => false,
+        };
+        match &self.take.as_ref()?.engine {
+            Engine::Cloud(net) => (live || noted).then(|| BarMark::Cloud(net.name.clone())),
+            Engine::Local(ready) => live.then(|| BarMark::Device(ready.short.clone())),
+        }
+    }
+
+    /// The Listening bar, with the time listened so far and the service's warning on its first dictation.
     fn listening(&self, since: kx_module_api::Mono, nothing: bool) -> VoiceBar {
         let Some(take) = &self.take else {
             return VoiceBar::Hidden;
@@ -121,6 +158,7 @@ impl Flow {
             elapsed_ms: u32::try_from(elapsed).unwrap_or(u32::MAX),
             nothing,
             wave_ms: self.settings.wave_ms,
+            warn: take.engine.net().and_then(|n| n.warn.clone()),
         })
     }
 
@@ -139,9 +177,9 @@ impl Flow {
 fn same(a: &VoicePage, b: &VoicePage) -> bool {
     let bars = match (&a.bar, &b.bar) {
         (VoiceBar::Listening(x), VoiceBar::Listening(y)) => {
-            x.lang == y.lang && x.nothing == y.nothing && x.wave_ms == y.wave_ms
+            x.lang == y.lang && x.nothing == y.nothing && x.wave_ms == y.wave_ms && x.warn == y.warn
         }
         (x, y) => x == y,
     };
-    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds
+    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds && a.mark == b.mark
 }

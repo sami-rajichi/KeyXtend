@@ -3,6 +3,9 @@
 //! handle limited to the `ui` module's capabilities. Nothing here logs a text, a name or a path.
 
 pub mod acts;
+mod card;
+mod chip;
+mod cloud;
 mod device;
 mod lists;
 mod options;
@@ -10,6 +13,7 @@ mod panel;
 mod parts;
 mod place;
 mod rows;
+mod service;
 mod sheets;
 mod view;
 
@@ -20,8 +24,8 @@ use crate::ui_module::MANIFEST;
 use crate::{I18n, spoken};
 use acts::{Click, click_of, round_of, silent};
 use kx_module_api::ports::{
-    BarPlace, CompareSheet, LEVEL_FULL, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceLevel,
-    VoiceOpen, VoicePage, VoiceSheet, VoiceView,
+    BarMark, BarPlace, CompareSheet, Fact, LEVEL_FULL, VoiceAct, VoiceAsk, VoiceBar, VoiceClick,
+    VoiceLevel, VoiceOpen, VoicePage, VoiceSheet, VoiceView,
 };
 use kx_module_api::{Bus, Event, EventError, Redacted, Subscription, Zeroizing};
 use kx_theme::sounds::Event as Sound;
@@ -57,6 +61,8 @@ struct State {
     bus: Option<Bus>,
     /// The newest view.
     page: Option<Arc<VoicePage>>,
+    /// The take's card warning with the chip it came with, kept from its last Listening page while that chip writes.
+    warned: Option<(BarMark, Fact)>,
     /// The pointer is over the bar, as QML last said.
     over: bool,
 }
@@ -83,11 +89,16 @@ impl Hub {
     #[must_use]
     pub fn voice_json(&self) -> Zeroizing<String> {
         self.voice.view.read();
-        let Some(page) = self.voice().page.clone() else {
+        let (page, warn) = {
+            let s = self.voice();
+            (s.page.clone(), s.warned.clone().map(|(_, fact)| fact))
+        };
+        let Some(page) = page else {
             return Zeroizing::new(NULL.to_owned());
         };
         let read = reads(&page).then(|| self.set_text()).flatten();
-        wiped::json(&view::of(&page, &self.i18n(), read.as_deref()))
+        let t = self.i18n();
+        wiped::json(&view::of(&page, &t, read.as_deref(), warn.as_ref()))
     }
 
     /// The sound level while the bar listens, 0 to 1, else 0; reading it lets the next level wake again.
@@ -97,13 +108,10 @@ impl Hub {
         f64::from(self.voice.level.load(Ordering::SeqCst)) / f64::from(LEVEL_FULL)
     }
 
-    /// Sends the click `kind` names (one of `acts`) with `id` and `arg`, on the view of round `round`, and sounds as a
-    /// key does but for the pointer and the wheel. Nothing goes before a view; a bad click sends nothing and warns.
-    /// Call it on the Qt thread.
+    /// Sends the click `kind` names (one of `acts`) with `id` and `arg` on the view of round `round`, sounding as a key
+    /// does unless `silent`. A click before any view or a bad one, which warns, sends and sounds nothing; call it on the
+    /// Qt thread.
     pub fn voice_act(&self, kind: &str, id: &str, arg: i32, round: i64) {
-        if !silent(kind) {
-            self.tapped();
-        }
         if self.voice().page.is_none() {
             tracing::debug!("a late voice click was dropped");
             return;
@@ -114,6 +122,9 @@ impl Hub {
             tracing::warn!(arg, "QML sent an unknown voice click or a bad argument");
             return;
         };
+        if !silent(kind) {
+            self.tapped();
+        }
         let click = match click {
             Click::Gear => return self.voice_send(&VoiceOpen),
             Click::Compare => {
@@ -192,6 +203,7 @@ impl Hub {
             let mut s = self.voice();
             let had = s.page.as_ref().is_some_and(|p| p.panel.is_some());
             s.page = Some(Arc::clone(page));
+            s.warned = kept(s.warned.take(), page);
             let was = s.over;
             s.over = was && !hidden;
             (was && hidden, page.panel.is_some() && !had)
@@ -268,6 +280,16 @@ impl Hub {
             .waker
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// The take's card warning with its chip after `page`: a Listening page's own, kept while the same chip writes, else
+/// none, so a text, a note, a hide or another chip drops it.
+fn kept(was: Option<(BarMark, Fact)>, page: &VoicePage) -> Option<(BarMark, Fact)> {
+    match &page.bar {
+        VoiceBar::Listening(l) => page.mark.clone().zip(l.warn.clone()),
+        VoiceBar::Transcribing => was.filter(|(mark, _)| page.mark.as_ref() == Some(mark)),
+        _ => None,
     }
 }
 

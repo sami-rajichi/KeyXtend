@@ -35,7 +35,7 @@ Item {
             const kinds = flat(panels.filter(p => p.sheet.is === names.sheets.options), p => p.sheet.rows.map(r => r.kind));
             compare([...new Set(kinds)].sort(), Object.values(names.options).sort(), "every option kind");
             const marks = flat(panels, p => flat(p.sheet.rows || [], r => (r.marks || []).concat(r.mark ? [r.mark] : [])));
-            for (const id of names.lit.concat(names.outlined, [names.writing]))
+            for (const id of names.lit.concat(names.outlined, names.warned, [names.writing]))
                 verify(marks.some(m => m.id === id), id + " is a mark the hub writes");
         }
 
@@ -56,7 +56,7 @@ Item {
             mouseClick(shown[1]);
             mouseClick(one(box, "voice.again"));
             mouseClick(one(box, "voice.close"));
-            compare(acts(box), ["act open device 0 " + box.round, "act button again 0 " + box.round, "act button close 0 " + box.round]);
+            compare(acts(box), ["act open cloud 0 " + box.round, "act button again 0 " + box.round, "act button close 0 " + box.round]);
             box.visible = false;
         }
 

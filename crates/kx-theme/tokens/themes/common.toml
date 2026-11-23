@@ -1,0 +1,24 @@
+# The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217).
+# Each theme has its own file here: the loader joins this one, then native.toml, et66.toml and dolch.toml.
+# CSS rgba() is written #RRGGBBAA.
+
+# Sizes all themes share are in shape.toml, timings in motion.toml and icons in icons.toml.
+# A palette's dim and dim_ink come from shape.toml [dim] and its badge_shadow from [common], so none is written here.
+# legend_2_plate colours secondary text and icons on the plate; a palette writes it only where it differs from legend_2.
+# A palette may write its own press; else a light one lays [common] press over its hover (the owner's choice of
+# 2026-10-11), and a dark one takes [common] press.
+
+# Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
+# The drawn check (src/drawn.rs) keeps all drawn text at WCAG AA where it sits, except the Carousel's faded side names.
+# A colour marked "owner 2026-09-30", "2026-10-02", "2026-10-11" or "2026-11-17" was nudged just enough to pass it.
+
+# Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), which light
+# palettes lay over their hover, the caption's recording dot (.rec-dot), the snip overlay (.snip-dim, .snip-rect, .dims)
+# and the mode badge's shadow (.badge box-shadow).
+[common]
+press = "#0000000F"
+rec_dot = "#E5484D"
+snip_dim = "#0000006B"
+snip_edge = "#FFFFFF"
+snip_tag = "#00000099"
+badge_shadow = { x = 0.0, y = 3.0, blur = 10.0, spread = 0.0, color = "#00000047" }

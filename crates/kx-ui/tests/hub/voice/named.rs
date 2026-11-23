@@ -3,7 +3,7 @@
 
 use super::{coded, heard, home, json, page, panel, panel_json};
 use crate::texts::rig;
-use kx_module_api::ports::{Listening, ModelsSheet, VoiceBar, VoiceLang, VoiceSheet};
+use kx_module_api::ports::{Listening, ModelSide, ModelsSheet, VoiceBar, VoiceLang, VoiceSheet};
 use serde_json::Value;
 
 /// The slow line for a language in front named `name` with code `iso`, on words in `setting` over a layout in `layout`.
@@ -17,11 +17,13 @@ fn slow_line(layout: &str, setting: &str, iso: &str, name: &str) -> Value {
         slow: true,
         folder: None,
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     };
     let mut shown = panel(VoiceSheet::Models(slow));
     shown.lang = coded(iso);
     name.clone_into(&mut shown.lang.name);
-    panel_json(&rig, &heard, shown)["sheet"]["slow"].clone()
+    panel_json(&rig, &heard, shown)["sheet"]["slow"]["text"].clone()
 }
 
 #[test]
@@ -52,6 +54,7 @@ fn chips(layout: &str, setting: &str, lang: &VoiceLang) -> [Value; 2] {
         elapsed_ms: 0,
         nothing: false,
         wave_ms: 0,
+        warn: None,
     });
     heard.view(page(1, bar, None));
     let on_bar = json(&rig)["bar"]["lang"]["name"].clone();

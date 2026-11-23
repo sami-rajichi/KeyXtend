@@ -1,14 +1,19 @@
 //! Voice typing's events: their names and gates, the place's names, the approved bar's buttons and hints, and `Debug`
-//! that never shows a transcript or a text to type. The panel's pages are in `panel`.
+//! that never shows a transcript or a text to type. The panel's pages are in `panel`, cloud services in `cloud`.
 
 use super::*;
 use crate::capability::is_kebab;
 use crate::{REDACTED_MARKER, Redacted, Secret, Zeroizing};
 use std::collections::HashSet;
 
+mod cloud;
+mod compare;
+mod lines;
 mod names;
+mod note;
 mod options;
 mod panel;
+mod sides;
 
 /// The `Voice` gate.
 const VOICE: Option<Capability> = Some(Capability::Voice);
@@ -21,7 +26,7 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The voice events, in the order `events_have_their_names` checks.
-fn events() -> [(&'static str, Option<Capability>); 9] {
+fn events() -> [(&'static str, Option<Capability>); 12] {
     [
         row::<VoiceKey>(),
         row::<VoiceLit>(),
@@ -31,6 +36,9 @@ fn events() -> [(&'static str, Option<Capability>); 9] {
         row::<VoiceAct>(),
         row::<TextAsk>(),
         row::<TextDone>(),
+        row::<VoiceLineKey>(),
+        row::<VoiceLine>(),
+        row::<VoiceClose>(),
         row::<VoiceLevel>(),
     ]
 }
@@ -68,6 +76,7 @@ fn page(bar: VoiceBar) -> VoicePage {
         panel: None,
         place: BarPlace::Above,
         sounds: true,
+        mark: None,
     }
 }
 
@@ -82,6 +91,9 @@ fn events_have_their_names() {
         "voice-act",
         "text-ask",
         "text-done",
+        "voice-line-key",
+        "voice-line",
+        "voice-close",
         "voice-level",
     ];
     assert_eq!(events().map(|r| r.0), want);
@@ -90,8 +102,8 @@ fn events_have_their_names() {
 #[test]
 fn every_event_needs_voice_but_the_level() {
     let gates = events().map(|r| r.1);
-    assert_eq!(gates[..8], [VOICE; 8], "ADR-0042 decision 7");
-    assert_eq!(gates[8], None, "a level holds no content");
+    assert_eq!(gates[..11], [VOICE; 11], "ADR-0042 decision 7, ADR-0049");
+    assert_eq!(gates[11], None, "a level holds no content");
 }
 
 #[test]
@@ -107,6 +119,19 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
     let mine: HashSet<_> = ours.iter().copied().collect();
     assert_eq!(mine.len(), ours.len(), "{ours:?}");
     assert!(mine.is_disjoint(&others), "{ours:?}");
+}
+
+#[test]
+fn the_light_starts_off_and_glows_amber_before_red() {
+    assert_eq!(
+        VoiceLit::default(),
+        VoiceLit::Off,
+        "before the module speaks"
+    );
+    let lights = [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Rec];
+    let names = lights.map(|l| serde_json::to_value(l).ok());
+    let want = ["off", "prep", "rec"].map(|n| Some(serde_json::Value::from(n)));
+    assert_eq!(names, want, "the face's state writes these");
 }
 
 #[test]
@@ -126,12 +151,14 @@ fn a_place_reads_and_writes_as_its_lowercase_name() {
 
 #[test]
 fn the_bar_has_the_approved_mock_ups_buttons() {
-    use BarButton::{Anyway, Cancel, Close, Copy, Download, Listen, Stop, Undo};
-    let want = [Cancel, Stop, Copy, Undo, Anyway, Listen, Download, Close];
+    use BarButton::{Again, Anyway, Cancel, Close, Copy, Download, Listen, Service, Stop, Undo};
+    let want = [
+        Cancel, Stop, Copy, Undo, Anyway, Again, Listen, Download, Service, Close,
+    ];
     assert_eq!(
         BarButton::ALL,
         want,
-        "Try again lives in the panel's footer"
+        "Try again shows on a cloud note and in the panel's footer"
     );
     assert!(PanelButton::ALL.contains(&PanelButton::Again));
     assert!(

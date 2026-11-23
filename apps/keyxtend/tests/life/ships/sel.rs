@@ -1,6 +1,6 @@
 //! The selection chips' grants (ADR-0041 decision 3): its feature is a default and the build ships it, it holds
-//! `ReadFocusedText`, `Selection` and `OpenLink`, the keyboard and the ui hold `Selection` as an event gate, and it
-//! alone asks for the watch and the link, which reach only their gates' holders.
+//! `ReadFocusedText`, `Selection` and `OpenLink`, the keyboard and the ui hold `Selection` as an event gate, it alone
+//! asks for the watch, and the link goes to it and to voice typing alone (ADR-0047 decision 11), reaching only them.
 
 use super::{asking, defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
@@ -14,6 +14,11 @@ use std::sync::Arc;
 
 /// The selection module's feature.
 const SEL_FEATURE: &str = "mod-selection";
+
+/// The modules the link goes to: the selection chips' Translate and a cloud card's link, written once for every test.
+pub(super) fn linkers() -> BTreeSet<ModuleId> {
+    BTreeSet::from([kx_mod_selection::ID, kx_mod_voice::ID])
+}
 
 #[test]
 fn mod_selection_is_a_default_feature_and_the_default_build_ships_it() {
@@ -40,22 +45,27 @@ fn selection_goes_to_the_module_and_as_an_event_gate_to_the_keyboard_and_the_ui(
 }
 
 #[test]
-fn only_the_selection_module_holds_open_link() {
-    let want = BTreeSet::from([kx_mod_selection::ID]);
-    assert_eq!(holders(Capability::OpenLink), want, "ADR-0041 decision 3");
+fn only_the_selection_and_voice_modules_hold_open_link() {
+    let why = "ADR-0041 decision 3, ADR-0047 decision 11";
+    assert_eq!(holders(Capability::OpenLink), linkers(), "{why}");
 }
 
 #[test]
-fn only_the_selection_module_asks_for_the_watch_or_the_link() {
-    let keys = [SelectionWatchKey::ID, WebLinkKey::ID];
-    assert_eq!(asking(&keys), BTreeSet::from([kx_mod_selection::ID]));
+fn only_the_selection_module_asks_for_the_watch() {
+    let watch = asking(&[SelectionWatchKey::ID]);
+    assert_eq!(watch, BTreeSet::from([kx_mod_selection::ID]));
 }
 
 #[test]
-fn the_web_link_reaches_the_selection_module_alone() {
+fn only_the_selection_and_voice_modules_ask_for_the_link() {
+    assert_eq!(asking(&[WebLinkKey::ID]), linkers(), "ADR-0047 decision 11");
+}
+
+#[test]
+fn the_web_link_reaches_the_selection_and_voice_modules_alone() {
     let link: Arc<dyn WebLink> = Arc::new(FakeWebLink::new());
     let got = reached::<WebLinkKey>(&Rig::new(), &link);
-    assert_eq!(got, BTreeSet::from([kx_mod_selection::ID]));
+    assert_eq!(got, linkers());
 }
 
 #[test]

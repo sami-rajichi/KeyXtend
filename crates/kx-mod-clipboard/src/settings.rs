@@ -7,7 +7,9 @@ mod parts;
 use std::fmt;
 use std::ops::RangeInclusive;
 
-use kx_module_api::ports::{MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES};
+use kx_module_api::ports::{
+    CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
+};
 use kx_module_api::{
     Redacted, Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within,
 };
@@ -37,8 +39,13 @@ pub const JOIN_RULE_CHARS: usize = 80;
 pub const PASTE_GAP_MS: RangeInclusive<u32> = 20..=2_000;
 /// The wait for the keyboard's paste, in ms.
 pub const PASTE_WAIT_MS: RangeInclusive<u32> = 100..=5_000;
+/// The characters of a text Paste at once reads to put back.
+pub const BACK_CHARS: RangeInclusive<usize> = 1_000..=16_000_000;
 /// The wait for an insert's file check, in ms.
 pub const CHECK_MS: RangeInclusive<u32> = 1_000..=30_000;
+/// A take's wait in ms, in which no copy of its text is kept, and how far apart one app's two writes of it may be: past
+/// the watch's longest clipboard wait and a margin.
+pub const TAKE_WAIT_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=60_000;
 /// The characters search reads.
 pub const SEARCH_CHARS: RangeInclusive<usize> = 100..=2_000;
 /// The characters a title keeps.
@@ -62,7 +69,7 @@ pub const RESTART_MS: RangeInclusive<u32> = 100..=30_000;
 /// The longest wait before a failed worker starts again, in ms.
 pub const RESTART_MAX_MS: RangeInclusive<u32> = 1_000..=600_000;
 /// The longest wait for the clipboard, in ms.
-pub const OPEN_MS: RangeInclusive<u32> = 10..=2_000;
+pub const OPEN_MS: RangeInclusive<u32> = 10..=CLIP_OPEN_MAX_MS;
 /// How often the clipboard is tried within that wait, in ms.
 pub const POLL_MS: RangeInclusive<u32> = 1..=100;
 /// The most copies that wait for the history to keep them.
@@ -123,8 +130,12 @@ pub struct ClipSettings {
     pub paste_gap_ms: u32,
     /// How long an insert waits for the keyboard to paste, in ms.
     pub paste_wait_ms: u32,
+    /// The most characters of a text Paste at once reads to put back; past it the asker types its text.
+    pub back_chars: usize,
     /// How long an insert waits for its files to be checked, in ms.
     pub check_ms: u32,
+    /// How long after a take no copy of its text is kept, in ms; also how far apart one app's two writes of it may be.
+    pub take_wait_ms: u32,
     /// The system's clipboard-history shortcut opens our panel.
     pub history_key: bool,
     /// The characters of each text search reads.
@@ -180,7 +191,9 @@ impl ClipSettings {
         within("join_breaks", self.join_breaks, &JOIN_BREAKS)?;
         within("paste_gap_ms", self.paste_gap_ms, &PASTE_GAP_MS)?;
         within("paste_wait_ms", self.paste_wait_ms, &PASTE_WAIT_MS)?;
+        within("back_chars", self.back_chars, &BACK_CHARS)?;
         within("check_ms", self.check_ms, &CHECK_MS)?;
+        within("take_wait_ms", self.take_wait_ms, &TAKE_WAIT_MS)?;
         within("search_chars", self.search_chars, &SEARCH_CHARS)?;
         within("title_chars", self.title_chars, &TITLE_CHARS)?;
         within("preview_chars", self.preview_chars, &PREVIEW_CHARS)?;
@@ -246,7 +259,9 @@ impl fmt::Debug for ClipSettings {
             .field("join_rule", &self.join_rule)
             .field("paste_gap_ms", &self.paste_gap_ms)
             .field("paste_wait_ms", &self.paste_wait_ms)
+            .field("back_chars", &self.back_chars)
             .field("check_ms", &self.check_ms)
+            .field("take_wait_ms", &self.take_wait_ms)
             .field("history_key", &self.history_key)
             .field("search_chars", &self.search_chars)
             .field("title_chars", &self.title_chars)

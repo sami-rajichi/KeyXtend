@@ -7,7 +7,9 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::FileFact;
 use kx_module_api::ports::{ClipPart, ImageCodec};
 
-use super::parts::{Formats, Kind, blank, crlf, text_of};
+use super::parts::{
+    CHUNK_CHECK, Formats, Kind, PNG_END, PNG_SIGNATURE, blank, crlf, png_end, text_of,
+};
 use super::*;
 
 #[cfg(windows)]
@@ -16,6 +18,7 @@ mod bytes;
 mod gather;
 #[cfg(windows)]
 mod live;
+mod marks;
 
 /// Made-up format ids, as Windows would give them.
 const F: Formats = Formats {
@@ -32,9 +35,23 @@ const F: Formats = Formats {
 /// A private format nobody keeps.
 const OTHER: u32 = 0xC0FF;
 
-fn marks(present: &[&str], zero: &[&str]) -> Marks {
-    let owned = |n: &[&str]| n.iter().map(ToString::to_string).collect();
-    Marks::new(owned(present), owned(zero))
+/// The bytes of a PNG header chunk's data.
+const IHDR_LEN: usize = 13;
+
+/// A PNG chunk of `kind` holding `data`, its check left at zero, which no read looks at.
+fn chunk(kind: &[u8], data: &[u8]) -> Vec<u8> {
+    let len = u32::try_from(data.len()).unwrap().to_be_bytes();
+    [&len[..], kind, data, &[0; CHUNK_CHECK]].concat()
+}
+
+/// A PNG's signature and its header chunk, without the end chunk.
+fn png_start() -> Vec<u8> {
+    [PNG_SIGNATURE, &chunk(b"IHDR", &[1; IHDR_LEN])].concat()
+}
+
+/// A small PNG: its signature, a header chunk and its end chunk.
+fn small_png() -> Vec<u8> {
+    [png_start(), chunk(PNG_END, &[])].concat()
 }
 
 #[test]
@@ -70,59 +87,6 @@ fn a_table_with_an_empty_name_or_limit_is_refused() {
 fn a_table_with_an_unknown_key_is_refused() {
     let text = format!("extra = 1\n{TABLE}");
     assert!(matches!(Table::parse(&text), Err(TableError::Parse(_))));
-}
-
-#[test]
-fn a_present_marker_skips_a_copy_whatever_else_it_holds() {
-    let m = marks(
-        &["Clipboard Viewer Ignore"],
-        &["CanIncludeInClipboardHistory"],
-    );
-    assert!(m.marked(|n| n == "Clipboard Viewer Ignore", |_| Some(1)));
-    assert!(!m.marked(|n| n == "HTML Format", |_| None), "plain copy");
-}
-
-#[test]
-fn a_number_marker_skips_only_when_it_holds_zero() {
-    let m = marks(&[], &["CanIncludeInClipboardHistory"]);
-    assert!(m.marked(|_| false, |_| Some(0)));
-    assert!(!m.marked(|_| false, |_| Some(1)));
-    assert!(!m.marked(|_| false, |_| None), "absent");
-}
-
-#[test]
-fn a_number_marker_that_cannot_be_named_or_read_counts_as_zero() {
-    use super::marks::number;
-    assert_eq!(number(None, |_| false, |_| None), Some(0), "not registered");
-    assert_eq!(
-        number(Some(1), |_| true, |_| None),
-        Some(0),
-        "there, unreadable"
-    );
-    assert_eq!(number(Some(1), |_| true, |_| Some(7)), Some(7), "read");
-    assert_eq!(number(Some(1), |_| false, |_| Some(7)), None, "absent");
-}
-
-#[test]
-fn marker_names_ignore_case_as_windows_does() {
-    let m = marks(
-        &["Clipboard Viewer Ignore"],
-        &["CanIncludeInClipboardHistory"],
-    );
-    assert!(m.has("clipboard viewer ignore") && m.has("CANINCLUDEINCLIPBOARDHISTORY"));
-    assert!(!m.has("PNG"));
-}
-
-#[test]
-fn without_drops_one_marker_and_keeps_the_rest() {
-    let m = Table::parse(TABLE).unwrap().marks();
-    let fewer = m.without("canincludeinclipboardhistory");
-    assert!(!fewer.has("CanIncludeInClipboardHistory"));
-    assert_eq!(fewer.names().count(), m.names().count() - 1);
-    assert!(
-        m.names()
-            .all(|n| fewer.has(n) || n == "CanIncludeInClipboardHistory")
-    );
 }
 
 #[test]

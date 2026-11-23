@@ -148,7 +148,7 @@ fn notes(rig: &Rig, seen: &mut Seen, told: &[VoiceNote]) -> Result<(), TestCaseE
             !live || !seen.ended.contains(&id),
             "{note:?} after run {id} ended"
         );
-        if let VoiceNote::Sound { .. } = note {
+        if let VoiceNote::Sound { .. } | VoiceNote::Speech { .. } = note {
             prop_assert!(
                 listening != Some(id),
                 "run {id} handed over while it listens"

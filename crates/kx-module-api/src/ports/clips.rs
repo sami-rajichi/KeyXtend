@@ -1,13 +1,16 @@
 //! The clipboard history's bus events (ADR-0034 decision 2, ADR-0035): the panel's state and what carries copied
-//! content or search text need `ReadClipboard`, Quick-fill's text hand-over too, the paste request needs
-//! `WriteClipboard`, and the open toggle and the chord flags carry nothing.
+//! content or search text need `ReadClipboard`, Quick-fill's text hand-over too, the paste request and Paste at once
+//! need `WriteClipboard`, and the open toggle and the chord flags carry nothing.
 
+mod paste;
+mod take;
 mod view;
 
+pub use paste::{PasteText, TextPasted};
+pub use take::{ClipTake, ClipTaken, ClipText};
 pub use view::{ClipKind, ClipPage, ClipRow, Filter, Pages, PanelNote, Preview, When};
 
-use super::MAX_FIELD_CHARS;
-use crate::{Capability, Event, Redacted, Secret};
+use crate::{Capability, Event, Redacted};
 use std::sync::Arc;
 
 /// The gate of the panel's state and of the events that carry content or search text.
@@ -17,6 +20,13 @@ const WRITE: Option<Capability> = Some(Capability::WriteClipboard);
 
 /// Bytes in a megabyte, as Windows counts sizes: the one unit the history's limits and the panel's sizes use.
 pub const MB: u64 = 1 << 20;
+
+/// The clipboard history's longest wait for the clipboard, in ms: the top of its `open_ms`.
+pub const CLIP_OPEN_MAX_MS: u32 = 2_000;
+/// The margin an answer wait keeps over the clipboard history's longest wait for the clipboard, in ms.
+pub const CLIP_ANSWER_MARGIN_MS: u32 = 500;
+/// The shortest wait for the clipboard history's answer, in ms: its longest wait for the clipboard, and the margin.
+pub const CLIP_ANSWER_MIN_MS: u32 = CLIP_OPEN_MAX_MS + CLIP_ANSWER_MARGIN_MS;
 
 /// From the keyboard: the side key or the history chord toggles the panel.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -55,8 +65,8 @@ pub enum PanelKey {
     Enter,
     /// Back out one step: the clipboard closes its question, else the preview, else clears the search, else closes.
     Esc,
-    /// The Space key, sent as this while any panel is open: a line with text, or Quick-fill's lines even when empty, takes
-    /// a space at the caret; the clipboard's empty search ticks or unticks the highlighted row.
+    /// The Space key, sent as this while any panel is open: a line with text, or Quick-fill's lines even when empty,
+    /// takes a space at the caret; the clipboard's empty search ticks or unticks the highlighted row.
     Tick,
     /// The Backspace key: erase the character before the caret, in the search or Quick-fill's highlighted line.
     Erase,
@@ -192,75 +202,6 @@ pub struct Pasted {
 impl Event for Pasted {
     const NAME: &'static str = "pasted";
     const CAPABILITY: Option<Capability> = WRITE;
-}
-
-/// A CR LF is two characters until Paste turns it into one space, so a take reads twice a field's characters.
-const SLACK: usize = 2;
-
-/// From Quick-fill: its Paste asks the clipboard module for the clipboard's current text, and for its history to forget
-/// that copy.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct ClipTake {
-    /// Names this request, so its answer names it too.
-    pub round: u32,
-    /// The most characters to read; a longer text is refused.
-    pub max_chars: usize,
-}
-
-impl ClipTake {
-    /// The take of round `round` for a field of `field_chars` characters, with room for each break to be two.
-    #[must_use]
-    pub const fn new(round: u32, field_chars: usize) -> Self {
-        Self {
-            round,
-            max_chars: field_chars.saturating_mul(SLACK),
-        }
-    }
-
-    /// The most characters the clipboard reads: `max_chars`, but never past the room of the longest field.
-    #[must_use]
-    pub const fn cap(&self) -> usize {
-        let most = MAX_FIELD_CHARS.saturating_mul(SLACK);
-        if self.max_chars < most {
-            self.max_chars
-        } else {
-            most
-        }
-    }
-}
-
-impl Event for ClipTake {
-    const NAME: &'static str = "clip-take";
-    const CAPABILITY: Option<Capability> = READ;
-}
-
-/// What a take found on the clipboard.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ClipText {
-    /// The clipboard's text.
-    Text(Secret),
-    /// The clipboard holds no text, such as an image.
-    Empty,
-    /// The text is past the take's cap, so it was refused.
-    TooLong,
-    /// Another app held the clipboard, the system refused it, or its text could not be read.
-    Busy,
-}
-
-/// From the clipboard module: what the take found. Its history forgets its newest entry only when the take read the
-/// text in full and that entry is this copy; it is not for a copy left out of history (as a password manager's), one
-/// refused as too big or under the disk floor, or one made while the keyboard was off.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ClipTaken {
-    /// The round of the request.
-    pub round: u32,
-    /// What the take found.
-    pub text: ClipText,
-}
-
-impl Event for ClipTaken {
-    const NAME: &'static str = "clip-taken";
-    const CAPABILITY: Option<Capability> = READ;
 }
 
 /// From the clipboard module: while `on`, the keyboard turns the platform's history chord into `ClipOpen`; it carries

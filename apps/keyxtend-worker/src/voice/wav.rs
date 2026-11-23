@@ -1,9 +1,12 @@
 //! WAV files the voice job reads: the card check's shipped clips and, in gate builds, the sound played in place of the
-//! microphone. It takes 16-bit PCM and 32-bit float within `RATES` and `MAX_CHANNELS`, up to `MAX_WAV_BYTES`; anything
-//! else is `BadFile`. The bytes and samples sit in wiped buffers, as a clip may be someone's voice.
+//! microphone. It takes 16-bit PCM and 32-bit float within `RATES`, `MAX_CHANNELS` and `MAX_WAV_BYTES` into wiped
+//! buffers, as a clip may be someone's voice, and anything else is `BadFile`.
 
 use super::mic::Format;
 use super::wipe::Buf;
+use crate::riff::{
+    BYTE_BITS, CHUNK_HEAD, DATA_ID, FIRST_CHUNK, FMT_ID, FMT_LEAST, PCM, PCM_BITS, RIFF_ID, WAVE_ID,
+};
 use kx_ipc::VoiceFault;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
@@ -18,31 +21,18 @@ const RATES: RangeInclusive<u32> = 8_000..=384_000;
 /// The most channels a file may have, as a microphone array gives.
 const MAX_CHANNELS: u16 = 8;
 
-/// Where the first chunk starts, after `RIFF`, the size and `WAVE`, and where `WAVE` sits.
-const FIRST_CHUNK: usize = 12;
+/// Where `WAVE` sits.
 const WAVE_AT: usize = 8;
-/// Bytes of a chunk id, and of a chunk's id and size.
+/// Bytes of a chunk id.
 const ID_LEN: usize = 4;
-const CHUNK_HEAD: usize = 8;
-/// Offsets in the `fmt ` chunk body: the format tag, channels, rate and bits per sample; and its least length.
+/// Offsets in the `fmt ` chunk body: the format tag, channels, rate and bits per sample.
 const TAG_AT: usize = 0;
 const CHANNELS_AT: usize = 2;
 const RATE_AT: usize = 4;
 const BITS_AT: usize = 14;
-const FMT_LEAST: usize = 16;
-/// Format tags: plain PCM and IEEE float.
-const PCM: u16 = 1;
+/// The IEEE float format tag, and the width it is read in.
 const FLOAT: u16 = 3;
-/// The sample widths each tag is read in.
-const PCM_BITS: u16 = 16;
 const FLOAT_BITS: u16 = 32;
-/// Bits in a byte.
-const BYTE_BITS: u16 = 8;
-/// The ids of the outer chunk, the form, the format chunk and the samples chunk.
-const RIFF_ID: &[u8] = b"RIFF";
-const WAVE_ID: &[u8] = b"WAVE";
-const FMT_ID: &[u8] = b"fmt ";
-const DATA_ID: &[u8] = b"data";
 
 /// A file's sound: its format, and its samples as floats in -1 to 1, interleaved.
 pub struct Sound {

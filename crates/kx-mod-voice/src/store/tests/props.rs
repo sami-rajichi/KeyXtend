@@ -48,8 +48,21 @@ fn date() -> impl Strategy<Value = Date> {
 }
 
 fn counts() -> impl Strategy<Value = Counts> {
-    let model = prop_oneof![Just(Model::Other), Just(Model::Row(ROW.into()))];
-    let device = prop_oneof![Just(Device::Cpu), card().prop_map(Device::Card)];
+    let cloud = |model: Option<&str>| Model::Cloud {
+        service: "groq".into(),
+        model: model.map(str::to_owned),
+    };
+    let model = prop_oneof![
+        Just(Model::Other),
+        Just(Model::Row(ROW.into())),
+        Just(cloud(Some("whisper-large-v3"))),
+        Just(cloud(None)),
+    ];
+    let device = prop_oneof![
+        Just(Device::Cpu),
+        card().prop_map(Device::Card),
+        Just(Device::Cloud),
+    ];
     let bucket = (date(), model, device).prop_map(|(date, model, device)| Bucket {
         date,
         model,
@@ -87,11 +100,13 @@ fn card() -> impl Strategy<Value = CardId> {
 }
 
 fn checks() -> impl Strategy<Value = Checks> {
-    let one = (card(), words(), any::<u8>(), verdict(), date());
-    let row = one.prop_map(|(card, driver, m, verdict, day)| Checked {
+    let lang = prop::option::of(prop::sample::select(vec!["en", "fr", "ar"]));
+    let one = (card(), words(), any::<u8>(), lang, verdict(), date());
+    let row = one.prop_map(|(card, driver, m, lang, verdict, day)| Checked {
         card,
         driver,
         model: print(m),
+        lang: lang.map(str::to_owned),
         verdict,
         day,
     });
@@ -136,6 +151,7 @@ fn read_all(bytes: &[u8]) {
     let _ = text::decode(bytes);
     let _ = numbers::decode_counts(bytes);
     let _ = numbers::decode_checks(bytes);
+    let _ = numbers::decode_langs(bytes);
     let _ = numbers::decode_scores(bytes);
 }
 
@@ -147,6 +163,7 @@ proptest! {
             (text::MARK, text::VERSION),
             (numbers::COUNTS_MARK, numbers::VERSION),
             (numbers::CHECKS_MARK, numbers::VERSION),
+            (numbers::LANGS_MARK, numbers::VERSION),
             (numbers::SCORES_MARK, numbers::VERSION),
         ];
         for (mark, version) in forms {
@@ -168,16 +185,22 @@ proptest! {
     #[test]
     fn any_numbers_come_back(c in counts(), k in checks(), s in scores()) {
         prop_assert_eq!(numbers::decode_counts(&numbers::encode_counts(&c)), Ok(c));
-        prop_assert_eq!(numbers::decode_checks(&numbers::encode_checks(&k)), Ok(k));
+        let plain = numbers::decode_checks(&numbers::encode_checks(&k)).unwrap();
+        let langs = numbers::decode_langs(&numbers::encode_langs(&k)).unwrap();
+        // The blob puts passes first, so the checks come back in another order.
+        let back = numbers::named(plain, langs);
+        let times = |rows: &[_], row| rows.iter().filter(|r| *r == row).count();
+        prop_assert_eq!(back.rows().len(), k.rows().len());
+        prop_assert!(k.rows().iter().all(|row| times(back.rows(), row) == times(k.rows(), row)));
         prop_assert_eq!(numbers::decode_scores(&numbers::encode_scores(&s)), Ok(s));
     }
 
     #[test]
     fn a_shelf_of_random_blobs_opens_without_panic(
-        blobs in prop::collection::btree_map((0..3_usize, 0..6_usize), prop::collection::vec(any::<u8>(), 0..64), 0..12),
+        blobs in prop::collection::btree_map((0..3_usize, 0..7_usize), prop::collection::vec(any::<u8>(), 0..64), 0..12),
     ) {
         let folders = ["texts", "sounds", "numbers"];
-        let names = ["1", "2", "1-0", "2-1", "counts", "checks"];
+        let names = ["1", "2", "1-0", "2-1", "counts", "checks", "check-langs"];
         let shelf = Arc::new(Mem::default());
         let planted: BTreeMap<_, _> = blobs.into_iter().collect();
         for ((f, n), bytes) in &planted {

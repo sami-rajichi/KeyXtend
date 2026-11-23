@@ -330,7 +330,7 @@ langkey =
 lang =
     .space = { $lang } · { $layout }
 
-## Theme names by themes.toml id: model names stay, plain words are translated.
+## Theme names by theme id (kx-theme's tokens/themes/*.toml): model names stay, plain words are translated.
 theme =
     .native = Native Adaptive
     .et66 = ET66
@@ -338,8 +338,11 @@ theme =
 
 ## Lists: what joins two items, the end of a list that leaves $more items out, and a list that names none.
 ## Plural forms select on $form, which is $more as the CLDR rules read it; $more is at least 1.
+## In a sentence, list.and-join joins a list's items and list.and comes before the last one, as CLDR's list patterns end.
 list =
     .join = {", "}
+    .and-join = {", "}
+    .and = {" and "}
     .more = { $list } and { $more } more
     .count = { $form ->
         [one] { $more } setting

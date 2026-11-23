@@ -31,14 +31,16 @@ Item {
         return i < all.length ? all[i] : null;
     }
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + (headed ? head.height + pn.row_px[1] * s : 0) + host.pageH
+    // A page of rows under the heads, or the pager's or the empty line's height when too few rows to a page cannot
+    // hold it.
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max((headed ? head.height + pn.row_px[1] * s : 0) + host.pageH, pg.least, sheet.empty ? blank.height : 0)
 
     Item {
         id: frame
         x: listing.side
         y: listing.pn.body_pad_px[0] * listing.s
         // The pager's room stays, so rows keep their width as views change.
-        width: listing.width - 2 * listing.side - (listing.pn.body_gap_px + listing.pn.page_px[0]) * listing.s
+        width: listing.width - 2 * listing.side - pg.span
         height: col.y + listing.host.pageH
 
         VoiceHeads {
@@ -62,6 +64,10 @@ Item {
             Repeater {
                 model: listing.slots(listing.names.sheets.models)
                 delegate: VoiceModels { list: listing }
+            }
+            Repeater {
+                model: listing.slots(listing.names.sheets.cloud)
+                delegate: VoiceCloud { list: listing }
             }
             Repeater {
                 model: listing.slots(listing.names.sheets.device)
@@ -89,23 +95,15 @@ Item {
             }
         }
     }
-    Pager {
+    VoicePager {
+        id: pg
         anchors.right: parent.right
         anchors.rightMargin: listing.side
         anchors.verticalCenter: parent.verticalCenter
-        page: listing.view.pages.at
-        pages: listing.view.pages.count
-        canBack: listing.view.pages.at > 0 && !listing.host.asking
-        canOn: listing.view.pages.at < listing.view.pages.count - 1 && !listing.host.asking
-        ui: listing.host.ui
-        lk: listing.lk
-        res: listing.host.res
-        s: listing.s
-        backId: listing.host.res.uid(listing.names.group, listing.names.ids.pageBack)
-        onId: listing.host.res.uid(listing.names.group, listing.names.ids.pageOn)
-        onTurn: by => listing.host.send(listing.names.acts.page, "", by)
+        host: listing.host
     }
     Column {
+        id: blank
         visible: !!listing.sheet.empty
         anchors.centerIn: parent
         spacing: listing.pn.body_gap_px * listing.s

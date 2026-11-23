@@ -21,8 +21,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P8 | Clipboard history | Done (v0.5) |
 | P9 | Quick-fill (vault) and one data folder | Done (v0.6) |
 | P10 | Selection helper | Done (v0.6) |
-| P11 | Voice typing ([design](superpowers/specs/2026-11-10-voice-typing-design.md)) | In progress (part 1 built; part 2, the cloud, next) |
-| P12 | Snip + OCR | Waiting |
+| P11 | Voice typing ([design](superpowers/specs/2026-11-10-voice-typing-design.md)) | Done (v0.7) |
+| P12 | Snip + OCR | Ready |
 | P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Waiting |
 | P14 | Release pipeline and v1.0 | Waiting |
 | P15 | macOS, then Linux | Waiting |
@@ -49,6 +49,7 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27, to be added one 
 | F14 | **Switch scanning** | A highlight moves through rows and keys; one switch or click picks the highlighted one. | P3, v1.0 | Medium |
 | F15 | **Number pad and navigation panel** | An optional panel with a number pad, Home, End, PgUp, PgDn, Insert and F-keys. | P3, v1.0 | Small |
 | F16 | **Chinese, Japanese and Korean input** | An IME mode that sends key presses instead of characters, so the Windows IME can build the text. | P3, v1.0 | Medium |
+| F17 | **Add your own voice model** | Install a speech model that is not in the list, with its fingerprint, memory needs and licence checked. | P11 | Medium |
 
 **Adding your own idea:** say "add a feature: …". Claude adds it as the next F-number with a one-line description, its needs and its size.
 

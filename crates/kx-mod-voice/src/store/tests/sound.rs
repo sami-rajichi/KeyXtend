@@ -4,12 +4,12 @@
 
 use super::*;
 use crate::VoiceSettings;
-use kx_module_api::ports::{MAX_SOUND_BYTES, SAMPLE_BYTES, SOUND_HZ};
+use kx_module_api::ports::{MAX_SOUND_BYTES, SOUND_BYTES_PER_S};
 
 #[test]
 fn edge_31_a_ten_minute_recording_is_kept_in_blobs_under_the_limits() {
     let settings = VoiceSettings::from_defaults().unwrap();
-    let ten_min = usize::from(settings.record_max_s) * SOUND_HZ * SAMPLE_BYTES;
+    let ten_min = usize::from(settings.record_max_s) * SOUND_BYTES_PER_S;
     let shelf = Arc::new(Mem::default());
     let mb = u64::from(settings.voice_max_mb) * MB;
     let (mut o, r) = (open(&shelf, MAX_BLOB_BYTES), rules(mb));

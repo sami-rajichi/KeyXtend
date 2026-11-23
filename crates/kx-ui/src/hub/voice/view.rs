@@ -1,7 +1,11 @@
 //! The bar as QML reads it (design "The bar"): each state's words in the keyboard's language, its buttons in one order
-//! in every language with the dimmed ones in place, a text with its own direction or dots, and a note with its action.
+//! in every language with the dimmed ones in place, a text with its own direction or dots, a note with its action and,
+//! for a note the service's pages settle, its acts under the line, and a service's card warning while the first
+//! dictation to it listens and while that service writes it.
 //! The gear shows in every state but `hidden`, before the last button.
 
+use super::acts::LOCAL;
+use super::chip::{self, Chip};
 use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
 use crate::I18n;
@@ -9,16 +13,18 @@ use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
-    VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING,
-    VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
+    FACT_WARN, SERVICE_KEY_ICON, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_JOIN,
+    VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING,
+    VOICE_USE_LOCAL, WINDOW_VOICE,
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoicePage, VoiceText,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Fact, Listening, LocalUse, VoiceBar,
+    VoicePage, VoiceText,
 };
 use serde::Serialize;
 
-/// The bar and the panel, as JSON.
+/// The bar with its chip, and the panel, as JSON.
 #[derive(Serialize)]
 pub(super) struct View {
     round: u32,
@@ -26,11 +32,14 @@ pub(super) struct View {
     sounds: bool,
     words: Words,
     bar: Bar,
+    mark: Option<Chip>,
     panel: Option<Panel>,
 }
 
 /// Qt's marks for the timer's minutes and seconds, which QML fills with `arg`.
 const TIMER_MARKS: [&str; 2] = ["%1", "%2"];
+/// The id of "Use the local model", which picks its icon.
+const LOCAL_ID: &str = "local";
 
 /// The words outside the buttons: the window's and bar's names, the gear's, Copy's once it copied, and the timer
 /// with `TIMER_MARKS` in its language's order.
@@ -52,13 +61,17 @@ enum Bar {
     Listening {
         lang: Lang,
         word: String,
+        quiet: String,
         elapsed_ms: u32,
         wave_ms: u16,
         hint: Option<String>,
+        warn: Option<String>,
+        said: String,
         buttons: Vec<Button>,
     },
     Transcribing {
         word: String,
+        warn: Option<String>,
         buttons: Vec<Button>,
     },
     Text {
@@ -70,6 +83,8 @@ enum Bar {
         hint: Hint,
         mic: bool,
         buttons: Vec<Button>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        acts: Vec<Button>,
     },
 }
 
@@ -83,8 +98,9 @@ struct Shown {
     masked: bool,
 }
 
-/// `page` with every text in `t`; `read` is Compare's set text in the language in front, if it has one.
-pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
+/// `page` with every text in `t`; `read` is Compare's set text in the language in front, if it has one, and `warn` the
+/// take's card warning, which a Transcribing bar shows.
+pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>, warn: Option<&Fact>) -> View {
     View {
         round: page.round,
         place: page.place,
@@ -96,7 +112,8 @@ pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
             copied: t.text(VOICE_COPIED),
             timer: timer(t),
         },
-        bar: bar(&page.bar, t),
+        bar: bar(&page.bar, t, warn),
+        mark: page.mark.as_ref().map(|m| chip::of(t, m)),
         panel: page.panel.as_ref().map(|p| panel::of(p, t, read)),
     }
 }
@@ -107,8 +124,8 @@ fn timer(t: &I18n) -> String {
     t.voice_with(VOICE_TIMER, &[(MINUTES, minutes), (SECONDS, seconds)])
 }
 
-/// The bar in `t`'s words.
-fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
+/// The bar in `t`'s words, Transcribing with the take's card warning `warn`.
+fn bar(bar: &VoiceBar, t: &I18n, warn: Option<&Fact>) -> Bar {
     let cancel = || Button::bar(t, BarButton::Cancel);
     // The strongest button last, drawn dark (owner, 2026-11-14).
     let stop = || Button::bar(t, BarButton::Stop).tone(Tone::Primary);
@@ -117,6 +134,7 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
         VoiceBar::Listening(l) => listening(l, t, vec![cancel(), stop()]),
         VoiceBar::Transcribing => Bar::Transcribing {
             word: t.text(VOICE_TRANSCRIBING),
+            warn: warn.map(|w| t.voice_fact(FACT_WARN, w).text),
             buttons: vec![cancel(), stop().on(false)],
         },
         VoiceBar::Text(text) => text_bar(text, t),
@@ -124,14 +142,27 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
     }
 }
 
-/// The Listening state, with the hint while it hears nothing yet.
+/// The Listening state, with the hint while it hears nothing yet and the service's card warning on its first dictation;
+/// readers hear the hint or the word, then the warning. `quiet` is the hint's text even while unshown, so the bar holds
+/// one width for the take.
 fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
+    let (word, quiet) = (t.text(VOICE_LISTENING), t.text(VOICE_NOTHING));
+    let hint = l.nothing.then(|| quiet.clone());
+    let warn = l.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w).text);
+    let first = hint.clone().unwrap_or_else(|| word.clone());
+    let said = match &warn {
+        Some(w) => [first, w.clone()].join(&t.text(VOICE_JOIN)),
+        None => first,
+    };
     Bar::Listening {
         lang: Lang::of(t, &l.lang),
-        word: t.text(VOICE_LISTENING),
+        word,
+        quiet,
         elapsed_ms: l.elapsed_ms,
         wave_ms: l.wave_ms,
-        hint: l.nothing.then(|| t.text(VOICE_NOTHING)),
+        hint,
+        warn,
+        said,
         buttons,
     }
 }
@@ -169,14 +200,39 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
     }
 }
 
-/// The Note state: the action it names, then Close.
+/// The Note state: the action it names, a cloud note's local model, then Close; a note the service's own pages settle
+/// puts them under its line with Open service, as the Windows 11 info bar does, and keeps Close (owner, 2026-11-20).
 fn note_bar(note: &BarNote, t: &I18n) -> Bar {
     let act = note.act.map(|b| action(b, &note.hint, t));
-    let buttons = act.into_iter().chain([Button::bar(t, BarButton::Close)]);
+    let (local, open) = match &note.hint {
+        BarHint::Cloud { local, why } => (
+            use_local(t, *local),
+            why.opens().then(|| open_service(t, why)),
+        ),
+        _ => (Vec::new(), None),
+    };
+    let close = Button::bar(t, BarButton::Close);
+    let mut acts: Vec<Button> = act.into_iter().chain(local).collect();
+    let buttons = if let Some(open) = open {
+        acts.push(open);
+        vec![close]
+    } else {
+        acts.drain(..).chain([close]).collect()
+    };
     Bar::Note {
         hint: Hint::of(t, &note.hint),
         mic: note.mic,
-        buttons: buttons.collect(),
+        buttons,
+        acts,
+    }
+}
+
+/// Open service, wearing a key on the key note as it opens the key page (design/voice-cloud.js `noteBar`).
+fn open_service(t: &I18n, why: &CloudWhy) -> Button {
+    let open = Button::bar(t, BarButton::Service);
+    match why {
+        CloudWhy::Key => open.icon(SERVICE_KEY_ICON),
+        _ => open,
     }
 }
 
@@ -184,10 +240,24 @@ fn note_bar(note: &BarNote, t: &I18n) -> Bar {
 fn action(b: BarButton, hint: &BarHint, t: &I18n) -> Button {
     let button = Button::bar(t, b).tone(Tone::Primary);
     match (b, hint) {
-        (BarButton::Download, BarHint::NoModel { bytes, .. }) => {
-            let size = (SIZE, t.voice_size(*bytes));
-            button.labelled(t.voice_with(VOICE_DOWNLOAD_SIZE, &[size]))
-        }
+        (BarButton::Download, BarHint::NoModel { bytes, .. }) => sized(t, button, *bytes),
         _ => button,
     }
+}
+
+/// "Use the local model", dimmed unless one is ready, then Download when none is (edge 20).
+fn use_local(t: &I18n, local: LocalUse) -> Vec<Button> {
+    let ready = local == LocalUse::Ready;
+    let fetch = match local {
+        LocalUse::Download { bytes } => Some(sized(t, Button::bar(t, BarButton::Download), bytes)),
+        LocalUse::Ready | LocalUse::Dimmed => None,
+    };
+    let local = Button::new(LOCAL, LOCAL_ID, 0, t.text(VOICE_USE_LOCAL)).on(ready);
+    [Some(local), fetch].into_iter().flatten().collect()
+}
+
+/// Download `button` naming the size of the `bytes` it fetches.
+fn sized(t: &I18n, button: Button, bytes: u64) -> Button {
+    let size = (SIZE, t.voice_size(bytes));
+    button.labelled(t.voice_with(VOICE_DOWNLOAD_SIZE, &[size]))
 }

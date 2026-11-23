@@ -1,4 +1,4 @@
-//! A capture of the lines the actor logs on the test's thread, by their fields.
+//! A capture of the lines the actor logs on the test's thread, each its level and then its fields.
 
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
@@ -54,7 +54,7 @@ impl Subscriber for Lines {
     fn record_follows_from(&self, _: &Id, _: &Id) {}
 
     fn event(&self, event: &Event<'_>) {
-        let mut line = Recorder::default();
+        let mut line = Recorder(format!("{} ", event.metadata().level()));
         event.record(&mut line);
         SEEN.with(|seen| seen.borrow_mut().as_mut().map(|l| l.push(line.0.clone())));
     }

@@ -10,7 +10,7 @@ pub const VOICE_FILES: &str = "voice";
 /// The voice detector's model file.
 pub const DETECTOR: &str = "silero-vad-v6.2-F32.gguf";
 
-/// The self-test clips by ISO 639 code, in the order a model takes them: the first it knows (the voice design).
+/// The self-test clips by ISO 639 code: the language in front's, else the first a model knows in this order (ADR-0052).
 pub const CLIPS: [(&str, &str); 3] = [
     ("en", "check-en.wav"),
     ("fr", "check-fr.wav"),
@@ -66,6 +66,6 @@ mod tests {
             .into_iter()
             .map(|(l, _)| l)
             .collect();
-        assert_eq!(langs, ["en", "fr", "ar"], "ADR-0044 decision 7");
+        assert_eq!(langs, ["en", "fr", "ar"], "ADR-0044 decision 7, ADR-0052");
     }
 }

@@ -1,0 +1,293 @@
+//! The cloud pages' state and clicks (ADR-0047): the Cloud page's switch and its ticked service's buttons, a card's
+//! confirm, and the writes each act leaves in `[voice]`. The key page's acts are in `lines`, the Models page's sides in
+//! `sides`; `services` and `parked` are written only through `services_value` and `parked_value`.
+
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    AddressFault, CloudButton, CloudLine, KeyCheck, Link, ModelSide, PasteFault, Renewal,
+    ServiceMark, VoiceClick, VoiceTab,
+};
+
+use super::typing::Typed;
+use super::{Do, Key, Page, Panel};
+use crate::cloud::Cloud;
+use crate::settings::{CLOUD, PARKED, PICKS, SERVICES, VoiceSettings};
+use crate::view::Facts;
+
+/// The cloud pages' state.
+#[derive(Clone, Debug)]
+pub(crate) struct Clouds {
+    /// The service the card or the key page shows.
+    pub(crate) shown: Option<String>,
+    /// The card was opened from the key page, so Back goes there.
+    pub(crate) from_lines: bool,
+    /// The shown key's characters, read as its page opens.
+    pub(crate) dots: u32,
+    /// How the shown key's test stands.
+    pub(crate) check: KeyCheck,
+    /// When a test found the free allowance used up, when it renews, if the service told.
+    pub(crate) renews_at: Option<Renewal>,
+    /// Counts Pastes, tests and key changes, so an answer to an older one is dropped.
+    pub(crate) round: u32,
+    /// Why a typed or pasted key kept nothing, Unfit, until the next round but an address or model Paste's; the test's
+    /// answer stays beneath.
+    pub(crate) unkept: Option<KeyCheck>,
+    /// The Paste waited for, and the line it goes on.
+    pub(crate) take: Option<(u32, CloudLine)>,
+    /// The line whose Paste put nothing, with why, until the next Paste or round; a key's round keeps another line's.
+    pub(crate) pasted: Option<(CloudLine, PasteFault)>,
+    /// The test waited for.
+    pub(crate) test: Option<u32>,
+    /// The address just refused, with why, until the page changes.
+    pub(crate) refused: Option<(Redacted<String>, AddressFault)>,
+    /// The Other model id just refused, until the page changes.
+    pub(crate) refused_model: Option<Redacted<String>>,
+    /// The Models page's side, and the page the other side was left on.
+    pub(crate) side: (ModelSide, usize),
+    /// The key page's lines as typed (ADR-0049).
+    pub(crate) typed: Typed,
+}
+
+impl Default for Clouds {
+    fn default() -> Self {
+        Self {
+            shown: None,
+            from_lines: false,
+            dots: 0,
+            check: KeyCheck::Untested,
+            renews_at: None,
+            round: 0,
+            unkept: None,
+            take: None,
+            pasted: None,
+            test: None,
+            refused: None,
+            refused_model: None,
+            side: (ModelSide::Local, 0),
+            typed: Typed::default(),
+        }
+    }
+}
+
+impl Clouds {
+    /// Starts a new round, so the Paste or test waited for is dropped, a dropped test leaving the key untested; gives
+    /// its number.
+    pub(crate) fn next(&mut self) -> u32 {
+        self.round = self.round.wrapping_add(1);
+        if self.test.take().is_some() {
+            self.check = KeyCheck::Untested;
+        }
+        (self.take, self.unkept, self.pasted) = (None, None, None);
+        self.round
+    }
+
+    /// A round for the key's Test, Remove or Save: as `next`, but a Paste for the address or model line, and its note,
+    /// stay, as the history may have given that copy up already.
+    pub(crate) fn key_round(&mut self) -> u32 {
+        let take = self.take.filter(|(_, line)| *line != CloudLine::Key);
+        let pasted = self.pasted.filter(|(line, _)| *line != CloudLine::Key);
+        let round = self.next();
+        (self.take, self.pasted) = (take, pasted);
+        round
+    }
+
+    /// A round for a Paste on the address or model line: only the Paste waited for and its note go, so a test runs on.
+    pub(crate) fn line_round(&mut self) -> u32 {
+        self.round = self.round.wrapping_add(1);
+        (self.take, self.pasted) = (None, None);
+        self.round
+    }
+
+    /// Forgets the closed panel's cloud pages but keeps counting rounds, so an answer from before the close is dropped.
+    pub(crate) fn reset(&mut self) {
+        *self = Self {
+            round: self.round,
+            ..Self::default()
+        };
+    }
+}
+
+impl Panel {
+    /// A click of the cloud pages, the Models page's sides, or the Cloud page opened from Home or Models.
+    pub(super) fn cloud_click(&mut self, click: &VoiceClick, facts: &Facts<'_>) -> Vec<Do> {
+        let lines = self.page == Some(Page::Lines);
+        match click {
+            VoiceClick::Open(VoiceTab::Cloud) => self.open_cloud(),
+            VoiceClick::Cloud(on) if self.page == Some(Page::Tab(VoiceTab::Cloud)) => {
+                self.ticks.clear();
+                edit(facts, |c, s| {
+                    c.switch(s, *on);
+                    true
+                })
+            }
+            VoiceClick::Service(button) if self.cloud_acts(facts).contains(button) => {
+                self.cloud_button(*button, facts)
+            }
+            VoiceClick::SetKey(key) if lines => self.set_key(key),
+            VoiceClick::SetAddress(text) => self.type_address(text, facts),
+            VoiceClick::SetModel(text) => self.type_model(text, facts),
+            VoiceClick::Save(line) => self.save(*line, facts),
+            VoiceClick::Paste(line) => self.paste(*line, facts),
+            VoiceClick::Caret { line, at } => {
+                self.place_caret(*line, *at.expose(), facts);
+                Vec::new()
+            }
+            VoiceClick::KeepNothing(on) => self.keep_nothing(*on, facts),
+            VoiceClick::Side(side) => self.side(*side),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Opens the Cloud page from Home, or from the Models page's band.
+    fn open_cloud(&mut self) -> Vec<Do> {
+        let from = matches!(self.page, Some(Page::Home | Page::Tab(VoiceTab::Models)));
+        if from {
+            return self.go(Page::Tab(VoiceTab::Cloud));
+        }
+        Vec::new()
+    }
+
+    /// A cloud button the shown page offers now.
+    fn cloud_button(&mut self, button: CloudButton, facts: &Facts<'_>) -> Vec<Do> {
+        let ticked = match self.ticked() {
+            Some(Key::Service(id)) if self.page == Some(Page::Tab(VoiceTab::Cloud)) => Some(id),
+            _ => self.cloud.shown.as_ref(),
+        };
+        let Some(id) = ticked.cloned() else {
+            return Vec::new();
+        };
+        match button {
+            CloudButton::On | CloudButton::Facts => {
+                self.cloud.from_lines = self.page == Some(Page::Lines);
+                self.show(id, Page::Card)
+            }
+            CloudButton::Lines => self.show(id, Page::Lines),
+            CloudButton::Off => self.turn_off(&id, false, facts),
+            CloudButton::Link => self.link(&id, facts),
+            CloudButton::Test | CloudButton::Remove => self.key_button(&id, button, facts),
+        }
+    }
+
+    /// Open service on a cloud note: service `id`'s card, or its key page for the key note, with Back to the Cloud
+    /// page; that page while cloud does not offer the row, as with cloud off, where the switch is.
+    pub fn settle(&mut self, id: &str, key: bool, facts: &Facts<'_>) -> Vec<Do> {
+        let offered = facts.cloud.map(|c| c.offered(facts.settings));
+        if !offered.is_some_and(|rows| rows.iter().any(|r| r.id == id)) {
+            return self.go(Page::Tab(VoiceTab::Cloud));
+        }
+        self.cloud.from_lines = false;
+        self.show(id.to_owned(), if key { Page::Lines } else { Page::Card })
+    }
+
+    /// Shows service `id`'s card or key page; another service's key starts untested.
+    fn show(&mut self, id: String, page: Page) -> Vec<Do> {
+        if self.cloud.shown.as_ref() != Some(&id) {
+            self.cloud.check = KeyCheck::Untested;
+        }
+        self.cloud.shown = Some(id);
+        self.go(page)
+    }
+
+    /// Switches service `id` Off, plainly or as its newer terms were `declined`: its entry goes aside and its picks
+    /// wait for its Confirm (ADR-0054). Its sealed key stays, as only Remove key deletes it.
+    fn turn_off(&mut self, id: &str, declined: bool, facts: &Facts<'_>) -> Vec<Do> {
+        let mut out = edit(facts, |c, s| {
+            if declined {
+                c.decline(s, id);
+            } else {
+                c.turn_off(s, id);
+            }
+            true
+        });
+        if self.page != Some(Page::Tab(VoiceTab::Cloud)) {
+            out.extend(self.go(Page::Tab(VoiceTab::Cloud)));
+        }
+        out
+    }
+
+    /// The shown page's link: the card's facts page, or the key page's where keys are made; only the row's own HTTPS
+    /// address from the table, never a typed one (edge 23).
+    fn link(&self, id: &str, facts: &Facts<'_>) -> Vec<Do> {
+        let row = facts.cloud.and_then(|c| c.row(id));
+        let url = match self.page {
+            Some(Page::Card) => row.and_then(|r| r.facts.source.as_ref()),
+            _ => row.and_then(|r| r.keys.as_ref()),
+        };
+        let link = url.and_then(|u| Link::new(u.expose().to_owned()).ok());
+        link.map(Do::Link).into_iter().collect()
+    }
+
+    /// An answer to the card's question: yes switches the service on at today's terms and opens its key page; no to
+    /// newer terms switches it off (edge 16), and no to a service still off goes back.
+    pub(super) fn card_confirm(&mut self, yes: bool, facts: &Facts<'_>) -> Vec<Do> {
+        let (Some(id), Some(cloud)) = (self.cloud.shown.clone(), facts.cloud) else {
+            return Vec::new();
+        };
+        let Some(row) = cloud.row(&id).filter(|_| self.asking(facts)) else {
+            return Vec::new();
+        };
+        if yes {
+            let today = facts.now.date;
+            let mut out = edit(facts, |c, s| c.confirm(s, &id, today));
+            if !out.is_empty() {
+                out.extend(self.go(Page::Lines));
+            }
+            return out;
+        }
+        if cloud.asks(facts.settings, row) {
+            return self.turn_off(&id, true, facts);
+        }
+        let back = if self.cloud.from_lines {
+            Page::Lines
+        } else {
+            Page::Tab(VoiceTab::Cloud)
+        };
+        self.go(back)
+    }
+
+    /// True while the shown card asks: its service is off, or its newer terms wait to be confirmed.
+    pub(crate) fn asking(&self, facts: &Facts<'_>) -> bool {
+        let id = self.cloud.shown.as_deref();
+        let (Some(cloud), Some(id)) = (facts.cloud, id) else {
+            return false;
+        };
+        let s = facts.settings;
+        cloud
+            .row(id)
+            .is_some_and(|row| cloud.mark(s, row, false) == ServiceMark::Off || cloud.asks(s, row))
+    }
+}
+
+/// The writes `act` leaves, when it changed `[voice]` and the cloud rules load; none for a refused act.
+pub(super) fn edit(
+    facts: &Facts<'_>,
+    act: impl FnOnce(&Cloud<'_>, &mut VoiceSettings) -> bool,
+) -> Vec<Do> {
+    let Some(cloud) = facts.cloud else {
+        return Vec::new();
+    };
+    let mut next = facts.settings.clone();
+    if !act(&cloud, &mut next) {
+        return Vec::new();
+    }
+    writes(facts.settings, &next)
+}
+
+/// The one write that brings `[voice]` from `before` to `after`: the picks, the services On and parked, and the switch
+/// that changed, saved all or none, so a stop never leaves an entry in both maps.
+fn writes(before: &VoiceSettings, after: &VoiceSettings) -> Vec<Do> {
+    let mut keys = Vec::new();
+    if before.picks != after.picks {
+        keys.extend(toml::Value::try_from(&after.picks).ok().map(|v| (PICKS, v)));
+    }
+    if before.services != after.services {
+        keys.extend(after.services_value().map(|v| (SERVICES, v)));
+    }
+    if before.parked != after.parked {
+        keys.extend(after.parked_value().map(|v| (PARKED, v)));
+    }
+    if before.cloud != after.cloud {
+        keys.push((CLOUD, toml::Value::Boolean(after.cloud)));
+    }
+    Do::write(keys)
+}

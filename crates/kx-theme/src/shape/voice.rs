@@ -25,14 +25,28 @@ pub struct VoiceShape {
     pub panel_px: f32,
     /// Compare's writing line: the moving part's share of its track, and the line's opacity under reduced motion.
     pub run_share: [f32; 2],
+    /// A cloud card's label column.
+    pub fact_px: f32,
+    /// Compare's cloud picks to a row once they pair.
+    pub pick_across: u8,
+    /// The least a cut pick's name keeps before its service's mark is cut too.
+    pub pick_name_px: f32,
+    /// The widest the bar's chip shows its name before it is cut in the middle.
+    pub chip_name_px: f32,
+    /// The least room the wave or the shimmer keeps; past it the bar widens, at most to its text width.
+    pub wave_room_px: f32,
 }
 
 impl VoiceShape {
-    /// Refuses, naming the size: no line, a size of 0 or less, a share outside 0 to 1, a wave gap below 0, a wide bar
-    /// narrower than the other, a wave whose rest is above its full height, or a knob larger than its switch.
+    /// Refuses, naming the size: no line or pick to a row, a size of 0 or less, a share outside 0 to 1, a wave gap below
+    /// 0, a wide bar narrower than the other, a wave whose rest is above its full height, or a knob larger than its switch.
     pub(super) fn check(&self) -> Result<(), String> {
-        if self.text_lines == 0 {
-            return Err("shape: voice.text_lines 0 must be 1 or more".to_owned());
+        let counts = [
+            ("voice.text_lines", self.text_lines),
+            ("voice.pick_across", self.pick_across),
+        ];
+        if let Some((n, _)) = counts.iter().find(|(_, v)| *v == 0) {
+            return Err(format!("shape: {n} 0 must be 1 or more"));
         }
         let [w, gap, rest, full] = self.wave_px;
         let above = self.bar_px.iter().map(|v| ("voice.bar_px", *v));
@@ -45,6 +59,10 @@ impl VoiceShape {
             ("voice.value_px", self.value_px),
             ("voice.col_px", self.col_px),
             ("voice.panel_px", self.panel_px),
+            ("voice.fact_px", self.fact_px),
+            ("voice.pick_name_px", self.pick_name_px),
+            ("voice.chip_name_px", self.chip_name_px),
+            ("voice.wave_room_px", self.wave_room_px),
         ]);
         if let Some((n, v)) = above.find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));

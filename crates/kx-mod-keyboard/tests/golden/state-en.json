@@ -11,6 +11,7 @@
     "alt": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -22,10 +23,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -34,6 +35,7 @@
     "altgr": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -45,10 +47,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -57,6 +59,7 @@
     "bksp": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -68,10 +71,10 @@
         "ink": "danger_ink",
         "skirt": "danger"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -80,6 +83,7 @@
     "c-0x0002": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "1",
       "main_ar": false,
       "main_mark": false,
@@ -91,10 +95,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "!",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -103,6 +107,7 @@
     "c-0x0003": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "2",
       "main_ar": false,
       "main_mark": false,
@@ -114,10 +119,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "@",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -126,6 +131,7 @@
     "c-0x0004": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "3",
       "main_ar": false,
       "main_mark": false,
@@ -137,10 +143,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "#",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -149,6 +155,7 @@
     "c-0x0005": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "4",
       "main_ar": false,
       "main_mark": false,
@@ -160,10 +167,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "$",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -172,6 +179,7 @@
     "c-0x0006": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "5",
       "main_ar": false,
       "main_mark": false,
@@ -183,10 +191,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "%",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -195,6 +203,7 @@
     "c-0x0007": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "6",
       "main_ar": false,
       "main_mark": false,
@@ -206,10 +215,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "^",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -218,6 +227,7 @@
     "c-0x0008": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "7",
       "main_ar": false,
       "main_mark": false,
@@ -229,10 +239,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "&",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -241,6 +251,7 @@
     "c-0x0009": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "8",
       "main_ar": false,
       "main_mark": false,
@@ -252,10 +263,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "*",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -264,6 +275,7 @@
     "c-0x000A": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "9",
       "main_ar": false,
       "main_mark": false,
@@ -275,10 +287,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "(",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -287,6 +299,7 @@
     "c-0x000B": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "0",
       "main_ar": false,
       "main_mark": false,
@@ -298,10 +311,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": ")",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -310,6 +323,7 @@
     "c-0x000C": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "-",
       "main_ar": false,
       "main_mark": false,
@@ -321,10 +335,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "_",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -333,6 +347,7 @@
     "c-0x000D": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "=",
       "main_ar": false,
       "main_mark": false,
@@ -344,10 +359,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "+",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -356,6 +371,7 @@
     "c-0x0010": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "q",
       "main_ar": false,
       "main_mark": false,
@@ -367,10 +383,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -379,6 +395,7 @@
     "c-0x0011": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "w",
       "main_ar": false,
       "main_mark": false,
@@ -390,10 +407,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -402,6 +419,7 @@
     "c-0x0012": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "e",
       "main_ar": false,
       "main_mark": false,
@@ -413,10 +431,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -425,6 +443,7 @@
     "c-0x0013": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "r",
       "main_ar": false,
       "main_mark": false,
@@ -436,10 +455,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -448,6 +467,7 @@
     "c-0x0014": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "t",
       "main_ar": false,
       "main_mark": false,
@@ -459,10 +479,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -471,6 +491,7 @@
     "c-0x0015": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "y",
       "main_ar": false,
       "main_mark": false,
@@ -482,10 +503,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -494,6 +515,7 @@
     "c-0x0016": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "u",
       "main_ar": false,
       "main_mark": false,
@@ -505,10 +527,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -517,6 +539,7 @@
     "c-0x0017": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "i",
       "main_ar": false,
       "main_mark": false,
@@ -528,10 +551,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -540,6 +563,7 @@
     "c-0x0018": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "o",
       "main_ar": false,
       "main_mark": false,
@@ -551,10 +575,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -563,6 +587,7 @@
     "c-0x0019": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "p",
       "main_ar": false,
       "main_mark": false,
@@ -574,10 +599,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -586,6 +611,7 @@
     "c-0x001A": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "[",
       "main_ar": false,
       "main_mark": false,
@@ -597,10 +623,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "{",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -609,6 +635,7 @@
     "c-0x001B": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "]",
       "main_ar": false,
       "main_mark": false,
@@ -620,10 +647,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "}",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -632,6 +659,7 @@
     "c-0x001E": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "a",
       "main_ar": false,
       "main_mark": false,
@@ -643,10 +671,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -655,6 +683,7 @@
     "c-0x001F": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "s",
       "main_ar": false,
       "main_mark": false,
@@ -666,10 +695,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -678,6 +707,7 @@
     "c-0x0020": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "d",
       "main_ar": false,
       "main_mark": false,
@@ -689,10 +719,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -701,6 +731,7 @@
     "c-0x0021": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "f",
       "main_ar": false,
       "main_mark": false,
@@ -712,10 +743,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -724,6 +755,7 @@
     "c-0x0022": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "g",
       "main_ar": false,
       "main_mark": false,
@@ -735,10 +767,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -747,6 +779,7 @@
     "c-0x0023": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "h",
       "main_ar": false,
       "main_mark": false,
@@ -758,10 +791,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -770,6 +803,7 @@
     "c-0x0024": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "j",
       "main_ar": false,
       "main_mark": false,
@@ -781,10 +815,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -793,6 +827,7 @@
     "c-0x0025": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "k",
       "main_ar": false,
       "main_mark": false,
@@ -804,10 +839,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -816,6 +851,7 @@
     "c-0x0026": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "l",
       "main_ar": false,
       "main_mark": false,
@@ -827,10 +863,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -839,6 +875,7 @@
     "c-0x0027": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": ";",
       "main_ar": false,
       "main_mark": false,
@@ -850,10 +887,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": ":",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -862,6 +899,7 @@
     "c-0x0028": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "'",
       "main_ar": false,
       "main_mark": false,
@@ -873,10 +911,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "\"",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -885,6 +923,7 @@
     "c-0x0029": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "`",
       "main_ar": false,
       "main_mark": false,
@@ -896,10 +935,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "~",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -908,6 +947,7 @@
     "c-0x002B": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "\\",
       "main_ar": false,
       "main_mark": false,
@@ -919,10 +959,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "|",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -931,6 +971,7 @@
     "c-0x002C": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "z",
       "main_ar": false,
       "main_mark": false,
@@ -942,10 +983,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -954,6 +995,7 @@
     "c-0x002D": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "x",
       "main_ar": false,
       "main_mark": false,
@@ -965,10 +1007,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -977,6 +1019,7 @@
     "c-0x002E": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "c",
       "main_ar": false,
       "main_mark": false,
@@ -988,10 +1031,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1000,6 +1043,7 @@
     "c-0x002F": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "v",
       "main_ar": false,
       "main_mark": false,
@@ -1011,10 +1055,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1023,6 +1067,7 @@
     "c-0x0030": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "b",
       "main_ar": false,
       "main_mark": false,
@@ -1034,10 +1079,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1046,6 +1091,7 @@
     "c-0x0031": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "n",
       "main_ar": false,
       "main_mark": false,
@@ -1057,10 +1103,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1069,6 +1115,7 @@
     "c-0x0032": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "m",
       "main_ar": false,
       "main_mark": false,
@@ -1080,10 +1127,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1092,6 +1139,7 @@
     "c-0x0033": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": ",",
       "main_ar": false,
       "main_mark": false,
@@ -1103,10 +1151,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "<",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1115,6 +1163,7 @@
     "c-0x0034": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": ".",
       "main_ar": false,
       "main_mark": false,
@@ -1126,10 +1175,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": ">",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1138,6 +1187,7 @@
     "c-0x0035": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "/",
       "main_ar": false,
       "main_mark": false,
@@ -1149,10 +1199,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "?",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1161,6 +1211,7 @@
     "c-0x0056": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "\\",
       "main_ar": false,
       "main_mark": false,
@@ -1172,10 +1223,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "|",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1184,6 +1235,7 @@
     "caps": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1195,10 +1247,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1207,6 +1259,7 @@
     "clip": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1218,10 +1271,10 @@
         "ink": "legend_act",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1230,6 +1283,7 @@
     "ctrl": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1241,10 +1295,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1253,6 +1307,7 @@
     "del": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1264,10 +1319,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1276,6 +1331,7 @@
     "down": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1287,10 +1343,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1299,6 +1355,7 @@
     "enter": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1310,10 +1367,10 @@
         "ink": "enter_ink",
         "skirt": "enter"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1322,6 +1379,7 @@
     "esc": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1333,10 +1391,10 @@
         "ink": "danger_ink",
         "skirt": "danger"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1345,6 +1403,7 @@
     "fill": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1356,10 +1415,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1368,6 +1427,7 @@
     "grab": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1379,10 +1439,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1391,6 +1451,7 @@
     "lang": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1402,10 +1463,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1414,6 +1475,7 @@
     "left": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1425,10 +1487,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1437,6 +1499,7 @@
     "menu": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1448,10 +1511,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1460,6 +1523,7 @@
     "mic": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1471,10 +1535,10 @@
         "ink": "legend_act",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1483,6 +1547,7 @@
     "power": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1494,10 +1559,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1506,6 +1571,7 @@
     "rclick": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1517,10 +1583,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1529,6 +1595,7 @@
     "right": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1540,10 +1607,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1552,6 +1619,7 @@
     "rshift": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1563,10 +1631,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1575,6 +1643,7 @@
     "settings": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1586,10 +1655,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1598,6 +1667,7 @@
     "shift": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1609,10 +1679,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1621,6 +1691,7 @@
     "shortcuts": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1632,10 +1703,10 @@
         "ink": "legend_act",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1644,6 +1715,7 @@
     "snip": {
       "blank": null,
       "dim": true,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1655,10 +1727,10 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1667,6 +1739,7 @@
     "space": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1678,10 +1751,10 @@
         "ink": "legend",
         "skirt": "key"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1690,6 +1763,7 @@
     "tab": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1701,10 +1775,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1713,6 +1787,7 @@
     "up": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1724,10 +1799,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,
@@ -1736,6 +1811,7 @@
     "win": {
       "blank": null,
       "dim": false,
+      "lit": "off",
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1747,10 +1823,10 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
-      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
+      "spoken": null,
       "third": "",
       "third_ar": false,
       "third_mark": false,

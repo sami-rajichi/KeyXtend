@@ -1,9 +1,11 @@
 //! Voice typing's translation keys (P11 design "What the user sees"): every key starts `voice.`, and a group's key
 //! takes an id from `ids`, as in `voice.note-no-mic`.
 
+mod cloud;
 mod ids;
 pub mod vars;
 
+pub use cloud::*;
 pub use ids::*;
 
 /// A word by id, and the start of every voice key: this, then a button's or a page's id, as in `voice.stop`.
@@ -35,6 +37,8 @@ pub const VOICE_GEAR: &str = "voice.gear";
 pub const VOICE_LISTENING: &str = "voice.listening";
 /// The Transcribing state's word.
 pub const VOICE_TRANSCRIBING: &str = "voice.transcribing";
+/// The Dictation key's name while the microphone starts, which readers hear; the keyboard names it as `PREP_NAME`.
+pub const VOICE_PREPARING: &str = "voice.preparing";
 /// The hint while listening hears nothing yet.
 pub const VOICE_NOTHING: &str = "voice.nothing";
 /// Copy's word once it copied.

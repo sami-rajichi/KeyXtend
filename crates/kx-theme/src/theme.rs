@@ -1,4 +1,4 @@
-//! `themes.toml`: three looks, each light and soft dark, and the colours they share.
+//! `tokens/themes/`: three looks, a file each, each light and soft dark, and the colours they share (`common.toml`).
 
 use std::collections::BTreeMap;
 
@@ -9,8 +9,18 @@ use crate::look::Look;
 use crate::mode::Mode;
 use crate::palette::{Palette, own_press, plate_default};
 
+mod files;
+pub(crate) use files::{Part, load};
+
 /// Text weights run from thin to black.
 pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
+/// The key that names a theme table's id.
+const ID: &str = "id";
+
+/// The reason a theme id is refused when another theme or part already has it.
+fn twice(id: &str) -> String {
+    format!("{id}: the theme id is used twice")
+}
 
 /// One theme: its look and its two palettes.
 #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +81,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     }
     for (i, t) in themes.iter().enumerate() {
         if themes[..i].iter().any(|u| u.look.id == t.look.id) {
-            return Err(format!("theme id {:?} is used twice", t.look.id));
+            return Err(twice(&t.look.id));
         }
     }
     Ok((themes, common))
@@ -81,7 +91,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
 /// then its look, whose marks take its Arabic fonts unless it names its own.
 fn theme(mut t: toml::Table, common: &Common) -> Result<Theme, String> {
     let id = t
-        .get("id")
+        .get(ID)
         .and_then(toml::Value::as_str)
         .unwrap_or("?")
         .to_string();
@@ -128,6 +138,12 @@ fn palette(
 #[cfg(test)]
 mod derived;
 #[cfg(test)]
+mod parts;
+#[cfg(test)]
+mod prep;
+#[cfg(test)]
 mod press;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod warn;

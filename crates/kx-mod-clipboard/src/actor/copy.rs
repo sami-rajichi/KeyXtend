@@ -1,22 +1,26 @@
-//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's, a marked copy or the one a
-//! take read before its note came keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
+//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's, a marked copy or a take's
+//! copy told within `take_wait_ms` keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
 //! refused with a note, and the caps then trim the oldest unpinned entries.
 
-use kx_module_api::keys;
 use kx_module_api::ports::{AppRef, ClipKind, ClipNote, ClipPart, PanelNote, SealedError};
+use kx_module_api::{Mono, keys};
 
 use super::Actor;
+use super::take::wipe;
 use crate::entry::{Entry, keep_parts};
 use crate::keep::{admit, trim};
 use crate::media::{Size, job_of};
 
 impl Actor {
-    /// Takes `note` from the watch: a copy too big shows a note unless its app is skipped, and a busy clipboard tells
-    /// nothing.
-    pub(super) fn note(&mut self, note: ClipNote) {
+    /// Takes `note` from the watch, read at `read`, the board first, and a change not ours keeps a lent paste from
+    /// putting back. A copy too big shows a note unless its app is skipped, and a busy clipboard tells nothing.
+    pub(super) fn note(&mut self, note: ClipNote, read: Mono) {
+        if !self.board.heard(&note, self.unsure(&note)) {
+            self.lend_moved();
+        }
         match note {
             ClipNote::Copied { parts, app } => {
-                if let Some(parts) = self.past_take(parts) {
+                if let Some(parts) = self.past_take(parts, read) {
                     self.copied(parts, app.as_ref());
                 }
             }
@@ -25,6 +29,17 @@ impl Actor {
                 self.say_note(PanelNote::TooBig);
             }
             ClipNote::TooBig { .. } | ClipNote::Marked { .. } | ClipNote::Busy => {}
+        }
+    }
+
+    /// True when `note` comes from a skipped app, or tells a change the watch could not read, which may be one.
+    fn unsure(&self, note: &ClipNote) -> bool {
+        match note {
+            ClipNote::Copied { app, .. }
+            | ClipNote::Marked { app }
+            | ClipNote::Cleared { app }
+            | ClipNote::TooBig { app, .. } => self.follow.skips(app.as_ref()),
+            ClipNote::Busy => true,
         }
     }
 
@@ -37,7 +52,7 @@ impl Actor {
     /// Keeps a copy of `parts` by `app`, moves up the entry holding the same content, or refuses it with a note.
     fn copied(&mut self, parts: Vec<ClipPart>, app: Option<&AppRef>) {
         if self.follow.skips(app) {
-            return;
+            return wipe(parts);
         }
         let Some(parts) = keep_parts(parts) else {
             return;
@@ -48,7 +63,7 @@ impl Actor {
             if let Some(from) = self.history.raise(id, &now) {
                 self.moved(id, from);
             }
-            return self.kept(id, app);
+            return self.kept(id, app, &parts);
         }
         if let Err(note) = admit(&self.history, &entry, self.free(), &self.limits) {
             return self.say_note(note);
@@ -56,7 +71,7 @@ impl Actor {
         let kind = entry.kind;
         let id = self.history.add(entry);
         if self.put(id, &parts) {
-            self.kept(id, app);
+            self.kept(id, app, &parts);
             self.look_new(id, kind, parts);
             for gone in trim(&mut self.history, &self.limits) {
                 self.forget(&gone);
@@ -80,7 +95,8 @@ impl Actor {
         self.history.twin(entry.hash, same)
     }
 
-    /// Saves the content of new entry `id`; a failed save deletes the entry, and a locked shelf says so once.
+    /// Saves the content of new entry `id`; a failed save takes its row out, as the history never kept it, so its text
+    /// may still go back, and a locked shelf says so once.
     fn put(&mut self, id: u64, parts: &[ClipPart]) -> bool {
         let Some(entry) = self.history.get(id) else {
             return false;
@@ -92,15 +108,19 @@ impl Actor {
                 if error == SealedError::Locked {
                     self.say_once(keys::CLIP_LOCKED);
                 }
-                self.remove(id);
+                // The store's put already removed the blobs it saved.
+                self.history.remove(id);
                 false
             }
         }
     }
 
-    /// Notes that `id` was kept or moved up for `app`: follow-the-clear watches it, and the note is past.
-    fn kept(&mut self, id: u64, app: Option<&AppRef>) {
+    /// Notes that `id` was kept or moved up for `app` with `parts`: follow-the-clear watches it, the board holds it, its
+    /// text may go back again if it had left the history, and the note is past.
+    fn kept(&mut self, id: u64, app: Option<&AppRef>, parts: &[ClipPart]) {
         self.follow.kept(id, app, self.ports.clock.now());
+        self.board.kept(id);
+        self.lost.kept(parts);
         self.note = None;
         self.changed();
     }

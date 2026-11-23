@@ -198,13 +198,15 @@ fn a_cut_fetch_frame_is_short_and_an_empty_stream_closed() {
 
 #[test]
 fn each_fetch_frame_is_refused_by_every_other_reader() {
-    let others: [Reader; 6] = [
+    let others: [Reader; 8] = [
         read_ask,
         read_reply,
         |r| crate::VaultAsk::read(r).map(drop),
         |r| crate::VaultReply::read(r).map(drop),
         |r| VoiceAsk::read(r).map(drop),
         |r| VoiceNote::read(r).map(drop),
+        |r| crate::NetAsk::read(r).map(drop),
+        |r| crate::NetNote::read(r).map(drop),
     ];
     let asks = every_fetch_ask()
         .iter()

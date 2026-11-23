@@ -29,8 +29,8 @@ mod-voice = ["dep:kx-mod-voice"]
 gate-input = ["kx-platform-windows/sim-input"]
 # The gate-only voice build: `--sound <file.wav>` makes its worker, the one built with `gate`, play that file in place
 # of the microphone, so G22 dictates without a voice. It never ships: the stage and dev-install refuse a program holding
-# kx-ipc's `SOUND_FLAG`.
-gate-voice = ["dep:kx-ipc"]
+# kx-ipc's `SOUND_FLAG`; its cloud speech names each dictation's service by voice typing's services table.
+gate-voice = ["dep:kx-ipc", "mod-voice"]
 
 [dependencies]
 # The sealed files that keep the learned words, the clipboard history and Quick-fill's notebook, under data keys the

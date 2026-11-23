@@ -8,12 +8,14 @@
 )]
 
 mod during;
+mod lines;
 mod pieces;
 mod props;
 mod text;
 
 use crate::assist::{Bench, ear};
 use crate::rig::STATE;
+use kx_mod_keyboard::view::PREP_NAME;
 use kx_mod_keyboard::{BoardSpec, KeyboardSettings, Role};
 use kx_module_api::ports::{
     FaceAction, FaceReply, Piece, TextAsk, TextDone, Typed, VoiceAsk, VoiceKey, VoiceLit,
@@ -76,9 +78,9 @@ impl Mic {
         std::mem::take(&mut *heard)
     }
 
-    /// The voice module says the microphone is open, or not.
-    pub fn lit(&self, rec: bool) {
-        self.b.send(&VoiceLit { rec });
+    /// The voice module tells the key's light.
+    pub fn lit(&self, light: VoiceLit) {
+        self.b.send(&light);
     }
 
     /// The voice module asks for `erase` erased, then `t` typed with `gap_ms` between pieces, in round `round`.
@@ -86,11 +88,12 @@ impl Mic {
         self.b.send(&ask(round, erase, t, gap_ms));
     }
 
-    /// The Dictation key's light: its flags and paint.
+    /// The Dictation key's light: its flags, the name readers hear in place of its own, and its paint.
     fn light(&self) -> Value {
         let k = self.b.key(MIC);
         let p = &k["paint"];
-        json!({ "rec": k["rec"], "on": k["on"], "dim": k["dim"], "paint": [p["fill"], p["ink"], p["skirt"]] })
+        let paint = [&p["fill"], &p["ink"], &p["skirt"]];
+        json!({ "lit": k["lit"], "spoken": k["spoken"], "on": k["on"], "dim": k["dim"], "paint": paint })
     }
 }
 
@@ -125,12 +128,17 @@ pub fn erase_gap() -> Duration {
 
 /// The key unlit: a side key's own paint.
 fn unlit() -> Value {
-    json!({ "rec": false, "on": false, "dim": false, "paint": ["key_act", "legend_act", "key_mod"] })
+    json!({ "lit": "off", "spoken": null, "on": false, "dim": false, "paint": ["key_act", "legend_act", "key_mod"] })
 }
 
 /// The key lit while the microphone is open: the theme's recording tokens.
-fn lit() -> Value {
-    json!({ "rec": true, "on": true, "dim": false, "paint": ["rec", "rec_ink", "rec"] })
+fn red() -> Value {
+    json!({ "lit": "rec", "spoken": null, "on": true, "dim": false, "paint": ["rec", "rec_ink", "rec"] })
+}
+
+/// The key while the microphone starts: the theme's amber tokens, and a name that says it prepares.
+fn amber() -> Value {
+    json!({ "lit": "prep", "spoken": PREP_NAME, "on": false, "dim": false, "paint": ["prep", "prep_ink", "prep"] })
 }
 
 #[test]
@@ -171,39 +179,53 @@ fn the_keyboard_starts_unlit_and_asks_the_voice_module_for_the_light() {
 }
 
 #[test]
-fn voice_lit_sets_the_rec_flag_and_paint_and_redraws_at_the_next_relabel() {
+fn voice_lit_sets_the_light_and_paint_and_redraws_at_the_next_relabel() {
     let m = Mic::quiet(None);
     m.b.rig.state();
-    m.lit(true);
+    m.lit(VoiceLit::Prep);
     assert_eq!(m.b.rig.act(FaceAction::Relabel), Ok(STATE));
-    assert_eq!(m.light(), lit());
-    m.lit(true);
+    assert_eq!(m.light(), amber());
+    m.lit(VoiceLit::Rec);
+    assert_eq!(m.b.rig.act(FaceAction::Relabel), Ok(STATE));
+    assert_eq!(m.light(), red());
+    m.lit(VoiceLit::Rec);
     let again = m.b.rig.act(FaceAction::Relabel);
     assert_eq!(again, Ok(FaceReply::default()), "no change, no redraw");
-    m.lit(false);
+    m.lit(VoiceLit::Off);
     assert_eq!(m.b.rig.act(FaceAction::Relabel), Ok(STATE));
     assert_eq!(m.light(), unlit());
 }
 
 #[test]
+fn a_new_light_is_in_the_state_at_once_for_the_uis_wake_to_read() {
+    let m = Mic::quiet(None);
+    for (light, want) in [(VoiceLit::Prep, amber()), (VoiceLit::Rec, red())] {
+        m.lit(light);
+        assert_eq!(m.light(), want, "{light:?} with no relabel");
+    }
+}
+
+#[test]
 fn a_restart_forgets_the_light_and_asks_again() {
     let mut m = Mic::quiet(None);
-    m.lit(true);
+    m.lit(VoiceLit::Prep);
     m.b.rig.restart(None);
     assert_eq!(m.heard(), [Heard::Ask]);
     assert_eq!(m.light(), unlit());
 }
 
 #[test]
-fn only_the_mic_key_lights_red() {
+fn only_the_mic_key_glows_amber_or_red() {
     let m = Mic::quiet(None);
-    m.lit(true);
-    let state = m.b.rig.state();
-    let keys = state["keys"].as_object().unwrap();
-    let red: Vec<&String> = keys
-        .iter()
-        .filter(|(_, k)| k["rec"] == true)
-        .map(|(id, _)| id)
-        .collect();
-    assert_eq!(red, [MIC]);
+    for light in [VoiceLit::Prep, VoiceLit::Rec] {
+        m.lit(light);
+        let state = m.b.rig.state();
+        let keys = state["keys"].as_object().unwrap();
+        let glowing: Vec<&String> = keys
+            .iter()
+            .filter(|(_, k)| k["lit"] != "off" || k["spoken"] != Value::Null)
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(glowing, [MIC], "{light:?}");
+    }
 }

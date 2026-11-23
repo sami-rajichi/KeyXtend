@@ -3,7 +3,24 @@
 use super::*;
 use crate::voice::fake::lib::FakeLib;
 use crate::voice::library::{Library, Place};
+use std::cell::Cell;
 use std::path::Path;
+
+thread_local! {
+    /// How many samples this test's thread has weighed.
+    static WEIGHED: Cell<usize> = const { Cell::new(0) };
+}
+
+/// A sample that counts each time it is weighed.
+#[derive(Clone, Copy)]
+struct Counted;
+
+impl Sample for Counted {
+    fn power(self) -> f32 {
+        WEIGHED.with(|n| n.set(n.get() + 1));
+        1.0
+    }
+}
 
 /// `n` loud samples with a quiet stretch of `QUIET_MS` starting at `quiet`.
 fn loud_with_quiet(n: usize, quiet: usize) -> Vec<f32> {
@@ -29,7 +46,7 @@ fn a_piece_that_fits_or_a_model_without_a_limit_is_one_span() {
     let pcm = vec![0.5; 1000];
     assert_eq!(spans(&pcm, Some(1000)), one(0..1000));
     assert_eq!(spans(&pcm, None), one(0..1000));
-    assert_eq!(spans(&[], Some(10)), one(0..0));
+    assert_eq!(spans::<f32>(&[], Some(10)), one(0..0));
 }
 
 #[test]
@@ -59,6 +76,16 @@ fn every_part_fits_and_the_parts_cover_the_piece_in_order() {
         }
         assert_eq!(at, pcm.len());
     }
+}
+
+#[test]
+fn cutting_a_long_piece_weighs_each_sample_at_most_once() {
+    let secs = 60;
+    let pcm = vec![Counted; secs * SOUND_HZ];
+    let got = spans(&pcm, Some(SOUND_HZ));
+    assert!(got.len() >= secs, "one-second parts: {}", got.len());
+    let weighed = WEIGHED.with(Cell::get);
+    assert!(weighed <= pcm.len(), "{weighed} weighs for {}", pcm.len());
 }
 
 #[test]

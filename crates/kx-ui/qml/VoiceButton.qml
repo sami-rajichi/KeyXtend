@@ -1,13 +1,14 @@
-// A dictation bar button (design/voice-bar.html .vb, .vt): a round icon (Cancel, the gear, Stop or Close) or a pill
-// with its word (Copy, Undo insert, a note's action). Stop is a dark disc and a note's action takes Enter's colours; one
-// that cannot act shows dimmed in its place, and it acts at let-go (ADR-0024).
+// A dictation bar button (design/voice-bar.css .vb, .vt): a round icon (Cancel, the gear, Stop or Close) or a pill
+// with its word (Copy, Undo insert, a note's action). Stop is a dark disc and a note's action takes Enter's colours;
+// one that cannot act shows dimmed in its place, and it acts at let-go (ADR-0024).
 import QtQuick
 
 Item {
     id: b
 
-    // The button as the hub writes it (`{kind, id, arg, label, on, tone}`), round or a pill, the look, fonts, icons and
-    // size, whether the keyboard speaks Arabic, its gate id, and Copy's word and icon once it copied (empty before).
+    // The button as the hub writes it (`{kind, id, arg, label, on, tone}`, maybe an `icon` in place of its id's), round
+    // or a pill, the look, fonts, icons and size, whether the keyboard speaks Arabic, its gate id, and Copy's word and
+    // icon once it copied (empty before).
     required property var button
     required property bool round
     required property var lk
@@ -24,7 +25,7 @@ Item {
     readonly property bool can: button.on
     readonly property bool hot: can && area.containsMouse
     readonly property string word: done !== "" ? done : button.label
-    readonly property string icon: done !== "" ? lk.icons.voice.copied : (lk.icons.voice[button.id] || "")
+    readonly property string icon: done !== "" ? lk.icons.voice.copied : (lk.icons.voice[button.icon || button.id] || "")
     // Each tone's fill and ink, round then pill; kx-theme checks each pair, under the pointer too (drawn/plate.rs,
     // drawn/clip.rs).
     readonly property var looks: ({

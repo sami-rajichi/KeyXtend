@@ -6,6 +6,7 @@ use kx_module_api::ports::{ClipError, ClipPart, PanelNote, PasteAsk, SealedError
 use kx_module_api::{Redacted, keys};
 
 use super::super::Actor;
+use super::super::board::Held;
 use super::Paste;
 use super::dib::wants_dib;
 use crate::insert::{Insert, Step, paste_parts};
@@ -59,9 +60,9 @@ impl Actor {
             run.insert.written(step);
             run.wrote = true;
         }
-        self.paste.round = self.paste.round.wrapping_add(1);
-        let (round, since) = (self.paste.round, self.ports.clock.now());
         let entry = step.map(|s| s.id);
+        self.board.wrote(entry.map_or(Held::Other, Held::Entry));
+        let (round, since) = (self.paste.next_round(), self.ports.clock.now());
         self.paste.state = Paste::Asked {
             run,
             round,

@@ -1,5 +1,7 @@
 //! Where a model runs (ADR-0044 decisions 5, 7 and 8): the processor, a picked card once its check passed and it has
-//! room, or for Automatic the fastest checked card with room; and a card check's verdict from its times and texts.
+//! room, or for Automatic the fastest checked card with room; a check's clip (ADR-0052) and its verdict.
+
+pub mod told;
 
 use kx_module_api::ports::{
     CardId, CardUse, CheckDone, Device, DeviceKind, DevicePick, Hundredths, Verdict,
@@ -34,6 +36,8 @@ pub enum Why {
     NoneChecked,
     /// The picked card has no check for this model yet.
     Unchecked,
+    /// The model's file is not fingerprinted yet, and a card's check goes by its fingerprint; only the folder sets it.
+    Unread,
     /// The picked card's check failed, with its verdict.
     Failed(Verdict),
     /// The picked card is gone.
@@ -45,6 +49,22 @@ pub enum Why {
         /// The card's free memory now.
         free_mb: u32,
     },
+}
+
+impl Why {
+    /// Its plain name, which a log line may hold; never a value it carries.
+    #[must_use]
+    pub const fn kind(self) -> &'static str {
+        match self {
+            Self::Picked => "picked",
+            Self::NoneChecked => "none_checked",
+            Self::Unchecked => "unchecked",
+            Self::Unread => "unread",
+            Self::Failed(_) => "failed",
+            Self::Gone => "gone",
+            Self::NoRoom { .. } => "no_room",
+        }
+    }
 }
 
 /// Where the model runs.
@@ -132,27 +152,53 @@ fn gain(check: Option<Verdict>) -> Option<Hundredths> {
     }
 }
 
+/// The clip a card's check reads with `front` in front (ADR-0052): `front`'s when the model knows it, else the first of
+/// `clips` it knows; with the model's own code for that clip's language, which `code` gives by ISO code.
+#[must_use]
+pub fn clip<'c, 'm>(
+    front: &str,
+    clips: &'c [String],
+    code: impl Fn(&str) -> Option<&'m str>,
+) -> Option<(&'c str, &'m str)> {
+    let known = |c: &'c String| Some((c.as_str(), code(c)?));
+    let own = clips.iter().filter(|c| *c == front).find_map(known);
+    own.or_else(|| clips.iter().find_map(known))
+}
+
+/// A card check's verdict, with how many words apart its two texts were.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Judged {
+    /// How the check ended.
+    pub verdict: Verdict,
+    /// How many words the card's text and the processor's differ by, in the clip's language.
+    pub apart: u16,
+}
+
 /// A card check's verdict: its text against the processor's first (`card_diff` words in the clip's language `lang`),
 /// then its speed (`card_gain`).
 #[must_use]
-pub fn verdict(done: &CheckDone, lang: &str, rules: &CardRules) -> Verdict {
+pub fn verdict(done: &CheckDone, lang: &str, rules: &CardRules) -> Judged {
     let words = apart(done.card_text.expose(), done.cpu_text.expose(), lang);
+    let judged = |verdict| Judged {
+        verdict,
+        apart: words,
+    };
     if words > u16::from(rules.diff) {
-        return Verdict::Differs {
+        return judged(Verdict::Differs {
             words,
             allowed: rules.diff,
-        };
+        });
     }
     let per_one = u64::from(Hundredths::PER_ONE);
     let times = (u64::from(done.cpu_ms) * per_one).checked_div(u64::from(done.card_ms));
     let gain = Hundredths(times.map_or(u32::MAX, |t| u32::try_from(t).unwrap_or(u32::MAX)));
     if gain < rules.gain {
-        return Verdict::Slow {
+        return judged(Verdict::Slow {
             gain,
             need: rules.gain,
-        };
+        });
     }
-    Verdict::Passed { gain }
+    judged(Verdict::Passed { gain })
 }
 
 #[cfg(test)]

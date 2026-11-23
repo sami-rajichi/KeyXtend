@@ -1,6 +1,7 @@
 //! The frames between the keyboard and its worker processes, the worker's command words and exit codes, and the backup
-//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042). A frame has a fixed header
-//! and a payload capped by its kind, and every field is checked before it is trusted or a buffer is allocated.
+//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042, ADR-0047). A frame has a
+//! fixed header and a payload capped by its kind, and every field is checked before it is trusted or a buffer is
+//! allocated.
 
 #![forbid(unsafe_code)]
 
@@ -10,7 +11,9 @@ mod command;
 mod error;
 mod fetch;
 mod frame;
+pub mod gate;
 mod limits;
+mod net;
 mod reply;
 pub mod rules;
 mod vault;
@@ -21,8 +24,8 @@ mod wire;
 pub use ask::Ask;
 pub use code::{Codec, Fault, Why};
 pub use command::{
-    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, SOUND_FLAG, VAULT_JOB,
-    VOICE_JOB,
+    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, REFUSED_EXIT, SOUND_FLAG,
+    VAULT_JOB, VOICE_JOB,
 };
 pub use error::IpcError;
 pub use fetch::ask::FetchAsk;
@@ -39,9 +42,20 @@ pub use limits::{
 pub use limits::{
     HTTPS, LEVEL_HZ, MAX_DEVICES, MAX_HOST_BYTES, MAX_HOSTS, MAX_LANGS, MAX_MODEL_BYTES,
     MAX_NAME_BYTES, MAX_PATH_BYTES, MAX_PERCENT, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES,
-    MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_TAG_BYTES, MAX_TEXT_BYTES, MAX_URL_BYTES, MAX_URLS, PAD_MS,
-    PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SHA256_BYTES, SILENCE_STOP_S, SOUND_HZ, STALL_S,
-    THREADS,
+    MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_TEXT_BYTES,
+    MAX_URL_BYTES, MAX_URLS, MIB, MS_PER_S, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES,
+    SHA256_BYTES, SILENCE_STOP_S, SOUND_BYTES_PER_S, SOUND_HZ, STALL_S, THREADS,
+};
+pub use limits::{
+    MAX_ADMIN, MAX_FIXED, MAX_KEY_BYTES, MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES,
+    MAX_NET_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PACE_S, NET_PER_MIN, NET_RENEW_S,
+    NET_TEST_TRIES, NET_TRIES, NET_TRY_WAITS, NET_UPLOAD_TIMES, NET_WAIT_S, piece_bytes,
+};
+pub use net::ask::NetAsk;
+pub use net::code::ShapeCode;
+pub use net::note::NetNote;
+pub use net::{
+    NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, NetShape,
 };
 pub use reply::Reply;
 pub use vault::ask::VaultAsk;

@@ -1,6 +1,6 @@
 [package]
 name = "keyxtend-worker"
-description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone and downloads model files outside the uiAccess keyboard (ADR-0004, ADR-0042)."
+description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone, downloads model files and sends dictations to a cloud service outside the uiAccess keyboard (ADR-0004, ADR-0042, ADR-0047)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -28,10 +28,19 @@ keepass.workspace = true
 thiserror.workspace = true
 zeroize.workspace = true
 transcribe-cpp = { workspace = true, optional = true }
-# The fetch job's HTTPS downloads, with the address, redirect and range rules (ADR-0042, ADR-0043 decision 8).
+# The fetch job's HTTPS downloads and the speech job's calls, with their address, redirect, range and header rules
+# (ADR-0042, ADR-0043 decision 8, ADR-0047).
 kx-platform-net = { path = "../../crates/kx-platform-net" }
-# The fetch job's SHA-256 check: the same release `keepass` already builds into this program, so no new crate.
+# The fetch job's SHA-256 check and the speech job's form boundary: the same release `keepass` already builds into
+# this program, so no new crate.
 sha2 = { version = "0.11.1", default-features = false }
+# The speech job reads a service's JSON reply (ADR-0047): `serde_json` 1.0.151, checked on 2026-11-17 and already in
+# the app, with `serde`, its own dependency.
+serde.workspace = true
+serde_json.workspace = true
+# Gemini's request writes the sound as Base64 (ADR-0047): `base64` 0.23.1, checked on 2026-11-20, the release
+# `keepass` already builds into this program with the same features, so no new crate.
+base64 = "0.23.1"
 
 # The voice job's microphone; other systems build without it until P15, as Linux needs ALSA's headers for it.
 [target.'cfg(windows)'.dependencies]

@@ -1,0 +1,1 @@
+{"detail":[{"loc":["body","temperature"],"msg":"ensure this value is less than or equal to 1","type":"value_error.number.not_le"}]}

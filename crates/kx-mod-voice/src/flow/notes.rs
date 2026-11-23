@@ -6,12 +6,18 @@ use kx_module_api::ports::{
     BarButton, BarHint, SpeechDone, SpeechError, SpeechNote, SpeechStage, VoiceLevel,
 };
 
-use super::take::Lang;
-use super::{Count, Flow, Out, Phase};
+use super::take::{Lang, Take};
+use super::{Count, Flow, Out, Phase, Supply};
 
 impl Flow {
     /// A note from dictation `id`'s run.
-    pub(super) fn note(&mut self, id: u32, note: SpeechNote, out: &mut Vec<Out>) {
+    pub(super) fn note(
+        &mut self,
+        id: u32,
+        note: SpeechNote,
+        supply: &dyn Supply,
+        out: &mut Vec<Out>,
+    ) {
         let live = self.take.as_ref().is_some_and(|t| t.id == id && t.open);
         if !live {
             return;
@@ -22,19 +28,19 @@ impl Flow {
             SpeechNote::Heard => self.heard(),
             SpeechNote::Quiet | SpeechNote::Warming { .. } => {}
             SpeechNote::Piece { index, text } => self.piece(index, text),
-            SpeechNote::Done(done) => self.done(done, out),
+            SpeechNote::Done(done) => self.done(done, supply, out),
             SpeechNote::Wiped => self.lose(),
             SpeechNote::Fault(error) => self.fault(error, out),
         }
     }
 
-    /// The light follows the microphone, and listening counts from its opening; the job stopping by itself ends
-    /// listening.
+    /// The light follows the microphone, and listening starts at its opening; a model still loading is no error, and
+    /// the job stopping by itself ends listening.
     fn stage(&mut self, stage: SpeechStage, out: &mut Vec<Out>) {
         let listening = self.phase() == Phase::Listening;
         match stage {
             SpeechStage::Loading => {}
-            SpeechStage::Open => self.opened(),
+            SpeechStage::Open => self.opened(out),
             SpeechStage::Shut => self.lit = false,
             SpeechStage::Limit | SpeechStage::Silence => {
                 if let Some(take) = self.take.as_mut() {
@@ -48,13 +54,21 @@ impl Flow {
         }
     }
 
-    /// The microphone opened: the key lights while listening, whose time and hint start now.
-    fn opened(&mut self) {
-        let now = self.now();
-        self.lit = self.phase() == Phase::Listening;
-        if let super::State::Listening { since, .. } = &mut self.state {
-            *since = now;
+    /// The microphone opened: a preparing dictation shows its Listening bar, whose time and hint start now, and the key
+    /// turns red. A service's warning on it is noted seen, as it shows from now on.
+    fn opened(&mut self, out: &mut Vec<Out>) {
+        if self.phase() == Phase::Preparing {
+            let since = self.now();
+            self.state = super::State::Listening {
+                since,
+                nothing: false,
+            };
+            let net = self.take.as_ref().and_then(|t| t.engine.net());
+            if let Some(net) = net.filter(|n| n.warn.is_some()) {
+                out.push(Out::Warned(net.service.clone()));
+            }
         }
+        self.lit = self.phase() == Phase::Listening;
     }
 
     /// The level reaches the bar only while listening.
@@ -74,16 +88,24 @@ impl Flow {
         }
     }
 
-    /// A piece is kept, unshown, while the run writes.
+    /// A piece is kept, unshown, while the run writes; a listen-only run writes none, so a cloud take's pieces come
+    /// only from its service.
     fn piece(&mut self, index: u16, text: Secret) {
         let writing = self.busy();
-        if let Some(take) = self.take.as_mut().filter(|_| writing) {
+        if let Some(take) = (self.take.as_mut()).filter(|t| writing && t.engine.net().is_none()) {
             take.pieces.insert(index, text);
         }
     }
 
-    /// The run wrote every piece: the text goes out; with none, Try again's bar comes back, else nothing was heard.
-    fn done(&mut self, done: SpeechDone, out: &mut Vec<Out>) {
+    /// The run wrote every piece: the text goes out; with none, Try again's bar comes back, else nothing was heard. A
+    /// listen-only run's end hands its speech over instead, and only its first counts.
+    fn done(&mut self, done: SpeechDone, supply: &dyn Supply, out: &mut Vec<Out>) {
+        let spoken = (self.take.as_ref()).and_then(|t| t.wire.as_ref().map(|w| w.spoken.is_some()));
+        match spoken {
+            Some(false) => return self.listened(done, supply, out),
+            Some(true) => return,
+            None => {}
+        }
         if !self.busy() {
             return;
         }
@@ -92,7 +114,7 @@ impl Flow {
             return;
         };
         if !self.hidden {
-            let model = take.ready.name.clone();
+            let model = take.engine.name();
             let card = take.ask.card.as_ref().filter(|_| done.card);
             let card = card.map(|c| c.id.clone());
             out.push(Out::Count(Count { model, card, done }));
@@ -118,19 +140,17 @@ impl Flow {
         }
     }
 
-    /// A fault: a card's lets the processor carry on; another ends a busy run; after the text, a death loses the
-    /// recording.
+    /// A fault: a card's lets the processor carry on; another ends a busy run; after the text, or while an upload
+    /// runs, a death loses the recording.
     fn fault(&mut self, error: SpeechError, out: &mut Vec<Out>) {
+        let sending = self.take.as_ref().is_some_and(Take::sending);
         if !error.ends() {
             return self.fell(error, out);
         }
-        if self.busy() {
+        if self.busy() && !sending {
             return self.broke(error, out);
         }
-        if matches!(
-            error,
-            SpeechError::Gone | SpeechError::Timeout | SpeechError::NoSound
-        ) {
+        if lost(error) {
             self.lose();
         }
     }
@@ -142,9 +162,13 @@ impl Flow {
         };
         take.fell = true;
         let card = take.ask.card.as_ref().map(|c| c.id.clone());
-        if let (SpeechError::CardFailed, Some(card)) = (error, card) {
-            let model = take.ready.print;
-            out.push(Out::Fell { card, model });
+        if let (SpeechError::CardFailed, Some(card), Some(ready)) =
+            (error, card, take.engine.ready())
+        {
+            out.push(Out::Fell {
+                card,
+                model: ready.print,
+            });
         }
     }
 
@@ -154,7 +178,8 @@ impl Flow {
             return;
         };
         let pieces = take.joined();
-        let (lang, bytes) = (take.lang.clone(), take.ready.bytes);
+        let bytes = take.engine.ready().map(|r| r.bytes).unwrap_or_default();
+        let lang = take.lang.clone();
         self.end_run(false, out);
         if error == SpeechError::NoFile {
             out.push(Out::Lost);
@@ -185,6 +210,14 @@ fn fault_note(error: SpeechError, lang: &Lang, bytes: u64) -> (BarHint, Option<B
         SpeechError::Memory => (BarHint::NoFit, None),
         _ => (BarHint::Fault, None),
     }
+}
+
+/// True for a fault after which the run no longer holds the recording: the job ended, or let it go.
+pub(super) fn lost(error: SpeechError) -> bool {
+    matches!(
+        error,
+        SpeechError::Gone | SpeechError::Timeout | SpeechError::NoSound
+    )
 }
 
 /// The note of a microphone's fault, which Compare's recording shows too; `None` for any other fault.

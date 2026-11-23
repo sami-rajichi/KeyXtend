@@ -15,7 +15,7 @@ mod shelf;
 #[cfg(test)]
 mod testing;
 
-pub use consts::KEY_LEN;
+pub use consts::{KEY_FILE, KEY_LEN, SEALED_EXT};
 pub use files::SealedFiles;
 pub use guard::{GuardError, KeyGuard};
 pub use memory::{MemoryShelf, MemoryStore};

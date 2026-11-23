@@ -5,8 +5,8 @@ use std::ops::RangeInclusive;
 
 /// A kibibyte, the unit of the read chunk and of the locked identity's cap.
 const KIB: usize = 1024;
-/// A mebibyte, the unit of the image, decoder, box and vault job caps.
-pub(crate) const MIB: usize = KIB * KIB;
+/// A mebibyte, the unit of the image, decoder, box and vault job caps, and of every job's memory cap.
+pub const MIB: usize = KIB * KIB;
 
 /// The bytes every frame starts with.
 pub(crate) const MAGIC: [u8; 4] = *b"KXIP";
@@ -136,18 +136,23 @@ pub const STALL_S: RangeInclusive<u16> = 5..=300;
 pub const SOUND_HZ: usize = 16_000;
 /// Bytes in one sound sample: signed 16-bit, little-endian.
 pub const SAMPLE_BYTES: usize = size_of::<i16>();
+/// Bytes of hand-over sound in one second.
+pub const SOUND_BYTES_PER_S: usize = SOUND_HZ * SAMPLE_BYTES;
 /// The most sound one frame carries, in whole samples: about 33 seconds.
 pub const MAX_SOUND_BYTES: usize = MIB;
 /// The longest recording in bytes: `record_max_s` at its top, as hand-over sound.
-pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_HZ * SAMPLE_BYTES;
+pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_BYTES_PER_S;
 /// The most pieces a recording is handed over in, so a piece's index stays bounded.
 pub const MAX_SOUND_PIECES: usize = MAX_RECORD_BYTES.div_ceil(MAX_SOUND_BYTES);
 /// Milliseconds in a second.
-const MS_PER_S: u32 = 1000;
+pub const MS_PER_S: u32 = 1000;
 /// The longest recording in ms, which a done note's sound may not pass.
 pub const MAX_SOUND_MS: u32 = *RECORD_MAX_S.end() as u32 * MS_PER_S;
 /// The most text pieces a dictation is cut into: each but the last is at least `piece_s` long.
 pub const MAX_PIECES: usize = (*RECORD_MAX_S.end() / *PIECE_S.start() as u16) as usize + 1;
+/// The most speech pieces a listen-only Stop hands over, and so the most one cloud run sends: two in a row hold more
+/// than the shortest `piece_s`.
+pub const MAX_SPEECH_PIECES: usize = 2 * MAX_PIECES;
 /// The longest text of one piece in UTF-8 bytes: far past two minutes of speech in any script.
 pub const MAX_TEXT_BYTES: usize = 64_000;
 /// The longest file path in UTF-8 bytes.
@@ -181,6 +186,62 @@ pub const SHA256_BYTES: usize = 32;
 pub const HTTPS: &str = "https://";
 /// What a download's partial file adds to the final name.
 pub const PART_EXT: &str = ".part";
+
+/// The `net_wait_s` setting's range: seconds to wait for one cloud request's answer.
+pub const NET_WAIT_S: RangeInclusive<u16> = 5..=300;
+/// The `net_tries` setting's range: tries per piece before a cloud fault is told.
+pub const NET_TRIES: RangeInclusive<u8> = 1..=5;
+/// A service row's megabytes a request: up to 8 GiB, far past the largest cap a service names.
+pub const NET_MAX_MB: RangeInclusive<u32> = 1..=8_192;
+/// A service row's requests a minute: up to 100 a second, a sanity ceiling far past any service's own rate.
+pub const NET_PER_MIN: RangeInclusive<u16> = 1..=6_000;
+/// A service row's requests at once: up to 16, so one dictation never floods the user's link.
+pub const NET_AT_ONCE: RangeInclusive<u8> = 1..=16;
+/// The longest cloud key a header carries: 1 KiB, far past any service's key of a few hundred bytes.
+pub const MAX_KEY_BYTES: usize = KIB;
+/// The most fixed fields an upload form adds: a keep-nothing switch needs one, and 4 leaves room for a new row's own
+/// without a frame change.
+pub const MAX_FIXED: usize = 4;
+/// The most reply fields a form's key test reads for a management key: `OpenRouter` names two, and 4 leaves room.
+pub const MAX_ADMIN: usize = 4;
+/// The longest cloud piece, in seconds: ten minutes, 19.2 MB raw, under the ~25 MB a request most services take; a
+/// longer dictation goes in more pieces.
+const NET_PIECE_MAX_S: u16 = 600;
+/// A service row's seconds a request: from the shortest piece the `voice` job cuts to `NET_PIECE_MAX_S`.
+pub const NET_MAX_S: RangeInclusive<u16> = (*PIECE_S.start() as u16)..=NET_PIECE_MAX_S;
+/// Seconds in a day, the unit of a renewal's cap.
+const DAY_S: u32 = 24 * 60 * 60;
+/// The most days an allowance's renewal may be away: a month, the longest period a service's free allowance names.
+const RENEW_DAYS: u32 = 31;
+/// How far away an allowance's renewal may be, in seconds.
+pub const NET_RENEW_S: RangeInclusive<u32> = 1..=RENEW_DAYS * DAY_S;
+/// The longest text of one cloud piece in UTF-8 bytes: `MAX_TEXT_BYTES` for each top `piece_s` the longest piece holds.
+pub const MAX_NET_TEXT_BYTES: usize =
+    MAX_TEXT_BYTES * (*NET_MAX_S.end() / *PIECE_S.end() as u16) as usize;
+/// The most text bytes one cloud run tells in all, as for the longest dictation; the host enforces it.
+pub const MAX_NET_RUN_TEXT_BYTES: usize =
+    MAX_TEXT_BYTES * (*RECORD_MAX_S.end() / *PIECE_S.end() as u16) as usize;
+/// The largest reply `speech-net` reads from a service: ten minutes' words with their timings stay under 1 MiB, so
+/// this leaves room yet bounds a hostile reply.
+pub const MAX_NET_REPLY_BYTES: usize = 4 * MIB;
+/// The span a row's `per_min` counts requests in, in seconds; a request may wait this long for its turn.
+pub const NET_PACE_S: u16 = 60;
+/// The waits of `net_wait_s` one try may spend beside its upload: connecting, the service's answer and its reply.
+pub const NET_TRY_WAITS: u32 = 3;
+/// How many times its own length a piece's upload may take: a link at half the sound's rate still sends it.
+pub const NET_UPLOAD_TIMES: u32 = 2;
+/// A key's test sends once: a wrong key is told at once, and a 429 still waits once.
+pub const NET_TEST_TRIES: u8 = 1;
+
+/// The most bytes one cloud piece may hold within a row's `max_mb` and `max_s`, in whole samples.
+#[must_use]
+pub fn piece_bytes(max_mb: u32, max_s: u16) -> usize {
+    let by_size = u64::from(max_mb).saturating_mul(MIB as u64);
+    let by_size = usize::try_from(by_size).unwrap_or(usize::MAX);
+    let by_time = usize::from(max_s) * SOUND_BYTES_PER_S;
+    let most = by_size.min(by_time);
+    most - most % SAMPLE_BYTES
+}
 
 /// The longest of `names`, in bytes.
 const fn longest(names: &[&str]) -> usize {
@@ -223,5 +284,12 @@ const _: () = assert!(MAX_IMAGE_BYTES <= MAX_REPLY_LEN);
 const _: () = assert!(MAX_SOUND_BYTES.is_multiple_of(SAMPLE_BYTES));
 const _: () = assert!(MAX_SOUND_PIECES <= u16::MAX as usize);
 const _: () = assert!(MAX_PIECES <= u16::MAX as usize);
+const _: () = assert!(MAX_SPEECH_PIECES <= u16::MAX as usize);
 const _: () = assert!(*SILENCE_STOP_S.start() > 0);
 const _: () = assert!(PART_EXT.len() < MAX_PATH_BYTES);
+// A service's reply holds the longest text it may yield, a run holds its longest piece's text, and the longest piece
+// lies between the longest `piece_s` and the longest dictation.
+const _: () = assert!(MAX_NET_REPLY_BYTES >= MAX_NET_TEXT_BYTES);
+const _: () = assert!(MAX_NET_RUN_TEXT_BYTES >= MAX_NET_TEXT_BYTES);
+const _: () =
+    assert!(NET_PIECE_MAX_S <= *RECORD_MAX_S.end() && NET_PIECE_MAX_S >= *PIECE_S.end() as u16);

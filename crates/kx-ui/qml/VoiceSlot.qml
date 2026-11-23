@@ -1,4 +1,4 @@
-// The mark before a text or a note, a button wide (design/voice-bar.html .slot): the text's or the dots' mark, each
+// The mark before a text or a note, a button wide (design/voice-bar.css .slot): the text's or the dots' mark, each
 // note's own by its hint id, or the red dot while the microphone is still open, so a note never hides it.
 import QtQuick
 

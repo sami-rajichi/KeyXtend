@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    FieldKind, FieldWatch, SessionWatch, SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct,
-    VoiceBar, VoiceClick, VoicePage,
+    FieldKind, FieldWatch, PasteText, SessionWatch, SpeechNote, SpeechStage, TextAsk, TextDone,
+    TextPasted, VoiceAct, VoiceBar, VoiceClick, VoiceLit, VoicePage,
 };
 use kx_module_api::{Bus, ModuleCx, Redacted, Subscription, Zeroizing};
 use kx_platform_fake::SpeechCall;
@@ -17,6 +17,7 @@ use kx_test_support::host::FakeHost;
 use super::super::{Actor, Msg, Ports};
 pub(super) use super::fakes::{DIR, Fakes, done, english, english_layout};
 use super::taps::{Heard, in_place, listen, typist};
+use crate::module::read;
 use crate::{MANIFEST, VoiceSettings};
 
 /// The actor on a fake host, its fakes, and what it published.
@@ -43,7 +44,12 @@ impl Rig {
 
     /// A begun rig of a run whose saves would be hidden (ADR-0037).
     pub fn hidden() -> Self {
-        Self::begun(Self::unbegun_as(true, |_, _| {}))
+        Self::hidden_with(|_, _| {})
+    }
+
+    /// A begun rig of a hidden run whose fakes and settings `setup` prepares first.
+    pub fn hidden_with(setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
+        Self::begun(Self::unbegun_as(true, setup))
     }
 
     /// `rig` begun, then a text box focused and English in front.
@@ -61,14 +67,34 @@ impl Rig {
         Self::unbegun_as(false, setup)
     }
 
+    /// A begun rig on `section`, read and repaired as the module's own start does, with `fake` behind its ports.
+    pub fn restarted(fake: Fakes, section: toml::Table) -> Self {
+        let setup = |_: &Fakes, host: &mut FakeHost| {
+            for (key, value) in section {
+                host.put(&key, value);
+            }
+        };
+        let rig = Self::unbegun_from(false, fake, setup, |cx| read(cx).unwrap());
+        Self::begun(rig)
+    }
+
     /// The rig before `begin`, of a hidden run when `hidden`, its settings and fakes prepared by `setup`.
     fn unbegun_as(hidden: bool, setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
+        Self::unbegun_from(hidden, Fakes::new(), setup, |cx| cx.settings().unwrap())
+    }
+
+    /// The rig before `begin` on `fake`, prepared by `setup`, its settings as `read` takes them from the host.
+    fn unbegun_from(
+        hidden: bool,
+        fake: Fakes,
+        setup: impl FnOnce(&Fakes, &mut FakeHost),
+        read: impl FnOnce(&ModuleCx<'_>) -> VoiceSettings,
+    ) -> Self {
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();
         host.put("models_dir", DIR.into());
-        let fake = Fakes::new();
         setup(&fake, &mut host);
-        let settings: VoiceSettings = ModuleCx::new(&mut host).settings().unwrap();
+        let settings = read(&ModuleCx::new(&mut host));
         let (tx, inbox) = mpsc::channel();
         let (asks, heard) = (Arc::default(), Arc::default());
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);
@@ -180,7 +206,7 @@ impl Rig {
     }
 
     /// Every light told, in order.
-    pub fn lits(&self) -> Vec<bool> {
+    pub fn lits(&self) -> Vec<VoiceLit> {
         self.picked(|h| match h {
             Heard::Lit(on) => Some(on),
             _ => None,
@@ -206,6 +232,20 @@ impl Rig {
     /// Every text handed to the typer, in order.
     pub fn asks(&self) -> Vec<TextAsk> {
         self.asks.lock().unwrap().clone()
+    }
+
+    /// Every text handed to the clipboard history to paste, in order.
+    pub fn pastes(&self) -> Vec<PasteText> {
+        self.picked(|h| match h {
+            Heard::Paste(ask) => Some(ask),
+            _ => None,
+        })
+    }
+
+    /// The clipboard history answers the last paste asked.
+    pub fn pasted(&mut self, ok: bool) {
+        let round = self.pastes().last().unwrap().round;
+        self.send(Msg::Pasted(TextPasted { round, ok }));
     }
 
     /// The settings as the module's own writes left them.
@@ -237,6 +277,8 @@ fn ports(
         clip: Arc::clone(&fake.clip) as _,
         reveal: Arc::clone(&fake.reveal) as _,
         shelf: Arc::new(fake.shelf.clone()),
+        cloud: Some(Arc::new(fake.cloud.clone())),
+        link: Some(Arc::clone(&fake.link) as _),
         field: field.ok(),
         session: session.ok(),
         handle: host.handle(),

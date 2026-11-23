@@ -8,6 +8,7 @@ use std::collections::HashSet;
 
 mod ask;
 mod job;
+mod kind;
 
 /// A transcript no output may show.
 const SAID: &str = "bonjour-7731";

@@ -1,5 +1,6 @@
 //! History: the shown page of texts, with the counts its header, Pin and Delete all need. Each text is wiped on drop.
 
+use super::cloud::ServiceName;
 use crate::ports::When;
 use crate::{Redacted, Secret};
 
@@ -24,6 +25,8 @@ pub struct HistoryRow {
     pub pinned: bool,
     /// Its place in the tick order, from 1, while ticked; Insert follows that order.
     pub tick: Option<u16>,
+    /// The cloud service that wrote it, which the row's cloud mark names; `None` for a model on this PC.
+    pub cloud: Option<ServiceName>,
 }
 
 /// The History page.

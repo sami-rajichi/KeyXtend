@@ -1,5 +1,5 @@
-// A model in Compare's run (mock-up comparing()): its name, then its mark, or Writing over the moving line while it
-// writes; the row takes no click.
+// A model in Compare's run (mock-up comparing()): its name over why a cloud model failed, then its mark, or Writing
+// over the moving line while it writes; the row takes no click.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -10,6 +10,7 @@ VoiceRow {
     readonly property bool writes: !!step && step.id === host.names.writing
 
     name: entry ? entry.name : ""
+    line: entry ? entry.why || "" : ""
     takes: false
 
     Repeater {

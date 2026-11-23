@@ -1,4 +1,4 @@
-# The theme, by kx-theme's themes.toml id: "native", "et66" or "dolch".
+# The theme, by kx-theme's themes/*.toml id: "native", "et66" or "dolch".
 theme = "native"
 # "light", "dark", or "auto" to follow the Windows app mode.
 mode = "auto"

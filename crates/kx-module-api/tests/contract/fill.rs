@@ -197,11 +197,8 @@ fn the_delete_key_and_a_placed_caret_need_vault() {
 
 #[test]
 fn the_paste_hand_over_needs_read_clipboard_not_vault() {
-    let taken = ClipTaken {
-        round: 1,
-        text: ClipText::Empty,
-    };
-    let take = ClipTake::new(1, 9);
+    let take = ClipTake::new(ModuleId::new("vault"), 1, 9);
+    let taken = take.answer(ClipText::Empty);
     let closed = host(&[Vault]).bus();
     assert_eq!(closed.publish(&take), refused::<ClipTake>(ReadClipboard));
     assert_eq!(closed.publish(&taken), refused::<ClipTaken>(ReadClipboard));

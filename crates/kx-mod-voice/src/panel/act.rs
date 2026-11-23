@@ -1,9 +1,10 @@
-//! What the actor does after a panel input, in order: reads, writes, downloads, a card's check, History's acts and
-//! Compare's run. Each read comes back through the `Panel` method its line names.
+//! What the actor does after a panel input, in order: reads, writes, downloads, a card's check, History's acts,
+//! Compare's run and the cloud keys, Paste and link. Each read comes back through the `Panel` method its line names.
 
 use std::path::PathBuf;
 
-use kx_module_api::ports::{CardId, CheckAsk, FactsAsk, FetchAsk, FetchButton, Fingerprint};
+use kx_module_api::Secret;
+use kx_module_api::ports::{CardId, CheckAsk, FactsAsk, FetchAsk, FetchButton, Fingerprint, Link};
 
 use crate::compare::Act;
 use crate::counts::Checked;
@@ -48,6 +49,8 @@ pub enum Do {
     Make(PathBuf),
     /// Write this `[voice]` key.
     Set(&'static str, toml::Value),
+    /// Write these `[voice]` keys in one save, all or none: the keys one act changes together.
+    SetAll(toml::Table),
     /// Start row `row`'s download as `ask` says; its notes go to `Panel::fetch_note`.
     Fetch {
         /// The row's id.
@@ -84,4 +87,43 @@ pub enum Do {
     DeleteAll(Asked),
     /// An effect on Compare's run.
     Compare(Act),
+    /// Seal `key` as service `service`'s, then call `Panel::key_set` and tell the flow the keys changed.
+    SetKey {
+        /// The service's id.
+        service: String,
+        /// The key, wiped once sealed.
+        key: Secret,
+    },
+    /// Remove this service's key, then tell the flow the keys changed.
+    RemoveKey(String),
+    /// Count the characters of this service's key, then call `Panel::dots`.
+    Dots(String),
+    /// Test service `service`'s key off the actor, then call `Panel::tested` with `ticket`.
+    Test {
+        /// The service's id.
+        service: String,
+        /// Names the test, so an answer the user no longer waits for is dropped.
+        ticket: u32,
+    },
+    /// Ask the clipboard history for its text (`ClipTake`), which `Panel::pasted` gets.
+    Take {
+        /// The round its answer names.
+        round: u32,
+        /// The most characters the line holds; a longer text is refused.
+        max: usize,
+    },
+    /// Open this link from the services table in the browser.
+    Link(Link),
+}
+
+impl Do {
+    /// The one write of `keys`: none, a lone key's `Set`, or one `SetAll`, which saves them all or none.
+    pub(super) fn write(mut keys: Vec<(&'static str, toml::Value)>) -> Vec<Self> {
+        if keys.len() < 2 {
+            let one = keys.pop().map(|(key, value)| Self::Set(key, value));
+            return one.into_iter().collect();
+        }
+        let all = keys.into_iter().map(|(key, value)| (key.to_owned(), value));
+        vec![Self::SetAll(all.collect())]
+    }
 }

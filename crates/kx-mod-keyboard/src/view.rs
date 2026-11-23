@@ -16,9 +16,9 @@ pub use layer::{
     LayerState, NEXT_ICON, NO_SHORTCUTS_TIP, SHORTCUT_ICON_PREFIX, SHORTCUT_NAME_PREFIX, with_layer,
 };
 pub use pad::{PadState, SCROLL_OFF_TIP, pad_state};
-pub use paint::{DIM, Paint, REC, paint};
+pub use paint::{DIM, PREP, Paint, REC, paint};
 pub use power::POWER_OFF_TIP;
-pub use role::FILL_OFF_TIP;
+pub use role::{FILL_OFF_TIP, PREP_NAME};
 
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangView, lang_view, lone};
@@ -30,6 +30,7 @@ use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
 use kx_module_api::ports::{
     AssistChanged, FillLive, KeyName, LangLabel, LayoutTable, Point, PowerChanged, ScrollChanged,
+    VoiceLit,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -148,8 +149,10 @@ pub struct KeyState {
     /// It does nothing now: a later key, a mouse-assist, Power or fill key while its module is not running, or the
     /// Shortcuts key with nothing to show.
     pub dim: bool,
-    /// The Dictation key while the microphone is open, so it glows in the recording paint.
-    pub rec: bool,
+    /// The Dictation key's light, which glows amber while the microphone starts and red while it is open.
+    pub lit: VoiceLit,
+    /// The name readers hear now in place of its own, by translation key: the Dictation key's `PREP_NAME`.
+    pub spoken: Option<&'static str>,
     /// Its colours now, by palette token.
     pub paint: Paint,
     /// What it says after its name now, by translation key, shown in its tip: the language key's `LONE_TIP`, or a
@@ -230,8 +233,8 @@ pub struct StateInput<'a> {
     pub panel: Option<Panel>,
     /// The open panel's line takes the keys.
     pub aimed: bool,
-    /// The microphone is open, as the voice module last told.
-    pub rec: bool,
+    /// The Dictation key's light, as the voice module last told it.
+    pub voice: VoiceLit,
 }
 
 /// Every key's state, the language key, the list, the place, the pad and the layer.
@@ -271,11 +274,8 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             name: shown(text),
             marks: mark_names(text),
             blank: is_empty(c, mods).then_some(EMPTY_NAME),
-            on: false,
-            dim: false,
-            rec: false,
             paint: paint(k.kind, false),
-            tip: None,
+            ..KeyState::default()
         };
     }
     let on = match k.role {

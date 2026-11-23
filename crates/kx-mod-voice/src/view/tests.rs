@@ -1,12 +1,20 @@
-//! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home
-//! list names the model, the device, the last Compare and the counts; Try again acts as the flow allows.
+//! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home list
+//! names the model, the device, the last Compare and the counts; Try again acts as the flow allows; History names a
+//! cloud text's model and service, as the run's table names them.
 
 use kx_module_api::ports::{
-    DeviceLabel, DeviceName, Pages, PanelButton, VoiceClick, VoiceHome, VoiceSheet, VoiceTab,
+    DeviceLabel, DeviceName, Pages, PanelButton, ServiceName, VoiceClick, VoiceHome, VoiceSheet,
+    VoiceTab,
 };
 
+use kx_module_api::{Redacted, Zeroizing};
+
+use super::{service_of, shown_name};
+use crate::cloud::pick_text;
 use crate::counts::Board;
 use crate::panel::rig::{ROWS, Rig, cpu, row};
+use crate::services::tests::shipped::{first, model, pick};
+use crate::services::tests::{ROUTER, with_rows};
 
 /// The rig on `tab`.
 fn on(tab: VoiceTab) -> Rig {
@@ -92,6 +100,8 @@ fn the_home_list_names_the_model_the_device_compare_and_the_counts() {
         compared: Some(day),
         history: 3,
         changed: 1,
+        cloud: None,
+        tabs: VoiceTab::ALL[..usize::from(ROWS)].to_vec(),
     };
     assert_eq!(home, want);
 }
@@ -150,4 +160,69 @@ fn the_panel_draws_nothing_while_closed() {
     let mut rig = Rig::new();
     rig.click(&VoiceClick::Button(PanelButton::Close));
     assert!(rig.view().is_none());
+}
+
+#[test]
+fn history_names_a_cloud_texts_model_and_its_service_never_the_raw_pick() {
+    let mut rig = Rig::new();
+    let rules = crate::history::Rules {
+        texts: true,
+        max: 500,
+        voice: false,
+        voice_bytes: 0,
+    };
+    let listed = pick(first(), 0);
+    for (take, pick) in [(1, "custom:whisper-1"), (2, listed.as_str())] {
+        let kept = crate::flow::Kept {
+            take,
+            text: Redacted::new(Zeroizing::new(format!("texte {take}"))),
+            lang: "fr".into(),
+            model: Redacted::new(pick.into()),
+        };
+        let at = crate::history::Stamp {
+            unix_ms: 1_794_657_600_000 + i64::from(take),
+            offset_min: 0,
+        };
+        rig.history.keep(kept, at, &rules);
+    }
+    rig.click(&VoiceClick::Open(VoiceTab::History));
+    let VoiceSheet::History(sheet) = rig.view().unwrap().sheet else {
+        panic!("not History");
+    };
+    let named: Vec<_> = (sheet.rows.iter())
+        .map(|r| (r.model.expose().clone(), r.cloud.clone()))
+        .collect();
+    let want = [
+        (model(first(), 0).name.clone(), Some(first().shown())),
+        ("whisper-1".to_owned(), Some(ServiceName::Custom)),
+    ];
+    assert_eq!(named, want);
+}
+
+#[test]
+fn the_home_list_pages_its_six_pages_five_to_a_page_with_options_on_the_second() {
+    let mut rig = Rig::new();
+    let view = rig.view().unwrap();
+    assert_eq!(view.pages, Pages { at: 0, count: 2 });
+    let VoiceSheet::Home(home) = view.sheet else {
+        panic!("not Home");
+    };
+    assert_eq!(home.tabs, VoiceTab::ALL[..usize::from(ROWS)]);
+    rig.click(&VoiceClick::Page { back: false });
+    let VoiceSheet::Home(home) = rig.view().unwrap().sheet else {
+        panic!("not Home");
+    };
+    assert_eq!(home.tabs, [VoiceTab::Options]);
+}
+
+#[test]
+fn a_cloud_picks_model_and_service_are_named_by_the_runs_table() {
+    let held = with_rows(ROUTER);
+    let picked = Redacted::new(pick_text("router-test", "openai/whisper-large-v3-turbo"));
+    let named = shown_name(&picked, Some(&held));
+    assert_eq!(named.expose(), "Whisper Large v3 Turbo");
+    let service = service_of(&picked, Some(&held));
+    assert_eq!(service, Some(ServiceName::Named("Router Test".into())));
+    assert_eq!(shown_name(&picked, None), picked, "no table names no model");
+    assert_eq!(service_of(&picked, None), None, "nor a service");
 }

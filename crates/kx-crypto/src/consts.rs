@@ -25,10 +25,10 @@ pub(crate) use kx_module_api::ports::MAX_BLOB_BYTES;
 /// The largest key file that is read; a wrapped 32-byte key is far smaller.
 pub(crate) const MAX_KEY_FILE_BYTES: usize = 64 * 1024;
 
-/// The file in the folder that holds the wrapped data key.
-pub(crate) const KEY_FILE: &str = "sealed.key";
-/// The extension of a blob's sealed file.
-pub(crate) const SEALED_EXT: &str = "sealed";
+/// The file in the folder that holds the wrapped data key; a gate copies it by this name and never opens it.
+pub const KEY_FILE: &str = "sealed.key";
+/// The extension of a blob's sealed file; a gate copies a blob by it and never opens it.
+pub const SEALED_EXT: &str = "sealed";
 /// The extension of a blob set aside because it would not open.
 pub(crate) const DAMAGED_EXT: &str = "damaged";
 /// The extension a save writes first, before the file takes the old one's place.

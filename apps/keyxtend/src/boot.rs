@@ -6,13 +6,13 @@ use crate::hidden::Run;
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter,
-    ClipboardWriterKey, FieldWatch, FieldWatchKey, FolderReveal, FolderRevealKey, InputInjector,
-    InputInjectorKey, LayoutSource, LayoutSourceKey, ModelFiles, ModelFilesKey, Pictures,
-    PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
-    Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore,
-    SealedStoreKey, SelectionWatch, SelectionWatchKey, SessionWatch, SessionWatchKey, Shortcuts,
-    ShortcutsKey, Speech, SpeechKey, VaultStoreKey, VoiceShelfKey, WebLink, WebLinkKey, WordPacks,
-    WordPacksKey,
+    ClipboardWriterKey, CloudSpeech, CloudSpeechKey, FieldWatch, FieldWatchKey, FolderReveal,
+    FolderRevealKey, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, ModelFiles,
+    ModelFilesKey, Pictures, PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey,
+    PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf,
+    SealedShelfKey, SealedStore, SealedStoreKey, SelectionWatch, SelectionWatchKey, SessionWatch,
+    SessionWatchKey, Shortcuts, ShortcutsKey, Speech, SpeechKey, VaultStoreKey, VoiceShelfKey,
+    WebLink, WebLinkKey, WordPacks, WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -71,6 +71,8 @@ pub struct Services {
     pub folders: Arc<dyn FolderReveal>,
     /// Records and transcribes in the worker's `voice` job, for voice typing.
     pub speech: Arc<dyn Speech>,
+    /// Sends a dictation's speech at Stop to the service the user picked, in the worker's `speech-net` job (ADR-0047).
+    pub cloud: Arc<dyn CloudSpeech>,
     /// Lists, downloads and checks the voice model files, in the worker's `fetch` job.
     pub models: Arc<dyn ModelFiles>,
     /// Tells a lock or a sleep, so a dictation stops and wipes.
@@ -163,6 +165,7 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<WebLinkKey>(services.link)?;
     kernel.provide_platform::<FolderRevealKey>(services.folders)?;
     kernel.provide_platform::<SpeechKey>(services.speech)?;
+    kernel.provide_platform::<CloudSpeechKey>(services.cloud)?;
     kernel.provide_platform::<ModelFilesKey>(services.models)?;
     kernel.provide_platform::<SessionWatchKey>(services.session)?;
     kernel.provide_platform::<VoiceShelfKey>(services.voice_shelf)

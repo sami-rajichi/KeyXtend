@@ -1,0 +1,298 @@
+//! Cloud models and the bar through the hub: the Models page's Local | Cloud chips and band (edge 29), a cloud model's
+//! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
+//! a cloud model's reason while Compare runs (carry 5), the bar's chip for a service or the model on this PC, and a
+//! cloud note's buttons (carry 4), with Open service under the line of a note the service's pages settle, a key on the
+//! key note's (final review m5).
+
+use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
+use super::{groq, marks, pairs};
+use crate::Rig;
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    BarButton, BarHint, BarMark, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareMic,
+    CompareRun, CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState,
+    ModelsSheet, RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
+};
+use kx_ui::i18n::keys::SERVICE_KEY_ICON;
+use kx_ui::voice_acts::{BAR, LOCAL, OPEN, SIDE};
+use serde_json::{Value, json};
+
+/// A cloud model `name` of `service` standing at `mark`, maybe Unavailable.
+fn cloud_model(name: &str, service: ServiceName, mark: ServiceMark, na: bool) -> ModelRow {
+    ModelRow {
+        name: Redacted::new(name.to_owned()),
+        bytes: 0,
+        default: false,
+        state: ModelState::Ready,
+        used: false,
+        tick: false,
+        fetch: None,
+        cloud: Some(CloudRow {
+            service,
+            mark,
+            unavailable: na.then_some(Unavailable::KeepNothing),
+        }),
+    }
+}
+
+/// The Models page's Cloud side with `rows` and `band`.
+fn cloud_side(rows: Vec<ModelRow>, band: CloudBand) -> VoiceSheet {
+    VoiceSheet::Models(ModelsSheet {
+        rows,
+        best: None,
+        untested: false,
+        slow: false,
+        folder: None,
+        offer: None,
+        side: ModelSide::Cloud,
+        band: Some(band),
+    })
+}
+
+/// A list of one JSON button, for `buttons`.
+fn one(b: &Value) -> Value {
+    Value::Array(vec![b.clone()])
+}
+
+#[test]
+fn the_cloud_side_lists_each_model_with_its_service_and_where_it_stands() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let router = ServiceName::Named("OpenRouter".to_owned());
+    let rows = vec![
+        cloud_model("Whisper Large v3 Turbo", groq(), ServiceMark::Ready, false),
+        cloud_model("voxtral", router.clone(), ServiceMark::Ready, true),
+        cloud_model("nemotron", router, ServiceMark::NeedsKey, false),
+    ];
+    let p = panel_json(&rig, &heard, panel(cloud_side(rows, CloudBand::Listed)));
+    let sides = &p["sheet"]["sides"];
+    assert_eq!(
+        (sides["name"].as_str(), sides["shown"].as_str()),
+        (Some("Where the model runs"), Some("cloud"))
+    );
+    let chips = [
+        button(SIDE, "local", "Local", true, "plain"),
+        button(SIDE, "cloud", "Cloud", true, "plain"),
+    ];
+    assert_eq!(buttons(&sides["chips"]), chips, "edge 29");
+    let band = &p["sheet"]["band"];
+    let listed = "Models of the services you switched on; nothing leaves before Stop.";
+    assert_eq!(band["text"], listed);
+    let to = button(OPEN, "cloud", "Cloud services", true, "plain");
+    assert_eq!(buttons(&one(&band["button"])), [to]);
+    let rows = p["sheet"]["rows"].as_array().cloned().unwrap_or_default();
+    assert_eq!(rows[0]["line"], "In the cloud, with your key");
+    assert_eq!(
+        marks(&rows[0]["marks"]),
+        pairs(&[("cloud", "Groq"), ("ready", "Ready")])
+    );
+    let none = "No host of this model promises to keep nothing.";
+    assert_eq!(rows[1]["line"], none, "edge 17");
+    let na = pairs(&[("cloud", "OpenRouter"), ("unavailable", "Unavailable")]);
+    assert_eq!(marks(&rows[1]["marks"]), na);
+    let key = pairs(&[("cloud", "OpenRouter"), ("needs-key", "Needs a key")]);
+    assert_eq!(marks(&rows[2]["marks"]), key);
+}
+
+#[test]
+fn each_band_says_where_cloud_stands() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let off = "Cloud services are off: none is offered and nothing is sent.";
+    for (band, text) in [
+        (CloudBand::Off, off),
+        (CloudBand::NoneOn, "No cloud service is switched on yet."),
+    ] {
+        let p = panel_json(&rig, &heard, panel(cloud_side(Vec::new(), band)));
+        assert_eq!(p["sheet"]["band"]["text"], text);
+    }
+}
+
+#[test]
+fn compare_lists_its_cloud_models_and_warns_where_the_voice_goes_before_start() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let pick = CompareCloud {
+        name: Redacted::new("Whisper Large v3 Turbo".to_owned()),
+        service: groq(),
+        tick: true,
+    };
+    let sheet = VoiceSheet::Compare(CompareSheet::Ready {
+        models: 2,
+        device: DeviceLabel::Auto(DeviceName::Cpu),
+        mic: CompareMic::Closed,
+        cloud: vec![pick],
+        send: vec![groq(), ServiceName::Custom],
+    });
+    let p = panel_json(&rig, &heard, panel(sheet));
+    let said = "Whisper Large v3 Turbo, Groq";
+    let picks =
+        json!([{"name": "Whisper Large v3 Turbo", "service": "Groq", "said": said, "tick": true}]);
+    assert_eq!(p["sheet"]["picks"], picks);
+    let send = "Compare sends your voice to Groq and the address you type at Stop.";
+    assert_eq!(p["sheet"]["send"], send);
+}
+
+#[test]
+fn a_cloud_model_that_failed_while_compare_runs_says_why() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let run = |why| CompareRun {
+        name: Redacted::new("Whisper Large v3".to_owned()),
+        step: RunStep::Failed,
+        why,
+    };
+    let sheet = VoiceSheet::Compare(CompareSheet::Running {
+        at: 2,
+        of: 2,
+        name: Redacted::new("Whisper small".to_owned()),
+        rows: vec![
+            run(Some(CloudWhy::Key)),
+            run(Some(CloudWhy::Language(english()))),
+            run(None),
+        ],
+    });
+    let p = panel_json(&rig, &heard, panel(sheet));
+    let rows = &p["sheet"]["rows"];
+    assert_eq!(
+        rows[0]["why"],
+        "The service refused the key. Check it on the key page."
+    );
+    assert_eq!(rows[1]["why"], "The service does not take English.");
+    assert_eq!(rows[2]["why"], Value::Null);
+}
+
+#[test]
+fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let mut shown = page(1, listening_bar(), None);
+    heard.view(shown.clone());
+    assert_eq!(json(&rig)["mark"], Value::Null);
+    shown.mark = Some(BarMark::Cloud(groq()));
+    heard.view(shown.clone());
+    let said = "Your voice goes to Groq at Stop";
+    let mark = json!({"kind": "cloud", "name": "Groq", "capped": false, "said": said});
+    assert_eq!(json(&rig)["mark"], mark, "a service's name is never capped");
+    shown.mark = Some(BarMark::Cloud(ServiceName::Custom));
+    heard.view(shown);
+    let said = "Your voice goes to the address you type at Stop";
+    let mark = json!({"kind": "cloud", "name": "Custom", "capped": false, "said": said});
+    assert_eq!(
+        json(&rig)["mark"],
+        mark,
+        "Custom's short name seen, heard as the card says it"
+    );
+}
+
+#[test]
+fn the_bar_names_the_model_on_this_pc_and_readers_hear_who_writes() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let mut shown = page(1, listening_bar(), None);
+    shown.mark = Some(BarMark::Device(Redacted::new("Whisper Turbo".into())));
+    heard.view(shown.clone());
+    let said = "Whisper Turbo writes what you say";
+    let name = "Whisper Turbo";
+    let mark = json!({"kind": "device", "name": name, "capped": true, "said": said});
+    assert_eq!(json(&rig)["mark"], mark, "a model's own name may be capped");
+    shown.mark = Some(BarMark::Device(Redacted::new("my\u{202E}model".into())));
+    heard.view(shown);
+    let mark = &json(&rig)["mark"];
+    assert_eq!(
+        mark["name"], "mymodel",
+        "a file name's hidden marks are dropped"
+    );
+    assert_eq!(mark["said"], "mymodel writes what you say");
+}
+
+/// The bar's two rows for a cloud note on `why` with `local`, and Try again when `again`: its buttons, then the acts
+/// under its line.
+fn note_rows(why: CloudWhy, local: LocalUse, again: bool) -> [Vec<[String; 5]>; 2] {
+    let bar = note_bar(why, local, again);
+    [buttons(&bar["buttons"]), buttons(&bar["acts"])]
+}
+
+/// The bar QML reads for a cloud note on `why` with `local`, and Try again when `again`.
+fn note_bar(why: CloudWhy, local: LocalUse, again: bool) -> Value {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let note = BarNote {
+        hint: BarHint::Cloud { why, local },
+        act: again.then_some(BarButton::Again),
+        mic: false,
+    };
+    heard.view(page(1, VoiceBar::Note(note), None));
+    let bar = json(&rig)["bar"].clone();
+    assert_eq!(bar["state"], "note");
+    bar
+}
+
+/// The bar's buttons for a cloud note no service page settles, all on one row.
+fn note_buttons(why: &CloudWhy, local: LocalUse, again: bool) -> Vec<[String; 5]> {
+    let [buttons, acts] = note_rows(why.clone(), local, again);
+    assert!(acts.is_empty(), "{why:?} keeps one row");
+    buttons
+}
+
+#[test]
+fn a_cloud_note_offers_try_again_then_the_local_model_dimmed_with_download_when_none_is_ready() {
+    let again = button(BAR, "again", "Try again", true, "primary");
+    let local = |on| button(LOCAL, "local", "Use the local model", on, "plain");
+    let close = button(BAR, "close", "Close", true, "plain");
+    let ready = note_buttons(&CloudWhy::Rate, LocalUse::Ready, true);
+    assert_eq!(ready, [again.clone(), local(true), close.clone()]);
+    let fetch = note_buttons(
+        &CloudWhy::Net,
+        LocalUse::Download { bytes: 740_000_000 },
+        true,
+    );
+    let download = button(BAR, "download", "Download · 740 MB", true, "plain");
+    assert_eq!(
+        fetch,
+        [again, local(false), download, close.clone()],
+        "edge 20"
+    );
+    let none = note_buttons(&CloudWhy::NoLocal, LocalUse::Dimmed, false);
+    assert_eq!(none, [local(false), close]);
+}
+
+#[test]
+fn a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line() {
+    let again = button(BAR, "again", "Try again", true, "primary");
+    let local = button(LOCAL, "local", "Use the local model", true, "plain");
+    let open = button(BAR, "service", "Open service", true, "plain");
+    let close = button(BAR, "close", "Close", true, "plain");
+    let opens = [
+        CloudWhy::Key,
+        CloudWhy::Terms,
+        CloudWhy::Account,
+        CloudWhy::Allowance { renews_at: None },
+        CloudWhy::Off,
+    ];
+    for why in opens {
+        let [buttons, acts] = note_rows(why.clone(), LocalUse::Ready, true);
+        assert_eq!(
+            buttons,
+            std::slice::from_ref(&close),
+            "{why:?}: Close stays on the row"
+        );
+        let want = [again.clone(), local.clone(), open.clone()];
+        assert_eq!(acts, want, "{why:?}: the owner, 2026-11-20");
+    }
+    let net = note_buttons(&CloudWhy::Net, LocalUse::Ready, true);
+    assert!(!net.contains(&open), "a network fault opens nothing");
+}
+
+#[test]
+fn the_key_notes_open_service_wears_a_key_and_the_other_notes_its_own_icon() {
+    let icon = |why| note_bar(why, LocalUse::Ready, true)["acts"][2]["icon"].clone();
+    assert_eq!(
+        icon(CloudWhy::Key),
+        SERVICE_KEY_ICON,
+        "it opens the key page"
+    );
+    for why in [CloudWhy::Terms, CloudWhy::Account, CloudWhy::Off] {
+        assert_eq!(icon(why.clone()), Value::Null, "{why:?}: its id's own");
+    }
+}

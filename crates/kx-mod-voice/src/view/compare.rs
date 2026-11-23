@@ -1,24 +1,32 @@
 //! The Compare page: the set text with the ready models and where they run, each model's turn while they run, and the
 //! results with their day and device. A text shows only for a language with no set text.
 
-use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet};
+use kx_module_api::ports::{
+    CompareMic, CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet,
+};
 
 use super::{Facts, device, short};
 use crate::compare::Line;
+use crate::flow::{Lend, net_why};
 use crate::panel::{Key, Panel};
 
 impl Panel {
-    /// The Compare page as it stands.
+    /// The Compare page as it stands: the set text, each model's turn while they run, or the results.
     pub(super) fn compare_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         if let Some((at, models)) = self.compare.running() {
             let name = models
                 .get(at.unwrap_or(0))
-                .map(|(m, _)| m.name.clone())
+                .map(|(name, _)| (*name).clone())
                 .unwrap_or_default();
-            let runs = models.iter().map(|(m, step)| {
+            let lang = facts.lang();
+            let runs = models.iter().enumerate().map(|(i, (name, step))| {
                 let run = CompareRun {
-                    name: m.name.clone(),
+                    name: (*name).clone(),
                     step: *step,
+                    why: self
+                        .compare
+                        .why(i)
+                        .map(|(f, renews)| net_why(f, &lang, renews)),
                 };
                 (Key::Plain, run)
             });
@@ -30,13 +38,28 @@ impl Panel {
         if !self.compare.results().is_empty() {
             return self.results_sheet(facts);
         }
+        self.ready_sheet(facts)
+    }
+
+    /// The set text with the cloud models it may send the recording to and the warning; while it records, the ones its
+    /// plan sends to.
+    fn ready_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let entrants = self.entrants(facts);
+        let lend = self.compare.lend();
+        let (clouds, send) = if self.compare.recording() {
+            self.planned_clouds()
+        } else {
+            self.compare_clouds(facts)
+        };
+        let (cloud, pages) = self.paged(clouds);
         let sheet = CompareSheet::Ready {
             models: short(entrants.len()),
             device: device::label(facts, entrants.first().map(|e| &e.ready)),
-            recording: self.compare.recording(),
+            mic: mic(lend),
+            cloud,
+            send,
         };
-        (VoiceSheet::Compare(sheet), self.single())
+        (VoiceSheet::Compare(sheet), pages)
     }
 
     /// The results, ticked to use one for the language.
@@ -44,7 +67,7 @@ impl Panel {
         let ticks = self.ticks.clone();
         let list: Vec<(Key, CompareRow)> = (self.compare.results().iter())
             .map(|line| {
-                let key = Key::Score(line.print);
+                let key = result_key(line);
                 let row = compare_row(line, ticks.contains(&key));
                 (key, row)
             })
@@ -65,7 +88,7 @@ impl Panel {
         if self.compare.results().is_empty() {
             return Vec::new();
         }
-        let ticked = matches!(self.ticked(), Some(Key::Score(_)));
+        let ticked = matches!(self.ticked(), Some(Key::Score(_) | Key::Cloud { .. }));
         let mut acts = vec![PanelButton::Rerun];
         acts.extend(ticked.then_some(PanelButton::Use));
         acts
@@ -81,6 +104,28 @@ fn compare_row(line: &Line, tick: bool) -> CompareRow {
         wait_ms: line.wait_ms,
         mb: line.mb,
         text: line.text.clone(),
+        cloud: line.cloud.as_ref().map(|r| r.shown.clone()),
         tick,
+    }
+}
+
+/// What a result's row is ticked by: its file's fingerprint, or its cloud model, which Use then picks.
+fn result_key(line: &Line) -> Key {
+    match (&line.cloud, line.print) {
+        (Some(r), _) => Key::Cloud {
+            service: r.service.clone(),
+            model: r.model.clone(),
+        },
+        (None, Some(print)) => Key::Score(print),
+        (None, None) => Key::Plain,
+    }
+}
+
+/// Where Compare's microphone stands while its run holds it as `lend`; closed once its models write.
+fn mic(lend: Lend) -> CompareMic {
+    match lend {
+        Lend::Prep => CompareMic::Opening,
+        Lend::Listen => CompareMic::Reading,
+        Lend::Off | Lend::Write => CompareMic::Closed,
     }
 }

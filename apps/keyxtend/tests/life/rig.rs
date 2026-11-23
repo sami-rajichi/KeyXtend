@@ -1,9 +1,9 @@
 //! The app over the fake platform: temp folders with a portable data folder, a clock that moves only when told, the
 //! fake injector and layouts on the captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power
 //! dialog, box watch, word packs, sealed store, clipboard, shelf, pictures and calendar, Quick-fill's notebook in
-//! memory with seeded random bytes, boxes and places, the selection watch and web link, voice typing's speech, model
-//! files, session watch and shelf, and the shared fake UI ports with a reveal and a look the rig keeps; a waker keeps
-//! every wake.
+//! memory with seeded random bytes, boxes and places, the selection watch and web link, voice typing's speech, cloud
+//! speech, model files, session watch and shelf, and the shared fake UI ports with a reveal and a look the rig keeps; a
+//! waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -16,9 +16,9 @@ use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
     DEFAULT_LANGUAGE, FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock,
-    FakeFieldWatch, FakeFolderReveal, FakeInjector, FakeLayoutSource, FakeModelFiles, FakePictures,
-    FakePlaces, FakePlatform, FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal,
-    FakeScrollTarget, FakeSealedStore, FakeSelectionWatch, FakeSessionWatch, FakeShelf,
+    FakeCloud, FakeFieldWatch, FakeFolderReveal, FakeInjector, FakeLayoutSource, FakeModelFiles,
+    FakePictures, FakePlaces, FakePlatform, FakePointerHook, FakePowerDialog, FakeRandom,
+    FakeReveal, FakeScrollTarget, FakeSealedStore, FakeSelectionWatch, FakeSessionWatch, FakeShelf,
     FakeShortcuts, FakeSpeech, FakeSystemLook, FakeTray, FakeWebLink, FakeWordPacks,
 };
 use kx_settings::Files;
@@ -34,12 +34,14 @@ const GOLDEN: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
 /// The longest a test waits for a module's thread; it never sleeps.
 pub const WAIT: Duration = Duration::from_secs(10);
 /// The calendar's day, hour, minute and offset east of UTC: Paris on 31 October 2026 at 16:32.
-const TODAY: (u16, u8, u8) = (2026, 10, 31);
+pub const TODAY: (u16, u8, u8) = (2026, 10, 31);
 const NOW: (u8, u8, i16) = (16, 32, 60);
 /// The seed of Quick-fill's random bytes, so its ids repeat from run to run.
 const SEED: u64 = 9;
 /// The system's display language the tests build the modules with: the fake look's own.
 pub const OS: &str = DEFAULT_LANGUAGE;
+/// The app a hidden run is started from, a made-up short name as the probe gives it.
+pub const APP: &str = "Claude";
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {
@@ -99,6 +101,8 @@ pub struct Rig {
     pub look: Arc<FakeSystemLook>,
     /// Behind speech, which opens a run on each ask and tells its notes on cue.
     pub speech: FakeSpeech,
+    /// Behind cloud speech, which answers each run as the test scripts and holds the rest.
+    pub cloud: FakeCloud,
     /// Behind the model files, with no drive until a test adds one.
     pub files: FakeModelFiles,
     /// Behind the session watch, which tells a lock or a sleep on cue.
@@ -140,6 +144,7 @@ impl Rig {
             folders: Arc::new(FakeFolderReveal::new()),
             look: Arc::new(FakeSystemLook::new()),
             speech: FakeSpeech::new(),
+            cloud: FakeCloud::new(),
             files: FakeModelFiles::new(),
             session: FakeSessionWatch::new(),
             voice: FakeShelf::new(),
@@ -204,6 +209,7 @@ impl Rig {
             link: self.web.clone(),
             folders: self.folders.clone(),
             speech: Arc::new(self.speech.clone()),
+            cloud: Arc::new(self.cloud.clone()),
             models: Arc::new(self.files.clone()),
             session: Arc::new(self.session.clone()),
             voice_shelf: Arc::new(self.voice.clone()),

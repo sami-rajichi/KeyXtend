@@ -1,6 +1,6 @@
-// The live wave while the bar listens (design/voice-bar.html .wave, frame()): bars in the ring colour as many as fit,
-// each rising from rest with the level smoothed over `waveMs`, a ripple running across them; reduced motion draws a
-// plain meter filled to the level instead (.meter).
+// The live wave while the bar listens (design/voice-bar.css .wave, voice-bar-scene.js frame()): bars in the ring
+// colour as many as fit, each rising from rest with the level smoothed over `waveMs`, a ripple running across them;
+// reduced motion draws a plain meter filled to the level instead (.meter).
 pragma ComponentBehavior: Bound
 import QtQuick
 

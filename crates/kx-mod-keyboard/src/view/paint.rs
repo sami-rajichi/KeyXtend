@@ -29,6 +29,13 @@ pub const REC: Paint = Paint {
     skirt: "rec",
 };
 
+/// The paint of the Dictation key while the microphone starts (mock-up `.key.prep`).
+pub const PREP: Paint = Paint {
+    fill: "prep",
+    ink: "prep_ink",
+    skirt: "prep",
+};
+
 /// The paint of a key of `kind`: side keys turn `on` when toggled, other keys `lock` when latched.
 #[must_use]
 pub fn paint(kind: KeyKind, on: bool) -> Paint {
@@ -59,6 +66,14 @@ mod tests {
     #[test]
     fn a_recording_key_takes_the_rec_tokens() {
         assert_eq!((REC.fill, REC.ink, REC.skirt), ("rec", "rec_ink", "rec"));
+    }
+
+    #[test]
+    fn a_preparing_key_takes_the_prep_tokens() {
+        assert_eq!(
+            (PREP.fill, PREP.ink, PREP.skirt),
+            ("prep", "prep_ink", "prep")
+        );
     }
 
     #[test]

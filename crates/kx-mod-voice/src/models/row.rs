@@ -4,21 +4,22 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CardId, CardUse, FetchAsk, Fingerprint, JobLimits, LINK_SCHEME, Link, SpeechModel, TAG_LEN,
     fits_iso, host_ok, link_named,
 };
-use kx_module_api::{Redacted, is_hidden};
 use serde::Deserialize;
 use thiserror::Error;
 
 use super::{Rules, file_ok};
+use crate::plain::one_line;
 
 /// Why a row was refused, in the order the rules are checked.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum RowError {
-    /// The shown name is empty or holds a hidden mark.
-    #[error("its name is empty or holds a hidden mark")]
+    /// The shown name or the short name is empty or holds a hidden mark.
+    #[error("its name or short name is empty or holds a hidden mark")]
     Name,
     /// The runner is not one the table lists, or not a tag.
     #[error("its runner is not listed")]
@@ -58,6 +59,8 @@ pub(super) struct RawRow {
     pub(super) id: String,
     /// The shown name.
     name: String,
+    /// The bar's name for it.
+    short: String,
     /// The runner that reads it.
     runner: String,
     /// The file's name.
@@ -95,6 +98,8 @@ pub struct Row {
     pub id: String,
     /// The shown name.
     pub name: String,
+    /// The bar's name for it, which no other row has.
+    pub short: String,
     /// The runner that reads it, as the speech port names it.
     pub runner: String,
     /// The file's name in the models folder.
@@ -135,6 +140,7 @@ impl Row {
         Ok(Self {
             id: raw.id,
             name: raw.name,
+            short: raw.short,
             runner: raw.runner,
             file: raw.file,
             bytes: raw.bytes,
@@ -211,7 +217,10 @@ impl RawRow {
             SpeechModel::CPU_MB.contains(&self.cpu_mb) && CardUse::NEED_MB.contains(&self.card_mb);
         let credit = one_line(&self.credit) && Link::new(self.origin.clone()).is_ok();
         let checks = [
-            (one_line(&self.name), RowError::Name),
+            (
+                one_line(&self.name) && one_line(&self.short),
+                RowError::Name,
+            ),
             (
                 rules.runners.contains(&self.runner) && tag_ok(&self.runner),
                 RowError::Runner,
@@ -264,11 +273,6 @@ impl RawRow {
 /// The fingerprint `sha256` spells, only in the lower-case hex the table writes.
 fn print_of(sha256: &str) -> Option<Fingerprint> {
     Fingerprint::from_hex(sha256).filter(|p| p.hex() == sha256)
-}
-
-/// True for text that is not empty and holds no hidden mark.
-fn one_line(text: &str) -> bool {
-    !text.is_empty() && !text.chars().any(is_hidden)
 }
 
 /// True for a tag the frames carry: within `TAG_LEN`, visible ASCII only.

@@ -15,7 +15,7 @@ use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
-use crate::g22cfg::{G22Bench, G22Product, G22Staged};
+use crate::g22cfg::{G22Bench, G22Cloud, G22Product, G22Staged};
 use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
@@ -84,6 +84,8 @@ pub struct GatesConfig {
     pub g22_bench: G22Bench,
     /// G22 on the product.
     pub g22_product: G22Product,
+    /// G22's cloud line on the product.
+    pub g22_cloud: G22Cloud,
     /// The staged worker's edges.
     pub g22_staged: G22Staged,
     /// The box proofs from the real install.
@@ -264,6 +266,7 @@ pub fn load() -> Result<GatesConfig, String> {
     p10cfg::check(&config)?;
     config.g22_bench.check()?;
     config.g22_product.check(&config.g22_bench)?;
+    config.g22_cloud.check()?;
     config.g22_staged.check(&config.g22_bench)?;
     config.boxed.check()?;
     Ok(config)

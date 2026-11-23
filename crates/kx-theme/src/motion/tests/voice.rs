@@ -1,4 +1,4 @@
-//! The dictation bar's wave (design/voice-bar.html `.wave`): its travel, its amounts and the plain meter.
+//! The dictation bar's wave (design/voice-bar.css `.wave`): its travel, its amounts and the plain meter.
 
 use super::*;
 

@@ -1,7 +1,7 @@
 # P1 spike workspace: kept and moved into the product phase by phase (ADR-0014, docs/spike-move-map.md).
 # The face qt-kb no longer builds (ADR-0016); its files stay as source until they move.
 [workspace]
-members = ["core", "worker"]
+members = ["core"]
 resolver = "3"
 
 [workspace.package]
@@ -11,18 +11,11 @@ publish = false
 license-file = "../LICENSE"
 
 [workspace.dependencies]
-spike-core = { path = "core" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 toml = "1"
 windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
-    "Win32_Security",
-    "Win32_System_LibraryLoader",
     "Win32_System_Performance",
-    "Win32_System_Threading",
-    "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }

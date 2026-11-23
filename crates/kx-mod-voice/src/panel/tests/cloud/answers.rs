@@ -1,0 +1,179 @@
+//! The key page says why, in its own words: a test's refusal names its reason, with a used allowance's renewal, a
+//! Paste the clipboard could not answer shows Busy on the key's line, not the general fault, and only until the page
+//! changes; an Other model id the frames refuse stays on its line likewise.
+
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, PasteFault, ServiceSheet,
+    VoiceClick, VoiceTab,
+};
+use std::time::Duration;
+
+use super::super::super::Do;
+use super::super::super::rig::Rig;
+use super::lines::on_groq_lines;
+use super::rows::shown;
+use super::{At, act, apply, cloud_sheet, lines_sheet};
+use crate::flow::renewal;
+
+#[test]
+fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
+    let mut rig = on_groq_lines();
+    let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+    let [Do::Take { round, .. }] = out[..] else {
+        panic!("no take: {out:?}");
+    };
+    let out = rig.with(|p, f| p.pasted(round, ClipText::Busy, f));
+    assert!(out.is_empty());
+    let busy = Some((CloudLine::Key, PasteFault::Busy));
+    assert_eq!(lines_sheet(&mut rig).pasted, busy);
+    assert_eq!(rig.view().unwrap().note, None, "no general fault band");
+}
+
+#[test]
+fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
+    let mut rig = on_groq_lines();
+    let typed = |rig: &mut Rig, text: &str| {
+        rig.click(&VoiceClick::SetModel(Redacted::new(text.to_owned())))
+    };
+    let bad = "two words";
+    assert!(typed(&mut rig, bad).is_empty(), "the frames refuse it");
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!(
+        (sheet.model.expose().as_str(), sheet.model_refused),
+        (bad, true)
+    );
+    let out = typed(&mut rig, "my-model");
+    apply(&mut rig, &out);
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!(
+        (sheet.model.expose().as_str(), sheet.model_refused),
+        ("my-model", false)
+    );
+    assert!(typed(&mut rig, bad).is_empty());
+    reopen(&mut rig);
+    assert!(
+        !lines_sheet(&mut rig).model_refused,
+        "a new page forgets it"
+    );
+}
+
+/// Five hours, a renewal a used-up allowance may tell.
+const RENEWS: Option<Duration> = Some(Duration::from_hours(5));
+
+#[test]
+fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
+    use KeyCheck::{Account, Admin, Allowance, Credit, Failed, Rate, Refused, Region, Strange};
+    let cases = [
+        (CloudFault::Key, Refused),
+        (CloudFault::Admin, Admin),
+        (CloudFault::Credit, Credit),
+        (CloudFault::Account, Account),
+        (CloudFault::Region, Region),
+        (CloudFault::Allowance { renews_in: None }, Allowance),
+        (CloudFault::Rate, Rate),
+        (CloudFault::Strange, Strange),
+        (CloudFault::Network, Failed),
+        (CloudFault::Timeout, Failed),
+        (CloudFault::Gone, Failed),
+        (CloudFault::Range("model"), Failed),
+        // A key test sends no sound, so these cannot come; they read as no answer.
+        (CloudFault::TooBig, Failed),
+        (CloudFault::Language, Failed),
+        (CloudFault::Empty, Failed),
+    ];
+    for (fault, said) in cases {
+        let sheet = tested(Err(fault));
+        assert_eq!((sheet.check, sheet.renews_at), (said, None), "{fault:?}");
+    }
+}
+
+#[test]
+fn a_used_allowance_on_test_carries_its_renewal_only_while_its_answer_shows() {
+    let mut rig = on_groq_lines();
+    let ticket = test(&mut rig);
+    let used = CloudFault::Allowance { renews_in: RENEWS };
+    let renews = rig.with(|_, f| renewal(&At(f.now), Some(&used)));
+    rig.with(|p, _| p.tested(ticket, Err(used), renews));
+    let sheet = lines_sheet(&mut rig);
+    let at = sheet.renews_at.map(|r| (r.at.hour, r.at.minute, r.today));
+    assert_eq!(
+        (sheet.check, at),
+        (KeyCheck::Allowance, Some((17, 0, true))),
+        "12:00 and five hours, as the actor read it"
+    );
+    let ticket = test(&mut rig);
+    assert_eq!(lines_sheet(&mut rig).renews_at, None, "testing again");
+    rig.with(|p, _| p.tested(ticket, Ok(()), None));
+    assert_eq!(lines_sheet(&mut rig).renews_at, None, "the key works");
+}
+
+/// Groq's key page after one test of its key answered `answer`.
+fn tested(answer: Result<(), CloudFault>) -> ServiceSheet {
+    let mut rig = on_groq_lines();
+    let ticket = test(&mut rig);
+    rig.with(|p, _| p.tested(ticket, answer, None));
+    lines_sheet(&mut rig)
+}
+
+/// Clicks Test on the shown key page; gives the test's ticket.
+fn test(rig: &mut Rig) -> u32 {
+    let out = rig.click(&VoiceClick::Service(CloudButton::Test));
+    let [Do::Test { ticket, .. }] = out[..] else {
+        panic!("no test: {out:?}");
+    };
+    ticket
+}
+
+#[test]
+fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing() {
+    for (clip, said) in [
+        (ClipText::Busy, PasteFault::Busy),
+        (ClipText::Empty, PasteFault::Empty),
+    ] {
+        let mut rig = on_groq_lines();
+        let out = rig.click(&VoiceClick::Service(CloudButton::Test));
+        let [Do::Test { ticket, .. }] = out[..] else {
+            panic!("no test: {out:?}");
+        };
+        rig.with(|p, _| p.tested(ticket, Ok(()), None));
+        let out = rig.click(&VoiceClick::Paste(CloudLine::Key));
+        let [Do::Take { round, .. }] = out[..] else {
+            panic!("no take: {out:?}");
+        };
+        rig.with(|p, f| p.pasted(round, clip, f));
+        let sheet = lines_sheet(&mut rig);
+        let note = (Some((CloudLine::Key, said)), KeyCheck::Untested);
+        assert_eq!((sheet.pasted, sheet.check), note, "in the answer's place");
+        reopen(&mut rig);
+        let sheet = lines_sheet(&mut rig);
+        let back = (sheet.pasted, sheet.check);
+        assert_eq!(back, (None, KeyCheck::Works), "{said:?}");
+    }
+}
+
+/// Leaves Groq's key page for the Cloud page and opens it again.
+fn reopen(rig: &mut Rig) {
+    rig.click(&VoiceClick::Button(PanelButton::Back));
+    if !cloud_sheet(rig).rows[0].tick {
+        rig.click(&VoiceClick::Row(0));
+    }
+    rig.click(&VoiceClick::Service(CloudButton::Lines));
+}
+
+#[test]
+fn a_paste_answer_from_before_a_close_never_lands_on_the_key_page_opened_again() {
+    let mut rig = on_groq_lines();
+    let paste = |rig: &mut Rig| match rig.click(&VoiceClick::Paste(CloudLine::Key))[..] {
+        [Do::Take { round, .. }] => round,
+        ref out => panic!("no take: {out:?}"),
+    };
+    let old = paste(&mut rig);
+    rig.panel.close();
+    rig.panel.open();
+    rig.click(&VoiceClick::Open(VoiceTab::Cloud));
+    act(&mut rig, &shown("groq"), CloudButton::Lines);
+    assert_ne!(paste(&mut rig), old, "the round goes on across the close");
+    assert!(rig.with(|p, f| p.pasted(old, ClipText::Busy, f)).is_empty());
+    assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Untested);
+}

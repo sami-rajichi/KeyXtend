@@ -13,6 +13,11 @@ function view(tag, name) {
     return JSON.parse(JSON.stringify(Panel.views[tag][name]));
 }
 
+// The names of the hub's views in language `tag` that start with `start`, such as each service's long card.
+function named(tag, start) {
+    return Object.keys(Panel.views[tag]).filter(n => n.startsWith(start));
+}
+
 // The one item in `hits`, or null; a library cannot read attached properties, so each test finds the hits by gate id.
 function only(hits) {
     return hits.length === 1 ? hits[0] : null;

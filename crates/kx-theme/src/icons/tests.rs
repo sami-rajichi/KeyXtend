@@ -219,8 +219,10 @@ fn the_quick_fill_panel_shows_its_icons_by_role() {
 fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "cancel=x stop=square gear=settings-2 close=x copy=copy copied=check undo=undo-2 \
-                anyway=rotate-ccw listen=mic download=download transcribing=audio-lines \
-                text=captions password=lock note=square-x notes.cancelled=x notes.checking=refresh-cw \
+                anyway=rotate-ccw again=rotate-ccw listen=mic download=download service=file \
+                service_key=key-round local=cpu cloud=cloud device=cpu \
+                transcribing=audio-lines text=captions password=lock note=square-x notes.cancelled=x \
+                notes.checking=refresh-cw \
                 notes.folder=folder notes.full=hard-drive notes.language=languages notes.mic-busy=mic-off \
                 notes.mic-refused=mic-off notes.net=wifi notes.no-fit=cpu notes.no-language=languages \
                 notes.no-mic=mic-off notes.no-model=hard-drive notes.nothing=mic-off notes.print=download \
@@ -232,7 +234,7 @@ fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
         .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.")))
         .collect();
     let want: Vec<&str> = want.split_whitespace().collect();
-    assert_eq!(got, want, "design/voice-bar.html bar()");
+    assert_eq!(got, want, "design/voice-bar.js bar() and voice-cloud.js");
     assert_eq!(i.tray.voice, "mic", "the Dictation key's icon");
     assert!(
         i.named()
@@ -252,21 +254,28 @@ fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
 fn the_voice_panel_shows_the_mock_ups_icons() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "room=hard-drive minus=minus plus=plus before=chevron-left after=chevron-right pinned=pin \
-                ticked=check unpin=pin-off slow=cpu untested=languages folder=folder pages.compare=scale \
-                pages.device=cpu pages.folders=folder-open pages.history=history pages.home=mic \
-                pages.models=audio-lines pages.options=settings-2 buttons.again=rotate-ccw buttons.back=arrow-left \
-                buttons.cancel=x buttons.change=folder buttons.check=activity buttons.close=x buttons.compare=mic \
-                buttons.copy=copy buttons.delete=trash-2 buttons.delete-all=trash-2 buttons.download=download \
-                buttons.here=check buttons.insert=clipboard-paste buttons.open=folder-open buttons.pause=pause \
-                buttons.pin=pin buttons.rerun=rotate-ccw buttons.resume=play buttons.use=check marks.done=check \
-                marks.download=download marks.failed=x marks.not-here=x marks.other=file marks.passed=check \
-                marks.ready=check marks.run-failed=x marks.used=check tops.best=check tops.failed=x tops.kept=check \
-                tops.step=scale kinds.auto=arrow-left-right kinds.built-in=gpu kinds.card=gpu kinds.cpu=cpu";
+                ticked=check unpin=pin-off slow=cpu untested=languages folder=folder pages.card=file-text \
+                pages.cloud=cloud pages.compare=scale pages.device=cpu pages.folders=folder-open \
+                pages.history=history pages.home=mic pages.models=audio-lines pages.options=settings-2 \
+                pages.service=key-round buttons.again=rotate-ccw buttons.back=arrow-left buttons.cancel=x \
+                buttons.change=folder buttons.check=activity buttons.close=x buttons.compare=mic buttons.copy=copy \
+                buttons.delete=trash-2 buttons.delete-all=trash-2 buttons.download=download \
+                buttons.facts=file-text buttons.here=check buttons.insert=clipboard-paste buttons.lines=key-round \
+                buttons.link=link buttons.off=power buttons.on=power buttons.open=folder-open \
+                buttons.paste=clipboard-paste buttons.pause=pause buttons.pin=pin buttons.remove=trash-2 \
+                buttons.rerun=rotate-ccw buttons.resume=play buttons.test=activity buttons.use=check \
+                marks.cloud=cloud marks.done=check marks.download=download marks.failed=x \
+                marks.needs-address=globe marks.needs-key=key-round marks.not-here=x marks.off=power marks.on=check \
+                marks.other=file marks.passed=check marks.ready=check marks.run-failed=x marks.unavailable=x \
+                marks.untested=activity marks.used=check tops.best=check tops.failed=x tops.kept=check \
+                tops.step=scale kinds.auto=arrow-left-right kinds.built-in=gpu kinds.card=gpu kinds.cpu=cpu \
+                cloud.no-test=activity cloud.off=power cloud.ok=check cloud.read=history cloud.site=key-round \
+                cloud.switch=cloud cloud.testing=activity cloud.untested=activity hints.insert=clipboard-paste";
     let got: Vec<_> = (i.voice.panel.named().into_iter())
         .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.panel.")))
         .collect();
     let want: Vec<&str> = want.split_whitespace().collect();
-    assert_eq!(got, want, "design/voice-bar.html PAGE");
+    assert_eq!(got, want, "design/voice-bar.js PAGE and voice-cloud.js");
     let named = i.named();
     assert!(named.contains(&("voice.panel.kinds.card".into(), "gpu")));
     let t = text().replacen("built-in = \"gpu\"", "built-in = \"Gpu\"", 1);

@@ -7,13 +7,13 @@ mod hash;
 mod job;
 
 use crate::serve;
+use crate::stream::{self, Heard, Note, Pipe, Streamed};
 use job::Job;
 use kx_ipc::{FetchAsk, FetchFault, FetchNote, IpcError};
 use kx_platform_net::Http;
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Read, Write};
 use std::panic::{self, AssertUnwindSafe};
-use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
-use std::thread;
+use std::sync::mpsc::{self, Receiver, TryRecvError};
 
 /// The name of the thread that reads the asks.
 const READER: &str = "fetch-asks";
@@ -43,45 +43,40 @@ pub trait Notes {
     fn tell(&mut self, note: FetchNote) -> Result<(), IpcError>;
 }
 
-/// The pipe: a note that fails its own checks goes as an internal fault instead.
-struct Pipe<'w, W: Write + ?Sized>(&'w mut W);
-
 impl<W: Write + ?Sized> Notes for Pipe<'_, W> {
     fn tell(&mut self, note: FetchNote) -> Result<(), IpcError> {
-        match note.write(self.0) {
-            Err(IpcError::Io(kind)) => Err(IpcError::Io(kind)),
-            Err(_) => {
-                let (id, fault) = (note.id(), FetchFault::Internal);
-                FetchNote::Fault { id, fault }.write(self.0)
-            }
-            Ok(()) => Ok(()),
-        }
+        self.send(&note)
     }
 }
 
-/// The client the shipped job downloads with: `WinHTTP` on Windows.
-#[cfg(windows)]
-pub fn live() -> Box<dyn Http> {
-    Box::new(kx_platform_net::WinHttp::new())
+/// A note that fails its own checks goes as an internal fault instead.
+impl Note for FetchNote {
+    fn put<W: Write + ?Sized>(&self, w: &mut W) -> Result<(), IpcError> {
+        self.write(w)
+    }
+
+    fn instead(&self) -> Self {
+        let (id, fault) = (self.id(), FetchFault::Internal);
+        Self::Fault { id, fault }
+    }
 }
 
-/// The client elsewhere: every download fails as `Net` until P15 brings an adapter.
-#[cfg(not(windows))]
-pub fn live() -> Box<dyn Http> {
-    Box::new(Offline)
+impl Streamed for FetchAsk<'static> {
+    fn read_from(r: &mut dyn Read) -> Result<Self, IpcError> {
+        Self::read(r)
+    }
+
+    fn last(&self) -> bool {
+        matches!(self, Self::Bye)
+    }
 }
 
-/// A client with no network, for systems without an adapter yet; tests check it everywhere.
-#[cfg(any(test, not(windows)))]
-struct Offline;
-
-#[cfg(any(test, not(windows)))]
-impl Http for Offline {
-    fn send(
-        &self,
-        _: &kx_platform_net::Hop<'_>,
-    ) -> Result<kx_platform_net::Reply, kx_platform_net::NetError> {
-        Err(kx_platform_net::NetError::Net)
+impl From<Heard<FetchAsk<'static>>> for Event {
+    fn from(heard: Heard<FetchAsk<'static>>) -> Self {
+        match heard {
+            Heard::Ask(ask) => Self::Ask(ask),
+            Heard::End(end) => Self::End(end),
+        }
     }
 }
 
@@ -109,7 +104,7 @@ where
     W: Write + ?Sized,
 {
     let (tx, rx) = mpsc::channel();
-    read(input, tx)?;
+    stream::listen::<FetchAsk<'static>, _, _>(input, tx, READER)?;
     let (mut job, mut pipe) = (Job::new(http), Pipe(w));
     let end = loop {
         let event = wake(&rx, job.busy());
@@ -160,34 +155,6 @@ fn act(job: &mut Job, event: Option<Event>, out: &mut dyn Notes) -> Result<Flow,
         return Ok(Flow::Go);
     };
     taken.map(|()| Flow::Go)
-}
-
-/// Reads asks from `input` on the reader thread until goodbye, the end of input or a broken frame.
-fn read<R: Read + Send + 'static>(mut input: R, tx: Sender<Event>) -> Result<(), IpcError> {
-    let reader = move || {
-        loop {
-            let event = next(&mut input);
-            let last = matches!(event, Event::End(_) | Event::Ask(FetchAsk::Bye));
-            if tx.send(event).is_err() || last {
-                return;
-            }
-        }
-    };
-    thread::Builder::new()
-        .name(READER.to_owned())
-        .spawn(reader)
-        .map(drop)
-        .map_err(|e| IpcError::Io(e.kind()))
-}
-
-/// The next ask on `input`; the end of input, a broken frame or a panic inside the read ends the job.
-fn next<R: Read>(input: &mut R) -> Event {
-    match panic::catch_unwind(AssertUnwindSafe(|| FetchAsk::read(input))) {
-        Ok(Ok(ask)) => Event::Ask(ask),
-        Ok(Err(IpcError::Closed)) => Event::End(Ok(())),
-        Ok(Err(e)) => Event::End(Err(e)),
-        Err(_) => Event::End(Err(IpcError::Io(ErrorKind::Other))),
-    }
 }
 
 #[cfg(test)]

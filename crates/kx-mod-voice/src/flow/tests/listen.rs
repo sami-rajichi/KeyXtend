@@ -31,7 +31,7 @@ fn stop_with_no_speech_types_nothing_and_offers_listen_again() {
     assert_eq!(note(&rig.shown()), want);
     let out = rig.bar(BarButton::Listen);
     assert_eq!(opened(&out).len(), 1);
-    assert!(matches!(rig.shown(), VoiceBar::Listening(_)));
+    assert_eq!(rig.light, VoiceLit::Prep, "a new dictation prepares");
 }
 
 #[test]

@@ -7,12 +7,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use kx_module_api::ports::{
-    BarHint, CheckDone, Device, FactsAsk, Fingerprint, FolderError, FolderPath, ModelError,
-    SpeechError, SpeechNote,
+    BarHint, CheckDone, Device, DevicePick, FactsAsk, Fingerprint, FolderError, FolderPath,
+    ModelError, SpeechError, SpeechNote,
 };
 
 use super::dos::Fetches;
 use super::{Actor, Back, Job, Msg};
+use crate::flow::renewal;
 use crate::panel::Check;
 
 /// The downloads running and the reads waiting or in flight.
@@ -47,6 +48,23 @@ impl Actor {
             Back::Checked(check, done) => self.checked(&check, done),
             Back::Fetched { row, note } => self.fetched(&row, note),
             Back::Shown(shown) => self.shown(shown),
+            Back::Net { take, round, note } => self.net_note(take, round, note),
+            Back::Sending { take, round, run } => self.opened_net(take, round, run),
+            Back::Tested { ticket, answer } => {
+                let renews = renewal(&*self.ports.calendar, answer.as_ref().err());
+                self.panel.tested(ticket, answer, renews);
+            }
+            Back::Trial { take, at, note } => self.trial_note(take, at, note),
+            Back::Tried { take, at, run } => self.tried(take, at, run),
+        }
+    }
+
+    /// A card may serve a dictation now: one is picked, or Automatic has a check to go by.
+    pub(super) fn card_could_serve(&self) -> bool {
+        match self.held.settings.device() {
+            DevicePick::Cpu => false,
+            DevicePick::Card(_) => true,
+            DevicePick::Auto => !self.held.checks.rows().is_empty(),
         }
     }
 

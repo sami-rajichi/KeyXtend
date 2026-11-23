@@ -6,11 +6,12 @@
 # and the product's speech host, with [voice]'s defaults, normal then weak. It starts no screen, moves nothing and
 # prints numbers, never text.
 [g22_bench]
-# The worker built with `gate`, which plays a sound file in place of the microphone; never a staged one. Build it with
-# `cargo build --release -p keyxtend-worker --features gate` into this target folder.
+# The worker built with `gate`, which plays a sound file in place of the microphone, and `card`, which adds the card
+# part a card run needs; never a staged one. Build it with
+# `cargo build --release -p keyxtend-worker --features gate,card`, with VULKAN_SDK set, into this target folder.
 worker = "../../target/p11-gates/release/keyxtend-worker.exe"
-# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts, as the roadmap's weak
-# PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses a folder holding any other part.
+# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts and no card part, as
+# the roadmap's weak PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses any other part there.
 weak_worker = "../../target/p11-gates/weak/keyxtend-worker.exe"
 # What every processor part of the engine is named from, and the ones a processor without AVX loads.
 part_prefix = "ggml-cpu-"
@@ -66,9 +67,9 @@ program = "../../target/p11-gates/release/keyxtend.exe"
 # The layout (LANGID) target-window takes for each clip's language: English (US), French (France), Arabic (Tunisia).
 layouts = { en = "0409", fr = "040C", ar = "1C01" }
 # Where the copy's models run ([voice] device): "cpu", "auto", or a card's id as the engine lists it, such as "Vulkan1"
-# (ASCII letters, digits, "-", "_" and "."; built-in graphics list as a card too). For the card run, pick the card with
-# Use on the Voice panel's Device page and copy the `device` value it writes into the product's settings file. With a
-# card here, a language passes only when that card wrote its text.
+# (the `device` value Use writes on the Voice panel's Device page); `g22 keyxtend --device <pick>` replaces it for one
+# run, so a card run edits no tracked file. With a card, a language passes only when that card wrote its text, and the
+# run refuses to start while the gate worker's folder lacks g22_staged.card_part.
 device = "cpu"
 # Wait after the copy's keyboard shows before the first click, so the voice module has read the models folder, in ms.
 ready_ms = 5000
@@ -90,17 +91,29 @@ open_ms = 15000
 settle_ms = 3000
 # The line the voice gate build logs at start with its clip (apps/keyxtend/src/run.rs).
 warn_line = "played sound in place of the microphone: a gate build, never for daily use"
-# The line it logs with the device id of each dictation it writes, which each language's line prints
-# (apps/keyxtend/src/played/told.rs).
-wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"
 stop = "stop"
-# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard.
+# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard and the gate
+# build's stage lines, which the timing lines need (checked).
 log_level = "debug"
 # What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
 # which holds text.
 why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
+
+# G22's cloud line on the product, after the local line: each offered service whose sealed key is in the owner's daily
+# data folder dictates the clips its row's first model knows (Custom with the daily address and model), on a fresh copy
+# with only that row on and the key copied still sealed, never opened. A service with no key is skipped, never failed.
+[g22_cloud]
+# The owner's daily data folder, `daily_dir`, is this PC's own absolute drive path, so it is set only in the git-ignored
+# kx-gates.local.toml beside this file; without it the cloud line prints one skipped line and the local line runs.
+
+# Wait after the bar shows before Stop, beside the clip's length and the bench's tail_ms, in ms: no model loads, and the
+# clip plays from the moment the microphone opens, which is when the bar shows.
+open_ms = 2000
+# Longest wait for a cloud dictation's text after Stop, in ms: at most [voice] net_wait_s, the product's own wait for one
+# request's answer (checked).
+text_wait_ms = 60000
 
 # The staged worker's edges (`g22 staged`), on a copy of what `cargo xtask stage` wrote, with no screen and no mouse.
 # Edge 28: without the card part the worker starts and offers no card. Edge 29: with only the plainest processor part,

@@ -221,9 +221,10 @@ here = "check"
 done = "check"
 lock = "lock"
 
-# The dictation bar (design/voice-bar.html bar(), lines 279-298): each button by the hub's id (Listen again as the
-# Dictation key, Copy turning to its tick once copied), the gear, the mark before Transcribing, a text and a password
-# box's dots, and before each note by its hint id; a note not listed wears `note`.
+# The dictation bar (design/voice-bar.js bar(), lines 97-115): each button by the hub's id (Listen again as the
+# Dictation key, Copy turning to its tick once copied, Open service as a page, or a key on the key note), the gear, the
+# chip's picture by its kind (a cloud, or for a model on this PC the processor, as the Device page draws it), the mark
+# before Transcribing, a text and a password box's dots, and before each note by its hint id; `note` for the rest.
 [voice]
 cancel = "x"
 stop = "square"
@@ -233,8 +234,14 @@ copy = "copy"
 copied = "check"
 undo = "undo-2"
 anyway = "rotate-ccw"
+again = "rotate-ccw"
 listen = "mic"
 download = "download"
+service = "file"
+service_key = "key-round"
+local = "cpu"
+cloud = "cloud"
+device = "cpu"
 transcribing = "audio-lines"
 text = "captions"
 password = "lock"
@@ -260,10 +267,11 @@ full = "hard-drive"
 folder = "folder"
 net = "wifi"
 
-# The Voice panel (design/voice-bar.html PAGE, lines 301-393): the folder line, a stepper's minus and plus, a place's
+# The Voice panel (design/voice-bar.js PAGE, lines 120-217): the folder line, a stepper's minus and plus, a place's
 # chevrons, a pinned text, the tick where one row is picked, Unpin, the slow-PC and untested lines, a folder row; each
 # page's header icon (also a home row's tile), each button by the hub's id or its kind (Start reading is `compare`),
-# each mark, line above a list and Device kind by id. An id left out shows no icon, as Default and Waiting in the mock-up.
+# each mark, line above a list and Device kind by id. An id left out shows no icon, as Default and Waiting in the
+# mock-up.
 [voice.panel]
 room = "hard-drive"
 minus = "minus"
@@ -285,6 +293,9 @@ compare = "scale"
 history = "history"
 options = "settings-2"
 folders = "folder-open"
+cloud = "cloud"
+card = "file-text"
+service = "key-round"
 
 [voice.panel.buttons]
 back = "arrow-left"
@@ -306,6 +317,14 @@ here = "check"
 compare = "mic"
 pause = "pause"
 resume = "play"
+on = "power"
+off = "power"
+facts = "file-text"
+lines = "key-round"
+paste = "clipboard-paste"
+test = "activity"
+remove = "trash-2"
+link = "link"
 
 [voice.panel.marks]
 used = "check"
@@ -317,6 +336,13 @@ passed = "check"
 failed = "x"
 done = "check"
 run-failed = "x"
+off = "power"
+needs-key = "key-round"
+needs-address = "globe"
+on = "check"
+untested = "activity"
+unavailable = "x"
+cloud = "cloud"
 
 [voice.panel.tops]
 best = "check"
@@ -329,3 +355,19 @@ auto = "arrow-left-right"
 cpu = "cpu"
 card = "gpu"
 built-in = "gpu"
+
+# The cloud pages (design/voice-cloud.js): the switch band, the line while cloud is off, the day facts were read, the
+# Untested line, where keys are made, and a key test's answers by their id; a warning shows no icon of its own.
+[voice.panel.cloud]
+switch = "cloud"
+off = "power"
+read = "history"
+untested = "activity"
+site = "key-round"
+ok = "check"
+testing = "activity"
+no-test = "activity"
+
+# Each Options hint row's bare icon by its option's key (design/voice-bar.js options()): Paste at once's hint.
+[voice.panel.hints]
+insert = "clipboard-paste"

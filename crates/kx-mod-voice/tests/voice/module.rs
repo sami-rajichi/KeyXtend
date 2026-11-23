@@ -1,15 +1,18 @@
-//! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick alone with the settings notice,
-//! fails on a bad section or a missing service, and stops.
+//! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick or service entry alone with the
+//! settings notice and saves the repair once, fails on a bad section or a missing service, starts with a fixed line
+//! when cloud speech is missing, and stops.
 
 use std::sync::{Arc, Mutex};
 
 use kx_mod_voice::{ID, VoiceModule, VoiceSettings};
-use kx_module_api::ports::SpeechKey;
+use kx_module_api::ports::{CloudSpeechKey, SpeechKey};
 use kx_module_api::{
     Host, Module, ModuleCx, Notice, NoticeArg, ServiceKey, Subscription, args, keys,
 };
 use kx_test_support::host::FakeHost;
+use tracing::Level;
 
+use crate::logs::lines_of;
 use crate::rig::{Fakes, start, stop};
 
 /// The notices published on `host`'s bus while the guard lives.
@@ -65,6 +68,59 @@ fn a_bad_pick_falls_back_alone_with_the_notice_and_is_written_back() {
 }
 
 #[test]
+fn a_service_entry_no_row_takes_on_or_parked_is_dropped_alone_and_written_back() {
+    let entry = |terms: i64| {
+        let on = "2026-11-17".parse::<toml::value::Datetime>().unwrap();
+        toml::Value::Table(toml::Table::from_iter([
+            ("on".to_owned(), toml::Value::Datetime(on)),
+            ("terms".to_owned(), terms.into()),
+        ]))
+    };
+    for key in ["services", "parked"] {
+        let mut host = Fakes::new().host();
+        let services = [("groq", entry(1)), ("no-such-row", entry(1))];
+        let services = toml::Table::from_iter(services.map(|(k, v)| (k.to_owned(), v)));
+        host.put(key, toml::Value::Table(services));
+        let (heard, _guard) = notices(&host);
+        let mut module = VoiceModule::new();
+        assert!(start(&mut module, &mut host).is_ok());
+        stop(&mut module, &mut host);
+        let mut want = Notice::about(keys::SETTINGS_RESET, ID);
+        let named = vec![format!("{key}.no-such-row")];
+        want.args.push((args::KEYS, NoticeArg::List(named)));
+        assert_eq!(*heard.lock().unwrap(), [want], "{key}");
+        let mut groq = entry(1);
+        groq.as_table_mut()
+            .unwrap()
+            .insert("keep".to_owned(), true.into());
+        let kept = toml::Table::from_iter([("groq".to_owned(), groq)]);
+        let written = toml::Table::from_iter([(key.to_owned(), toml::Value::Table(kept))]);
+        assert_eq!(host.sink.writes(), [(ID, written)], "{key}");
+    }
+}
+
+#[test]
+fn a_repair_of_several_keys_is_written_back_in_one_save() {
+    let mut host = Fakes::new().host();
+    let on = "2026-11-17".parse::<toml::value::Datetime>().unwrap();
+    let entry = toml::Table::from_iter([
+        ("on".to_owned(), toml::Value::Datetime(on)),
+        ("terms".to_owned(), 1.into()),
+    ]);
+    let map = |id: &str| toml::Table::from_iter([(id.to_owned(), entry.clone().into())]);
+    host.put("services", map("no-such-row").into());
+    host.put("parked", map("gone-row").into());
+    host.put("picks", picks(&[("fr", "whisper-medium-q5")]));
+    let mut module = VoiceModule::new();
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
+    let keys = |t: &toml::Table| t.keys().cloned().collect::<std::collections::BTreeSet<_>>();
+    let saves: Vec<_> = host.sink.writes().iter().map(|(_, t)| keys(t)).collect();
+    let all = ["parked", "picks", "services"].map(String::from).into();
+    assert_eq!(saves, [all], "one save of every key the repair changed");
+}
+
+#[test]
 fn a_bad_section_fails_the_start() {
     let mut host = Fakes::new().host();
     host.put("job_mb", 1.into());
@@ -86,4 +142,24 @@ fn a_hidden_run_starts_on_the_same_services() {
     let mut module = VoiceModule::hidden();
     assert!(start(&mut module, &mut host).is_ok());
     stop(&mut module, &mut host);
+}
+
+#[test]
+fn a_host_without_cloud_speech_still_starts_and_says_so_in_one_fixed_line() {
+    let mut host = Fakes::new().host();
+    host.services.remove(&CloudSpeechKey::ID);
+    let mut module = VoiceModule::new();
+    let lines = lines_of(|| {
+        assert!(
+            start(&mut module, &mut host).is_ok(),
+            "local models dictate"
+        );
+    });
+    stop(&mut module, &mut host);
+    let warned: Vec<&str> = lines
+        .iter()
+        .filter(|(level, _)| *level == Level::WARN)
+        .map(|(_, message)| message.as_str())
+        .collect();
+    assert_eq!(warned, ["cloud speech is not available"]);
 }

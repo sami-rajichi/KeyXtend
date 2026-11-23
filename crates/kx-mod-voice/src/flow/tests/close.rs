@@ -5,7 +5,7 @@ use super::*;
 use kx_module_api::ports::{DeviceLabel, Pages, VoiceHome, VoicePanel, VoiceSheet};
 
 /// `done_ms` in the defaults.
-fn done_ms() -> u64 {
+pub(super) fn done_ms() -> u64 {
     VoiceSettings::from_defaults().unwrap().done_ms.into()
 }
 
@@ -17,6 +17,8 @@ pub(super) fn panel() -> VoicePanel {
         compared: None,
         history: 0,
         changed: 0,
+        cloud: None,
+        tabs: Vec::new(),
     };
     VoicePanel {
         sheet: VoiceSheet::Home(home),
@@ -156,7 +158,7 @@ fn a_late_starter_hears_the_light_and_the_view_again() {
     rig.speak();
     let round = rig.round();
     let out = rig.on(In::Ask);
-    assert!(out.contains(&Out::Lit(kx_module_api::ports::VoiceLit { rec: true })));
+    assert!(out.contains(&Out::Lit(VoiceLit::Rec)));
     let view = out.iter().find_map(|o| match o {
         Out::View(view) => Some(view.0.round),
         _ => None,

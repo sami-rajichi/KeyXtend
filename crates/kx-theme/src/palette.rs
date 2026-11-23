@@ -39,6 +39,8 @@ pub struct Skirt {
     pub on: Rgba,
     /// The recording key.
     pub rec: Rgba,
+    /// The Dictation key while the microphone starts.
+    pub prep: Rgba,
     /// A dimmed key: the side keys' skirt faded over the plate, set from `shape.toml [dim]`.
     #[serde(skip_deserializing, default = "clear")]
     pub dim: Rgba,
@@ -54,6 +56,13 @@ const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
 
 /// The press shade token, which a mode table writes only to replace the shade made from `[common] press`.
 const PRESS: &str = "press";
+
+/// How many key, light and warning tokens `named` starts with.
+const KEY_TOKENS: usize = 25;
+/// How many panel and state tokens follow them.
+const REST_TOKENS: usize = 14;
+/// How many colour tokens a palette names; each part's array holds its own count, so none is dropped.
+const TOKENS: usize = KEY_TOKENS + REST_TOKENS;
 
 /// True when mode table `t` writes its own press shade.
 pub(crate) fn own_press(t: &toml::Table) -> bool {
@@ -112,6 +121,14 @@ pub struct Palette {
     pub rec: Rgba,
     /// Legend on the recording key.
     pub rec_ink: Rgba,
+    /// The Dictation key while the microphone starts: the amber stand-by light.
+    pub prep: Rgba,
+    /// Legend on the preparing key.
+    pub prep_ink: Rgba,
+    /// A warning's band and mark behind the panel's ink, as a card's that a service trains by default.
+    pub warn: Rgba,
+    /// A warning's words and icons on the panel, as old facts' day.
+    pub warn_ink: Rgba,
     /// LED when off.
     pub led_off: Rgba,
     /// LED when on.
@@ -172,15 +189,22 @@ impl Skirt {
             ("danger", self.danger),
             ("on", self.on),
             ("rec", self.rec),
+            ("prep", self.prep),
         ];
         all.into_iter().find_map(|(n, c)| (n == name).then_some(c))
     }
 }
 
 impl Palette {
-    /// Every colour token with its name in `themes.toml`.
+    /// Every colour token with its name in `themes/*.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 35] {
+    pub fn named(&self) -> [(&'static str, Rgba); TOKENS] {
+        let (keys, rest) = (self.keys_named(), self.rest_named());
+        std::array::from_fn(|i| keys.get(i).copied().unwrap_or_else(|| rest[i - keys.len()]))
+    }
+
+    /// The keys', lights' and warnings' tokens, the first part of `named`.
+    fn keys_named(&self) -> [(&'static str, Rgba); KEY_TOKENS] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -201,8 +225,18 @@ impl Palette {
             ("lock_ink", self.lock_ink),
             ("rec", self.rec),
             ("rec_ink", self.rec_ink),
+            ("prep", self.prep),
+            ("prep_ink", self.prep_ink),
+            ("warn", self.warn),
+            ("warn_ink", self.warn_ink),
             ("led_off", self.led_off),
             ("led_on", self.led_on),
+        ]
+    }
+
+    /// The panels' and states' tokens, the rest of `named`.
+    fn rest_named(&self) -> [(&'static str, Rgba); REST_TOKENS] {
+        [
             ("ring", self.ring),
             ("badge_bg", self.badge_bg),
             ("badge_ink", self.badge_ink),

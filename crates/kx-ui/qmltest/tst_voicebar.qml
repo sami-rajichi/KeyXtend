@@ -1,13 +1,15 @@
 // The dictation bar over the stand-in Voice object (design "The bar"): each state's words and buttons in one order in
 // English, French and Arabic, the gear before the last button, Stop dark and dimmed while it writes, Arabic keeping
 // Cancel left and Stop right with its text read right to left, a long text cut to its first lines, every icon loaded in
-// its tint, the red dot beside any note while the microphone listens, Copy turning to Copied, and a window that takes
-// clicks but never focus, each button found by its accessible id.
+// its tint, the red dot beside any note while the microphone listens, Copy turning to Copied, a window that takes
+// clicks but never focus, each button found by its accessible id, and no bar while preparing, when the amber Dictation
+// key says so instead.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
 import "pointer.js" as Pointer
+import "fixtures/face.js" as Face
 import "fixtures/voice.js" as Voice
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
@@ -27,6 +29,7 @@ Item {
     Component { id: voiceC; FakeVoice {} }
     Component { id: barC; VoiceBar {} }
     Component { id: namesC; VoiceNames {} }
+    Component { id: keyC; Key {} }
 
     TestCase {
         name: "voicebar"
@@ -248,6 +251,28 @@ Item {
             tryVerify(() => bar.visible, 2000, "a view shows it");
             bar.voice.page = view("en", "hidden");
             verify(!bar.visible, "and hides it");
+        }
+
+        // Preparing (owner, 2026-11-17): with no bar yet (a hidden view, as above), the amber Dictation key says it
+        // prepares, in each language.
+        function test_while_preparing_the_amber_key_says_so_data() {
+            return ["en", "fr", "ar"].map(t => ({ tag: t, t: t }));
+        }
+        function test_while_preparing_the_amber_key_says_so(d) {
+            const ui = root.texts[d.t].texts;
+            const plain = Face.states.en.keys.mic;
+            const prep = Object.assign({}, plain, { lit: "prep", spoken: "voice.preparing", paint: { fill: "prep", ink: "prep_ink", skirt: "prep" } });
+            const k = createTemporaryObject(keyC, root, {
+                kv: Face.board.keys.find(k => k.id === "mic"), ks: plain, lk: N.lk, lang: Face.states.en.lang,
+                design: Face.board.lang_key, res: Board.resOf(N.lk, root.texts[d.t]), s: 1
+            });
+            compare(k.Accessible.name, ui["key.mic"], "its own name at rest");
+            k.ks = prep;
+            compare(k.Accessible.name, ui["voice.preparing"]);
+            verify(k.Accessible.name.startsWith(ui["key.mic"]) && k.name !== ui["key.mic"], "Dictation, then why");
+            tryVerify(() => Qt.colorEqual(k.fillColour, N.lk.palette.prep), 1000, "amber");
+            k.ks = plain;
+            compare(k.Accessible.name, ui["key.mic"], "its own name once the microphone opens or it ends");
         }
     }
 }

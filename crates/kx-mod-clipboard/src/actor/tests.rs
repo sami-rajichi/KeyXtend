@@ -16,6 +16,7 @@ mod fakes;
 mod flood;
 mod images;
 mod joins;
+mod lend;
 mod lines;
 mod logs;
 mod panel;

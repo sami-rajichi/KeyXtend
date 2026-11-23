@@ -2,11 +2,11 @@
 //! refused by every other job's reader and by the other side's.
 
 use super::*;
-use crate::{FetchAsk, FetchNote, VaultAsk, VaultReply, ask, reply};
+use crate::{FetchAsk, FetchNote, NetAsk, NetNote, VaultAsk, VaultReply, ask, reply};
 
 #[test]
 fn every_kind_belongs_to_exactly_one_reader_and_the_codes_have_no_gap() {
-    let lists: [&[Kind]; 8] = [
+    let lists: [&[Kind]; 10] = [
         ask::KINDS,
         reply::KINDS,
         crate::vault::ask::KINDS,
@@ -15,6 +15,8 @@ fn every_kind_belongs_to_exactly_one_reader_and_the_codes_have_no_gap() {
         voice_note::KINDS,
         crate::fetch::ask::KINDS,
         crate::fetch::note::KINDS,
+        crate::net::ask::KINDS,
+        crate::net::note::KINDS,
     ];
     for kind in Kind::ALL {
         let owners = lists.iter().filter(|l| l.contains(kind)).count();
@@ -37,13 +39,15 @@ fn every_kind_has_its_lengths_and_only_a_bare_kind_takes_no_payload() {
 
 #[test]
 fn each_voice_frame_is_refused_by_every_other_reader() {
-    let others: [Reader; 6] = [
+    let others: [Reader; 8] = [
         read_ask,
         read_reply,
         |r| VaultAsk::read(r).map(drop),
         |r| VaultReply::read(r).map(drop),
         |r| FetchAsk::read(r).map(drop),
         |r| FetchNote::read(r).map(drop),
+        |r| NetAsk::read(r).map(drop),
+        |r| NetNote::read(r).map(drop),
     ];
     let asks = every_voice_ask()
         .iter()

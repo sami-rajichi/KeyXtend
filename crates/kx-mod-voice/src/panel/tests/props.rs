@@ -6,6 +6,7 @@ use super::super::options;
 use super::super::rig::{Rig, card, row};
 use super::*;
 use crate::compare::Act;
+use crate::compare::tests::SET;
 use crate::flow::Lend;
 use crate::settings::MODELS_DIR;
 use kx_module_api::ports::{
@@ -16,8 +17,6 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 use proptest::sample::select;
 
-/// The set text Compare's runs read.
-const SET: &str = "The evening train leaves at a quarter past seven.";
 /// History's texts, more than a page holds.
 const TEXTS: u32 = 7;
 /// A card's free memory, roomy enough for a check.
@@ -154,7 +153,9 @@ fn at_end(value: OptionValue, up: bool) -> bool {
         OptionValue::Number { ends, .. }
         | OptionValue::Factor { ends, .. }
         | OptionValue::Choice { ends, .. } => ends,
-        OptionValue::Switch(_) => return true,
+        // The chosen chip picks nothing new.
+        OptionValue::Pair { second, .. } => return second == up,
+        OptionValue::Switch(_) | OptionValue::Hint => return true,
     };
     if up { ends.high } else { ends.low }
 }
@@ -248,6 +249,7 @@ fn after(rig: &mut Rig, seen: &mut Seen, out: Vec<Do>) -> Result<(), TestCaseErr
         match done {
             Do::Compare(Act::Open { take, .. }) => seen.take = take,
             Do::Set(key, value) => set(rig, key, value),
+            Do::SetAll(values) => values.into_iter().for_each(|(k, v)| set(rig, &k, v)),
             _ => {}
         }
     }

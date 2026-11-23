@@ -1,6 +1,7 @@
 //! The actor over the fakes: the key and the light (`key`), the views and their times (`view`), the faults (`faults`),
-//! the text and Copy (`typing`), the store (`store`), the panel (`panel`), the cards' checks (`cards`, `auto`) and the
-//! logs (`logs`); `rig` drives it without a thread, hearing it through `taps`. Here: the start and the stop.
+//! the text and Copy (`typing`), Paste at once (`paste`), the store (`store`), the panel (`panel`), the cards' checks
+//! (`cards`, `auto`), Compare (`compare`), cloud dictation (`cloud`) and the logs (`logs`); `rig` drives it without a
+//! thread, hearing it through `taps`. Here: the start and the stop.
 
 #![allow(
     clippy::unwrap_used,
@@ -9,12 +10,16 @@
 
 mod auto;
 mod cards;
+mod cloud;
 mod compare;
 mod fakes;
 mod faults;
 mod key;
 mod logs;
+mod mark;
 mod panel;
+mod paste;
+mod restart;
 mod rig;
 mod store;
 mod taps;
@@ -22,7 +27,7 @@ mod typing;
 mod view;
 
 use kx_module_api::Event;
-use kx_module_api::ports::{LayoutAsk, VoiceBar};
+use kx_module_api::ports::{LayoutAsk, VoiceBar, VoiceLit};
 use kx_platform_fake::FileCall;
 
 use super::Msg;
@@ -38,7 +43,7 @@ fn the_start_tells_a_hidden_bar_and_no_light_then_asks_for_the_layout() {
     assert!(
         matches!(&heard[0], Heard::View(page) if page.bar == VoiceBar::Hidden && page.panel.is_none())
     );
-    assert_eq!(heard[1], Heard::Lit(false));
+    assert_eq!(heard[1], Heard::Lit(VoiceLit::Off));
     assert_eq!(heard.last(), Some(&Heard::Ask(LayoutAsk::NAME)));
 }
 
@@ -59,7 +64,7 @@ fn the_stop_closes_the_microphone_hides_the_bar_and_drops_the_watches() {
     assert!(run.closed && !run.held, "the recording is wiped");
     assert_eq!(
         (rig.bar(), rig.lits().last()),
-        (VoiceBar::Hidden, Some(&false))
+        (VoiceBar::Hidden, Some(&VoiceLit::Off))
     );
     assert!(!rig.fake.field.watching() && !rig.fake.session.watching());
 }

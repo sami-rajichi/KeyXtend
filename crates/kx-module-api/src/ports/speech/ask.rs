@@ -139,7 +139,9 @@ pub struct SpeechAsk {
     pub card: Option<CardUse>,
     /// Processor threads; 0 means the real cores, and more are capped at them.
     pub threads: u8,
-    /// A piece longer than this, in seconds, is cut at the next pause.
+    /// A piece longer than this, in seconds, is cut at the next pause; a run with no model packs its speech into
+    /// pieces no longer than this instead, the cloud row's own cut. Such a piece never passes one frame of sound
+    /// (`kx_ipc::MAX_SOUND_BYTES`), so a larger `piece_s` is held to it.
     pub piece_s: u8,
     /// The silence kept around speech when a piece is cut, in ms.
     pub pad_ms: u16,
@@ -202,7 +204,8 @@ pub struct CheckAsk {
     pub card: CardUse,
     /// Processor threads for the processor's run, as `SpeechAsk::threads`.
     pub threads: u8,
-    /// The shipped clip's language, an ISO 639 code such as `ar`: the first clip whose language the model knows.
+    /// The shipped clip's language, an ISO 639 code such as `ar`: the language in front's when the model knows it,
+    /// else the first shipped clip it knows (ADR-0052).
     pub clip: String,
 }
 

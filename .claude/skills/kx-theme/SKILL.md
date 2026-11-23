@@ -5,11 +5,13 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
 
 # Theme work
 
-- Tokens live in four files in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
-  - `themes.toml`: each theme's colours for light and dark, fonts and shape;
+- Tokens live in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
+  - the `themes/` folder: each theme's colours for light and dark, fonts and shape, a file per theme (`native.toml`, `et66.toml`, `dolch.toml`) after `common.toml`;
   - `shape.toml`: sizes all themes share;
   - `motion.toml`: each animation's length and curve, plus the reduced set;
-  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`).
+  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`);
+  - `sounds.toml`: the sound format, how the speaker plays, and each event's files (in `assets/sounds/`);
+  - `font_files.toml`: each bundled font family's files (in `assets/fonts/`, ADR-0021).
 - The reference values are in `design/keyboard-style-lab.html`, in the CSS blocks `[data-style=...][data-mode=...]`. Cite the mock-up line in the token's comment.
 - QML reads tokens only through the look object; it never writes a colour, size or time itself.
 - After a token change, run `cargo test -p kx-theme` with `KX_BLESS=1` to rewrite the QML look fixtures.
@@ -24,7 +26,7 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - secondary text and icons on the plate use `legend_2_plate` (4.5:1 on the plate), which takes `legend_2` unless a palette writes its own (only where it differs);
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
    - the theme tests compute these; never change an owner-approved colour without asking;
-   - one owner-approved exception: the Carousel's side names keep their fade as decoration (owner, 2026-10-02; `drawn::EXCEPTION`). Every other pair reaches its minimum, and the owner's nudges to reach it (2026-09-30, 2026-10-02) are marked in `themes.toml`;
+   - one owner-approved exception: the Carousel's side names keep their fade as decoration (owner, 2026-10-02; `drawn::EXCEPTION`). Every other pair reaches its minimum, and the owner's nudges to reach it (2026-09-30, 2026-10-02) are marked in `themes/*.toml`;
    - where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 3. **Colour means function** (ET66 rule): modifiers, Enter, danger keys (Esc/Backspace) and "on/locked" states each have a distinct token, in every theme.
 4. **Fonts:**

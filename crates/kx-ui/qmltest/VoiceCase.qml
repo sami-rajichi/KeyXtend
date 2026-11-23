@@ -34,14 +34,14 @@ TestCase {
         failOnWarning(/./);
     }
     // The panel showing panel view `v` (a whole view from Kit.view) in language `tag` and look `lk` (Native light by
-    // default), laid out and shown.
-    function show(v, tag, lk) {
+    // default), `rows` to a page (the settings' by default), at keyboard size `size` (1 by default), laid out and shown.
+    function show(v, tag, lk, rows, size) {
         const t = tag || "en";
         const look = lk || N.lk;
         const ui = createTemporaryObject(uiC, host, { texts: langs[t].texts, lang: langs[t].lang, look: look });
         const box = createTemporaryObject(boxC, host, {
-            ui: ui, voice: createTemporaryObject(voiceC, host), lk: look, res: Board.resOf(look, langs[t]), s: 1,
-            view: v.panel, round: v.round, rows: En.settings.pageRows, ar: t === "ar"
+            ui: ui, voice: createTemporaryObject(voiceC, host), lk: look, res: Board.resOf(look, langs[t]), s: size || 1,
+            view: v.panel, round: v.round, rows: rows || En.settings.pageRows, ar: t === "ar"
         });
         Pointer.through([box]);
         box.open();
@@ -49,8 +49,8 @@ TestCase {
         return box;
     }
     // The panel showing the hub's view `name`.
-    function make(name, tag, lk) {
-        return show(Kit.view(tag || "en", name), tag, lk);
+    function make(name, tag, lk, rows, size) {
+        return show(Kit.view(tag || "en", name), tag, lk, rows, size);
     }
     // The one shown part under `item` (the panel's content by default) whose gate id is `id`.
     function one(box, id, item) {

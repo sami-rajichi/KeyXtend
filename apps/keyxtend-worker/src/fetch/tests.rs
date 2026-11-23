@@ -95,6 +95,10 @@ impl Http for Server {
     fn send(&self, hop: &Hop<'_>) -> Result<Reply, NetError> {
         self.0.send(hop)
     }
+
+    fn deliver(&self, call: &kx_platform_net::Call<'_>) -> Result<Reply, NetError> {
+        self.0.deliver(call)
+    }
 }
 
 impl Notes for Vec<FetchNote> {

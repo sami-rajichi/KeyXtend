@@ -15,8 +15,12 @@ impl Actor {
         }
     }
 
-    /// Removes the blobs of `entry`, already out of the history; a blob left behind goes at the next load.
+    /// Removes the blobs of `entry`, already out of the history; a blob left behind goes at the next load. Paste at
+    /// once never puts its content back.
     pub(super) fn forget(&mut self, entry: &Entry) {
+        self.board.gone(entry.id);
+        self.lent.gone(entry.id);
+        self.lost.gone(entry);
         if let Err(error) = self.store.delete(entry) {
             tracing::warn!(%error, "a clipboard entry's blobs were not all removed");
         }

@@ -2,12 +2,13 @@
 //! stay Western (ADR-0017), with the language's decimal mark; trailing zeros drop, but seconds keep their one decimal.
 
 use super::I18n;
-use super::compose::{FORM_VAR, clean, count};
+use super::compose::{FORM_VAR, FRACTION_FORM, clean, count};
 use super::keys::vars::LANG;
 use super::keys::{
     LANG_IN, LANG_NAME, NUM_DECIMAL, VOICE_GB, VOICE_MB, VOICE_NOTE, VOICE_SECS, bar_hint_id,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
+use kx_module_api::MS_PER_S;
 use kx_module_api::ports::{BarHint, Date, Hundredths, VoiceLang};
 
 /// Bytes in a megabyte as the models table writes sizes, in decimal units.
@@ -15,8 +16,6 @@ const SI_MB: u128 = 1_000_000;
 /// Megabytes in a gigabyte, decimal for file sizes and binary for memory.
 const SI_GB_MB: u128 = 1000;
 const BIN_GB_MB: u128 = 1024;
-/// Milliseconds in a second.
-const MS_PER_S: u128 = 1000;
 /// A file size shows three significant digits: two decimals below ten gigabytes, one below a hundred.
 const TWO_PLACES_BELOW_GB: u128 = 10;
 const ONE_PLACE_BELOW_GB: u128 = 100;
@@ -31,13 +30,14 @@ const MB_VAR: &str = "mb";
 const GB_VAR: &str = "gb";
 const S_VAR: &str = "s";
 const TIMES_VAR: &str = "times";
-/// The plural form a factor with decimals takes: no plural rule matches it, so the text's other form shows.
-const FRACTION_FORM: &str = "fraction";
 
 impl I18n {
     /// The line of note `hint`, naming its language where it has one.
     #[must_use]
     pub fn voice_hint(&self, hint: &BarHint) -> String {
+        if let BarHint::Cloud { why, .. } = hint {
+            return self.voice_cloud(why);
+        }
         let key = format!("{VOICE_NOTE}{}", bar_hint_id(hint));
         match lang_of(hint) {
             Some(lang) => self.with(&key, [(LANG, self.voice_lang(lang))]),
@@ -127,7 +127,7 @@ impl I18n {
     /// Arabic decimal always takes the singular.
     #[must_use]
     pub fn voice_secs(&self, ms: u32) -> String {
-        let s = self.places(u128::from(ms), MS_PER_S, SECONDS_PLACES, false);
+        let s = self.places(u128::from(ms), u128::from(MS_PER_S), SECONDS_PLACES, false);
         self.with(VOICE_SECS, [(S_VAR, s)])
     }
 
@@ -155,7 +155,7 @@ impl I18n {
 
     /// `num` / `den` rounded to `places` decimals, grouped, with the language's decimal mark; `trim` drops trailing
     /// zeros, and the mark with them.
-    fn places(&self, num: u128, den: u128, places: u32, trim: bool) -> String {
+    pub(super) fn places(&self, num: u128, den: u128, places: u32, trim: bool) -> String {
         let scale = TEN.pow(places);
         let scaled = round(num.saturating_mul(scale), den);
         let whole = self.grouped(scaled / scale);

@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-11-16 (P11 task 29 `kx-security-check`: the Dictation key and dictated texts unchanged, the keyboard still the only typist; final); 2026-11-16 (P11 task 28: the Dictation key and dictated texts behind `Voice`, against the code); 2026-11-08 (P10 Task 16: the selection chips' edit route, against the code); 2026-11-06 (P9 Task 27: the aimed line told to prediction, and picks for it); 2026-11-05 (P9 `kx-security-check`: the gaps after a fill's app check, and the gate's pin; P9 Task 23: a fill's data and inputs, the route, the app check and the late limit); 2026-10-31 (P8 security check: the gated `ClipPanel` and a paste asked after the stop; P8 task 15: the clipboard key, the panel keys, paste on request and the history chord; P7 security review: hidden marks in picked words, and what guards the erase; the paced erase, stopped by a click away; P7 DoD review: stopped by a board key too)
+- **Last review:** 2026-11-20 (P11 part 2, task 23: the `Voice` gate's panel line, `VoiceLine`, `VoiceLineKey` and `VoiceClose`, and a letter for a voice line, ADR-0049, against the code); 2026-11-16 (P11 task 29 `kx-security-check`: the Dictation key and dictated texts unchanged, the keyboard still the only typist; final); 2026-11-16 (P11 task 28: the Dictation key and dictated texts behind `Voice`, against the code). Older reviews are in git history.
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -15,7 +15,7 @@
 | `WriteClipboard` | It gates `PasteAsk`, which it hears, and `Pasted`, which it tells (ADR-0034); it needs no clipboard service. | The module does not start, as it cannot hear paste requests. |
 | `Vault` | An event gate only (ADR-0038): it gates `FillLive`, `FillPanel` and `FillType`, which it hears, and `FillKey` and `FillTyped`, which it tells; it needs no vault service. | The module does not start, as it cannot hear Quick-fill's state, panel or fills. |
 | `Selection` | An event gate only (ADR-0041): it gates `EditAsk`, which it hears, and `EditDone`, which it tells; it needs no selection service. | The module does not start (`module::without_selection_it_cannot_hear_edit_requests`). |
-| `Voice` | An event gate only (ADR-0042 decision 7): it gates `VoiceLit` and `TextAsk`, which it hears, and `VoiceKey`, `VoiceAsk` and `TextDone`, which it tells; it needs no speech service and no `Microphone` (`the_voice_gate_covers_the_key_its_light_and_the_texts_and_no_microphone`). | The module does not start, as it cannot hear dictated texts. |
+| `Voice` | An event gate only (ADR-0042 decision 7, ADR-0049): it gates `VoiceLit`, `TextAsk` and `VoiceLine`, which it hears, and `VoiceKey`, `VoiceAsk`, `TextDone`, `VoiceLineKey` and `VoiceClose`, which it tells; it needs no speech service and no `Microphone` (`the_voice_gate_covers_the_key_its_light_the_texts_and_the_panels_line_and_no_microphone`). | The module does not start, as it cannot hear dictated texts. |
 
 - Besides its settings, the module writes only its own `size`, `x`, `y` and `placed`.
 
@@ -37,6 +37,7 @@
 | The clipboard panel open, and the history chord wanted, as the bus last told | Public (the key lights) | Memory only; forgotten at each start | No | Until the next change |
 | A fill's parts (`FillType`: its values and Tabs) | Secret | Memory only, as `Secret` while waiting; each text part goes to the injector from a copy wiped once sent; the injector's own copy is in `kx-platform-windows.md` | No | One fill |
 | A letter for Quick-fill's panel (`FillKey`) | Secret at times (it may be part of a password) | Memory only, as plain `Redacted<String>`, then one bus event heard only by `Vault` holders; never sent to the app | No | One click |
+| A letter for the Voice panel's key, address or model line (`VoiceLineKey`, ADR-0049) | Secret at times (it may be part of a service key) | Memory only, as plain `Redacted<String>`, then one bus event heard only by `Voice` holders, and only while a voice line is aimed at; never sent to the app, and Esc always goes to the app | No | One click |
 | The fill key's state and the panel open, as the bus last told (`FillLive`, `FillPanel`) | Public (the key lights or dims) | Memory only | No | Until the next change |
 | The aim (ADR-0040): on or off, the outside clicks when it aimed, what to restore after a form, and a number naming the front window | Public (it carries no title or text) | Memory only; never logged | No | Until the panel closes |
 | The open panel's line and the line told last, with a search's text (`ClipLine`, `FillLine`, `AimedLine`, ADR-0040) | Sensitive (what the user looks for) | Memory only, as plain `Redacted<String>` (see Accepted), then one `AimedLine` event, only while that line is aimed at, heard only by modules granted `ReadFocusedText`; never stored or logged. A private line holds no text | No | Until the search changes, the aim leaves or the panel closes |

@@ -1,18 +1,22 @@
 //! Voice typing over the whole app: the module watches the session while it runs and Quit lets it go, the Dictation
-//! key opens a dictation whose text the keyboard types and the voice shelf keeps, and a hidden run still dictates but
-//! keeps nothing (ADR-0037, edge 16).
+//! key opens a dictation whose text the keyboard types and the voice shelf keeps, Paste at once pastes it through the
+//! clipboard history and puts the clipboard back, and a hidden run still dictates but keeps nothing (ADR-0037, edge 16).
+//! `cloud` sends a dictation to a cloud service.
 
-use crate::rig::{Rig, WAIT, hear};
+mod cloud;
+
+use crate::rig::{APP, Rig, WAIT, hear};
 use keyxtend::boot::Boot;
 use keyxtend::hidden::Run;
-use kx_mod_voice::VoiceSettings;
+use kx_mod_clipboard::ClipSettings;
 use kx_mod_voice::models::table;
+use kx_mod_voice::{INSERTS, VoiceSettings};
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
-    Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB, SpeechDone, SpeechNote,
-    SpeechStage, TextDone, VoiceLit,
+    ClipPart, Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB, ShortcutId,
+    SpeechDone, SpeechNote, SpeechStage, TextDone, TextPasted, VoiceLit,
 };
-use kx_module_api::{Redacted, Zeroizing};
+use kx_module_api::{Event, Redacted, Zeroizing};
 use kx_platform_fake::{ShelfCall, SpeechCall};
 use std::path::Path;
 
@@ -22,10 +26,10 @@ const MODELS: &str = r"D:\KeyXtend\models";
 const MIC: &str = "mic";
 /// The language the tests dictate in, the rig's first layout.
 const ENGLISH: &str = "en";
-/// The app the hidden run was started from.
-const APP: &str = "Claude";
 /// What the test says.
 const SAID: &str = "hello";
+/// What the clipboard held before.
+const KEPT: &str = "kept";
 
 /// A rig whose models folder holds English's default model, on drive D:, with focus in a text box.
 fn rig() -> Rig {
@@ -51,16 +55,27 @@ fn tap_mic(boot: &Boot) {
     let _ = boot.hub.act(tap);
 }
 
-/// Starts `boot`, points voice typing at the models folder, and dictates `SAID` in English through the keyboard; it
-/// gives the keyboard's answer.
-fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
+/// Starts `boot` and points voice typing at the models folder, with `insert` as its way in.
+fn start(boot: &mut Boot, insert: &str) {
     boot.start().unwrap();
-    let models = toml::Value::String(MODELS.into());
-    boot.kernel
-        .set_setting(kx_mod_voice::ID, "models_dir", models)
-        .unwrap();
+    for (key, value) in [("models_dir", MODELS), ("insert", insert)] {
+        let value = toml::Value::String(value.into());
+        boot.kernel
+            .set_setting(kx_mod_voice::ID, key, value)
+            .unwrap();
+    }
+}
+
+/// Starts a dictation in English on a started `boot`, and the key stops it once speech was heard.
+fn talk(rig: &Rig, boot: &Boot) {
+    listen(rig, boot);
+    stop(rig, boot);
+}
+
+/// Starts a dictation in English on a started `boot` and waits until it records and speech was heard.
+fn listen(rig: &Rig, boot: &Boot) {
     let bus = boot.kernel.bus();
-    let ((_lit, lit), (_done, done)) = (hear::<VoiceLit>(&bus), hear::<TextDone>(&bus));
+    let (_lit, lit) = hear::<VoiceLit>(&bus);
     let english = LayoutChanged {
         id: LayoutId::new(1),
         iso: ENGLISH.into(),
@@ -71,8 +86,12 @@ fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
     rig.speech
         .on(SpeechCall::Open, vec![SpeechNote::Stage(SpeechStage::Open)]);
     tap_mic(boot);
-    while !lit.recv_timeout(WAIT).unwrap().rec {}
+    while lit.recv_timeout(WAIT).unwrap() != VoiceLit::Rec {}
     assert!(rig.speech.tell(SpeechNote::Heard));
+}
+
+/// The key stops the dictation `listen` started, once its debounce passed.
+fn stop(rig: &Rig, boot: &Boot) {
     rig.clock()
         .advance(VoiceSettings::from_defaults().unwrap().debounce());
     tap_mic(boot);
@@ -80,17 +99,34 @@ fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
         rig.speech.wait(WAIT, |runs| runs[0].stops == 1),
         "the key stops it"
     );
-    let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
-    assert!(rig.speech.tell(SpeechNote::Piece { index: 0, text }));
-    assert!(rig.speech.tell(SpeechNote::Done(SpeechDone {
-        pieces: 1,
+}
+
+/// A run's end after it wrote `pieces` pieces; a listen-only run writes none.
+const fn done(pieces: u16) -> SpeechNote {
+    SpeechNote::Done(SpeechDone {
+        pieces,
         sound_ms: 2_000,
         wait_ms: 300,
         load_ms: 0,
         memory_mb: 600,
         card: false,
-    })));
-    done.recv_timeout(WAIT).unwrap()
+    })
+}
+
+/// Dictates `SAID` in English on a started `boot`; it gives the first `E` heard once the text is out.
+fn speak<E: Event + Clone>(rig: &Rig, boot: &mut Boot) -> E {
+    let (_done, heard) = hear::<E>(&boot.kernel.bus());
+    talk(rig, boot);
+    let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
+    assert!(rig.speech.tell(SpeechNote::Piece { index: 0, text }));
+    assert!(rig.speech.tell(done(1)));
+    heard.recv_timeout(WAIT).unwrap()
+}
+
+/// Starts `boot` and dictates `SAID` as `speak` does, typed; it gives the keyboard's answer.
+fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
+    start(boot, INSERTS[0].0);
+    speak(rig, boot)
 }
 
 #[test]
@@ -129,4 +165,27 @@ fn a_hidden_run_still_dictates_but_keeps_nothing() {
     assert!(typed.ok && typed.count > 0, "{typed:?}");
     boot.kernel.stop_all();
     assert_eq!(rig.voice.calls(ShelfCall::Save), saves, "ADR-0037");
+}
+
+#[test]
+fn paste_at_once_pastes_the_text_through_the_clipboard_history_then_puts_the_clipboard_back() {
+    let rig = rig();
+    rig.shortcuts.set_known(vec![crate::clip::paste()]);
+    rig.clip.set_text(Some(KEPT));
+    let mut boot = rig.load();
+    start(&mut boot, INSERTS[1].0);
+    let pasted: TextPasted = speak(&rig, &mut boot);
+    assert!(pasted.ok, "{pasted:?}");
+    let sent: Vec<ShortcutId> = rig.shortcuts.sent().into_iter().map(|s| s.0).collect();
+    assert_eq!(sent, [crate::clip::paste().id], "one paste");
+    assert!(rig.injector.strokes().is_empty(), "nothing typed");
+    rig.clock()
+        .advance(ClipSettings::from_defaults().unwrap().paste_gap());
+    assert!(rig.writer.wait_tries(2, WAIT), "the clipboard goes back");
+    let writes = rig.writer.writes();
+    let said =
+        |parts: &[ClipPart]| matches!(parts, [ClipPart::Text(t)] if t.expose().starts_with(SAID));
+    assert!(said(&writes[0]), "the text, as ours");
+    assert_eq!(writes[1], [ClipPart::Text(Redacted::new(KEPT.to_owned()))]);
+    boot.kernel.stop_all();
 }

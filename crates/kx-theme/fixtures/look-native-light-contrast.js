@@ -21,6 +21,10 @@ var lk = {
     "lock_ink": "#FF050505",
     "rec": "#FF1AEBFF",
     "rec_ink": "#FF050505",
+    "prep": "#FF101010",
+    "prep_ink": "#FFFFFF00",
+    "warn": "#FF1AEBFF",
+    "warn_ink": "#FFFFFFFF",
     "led_off": "#FF101010",
     "led_on": "#FF1AEBFF",
     "ring": "#FF1AEBFF",
@@ -545,7 +549,7 @@ var lk = {
     "voice": {
       "bar_px": [
         500.0,
-        640.0
+        650.0
       ],
       "wave_px": [
         4.0,
@@ -566,7 +570,12 @@ var lk = {
       "run_share": [
         0.4,
         0.5
-      ]
+      ],
+      "fact_px": 200.0,
+      "pick_across": 2,
+      "pick_name_px": 96.0,
+      "chip_name_px": 128.0,
+      "wave_room_px": 48.0
     }
   },
   "motion": {
@@ -1162,8 +1171,14 @@ var lk = {
       "copied": "check",
       "undo": "undo-2",
       "anyway": "rotate-ccw",
+      "again": "rotate-ccw",
       "listen": "mic",
       "download": "download",
+      "service": "file",
+      "service_key": "key-round",
+      "local": "cpu",
+      "cloud": "cloud",
+      "device": "cpu",
       "transcribing": "audio-lines",
       "text": "captions",
       "password": "lock",
@@ -1199,13 +1214,16 @@ var lk = {
         "untested": "languages",
         "folder": "folder",
         "pages": {
+          "card": "file-text",
+          "cloud": "cloud",
           "compare": "scale",
           "device": "cpu",
           "folders": "folder-open",
           "history": "history",
           "home": "mic",
           "models": "audio-lines",
-          "options": "settings-2"
+          "options": "settings-2",
+          "service": "key-round"
         },
         "buttons": {
           "again": "rotate-ccw",
@@ -1219,24 +1237,39 @@ var lk = {
           "delete": "trash-2",
           "delete-all": "trash-2",
           "download": "download",
+          "facts": "file-text",
           "here": "check",
           "insert": "clipboard-paste",
+          "lines": "key-round",
+          "link": "link",
+          "off": "power",
+          "on": "power",
           "open": "folder-open",
+          "paste": "clipboard-paste",
           "pause": "pause",
           "pin": "pin",
+          "remove": "trash-2",
           "rerun": "rotate-ccw",
           "resume": "play",
+          "test": "activity",
           "use": "check"
         },
         "marks": {
+          "cloud": "cloud",
           "done": "check",
           "download": "download",
           "failed": "x",
+          "needs-address": "globe",
+          "needs-key": "key-round",
           "not-here": "x",
+          "off": "power",
+          "on": "check",
           "other": "file",
           "passed": "check",
           "ready": "check",
           "run-failed": "x",
+          "unavailable": "x",
+          "untested": "activity",
           "used": "check"
         },
         "tops": {
@@ -1250,6 +1283,19 @@ var lk = {
           "built-in": "gpu",
           "card": "gpu",
           "cpu": "cpu"
+        },
+        "cloud": {
+          "no-test": "activity",
+          "off": "power",
+          "ok": "check",
+          "read": "history",
+          "site": "key-round",
+          "switch": "cloud",
+          "testing": "activity",
+          "untested": "activity"
+        },
+        "hints": {
+          "insert": "clipboard-paste"
         }
       }
     }

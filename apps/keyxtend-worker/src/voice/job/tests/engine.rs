@@ -1,6 +1,5 @@
 //! The job over the real engine and a fake library: pieces written in the model's language while listening goes on,
-//! and engine asks answered by notes. Without an engine every engine ask answers `Runner`. Notes are awaited, never
-//! slept for.
+//! and engine asks answered by notes, or by `Runner` without an engine. Notes are awaited, never slept for.
 
 use super::*;
 use crate::voice::cut::NoDetectors;
@@ -84,11 +83,10 @@ fn the_engine_writes_pieces_in_the_models_language_while_listening_goes_on() {
     heard.extend(rig.speak(&talk, CHUNK));
     let notes = rig.until(|n| matches!(n, VoiceNote::Piece { .. }), heard);
     assert!(rig.open(), "listening goes on");
-    let pad = SEC * 3 / 10;
     let want = [
         stage(1, Stage::Open),
         stage(1, Stage::Loading),
-        said(0, 12 * SEC + pad),
+        said(0, 12 * SEC + PAD),
     ];
     assert_eq!(plain(&notes), want);
     rig.only(VoiceAsk::Stop { id: 1 });
@@ -105,9 +103,38 @@ fn the_engine_writes_pieces_in_the_models_language_while_listening_goes_on() {
     assert_eq!((pieces, sound_ms, card), (2, 16_000, false));
     assert_eq!(
         plain(&notes),
-        [stage(1, Stage::Shut), said(1, pad + 3 * SEC)]
+        [stage(1, Stage::Shut), said(1, PAD + 3 * SEC)]
     );
     assert!(lib.script().runs.iter().all(|r| r.2 == "fr-FR"));
+}
+
+#[test]
+fn sound_heard_while_the_model_still_loads_is_all_written_once_it_loads() {
+    let (mut rig, lib) = engine_rig();
+    let (go, gate) = mpsc::channel();
+    lib.script().gate = Some(gate);
+    let heard = rig.ask(writing());
+    let notes = rig.until(|n| *n == stage(1, Stage::Loading), heard);
+    assert_eq!(
+        plain(&notes),
+        [stage(1, Stage::Open), stage(1, Stage::Loading)]
+    );
+    let mut talk = loud(12 * SEC);
+    talk.extend(silent(SEC));
+    talk.extend(loud(3 * SEC));
+    let heard = rig.speak(&talk, CHUNK);
+    assert!(
+        lib.script().runs.is_empty(),
+        "nothing is written while it loads"
+    );
+    go.send(()).unwrap();
+    rig.only(VoiceAsk::Stop { id: 1 });
+    let notes = rig.until(|n| matches!(n, VoiceNote::Done { .. }), heard);
+    let pieces: Vec<VoiceNote> = (notes.iter())
+        .filter(|n| matches!(n, VoiceNote::Piece { .. }))
+        .cloned()
+        .collect();
+    assert_eq!(pieces, [said(0, 12 * SEC + PAD), said(1, PAD + 3 * SEC)]);
 }
 
 #[test]

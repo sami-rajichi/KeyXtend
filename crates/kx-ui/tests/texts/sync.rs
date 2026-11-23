@@ -8,6 +8,8 @@ use std::time::{Duration, SystemTime};
 
 /// Ends the name a changed file is written under before it takes its own.
 const PART: &str = ".part";
+/// Why a changed file cannot be replaced: a Quick test run holds it, so the two run one after the other.
+const HELD: &str = "a changed file is replaced; a running Quick test may hold it, so run this test before or after";
 
 /// Makes `to` hold exactly the files of `from`, writing only those whose bytes differ, each under a part name first.
 pub fn sync(from: &Path, to: &Path) {
@@ -22,10 +24,10 @@ pub fn sync(from: &Path, to: &Path) {
         let mut part = dst.clone().into_os_string();
         part.push(PART);
         std::fs::write(&part, &bytes).expect("the file is written");
-        std::fs::rename(&part, &dst).expect("the file takes its name");
+        std::fs::rename(&part, &dst).expect(HELD);
     }
     for rel in files(to).difference(&fresh) {
-        std::fs::remove_file(to.join(rel)).expect("a stray file goes");
+        std::fs::remove_file(to.join(rel)).expect(HELD);
     }
 }
 

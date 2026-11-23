@@ -12,7 +12,7 @@ pub use note::{
 };
 
 /// The handed-over sound's form and frame cap, the frames' own: 16 kHz mono 16-bit pieces, as `keep` gives them.
-pub use kx_ipc::{MAX_SOUND_BYTES, SAMPLE_BYTES, SOUND_HZ};
+pub use kx_ipc::{MAX_SOUND_BYTES, SAMPLE_BYTES, SOUND_BYTES_PER_S, SOUND_HZ};
 
 use crate::{Capability, SecretBytes, ServiceId, ServiceKey};
 use kx_ipc::VoiceFault;
@@ -97,6 +97,33 @@ impl SpeechError {
     pub fn ends(self) -> bool {
         !matches!(self, Self::NoCard | Self::CardRoom | Self::CardFailed)
     }
+
+    /// The error's plain name, letters only, which a log line may hold; never a value it carries.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Range(_) => "Range",
+            Self::BadPath => "BadPath",
+            Self::NoMic => "NoMic",
+            Self::MicBusy => "MicBusy",
+            Self::MicRefused => "MicRefused",
+            Self::Unplugged => "Unplugged",
+            Self::NoFile => "NoFile",
+            Self::BadFile => "BadFile",
+            Self::Language => "Language",
+            Self::Runner => "Runner",
+            Self::NoCard => "NoCard",
+            Self::CardRoom => "CardRoom",
+            Self::CardFailed => "CardFailed",
+            Self::NoSound => "NoSound",
+            Self::OutOfStep => "OutOfStep",
+            Self::Memory => "Memory",
+            Self::Internal => "Internal",
+            Self::Timeout => "Timeout",
+            Self::Gone => "Gone",
+            Self::Down { .. } => "Down",
+        }
+    }
 }
 
 /// Each fault the `voice` job sends, as the same error.
@@ -149,6 +176,16 @@ pub trait SpeechRun: Send {
     /// `NoSound` when the recording is gone, `Gone` or `Timeout` when the worker does not answer.
     fn keep(&mut self) -> Result<Vec<SecretBytes>, SpeechError>;
 
+    /// A listen-only run's speech once its `Done` was told: pieces cut at pauses within `piece_s`, each under the
+    /// frame limit, for a cloud service; empty when no speech was heard. Each call gives fresh copies, for Try again.
+    ///
+    /// # Errors
+    /// `NoSound` before `Done`, after a Cancel, an `again`, a close or a wipe, or on a run that cannot listen alone;
+    /// `Internal` when the job handed it over out of order.
+    fn pieces(&mut self) -> Result<Vec<SecretBytes>, SpeechError> {
+        Err(SpeechError::NoSound)
+    }
+
     /// Wipes the recording and ends the run; the job stays for `JobLimits::idle_min`.
     fn close(&mut self);
 }
@@ -190,8 +227,8 @@ pub trait Speech: Send + Sync {
         tell: Box<dyn Fn(SpeechNote) + Send>,
     ) -> Result<CheckDone, SpeechError>;
 
-    /// The ISO 639 codes of the shipped check clips, in the order a model takes them: a card's check reads the first
-    /// one the model knows.
+    /// The ISO 639 codes of the shipped check clips, in order: a card's check reads the language in front's when the
+    /// model knows it, else the first one it knows (ADR-0052).
     fn clips(&self) -> Vec<String>;
 }
 

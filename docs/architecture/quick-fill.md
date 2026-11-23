@@ -8,7 +8,7 @@ Moved from [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the overview, t
   - Named `Vault`: `FillLive` (is it running, which lights or dims the fill key) and `FillPanel` (vault to keyboard and ui), `FillView` (vault to ui), `FillKey` (keyboard to vault), `FillLine` (vault to keyboard: the line that shows, ADR-0040), `FillAct` and `FillNames` (ui to vault), `FillType` and `FillTyped` (vault and keyboard), and `VaultEmails` (vault to predict).
   - Paste uses `ClipTake` and `ClipTaken`, which name `ReadClipboard`.
 - **Ports.** `Boxes` starts a `BoxRun` on the vault job, and `Places` lists, reads, writes, finds and dates boxes in folders (`Places::modified`). Each call can block, so all run on the module's `kx-vault-box` thread. `Calendar` and `Random` have no gate.
-- **Who holds what.** See the list under [Word prediction](prediction.md): `Vault` gates events alone, and `VaultData`, which only the vault holds, gates the store, the boxes and the places (ADR-0039). `ReadClipboard` also goes to the vault, for Paste; it never reads a copy.
+- **Who holds what.** See the list under [Word prediction](prediction.md): `Vault` gates events alone, and `VaultData`, which only the vault holds, gates the store, the boxes and the places (ADR-0039). `ReadClipboard` also goes to the vault, for Paste, and since P11 part 2 to voice typing, for the key page's Paste; neither reads a copy.
 - **Files.**
   - `<data>/quickfill/` (`VAULT_DIR`) holds its key file and the sealed blobs `notebook` and `backup`, with their `-aside` copies when one opened but did not read.
   - Each place holds one `KeyXtend Backup.kxbox`: mark, version, the password-locked identity, then one `age` stream. A box another computer wrote, in a place the user picks, asks before any write.

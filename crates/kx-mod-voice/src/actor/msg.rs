@@ -4,10 +4,12 @@
 use std::path::PathBuf;
 
 use kx_module_api::ports::{
-    CardId, CheckDone, Device, FetchNote, FieldChange, Fingerprint, FolderError, LayoutChanged,
-    ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone, VoiceAct,
+    CardId, CheckDone, ClipTaken, CloudFault, CloudNote, Device, FetchNote, FieldChange,
+    Fingerprint, FolderError, LayoutChanged, ModelError, ModelFacts, PanelKey, SessionNote,
+    SpeechError, SpeechNote, TextDone, TextPasted, VoiceAct,
 };
 
+use super::ask::Wired;
 use super::lanes::{Answer, Lane, Run};
 use crate::panel::Check;
 
@@ -21,6 +23,10 @@ pub(crate) enum Msg {
     Open,
     /// A late starter asks for the view and the light again (`VoiceAsk`).
     Ask,
+    /// A key from the keyboard for the panel's line (`VoiceLineKey`).
+    LineKey(PanelKey),
+    /// Another panel opened, so this one closes (`VoiceClose`).
+    Close,
     /// The keyboard shows another layout.
     Layout(LayoutChanged),
     /// The focused box changed.
@@ -33,6 +39,10 @@ pub(crate) enum Msg {
     PressesAsk,
     /// The keyboard typed a text (`TextDone`).
     Typed(TextDone),
+    /// The clipboard history pasted a text, or not (`TextPasted`).
+    Pasted(TextPasted),
+    /// The clipboard history's text for the key page's Paste (`ClipTaken`).
+    Taken(ClipTaken),
     /// A job's answer.
     Back(Back),
     /// The module stops.
@@ -95,4 +105,47 @@ pub(crate) enum Back {
     },
     /// The models folder was shown, or why not.
     Shown(Result<(), FolderError>),
+    /// A note from dictation `take`'s upload of round `round`.
+    Net {
+        /// The dictation.
+        take: u32,
+        /// The upload.
+        round: u32,
+        /// The note; a text stays secret.
+        note: CloudNote,
+    },
+    /// A key's test of `ticket` answered.
+    Tested {
+        /// Names the test, so an answer the user no longer waits for is dropped.
+        ticket: u32,
+        /// Works, or why not.
+        answer: Result<(), CloudFault>,
+    },
+    /// A note from cloud model `at` of Compare's run `take`.
+    Trial {
+        /// Compare's run.
+        take: u32,
+        /// The model, in the run's order.
+        at: usize,
+        /// The note; a text stays secret.
+        note: CloudNote,
+    },
+    /// Model `at`'s service run for Compare's run `take` opened.
+    Tried {
+        /// Compare's run.
+        take: u32,
+        /// The model.
+        at: usize,
+        /// The run, held until it ends; dropping it cancels its requests.
+        run: Wired,
+    },
+    /// The service's run for dictation `take`'s upload of round `round` opened.
+    Sending {
+        /// The dictation.
+        take: u32,
+        /// The upload.
+        round: u32,
+        /// The run, held until it ends; dropping it cancels its requests.
+        run: Wired,
+    },
 }

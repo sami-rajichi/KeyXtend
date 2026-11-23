@@ -6,11 +6,12 @@ use std::sync::Arc;
 use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, FolderReveal, InputInjector,
-    LayoutSource, ModelFiles, Pictures, Places, PointerHook, PowerDialog, ScrollTarget,
-    SelectionWatch, SessionWatch, Shortcuts, Speech, WebLink, WordPacks,
+    Boxes, Calendar, Clipboard, ClipboardWriter, CloudSpeech, FieldWatch, FolderReveal,
+    InputInjector, LayoutSource, ModelFiles, Pictures, Places, PointerHook, PowerDialog,
+    ScrollTarget, SelectionWatch, SessionWatch, Shortcuts, Speech, WebLink, WordPacks,
 };
 use kx_platform::boxes::WorkerBoxes;
+use kx_platform::cloud::WorkerCloud;
 use kx_platform::models::WorkerModels;
 use kx_platform::pictures::WorkerPictures;
 use kx_platform::speech::{Assets, WorkerSpeech};
@@ -145,8 +146,14 @@ impl WindowsPlatform {
         ))
     }
 
-    /// Model files on this PC's drives, downloaded by the fetch worker, for the app to register under
-    /// `ModelFilesKey`.
+    /// Cloud speech by the `speech-net` job of the worker beside the program, to register under `CloudSpeechKey`.
+    #[must_use]
+    pub fn cloud_speech(&self) -> Arc<dyn CloudSpeech> {
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
+        Arc::new(WorkerCloud::new(worker, Arc::new(self.clock)))
+    }
+
+    /// Model files on this PC's drives, downloaded by the fetch worker, for the app to register under `ModelFilesKey`.
     #[must_use]
     pub fn model_files(&self) -> Arc<dyn ModelFiles> {
         let worker = WinSpawner::beside(&self.dirs.exe_dir);

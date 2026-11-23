@@ -1,4 +1,5 @@
-//! The calendar port: checked dates, day sums across month ends, year ends and leap days, weekdays, and its open gate.
+//! The calendar port: checked dates, day sums across month ends, year ends and leap days, weekdays, its open gate,
+//! and the default local time of another moment.
 
 use super::*;
 use proptest::prelude::*;
@@ -182,4 +183,19 @@ proptest! {
         let day = Date::from_day_number(n).unwrap();
         prop_assert_eq!(Date::parse(&day.to_string()), Some(day));
     }
+}
+
+/// A calendar that tells only now: 10:00 in Paris on the last day of summer time.
+struct Now;
+
+impl Calendar for Now {
+    fn now(&self) -> LocalTime {
+        LocalTime::at(utc(date(2026, 10, 24), 8, 0), 120).unwrap()
+    }
+}
+
+#[test]
+fn a_calendar_that_cannot_tell_another_moments_offset_keeps_the_one_in_force_now() {
+    let later = utc(date(2026, 10, 25), 8, 0);
+    assert_eq!(Now.local(later), LocalTime::at(later, 120), "the default");
 }

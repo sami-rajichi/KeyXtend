@@ -6,6 +6,9 @@ use super::*;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{CardId, Fingerprint, Hundredths, SpeechDone, Verdict};
 
+mod checks;
+mod cloud;
+
 /// A row of the models table.
 const ROW: &str = "parakeet-v3-q8";
 
@@ -46,12 +49,13 @@ fn print(n: u8) -> Fingerprint {
     Fingerprint::new([n; Fingerprint::BYTES])
 }
 
-/// `card`'s check of file `model` under `driver`.
+/// `card`'s check of file `model` under `driver`, on the English clip.
 fn checked(card_id: &str, driver: &str, model: u8, verdict: Verdict) -> Checked {
     Checked {
         card: card(card_id),
         driver: driver.into(),
         model: print(model),
+        lang: Some("en".into()),
         verdict,
         day: day(14),
     }
@@ -145,21 +149,21 @@ fn a_check_is_found_for_its_card_driver_and_file_only() {
     let mut checks = Checks::default();
     checks.put(checked("Vulkan0", "32.0.1", 1, passed(900)));
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.1", &print(1)),
+        checks.verdict(&card("Vulkan0"), "32.0.1", &print(1), "en"),
         Some(passed(900))
     );
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.2", &print(1)),
+        checks.verdict(&card("Vulkan0"), "32.0.2", &print(1), "en"),
         None,
         "a driver update"
     );
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2)),
+        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2), "en"),
         None,
         "a new model file"
     );
     assert_eq!(
-        checks.verdict(&card("Vulkan1"), "32.0.1", &print(1)),
+        checks.verdict(&card("Vulkan1"), "32.0.1", &print(1), "en"),
         None,
         "another card"
     );
@@ -177,11 +181,11 @@ fn a_new_check_replaces_the_cards_result_for_that_file_whatever_its_driver() {
     checks.put(checked("Vulkan0", "32.0.2", 1, slow));
     assert_eq!(checks.rows().len(), 2);
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.2", &print(1)),
+        checks.verdict(&card("Vulkan0"), "32.0.2", &print(1), "en"),
         Some(slow)
     );
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2)),
+        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2), "en"),
         Some(Verdict::NoRoom)
     );
 }
@@ -194,14 +198,17 @@ fn edge_25_a_card_that_failed_mid_run_loses_that_files_result_alone() {
     checks.put(checked("Vulkan1", "1.2", 1, passed(300)));
     assert!(checks.fell(&card("Vulkan0"), &print(1)));
     assert!(!checks.fell(&card("Vulkan0"), &print(1)));
-    assert_eq!(checks.verdict(&card("Vulkan0"), "32.0.1", &print(1)), None);
     assert_eq!(
-        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2)),
+        checks.verdict(&card("Vulkan0"), "32.0.1", &print(1), "en"),
+        None
+    );
+    assert_eq!(
+        checks.verdict(&card("Vulkan0"), "32.0.1", &print(2), "en"),
         Some(passed(400)),
         "another file on that card"
     );
     assert_eq!(
-        checks.verdict(&card("Vulkan1"), "1.2", &print(1)),
+        checks.verdict(&card("Vulkan1"), "1.2", &print(1), "en"),
         Some(passed(300)),
         "that file on another card"
     );

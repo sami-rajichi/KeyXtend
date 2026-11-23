@@ -22,6 +22,8 @@ join_rule = ""
 paste_gap_ms = 150
 # How long an insert waits for the keyboard to paste, in ms.
 paste_wait_ms = 1000
+# The most characters of a text Paste at once reads to put back; past it the dictated text is typed instead.
+back_chars = 1000000
 # How long an insert waits for its files to be checked, in ms; past it the insert stops.
 check_ms = 5000
 # The system's clipboard-history shortcut clicked on our keyboard opens our panel.
@@ -54,5 +56,8 @@ open_ms = 250
 poll_ms = 10
 # The most copies that wait for the history to keep them; past it a new copy is dropped.
 queue_copies = 8
+# How long after a take the watch's copies of the taken text are not kept, in ms, as an app may tell one late or twice;
+# also how far apart one app's two writes of it may be for the take to forget both.
+take_wait_ms = 5000
 # A change is saved this many ms after the first unsaved one, and at stop.
 save_ms = 500

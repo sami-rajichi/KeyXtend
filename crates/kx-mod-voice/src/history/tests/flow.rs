@@ -49,6 +49,8 @@ fn supply(iso: &str) -> Result<Ready, Lack> {
     Ok(Ready {
         model,
         card: None,
+        why: None,
+        short: name.clone(),
         name,
         print: Fingerprint::new([1; Fingerprint::BYTES]),
         bytes: 1,

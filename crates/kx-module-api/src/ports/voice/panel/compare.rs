@@ -2,8 +2,20 @@
 //! with their day and device. Only numbers are kept; a text shows only for a language with no set text, wiped on drop.
 
 use super::DeviceLabel;
-use crate::ports::Date;
+use super::cloud::ServiceName;
+use crate::ports::{CloudWhy, Date};
 use crate::{Redacted, Secret};
+
+/// A cloud model Compare may send the recording to (ADR-0047); only a ticked one's service gets it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompareCloud {
+    /// The model's shown name, or the id the user typed.
+    pub name: Redacted<String>,
+    /// Its service.
+    pub service: ServiceName,
+    /// It is ticked.
+    pub tick: bool,
+}
 
 /// Where one model stands while Compare runs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -28,6 +40,8 @@ pub struct CompareRun {
     pub name: Redacted<String>,
     /// Where it stands.
     pub step: RunStep,
+    /// Why a cloud model failed, the reason the bar would give; `None` for a local model or one that did not fail.
+    pub why: Option<CloudWhy>,
 }
 
 /// One model's numbers in Compare's table.
@@ -47,6 +61,19 @@ pub struct CompareRow {
     pub text: Option<Secret>,
     /// It is ticked.
     pub tick: bool,
+    /// The service that wrote it, for a cloud model; `None` for one on this PC.
+    pub cloud: Option<ServiceName>,
+}
+
+/// Where Compare's microphone stands before its models write.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CompareMic {
+    /// Closed, so Start shows.
+    Closed,
+    /// It opens: Start is gone and Cancel ends it, but nothing asks to read yet, as no bar shows.
+    Opening,
+    /// It is open and the user reads aloud now, so Start is gone and the bar's Stop ends it.
+    Reading,
 }
 
 /// Where Compare stands.
@@ -58,8 +85,13 @@ pub enum CompareSheet {
         models: u16,
         /// Where they run.
         device: DeviceLabel,
-        /// The user reads it aloud now, so Start is gone and the bar's Stop ends it.
-        recording: bool,
+        /// Where its microphone stands, which says whether Start shows.
+        mic: CompareMic,
+        /// The shown page of the cloud models of the services ready, ticked or not.
+        cloud: Vec<CompareCloud>,
+        /// The services the recording goes to after it is read, which the send warning names before Start; empty for
+        /// none, so no warning shows.
+        send: Vec<ServiceName>,
     },
     /// Model `at` of `of` writes the recording, as in Model 3 of 6 · its name, with Cancel.
     Running {

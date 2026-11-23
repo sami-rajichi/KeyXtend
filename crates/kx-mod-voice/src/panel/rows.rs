@@ -1,16 +1,17 @@
 //! The rows of the shown page: turning pages, ticking (one row, or History's in order), opening a folder, an option's
 //! switch and stepper, and the answer to the question shown.
 
-use kx_module_api::ports::BarHint;
+use kx_module_api::ports::{BarHint, VoiceTab};
 
-use super::{Do, Key, Panel, options};
+use super::{Do, Key, Page, Panel, options};
 use crate::VoiceSettings;
 use crate::folder::offer;
 use crate::view::Facts;
 
 impl Panel {
-    /// Turns the page; the view keeps it within the list.
+    /// Turns the page, letting go of a held row; the view keeps it within the list.
     pub(super) fn turn(&mut self, back: bool) {
+        self.hold = None;
         self.at = if back {
             self.at.saturating_sub(1)
         } else {
@@ -18,16 +19,30 @@ impl Panel {
         };
     }
 
-    /// A row of the shown page: open a folder in the folder list, else tick or untick it.
+    /// A row of the shown page: open a folder in the folder list, else tick or untick it; none on Compare while its run
+    /// is open, as Start fixed its plan.
     pub(super) fn row(&mut self, at: usize) -> Vec<Do> {
+        let compare = self.page == Some(Page::Tab(VoiceTab::Compare));
         let Some(key) = self.shown.get(at).cloned() else {
             return Vec::new();
         };
+        if compare && self.compare.busy() {
+            return Vec::new();
+        }
+        let many = compare && self.compare.results().is_empty();
         match key {
             Key::Dir(dir) => return self.open_dir(dir),
             Key::Opt(_) | Key::Plain => {}
+            // History's texts, and the cloud models Compare sends the recording to.
             Key::Text(_) => self.tick_many(key),
-            Key::Model(_) | Key::Device(_) | Key::Score(_) => self.tick_one(key),
+            Key::Cloud { .. } if many => self.tick_many(key),
+            Key::Model(_)
+            | Key::Device(_)
+            | Key::Score(_)
+            | Key::Service(_)
+            | Key::Cloud { .. } => {
+                self.tick_one(key);
+            }
         }
         Vec::new()
     }
@@ -64,8 +79,9 @@ impl Panel {
             .collect()
     }
 
-    /// An option's minus or plus on the shown page, where its row is live.
-    pub(super) fn step(&self, at: usize, up: bool, settings: &VoiceSettings) -> Vec<Do> {
+    /// An option's minus or plus on the shown page, where its row is live; the row then stays on screen.
+    pub(super) fn step(&mut self, at: usize, up: bool, settings: &VoiceSettings) -> Vec<Do> {
+        self.hold = self.shown.get(at).cloned();
         let table = options::values(settings);
         let opt = self
             .opt(at)
@@ -85,8 +101,11 @@ impl Panel {
         }
     }
 
-    /// An answer to the question shown: Delete all, or the folder offered at the first download.
+    /// An answer to the question shown: a card's, Delete all, or the folder offered at the first download.
     pub(super) fn confirm(&mut self, yes: bool, facts: &Facts<'_>) -> Vec<Do> {
+        if self.page == Some(Page::Card) {
+            return self.card_confirm(yes, facts);
+        }
         if let Some(asked) = self.asked.take() {
             return if yes {
                 vec![Do::DeleteAll(asked)]

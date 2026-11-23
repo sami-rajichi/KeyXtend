@@ -1,4 +1,5 @@
-//! An answer's status and the headers the rules read, each read into a buffer no longer than the longest address.
+//! An answer's status, the headers the rules read and those a call keeps, each read into a buffer no longer than the
+//! longest address.
 
 use super::codes;
 use super::handle::Handle;
@@ -8,24 +9,32 @@ use std::ffi::c_void;
 use windows::Win32::Foundation::{ERROR_INSUFFICIENT_BUFFER, WIN32_ERROR};
 use windows::Win32::Networking::WinHttp::{
     ERROR_WINHTTP_HEADER_NOT_FOUND, WINHTTP_QUERY_CONTENT_LENGTH, WINHTTP_QUERY_CONTENT_RANGE,
-    WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_QUERY_LOCATION, WINHTTP_QUERY_STATUS_CODE,
-    WinHttpQueryHeaders,
+    WINHTTP_QUERY_CUSTOM, WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_QUERY_LOCATION,
+    WINHTTP_QUERY_STATUS_CODE, WinHttpQueryHeaders,
 };
-use windows::core::PCWSTR;
+use windows::core::{HSTRING, PCWSTR};
 
 /// UTF-16 units a header value may take with its NUL: the longest address a redirect may name.
 const HEAD_UNITS: usize = MAX_URL_BYTES + 1;
 
-/// The status and headers of `req`'s answer.
+/// The status and headers of `req`'s answer, with each header named in `keep` that it holds.
 ///
 /// # Errors
 /// `Server` for a status that is no HTTP code, or a header too long or not UTF-16; `WinHTTP`'s error otherwise.
-pub(super) fn read(req: &Handle) -> Result<Head, NetError> {
+pub(super) fn read(req: &Handle, keep: &[&str]) -> Result<Head, NetError> {
+    let none = PCWSTR::null();
+    let mut extra = Vec::with_capacity(keep.len());
+    for name in keep {
+        if let Some(value) = text(req, WINHTTP_QUERY_CUSTOM, &HSTRING::from(*name))? {
+            extra.push(((*name).to_owned(), value));
+        }
+    }
     Ok(Head {
         status: status(req)?,
-        location: text(req, WINHTTP_QUERY_LOCATION)?,
-        length: text(req, WINHTTP_QUERY_CONTENT_LENGTH)?,
-        range: text(req, WINHTTP_QUERY_CONTENT_RANGE)?,
+        location: text(req, WINHTTP_QUERY_LOCATION, none)?,
+        length: text(req, WINHTTP_QUERY_CONTENT_LENGTH, none)?,
+        range: text(req, WINHTTP_QUERY_CONTENT_RANGE, none)?,
+        extra,
     })
 }
 
@@ -42,16 +51,20 @@ fn status(req: &Handle) -> Result<u16, NetError> {
     u16::try_from(code).map_err(|_| NetError::Server)
 }
 
-/// The header `what` names, or none when the answer has none.
+/// The header `what` names, or for `WINHTTP_QUERY_CUSTOM` the one called `name`; none when the answer has none.
 #[allow(unsafe_code, reason = "Reads a WinHTTP answer's header.")]
-fn text(req: &Handle, what: u32) -> Result<Option<String>, NetError> {
+fn text<P: windows::core::Param<PCWSTR>>(
+    req: &Handle,
+    what: u32,
+    name: P,
+) -> Result<Option<String>, NetError> {
     let mut wide = vec![0u16; HEAD_UNITS];
     let mut size = u32::try_from(HEAD_UNITS * size_of::<u16>()).map_err(|_| NetError::Internal)?;
     let buf = Some(wide.as_mut_ptr().cast::<c_void>());
     let index = std::ptr::null_mut();
-    // SAFETY: `req` has an answer; `wide` holds `size` bytes, and WinHTTP writes no more.
-    let read =
-        unsafe { WinHttpQueryHeaders(req.raw(), what, PCWSTR::null(), buf, &raw mut size, index) };
+    // SAFETY: `req` has an answer; `name` is null or lives for the call; `wide` holds `size` bytes, and WinHTTP writes
+    // no more.
+    let read = unsafe { WinHttpQueryHeaders(req.raw(), what, name, buf, &raw mut size, index) };
     match read.map_err(|e| WIN32_ERROR::from_error(&e).map(|c| c.0)) {
         Ok(()) => {
             let units = wide

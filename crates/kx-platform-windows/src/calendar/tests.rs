@@ -12,6 +12,15 @@ fn the_unix_epoch_is_ms_zero_and_a_tick_is_100_ns() {
 }
 
 #[test]
+fn a_moments_ticks_are_the_inverse_of_its_ms_and_none_before_1601() {
+    assert_eq!(ticks_of(0), Some(UNIX_EPOCH_TICKS));
+    for ms in [1, -1, 1_768_478_400_123, -11_644_473_600_000] {
+        assert_eq!(ticks_of(ms).map(unix_ms), Some(ms), "{ms}");
+    }
+    assert_eq!(ticks_of(-11_644_473_600_001), None, "before 1601");
+}
+
+#[test]
 fn the_offset_is_in_whole_minutes_east_of_utc() {
     let utc = UNIX_EPOCH_TICKS + 1_234_567;
     let min = |m: u64| m * TICKS_PER_MIN.unsigned_abs();
@@ -30,13 +39,67 @@ fn the_offset_is_in_whole_minutes_east_of_utc() {
 mod win {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use kx_module_api::ports::{Calendar, LocalTime};
+    use kx_module_api::MS_PER_S;
+    use kx_module_api::ports::{Calendar, Date, HOURS_PER_DAY, LocalTime, MIN_PER_HOUR, S_PER_MIN};
     use windows::Win32::Foundation::SYSTEMTIME;
     use windows::Win32::System::SystemInformation::GetLocalTime;
     use windows::Win32::System::SystemServices::{TIME_ZONE_ID_DAYLIGHT, TIME_ZONE_ID_STANDARD};
-    use windows::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
+    use windows::Win32::System::Time::{
+        DYNAMIC_TIME_ZONE_INFORMATION, EnumDynamicTimeZoneInformation, GetTimeZoneInformation,
+        TIME_ZONE_INFORMATION,
+    };
 
     use super::*;
+    use crate::calendar::win::local_at;
+
+    /// Paris's zone as Windows names it: an hour east of UTC, and an hour more in summer.
+    const PARIS: &str = "Romance Standard Time";
+    const PARIS_EAST_MIN: i16 = 60;
+    const SUMMER_MIN: i16 = 60;
+    /// The test moments: noon UTC on the 15th of January and of July.
+    const JANUARY: u8 = 1;
+    const JULY: u8 = 7;
+    const NOON: i64 = 12;
+
+    /// Paris's zone, from Windows' own list of zones.
+    #[allow(unsafe_code, reason = "Fills a local struct.")]
+    fn paris() -> DYNAMIC_TIME_ZONE_INFORMATION {
+        let nth = |i| {
+            let mut zone = DYNAMIC_TIME_ZONE_INFORMATION::default();
+            // SAFETY: the call fills a local that outlives it.
+            let found = unsafe { EnumDynamicTimeZoneInformation(i, &raw mut zone) } == 0;
+            found.then_some(zone)
+        };
+        let name = |z: &DYNAMIC_TIME_ZONE_INFORMATION| String::from_utf16_lossy(&z.TimeZoneKeyName);
+        (0..)
+            .map_while(nth)
+            .find(|z| name(z).trim_end_matches('\0') == PARIS)
+            .expect("Paris")
+    }
+
+    /// Noon UTC on the 15th of `month` 2026, in Unix ms.
+    fn noon_utc(month: u8) -> i64 {
+        let day = Date::new(2026, month, 15).expect("a day").day_number();
+        let min = (day * HOURS_PER_DAY + NOON) * MIN_PER_HOUR;
+        min * S_PER_MIN * i64::from(MS_PER_S)
+    }
+
+    #[test]
+    fn a_moment_shows_the_offset_its_zone_keeps_then_summer_time_included() {
+        let zone = paris();
+        let winter = local_at(noon_utc(JANUARY), &zone).expect("a time");
+        let summer = local_at(noon_utc(JULY), &zone).expect("a time");
+        let hour = |off: i16| u8::try_from(NOON + i64::from(off) / MIN_PER_HOUR).unwrap();
+        let (east, later) = (PARIS_EAST_MIN, PARIS_EAST_MIN + SUMMER_MIN);
+        assert_eq!((winter.offset_min, winter.hour), (east, hour(east)));
+        assert_eq!((summer.offset_min, summer.hour), (later, hour(later)));
+    }
+
+    #[test]
+    fn local_now_is_now() {
+        let t = WinCalendar.now();
+        assert_eq!(WinCalendar.local(t.unix_ms), Some(t));
+    }
 
     /// Windows' local time now, as year, month, day, hour and minute.
     #[allow(unsafe_code, reason = "A plain query.")]

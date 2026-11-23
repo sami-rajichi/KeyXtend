@@ -9,7 +9,7 @@ use kx_module_api::ports::{
     SpeechModel,
 };
 
-use super::{VoiceSettings, place_named};
+use super::{Insert, VoiceSettings, insert_named, place_named};
 use crate::device::CardRules;
 
 /// The characters a look at the focused box takes: none, as only its kind matters.
@@ -19,8 +19,14 @@ impl VoiceSettings {
     /// The settings with `key` set to `value`, as the panel writes it; `None` for a key or value `check` refuses.
     #[must_use]
     pub fn with(&self, key: &str, value: toml::Value) -> Option<Self> {
+        self.with_all(&toml::Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// The settings with each of `values` set, as one write of several keys leaves them; `None` as for `with`.
+    #[must_use]
+    pub fn with_all(&self, values: &toml::Table) -> Option<Self> {
         let mut table = toml::Table::try_from(self).ok()?;
-        table.insert(key.to_owned(), value);
+        table.extend(values.clone());
         let next: Self = table.try_into().ok()?;
         next.check().ok().map(|()| next)
     }
@@ -84,6 +90,24 @@ impl VoiceSettings {
     #[must_use]
     pub fn bar_place(&self) -> BarPlace {
         place_named(&self.place).unwrap_or(BarPlace::Above)
+    }
+
+    /// How a text goes in; typed for a name `check` would have refused.
+    #[must_use]
+    pub fn way(&self) -> Insert {
+        insert_named(&self.insert).unwrap_or(Insert::Type)
+    }
+
+    /// The longest wait for the clipboard history to paste a text, before it is typed.
+    #[must_use]
+    pub fn paste_wait(&self) -> Duration {
+        Duration::from_millis(self.paste_ms.into())
+    }
+
+    /// How long the key page's Paste waits for the clipboard's text, before the clipboard counts as busy.
+    #[must_use]
+    pub fn take_wait(&self) -> Duration {
+        Duration::from_millis(self.take_ms.into())
     }
 
     /// What a card's check must meet: `card_gain` in hundredths and `card_diff`.

@@ -1,4 +1,4 @@
-// The words on a dictation bar (design/voice-bar.html .vtx, .mask, .msg): a text in its own direction and font cut to
+// The words on a dictation bar (design/voice-bar.css .vtx, .mask, .msg): a text in its own direction and font cut to
 // its first `[voice] text_lines` lines, a password box's dots, or a note's line, which wraps the same way so a long
 // fault reads in full lines; a hint line, such as Password or Typing stopped, sits under a text.
 import QtQuick

@@ -18,6 +18,7 @@ mod jobs;
 mod life;
 mod once;
 mod props;
+mod spoken;
 
 /// How long a test waits for a note; a wait, never a sleep.
 const LONG: Duration = Duration::from_secs(10);

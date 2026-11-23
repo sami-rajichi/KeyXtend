@@ -1,0 +1,195 @@
+//! The bar's look, the foreground's count, the typed text's settling and each language's verdict: numbers, and the
+//! class of a window over the bar.
+
+use std::time::{Duration, Instant};
+
+use kx_mod_voice::score::Wrong;
+use windows::Win32::Foundation::RECT;
+use windows::Win32::UI::WindowsAndMessaging::{WS_EX_NOACTIVATE, WS_EX_TOPMOST};
+
+use super::super::Said;
+use super::super::bar::{BarLook, top_class};
+use super::super::front::{FrontCount, Fronts};
+use super::super::settle::Settle;
+
+fn rect(left: i32, top: i32, right: i32, bottom: i32) -> RECT {
+    RECT {
+        left,
+        top,
+        right,
+        bottom,
+    }
+}
+
+#[test]
+fn the_bar_must_be_no_activate_topmost_uncovered_above_the_keyboard_and_beside_it() {
+    let ex = WS_EX_NOACTIVATE.0 | WS_EX_TOPMOST.0;
+    let (bar, kb) = (rect(0, 0, 100, 40), rect(0, 50, 100, 300));
+    let order = [7, 3, 9];
+    let good = BarLook::of(ex, &order, (7, bar), (3, kb), Some(7));
+    assert!(good.ok(), "{good:?}");
+    assert!(
+        !BarLook::of(WS_EX_TOPMOST.0, &order, (7, bar), (3, kb), Some(7)).ok(),
+        "it can take focus"
+    );
+    assert!(
+        !BarLook::of(WS_EX_NOACTIVATE.0, &order, (7, bar), (3, kb), Some(7)).ok(),
+        "not on top"
+    );
+    assert!(
+        !BarLook::of(ex, &[3, 7], (7, bar), (3, kb), Some(7)).ok(),
+        "under the keyboard"
+    );
+    assert!(
+        !BarLook::of(ex, &[9, 3], (7, bar), (3, kb), Some(7)).ok(),
+        "not listed"
+    );
+    assert!(
+        !BarLook::of(ex, &order, (7, rect(0, 0, 100, 60)), (3, kb), Some(7)).ok(),
+        "over the keys"
+    );
+    assert!(
+        !BarLook::of(ex, &order, (7, bar), (3, kb), Some(9)).ok(),
+        "another window over it"
+    );
+}
+
+/// The target window, by a made-up key.
+const TARGET: isize = 5;
+/// The bar, by a made-up key.
+const BAR: isize = 8;
+/// The samples each made-up foreground count took.
+const SAMPLES: u32 = 4;
+
+/// The foregrounds that sampled `keys`, each named by a made-up class.
+fn fronts(keys: &[isize]) -> Fronts {
+    let seen = keys.iter().map(|&k| (k, format!("[C{k}] of p.exe")));
+    Fronts {
+        samples: SAMPLES,
+        seen: seen.collect(),
+    }
+}
+
+#[test]
+fn the_target_keeps_the_foreground_when_no_other_window_took_it_but_never_unsampled() {
+    let kept = fronts(&[]);
+    let want = FrontCount {
+        samples: SAMPLES,
+        away: 0,
+        bar: false,
+    };
+    assert_eq!(kept.count(TARGET, BAR), want);
+    assert!(kept.count(TARGET, BAR).kept());
+    assert!(
+        !Fronts::default().count(TARGET, BAR).kept(),
+        "never sampled"
+    );
+}
+
+#[test]
+fn the_target_loses_the_foreground_to_any_other_window_each_named() {
+    let lost = fronts(&[BAR, 2]);
+    let n = lost.count(TARGET, BAR);
+    assert_eq!((n.away, n.bar, n.kept()), (2, true, false));
+    let named = ["[C2] of p.exe", "[C8] of p.exe"];
+    assert_eq!(lost.away(TARGET), named, "each named");
+    let own = fronts(&[TARGET]);
+    assert!(own.count(TARGET, BAR).kept(), "the target itself");
+    assert!(own.away(TARGET).is_empty());
+}
+
+#[test]
+fn the_text_settles_once_it_shows_and_stays_the_same_for_the_wait() {
+    let (t0, ms) = (Instant::now(), Duration::from_millis);
+    let mut s = Settle::new(ms(500));
+    assert!(!s.feed("", t0));
+    assert!(!s.feed("", t0 + ms(900)), "nothing typed yet");
+    assert!(!s.feed("Today", t0 + ms(1000)));
+    assert!(!s.feed("Today the", t0 + ms(1400)), "still typing");
+    assert!(!s.feed("Today the", t0 + ms(1800)));
+    assert!(s.feed("Today the", t0 + ms(1900)));
+    assert_eq!(s.first(), Some(t0 + ms(1000)));
+}
+
+/// A class name a window over the bar could have.
+const CLASS: &str = "Qt683QWindowToolSaveBits";
+
+fn said(words: Option<u16>) -> Said {
+    Said {
+        lang: "en".into(),
+        clip_ms: 6000,
+        first_ms: Some(900),
+        wrong: words.map(|words| Wrong { words, total: 14 }),
+        look: BarLook {
+            no_activate: true,
+            topmost: true,
+            above: true,
+            apart: true,
+            uncovered: true,
+        },
+        front: FrontCount {
+            samples: 30,
+            away: 0,
+            bar: false,
+        },
+        top_class: None,
+    }
+}
+
+#[test]
+fn a_language_passes_within_card_diff_with_the_bar_and_the_foreground_right() {
+    assert!(said(Some(1)).pass(1));
+    assert!(!said(Some(2)).pass(1), "too many words wrong");
+    assert!(!said(None).pass(1), "nothing judged");
+    let mut s = said(Some(0));
+    s.look.no_activate = false;
+    assert!(!s.pass(1), "the bar could take focus");
+    let mut s = said(Some(0));
+    s.front.away = 1;
+    assert!(!s.pass(1), "the target lost the foreground");
+}
+
+#[test]
+fn a_languages_line_holds_numbers_never_text() {
+    let v = said(Some(1)).json(1);
+    assert_eq!(v["wrong"], 1);
+    assert_eq!(v["of"], 14);
+    assert_eq!(v["pass"], true);
+    let strings: Vec<&str> = v
+        .as_object()
+        .unwrap()
+        .values()
+        .filter_map(|x| x.as_str())
+        .collect();
+    assert_eq!(strings, ["en"], "only the language's code is text");
+}
+
+#[test]
+fn a_covered_bars_line_names_the_class_on_top_and_an_uncovered_ones_does_not() {
+    let clear = said(Some(1)).json(1);
+    assert!(clear.get("top_class").is_none(), "{clear}");
+    let mut s = said(Some(1));
+    s.look.uncovered = false;
+    s.top_class = Some(CLASS.into());
+    let v = s.json(1);
+    assert_eq!(v["top_class"], CLASS);
+    assert_eq!(v["pass"], false);
+}
+
+#[test]
+fn the_class_on_top_is_read_only_for_a_covered_bar() {
+    let look = said(Some(0)).look;
+    assert_eq!(
+        top_class(look, || panic!("read for an uncovered bar")),
+        None
+    );
+    let covered = BarLook {
+        uncovered: false,
+        ..look
+    };
+    assert_eq!(
+        top_class(covered, || Some(CLASS.into())),
+        Some(CLASS.into())
+    );
+    assert_eq!(top_class(covered, || None), None, "no window found");
+}

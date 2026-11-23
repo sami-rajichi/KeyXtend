@@ -73,7 +73,7 @@ impl Actor {
 }
 
 /// True when `parts` hold a PNG and no DIB, so the insert asks for one.
-pub(super) fn wants_dib(parts: &[ClipPart]) -> bool {
+pub(in crate::actor) fn wants_dib(parts: &[ClipPart]) -> bool {
     let has = |want| parts.iter().any(|p| codec_of(p) == Some(want));
     has(ImageCodec::Png) && !has(ImageCodec::Dib)
 }

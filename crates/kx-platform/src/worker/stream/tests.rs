@@ -13,6 +13,7 @@ use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 mod load;
+mod post;
 
 /// How long a test waits for the stream's thread; a wait, never a sleep.
 const LONG: Duration = Duration::from_secs(10);

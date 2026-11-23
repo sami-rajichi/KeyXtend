@@ -10,15 +10,17 @@ use std::collections::HashMap;
 impl Inner {
     /// Takes a module's word that `panel` opened, with `clicks` outside clicks heard so far; the next relabel redraws a
     /// change. The one opened last takes the keys, so one shows at a time, it aims unless the word only repeats, and it
-    /// closes the language list.
-    pub(in crate::face) fn panel_opened(&mut self, panel: Panel, clicks: u64) {
-        if self.open.replace(panel) != Some(panel) {
+    /// closes the language list. True when it newly opened.
+    pub(in crate::face) fn panel_opened(&mut self, panel: Panel, clicks: u64) -> bool {
+        let new = self.open.replace(panel) != Some(panel);
+        if new {
             self.aim_fresh(clicks);
             self.unshown = true;
         }
         if self.list.take().is_some() {
             self.unshown = true;
         }
+        new
     }
 
     /// Takes a module's word that `panel` closed, which ends the aim; closing another panel changes nothing.
@@ -48,8 +50,8 @@ impl Inner {
 
     /// Key `id` from our panels' key list `uses`, for the panel open now and aimed at, with `clicks` outside clicks
     /// heard so far: a move, or what a character key gives its search or line, after a burst left open ends as before a
-    /// tap. `None` while no panel is open or aimed at, or for a key it does not take; `Pass` for a key Ctrl, Alt or Win
-    /// acts on.
+    /// tap. `None` while no panel is open or aimed at, or for a key it does not take, as the Voice panel's Esc;
+    /// `Pass` for a key Ctrl, Alt or Win acts on.
     pub(in crate::face) fn took(
         &mut self,
         id: &str,
@@ -62,6 +64,9 @@ impl Inner {
             return None;
         }
         let &key = uses.get(id)?;
+        if !self.takes(panel, key) {
+            return None;
+        }
         self.ended();
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();

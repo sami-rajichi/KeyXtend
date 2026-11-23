@@ -25,8 +25,10 @@ Column {
     signal turn(int by)
 
     readonly property var pn: lk.shape.panel
+    // It shows only with more than one page; the one rule its users read too.
+    readonly property bool shows: pages > 1
 
-    visible: pages > 1
+    visible: shows
     spacing: pn.pager_gap_px * s
 
     PageButton {
@@ -41,7 +43,7 @@ Column {
     }
     Label {
         width: pager.pn.page_px[0] * pager.s
-        text: pager.pages > 1 && pager.counted && pager.ui ? pager.ui.pageText(pager.page + 1, pager.pages) : ""
+        text: pager.shows && pager.counted && pager.ui ? pager.ui.pageText(pager.page + 1, pager.pages) : ""
         font.family: pager.res.fam.ui
         font.pixelSize: pager.pn.count_px * pager.s
         font.weight: pager.pn.count_weight

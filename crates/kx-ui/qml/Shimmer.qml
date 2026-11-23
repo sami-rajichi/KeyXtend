@@ -1,4 +1,4 @@
-// The shimmer while the words are on their way (design/voice-bar.html .shim): a light band in pop_line slides right to
+// The shimmer while the words are on their way (design/voice-bar.css .shim): a light band in pop_line slides right to
 // left over pop_hover, once every `[moves] shimmer`, its tile `[caption] shimmer_span` bars wide. Reduced motion holds
 // it still, as the mock-up's still view does.
 import QtQuick

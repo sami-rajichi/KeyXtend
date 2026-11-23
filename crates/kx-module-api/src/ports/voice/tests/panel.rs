@@ -1,15 +1,18 @@
-//! The Voice panel's pages: the home list's order and values, model names and folders that never print, a model not
-//! for this PC, the Device page's numbers, Compare's steps, day and device, and History's counts. Options are in
-//! `options`.
+//! The Voice panel's pages: the home list's values, model names and folders that never print, a model not for this PC
+//! and the Device page's numbers. Compare and History are in `compare`, Options in `options`.
 
-use super::{SECRETS, english, hidden, keeps_secrets, secret};
+use super::{english, hidden, keeps_secrets};
 use crate::ports::voice::*;
-use crate::ports::{Date, Hundredths, Memory, Pages, Verdict, When};
-use crate::{Redacted, Zeroizing};
+use crate::ports::{Date, Hundredths, Memory, Pages, Verdict};
 
-/// 12 Nov 2026, Compare's last run in the mock-up.
-fn day() -> Date {
+/// The tests' one made-up day, which facts, runs and history carry.
+pub(super) fn day() -> Date {
     Date::new(2026, 11, 12).unwrap()
+}
+
+/// A made-up cloud service, as a line names it.
+pub(super) fn service() -> ServiceName {
+    ServiceName::Named("Service A".into())
 }
 
 /// A panel showing `sheet` in English, nothing ticked and Try again acting.
@@ -39,12 +42,6 @@ pub(super) fn holds(shown: &str, parts: &[&str]) {
 }
 
 #[test]
-fn the_panels_pages_keep_the_home_lists_order() {
-    use VoiceTab::{Compare, Device, History, Models, Options};
-    assert_eq!(VoiceTab::ALL, [Models, Device, Compare, History, Options]);
-}
-
-#[test]
 fn the_home_list_names_its_language_compare_day_options_and_device() {
     let home = VoiceHome {
         model: Some(hidden(2)),
@@ -52,10 +49,33 @@ fn the_home_list_names_its_language_compare_day_options_and_device() {
         compared: Some(day()),
         history: 12,
         changed: 0,
+        cloud: Some(2),
+        tabs: vec![VoiceTab::Models],
     };
     let shown = shown(VoiceSheet::Home(home));
-    let parts = ["English", "Auto(Cpu)", "month: 11", "changed: 0", "Again"];
+    let parts = [
+        "English",
+        "Auto(Cpu)",
+        "month: 11",
+        "changed: 0",
+        "cloud: Some(2)",
+        "Again",
+    ];
     holds(&shown, &parts);
+}
+
+/// A model row in `state`, its name hidden, with `fetch` under way.
+fn model_row(state: ModelState, fetch: Option<FetchState>) -> ModelRow {
+    ModelRow {
+        name: hidden(2),
+        bytes: 1_530_000_000,
+        default: false,
+        state,
+        used: false,
+        tick: false,
+        fetch,
+        cloud: None,
+    }
 }
 
 #[test]
@@ -65,29 +85,22 @@ fn model_names_and_folders_never_print_but_sizes_and_room_do() {
         total: 740_000_000,
         paused: true,
     };
-    let row = |state, fetch| ModelRow {
-        name: hidden(2),
-        bytes: 1_530_000_000,
-        default: false,
-        state,
-        used: false,
-        tick: false,
-        fetch,
-    };
     let folder = || FolderLine {
         path: hidden(2),
         free: 212_000_000_000,
     };
     let models = ModelsSheet {
         rows: vec![
-            row(ModelState::Other, None),
-            row(ModelState::Missing, Some(fetch)),
+            model_row(ModelState::Other, None),
+            model_row(ModelState::Missing, Some(fetch)),
         ],
         best: Some("Parakeet TDT 0.6b v3".into()),
         untested: false,
         slow: false,
         folder: Some(folder()),
         offer: Some(folder()),
+        side: ModelSide::Local,
+        band: None,
     };
     let shown = shown(VoiceSheet::Models(models));
     let parts = [
@@ -114,6 +127,7 @@ fn a_model_not_for_this_pc_carries_its_need_the_total_and_the_free_memory() {
         used: false,
         tick: false,
         fetch: None,
+        cloud: None,
     };
     let models = ModelsSheet {
         rows: vec![row],
@@ -122,6 +136,8 @@ fn a_model_not_for_this_pc_carries_its_need_the_total_and_the_free_memory() {
         slow: true,
         folder: None,
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     };
     let shown = shown(VoiceSheet::Models(models));
     let parts = [
@@ -184,95 +200,4 @@ fn the_device_page_carries_cores_built_in_memory_and_the_checks_numbers() {
         "failed: Some",
     ];
     holds(&shown, &parts);
-}
-
-#[test]
-fn comparing_shows_each_models_step_a_failed_one_too() {
-    let run = |step| CompareRun {
-        name: hidden(2),
-        step,
-    };
-    let running = CompareSheet::Running {
-        at: 3,
-        of: 6,
-        name: hidden(2),
-        rows: vec![
-            run(RunStep::Done { wait_ms: 2_100 }),
-            run(RunStep::Failed),
-            run(RunStep::Writing),
-            run(RunStep::Waiting),
-        ],
-    };
-    let shown = shown(VoiceSheet::Compare(running));
-    let parts = [
-        "at: 3",
-        "of: 6",
-        "wait_ms: 2100",
-        "Failed",
-        "Writing",
-        "Waiting",
-    ];
-    holds(&shown, &parts);
-}
-
-#[test]
-fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
-    let line = CompareRow {
-        name: hidden(2),
-        wrong: None,
-        words: 0,
-        wait_ms: 2_900,
-        mb: 900,
-        text: Some(secret(0)),
-        tick: false,
-    };
-    let held: Option<&Zeroizing<String>> = line.text.as_ref().map(Redacted::expose);
-    assert_eq!(held.map(|t| t.as_str()), Some(SECRETS[0]), "wiped on drop");
-    let results = CompareSheet::Results {
-        day: day(),
-        device: DeviceLabel::Card("RTX 4060".into()),
-        rows: vec![line],
-    };
-    let ready = CompareSheet::Ready {
-        models: 6,
-        device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-    };
-    let shown = [ready, results].map(|s| shown(VoiceSheet::Compare(s)));
-    holds(&shown[0], &["models: 6", "Auto(Cpu)", "recording: false"]);
-    holds(&shown[1], &["day: Date", "RTX 4060", "wait_ms: 2900"]);
-}
-
-#[test]
-fn history_carries_its_counts_for_the_header_pin_and_delete_all() {
-    let when = When {
-        days_ago: 0,
-        date: day(),
-        hour: 9,
-        minute: 41,
-    };
-    let row = HistoryRow {
-        id: 4,
-        text: secret(1),
-        rtl: true,
-        arabic: true,
-        when,
-        lang: "ar".into(),
-        model: hidden(2),
-        pinned: true,
-        tick: Some(1),
-    };
-    let held: &Zeroizing<String> = row.text.expose();
-    assert_eq!(held.as_str(), SECRETS[1], "wiped on drop");
-    let sheet = HistorySheet {
-        rows: vec![row],
-        total: 12,
-        unpinned: 0,
-        unpin: true,
-        confirm: false,
-    };
-    let shown = shown(VoiceSheet::History(sheet));
-    let parts = ["total: 12", "unpinned: 0", "unpin: true", "pinned: true"];
-    holds(&shown, &parts);
-    assert!(!shown.contains(SECRETS[1]), "{shown}");
 }

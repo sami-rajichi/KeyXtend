@@ -7,6 +7,7 @@ mod engine;
 mod hand;
 mod listen;
 mod props;
+mod speech;
 
 use super::*;
 use crate::voice::fake::{self, Got, LOUD, Mic};
@@ -25,6 +26,10 @@ const RATE: u32 = 16_000;
 const SEC: usize = SOUND_HZ;
 /// The samples a chunk of the fake source holds, 10 ms.
 const CHUNK: usize = SEC / 100;
+/// The silence the tests' setup keeps around speech, in ms.
+const PAD_TEST_MS: u16 = 300;
+/// That silence in samples.
+const PAD: usize = SEC * PAD_TEST_MS as usize / kx_ipc::MS_PER_S as usize;
 
 /// The tests' list of notes, checked as the pipe would check them.
 impl Notes for Vec<VoiceNote> {
@@ -130,7 +135,7 @@ fn model() -> Model<'static> {
 fn setup(with_model: bool) -> Setup<'static> {
     Setup {
         model: with_model.then(model),
-        pad_ms: 300,
+        pad_ms: PAD_TEST_MS,
         piece_s: *PIECE_S.start(),
         record_max_s: 600,
         level_hz: HZ,
@@ -169,15 +174,32 @@ fn ramp16(n: usize) -> Vec<i16> {
     (0..n).map(|i| i16::try_from(i % 200).unwrap()).collect()
 }
 
-/// The samples `notes` hand over, and each `Sound` note's index, last flag and length.
-fn sounds(notes: &[VoiceNote]) -> (Vec<i16>, Vec<(u16, bool, usize)>) {
+/// What pieces hand over: their samples, and each one's index, last flag and length.
+type Handed = (Vec<i16>, Vec<(u16, bool, usize)>);
+
+/// What the `Sound` notes among `notes` hand over.
+fn sounds(notes: &[VoiceNote]) -> Handed {
+    handed(notes, |n| match n {
+        VoiceNote::Sound { piece, .. } => Some(piece),
+        _ => None,
+    })
+}
+
+/// What a listen-only run's `Speech` notes among `notes` hand over.
+fn speech(notes: &[VoiceNote]) -> Handed {
+    handed(notes, |n| match n {
+        VoiceNote::Speech { piece, .. } => Some(piece),
+        _ => None,
+    })
+}
+
+/// What the pieces `pick` finds among `notes` hand over.
+fn handed(notes: &[VoiceNote], pick: fn(&VoiceNote) -> Option<&SoundPiece<'static>>) -> Handed {
     let (mut samples, mut pieces) = (Vec::new(), Vec::new());
-    for note in notes {
-        if let VoiceNote::Sound { piece, .. } = note {
-            pieces.push((piece.index, piece.last, piece.bytes.len()));
-            let pairs = piece.bytes.as_chunks::<SAMPLE_BYTES>().0;
-            samples.extend(pairs.iter().map(|b| i16::from_le_bytes(*b)));
-        }
+    for piece in notes.iter().filter_map(pick) {
+        pieces.push((piece.index, piece.last, piece.bytes.len()));
+        let pairs = piece.bytes.as_chunks::<SAMPLE_BYTES>().0;
+        samples.extend(pairs.iter().map(|b| i16::from_le_bytes(*b)));
     }
     (samples, pieces)
 }

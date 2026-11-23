@@ -4,7 +4,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    Device, ModelRow, ModelState, ModelsSheet, Pages, PanelButton, VoiceSheet,
+    Device, ModelRow, ModelSide, ModelState, ModelsSheet, Pages, PanelButton, VoiceSheet,
 };
 
 use super::Facts;
@@ -13,15 +13,23 @@ use crate::models::{Pick, Ranked, Row, code_in, table};
 use crate::panel::{Choice, Key, Panel};
 
 impl Panel {
-    /// The Models page's shown rows.
+    /// The Models page's shown rows, on its Local or Cloud side (edge 29).
     pub(super) fn models_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
+        let side = self.models_side();
         let ticks = self.ticks.clone();
-        let list = self.model_list(facts).into_iter().map(|(choice, mut row)| {
-            let key = Key::Model(choice);
+        let list: Vec<(Key, ModelRow)> = match side {
+            ModelSide::Local => (self.model_list(facts).into_iter())
+                .map(|(choice, row)| (Key::Model(choice), row))
+                .collect(),
+            ModelSide::Cloud => Self::cloud_list(facts),
+        };
+        let list = list.into_iter().map(|(key, mut row)| {
             row.tick = ticks.contains(&key);
             (key, row)
         });
         let (rows, pages) = self.paged(list.collect());
+        let local = side == ModelSide::Local;
+        let band = (!local).then(|| Self::cloud_band(facts));
         let order = table().ok().map(|t| t.order(facts.iso()));
         let best = order.as_ref().and_then(Ranked::first);
         let job_mb = facts.settings.job_mb;
@@ -29,21 +37,27 @@ impl Panel {
             .is_some_and(|(r, cpu)| r.not_here(&cpu.memory, job_mb).is_some());
         let sheet = ModelsSheet {
             rows,
-            best: best.map(|r| r.name.clone()),
-            untested: order.is_some_and(|o| o.untested),
-            slow,
-            folder: self.folder.line(facts.drives),
+            best: best.filter(|_| local).map(|r| r.name.clone()),
+            untested: local && order.is_some_and(|o| o.untested),
+            slow: local && slow,
+            folder: self.folder.line(facts.drives).filter(|_| local),
             offer: self
                 .offer
                 .as_ref()
                 .and_then(|_| offer(facts.drives))
-                .map(|(_, l)| l),
+                .map(|(_, l)| l)
+                .filter(|_| local),
+            side,
+            band,
         };
         (VoiceSheet::Models(sheet), pages)
     }
 
-    /// The Models page's buttons that act now.
+    /// The Models page's buttons that act now; the Cloud side has Use alone.
     pub(crate) fn models_acts(&self, facts: &Facts<'_>) -> Vec<PanelButton> {
+        if self.models_side() == ModelSide::Cloud {
+            return self.cloud_side_acts(facts);
+        }
         let mut acts = vec![PanelButton::Change];
         acts.extend(self.folder.dir().map(|_| PanelButton::Open));
         let Some(Key::Model(choice)) = self.ticked() else {
@@ -82,6 +96,7 @@ impl Panel {
                 used: used.as_ref() == Some(&choice),
                 tick: false,
                 fetch: self.fetches.state(&r.id),
+                cloud: None,
             };
             (choice, model)
         };
@@ -108,8 +123,12 @@ impl Panel {
         )
     }
 
-    /// The model used for the language in front, as the flow's `Supply` finds it.
+    /// The local model used for the language in front, as the flow's `Supply` finds it; none while a cloud pick holds
+    /// or waits for its service Off.
     pub(crate) fn used_choice(&self, facts: &Facts<'_>) -> Option<Choice> {
+        if facts.cloud_pick().is_some() {
+            return None;
+        }
         let table = table().ok()?;
         let default = || {
             table
@@ -168,6 +187,7 @@ fn other_row(file: &File, used: Option<&Choice>) -> (Choice, ModelRow) {
         used: used == Some(&choice),
         tick: false,
         fetch: None,
+        cloud: None,
     };
     (choice, model)
 }

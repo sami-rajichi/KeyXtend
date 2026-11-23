@@ -69,6 +69,8 @@ fn buttons(reader: &Reader, bar: HWND) -> Result<Vec<(String, bool)>, String> {
 mod tests {
     use super::*;
 
+    use kx_mod_voice::device::told;
+
     use crate::budget::stamp_us;
 
     /// Three stamps of the kernel's log format, a second apart.
@@ -92,6 +94,16 @@ mod tests {
         ];
         let got = marked(&log.join("\n"), stamp_us(START).unwrap(), &marks);
         assert_eq!(got, [looked, typed, "ERROR kx_mod_voice: broke"]);
+    }
+
+    #[test]
+    fn the_voice_modules_device_lines_are_marked() {
+        let marks = crate::config::load().unwrap().g22_product.why_marks;
+        for message in [told::CPU_SERVES, told::CHECK_ENDED] {
+            let line = format!("DEBUG kx_mod_voice::device::told: {message} why=\"gone\"");
+            let log = format!("{START}  {line}");
+            assert_eq!(marked(&log, stamp_us(START).unwrap(), &marks), [line]);
+        }
     }
 
     #[test]

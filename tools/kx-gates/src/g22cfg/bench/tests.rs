@@ -147,11 +147,60 @@ fn the_english_reading_forgives_only_the_split_the_reference_makes() {
 
 #[test]
 fn each_sentence_is_the_one_its_clip_reads() {
-    for (lang, clip) in shipped().clips {
-        let name = format!("`{}`", clip.file);
-        let row = (VOICE_README.lines()).find(|l| l.contains(&name) && l.contains(&clip.sentence));
-        assert!(row.is_some(), "{lang}: the README's sentence for {name}");
-    }
+    assert_eq!(shipped().check_credits(VOICE_README), Ok(()));
+    let dir = crate::config::load().expect("the settings load").dir;
+    assert_eq!(
+        shipped().credited(&dir),
+        Ok(()),
+        "read from the voice folder"
+    );
+}
+
+/// The 32 characters Windows-1252 reads bytes 0x80 to 0x9F as; the 5 it leaves unset read as the byte's own.
+const CP1252_HIGH: [u32; 32] = [
+    0x20AC, 0x81, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021, 0x2C6, 0x2030, 0x160, 0x2039,
+    0x152, 0x8D, 0x17D, 0x8F, 0x90, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x2DC,
+    0x2122, 0x161, 0x203A, 0x153, 0x9D, 0x17E, 0x178,
+];
+
+/// `text`'s UTF-8 bytes read as Windows-1252, as PowerShell 5.1 reads a file with no byte-order mark.
+fn as_1252(text: &str) -> String {
+    let high = |b: u8| char::from_u32(CP1252_HIGH[usize::from(b - 0x80)]);
+    let one = |b: u8| match b {
+        0x80..=0x9F => high(b).expect("a character"),
+        _ => char::from(b),
+    };
+    text.bytes().map(one).collect()
+}
+
+#[test]
+fn a_sentence_re_encoded_or_a_clip_the_credits_lack_is_refused_by_its_language_alone() {
+    let good = shipped();
+    let en = &good.clips["en"].sentence;
+    assert_eq!(&as_1252(en), en, "plain text reads the same");
+    let mut garbled = good.clone();
+    let ar = garbled.clips.get_mut("ar").expect("Arabic");
+    ar.sentence = as_1252(&ar.sentence);
+    let e = garbled
+        .check_credits(VOICE_README)
+        .expect_err("a re-encoded sentence");
+    let (real, bad) = (&good.clips["ar"].sentence, &garbled.clips["ar"].sentence);
+    assert!(
+        e.contains(" ar ") && !e.contains(real) && !e.contains(bad),
+        "{e}"
+    );
+    assert!(!e.contains('\n'), "one sentence");
+    let mut renamed = good.clone();
+    renamed.clips.get_mut("fr").expect("French").file = "other-fr.wav".into();
+    let e = renamed.check_credits(VOICE_README).expect_err("no row");
+    assert!(e.contains(" fr "), "{e}");
+    let mut cut = good;
+    let fr = cut.clips.get_mut("fr").expect("French");
+    fr.sentence.truncate(fr.sentence.len() / 2);
+    assert!(
+        cut.check_credits(VOICE_README).is_err(),
+        "part of the sentence"
+    );
 }
 
 #[test]

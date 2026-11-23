@@ -4,6 +4,7 @@
 
 mod fetch;
 mod media;
+mod net;
 mod vault;
 pub mod voice;
 
@@ -13,7 +14,7 @@ pub use vault::VaultAct;
 pub use voice::VoiceAct;
 
 use super::{Frames, Heard, Launch, SpawnError, Spawner, Split, Worker};
-use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, VaultAsk, VoiceAsk};
+use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, NetAsk, VaultAsk, VoiceAsk};
 use kx_module_api::{Clock, Mono};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -48,8 +49,8 @@ pub trait Faked: Frames {
     }
 }
 
-/// What the host did to a worker, in order, with the waits it gave; a vault, voice or fetch ask is kept whole, as its
-/// `Debug` hides its values.
+/// What the host did to a worker, in order, with the waits it gave; a vault, voice, fetch or net ask is kept whole,
+/// as its `Debug` hides its values.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
@@ -57,6 +58,7 @@ pub enum Call {
     Vault(VaultAsk<'static>),
     Voice(VoiceAsk<'static>),
     Fetch(FetchAsk<'static>),
+    Net(NetAsk<'static>),
     Bye,
     Reply { within: Duration },
     End,
@@ -82,6 +84,8 @@ struct Log<F: Faked> {
     tap: Option<Sender<Frame<F>>>,
     /// The most memory each worker's job took, as the system would tell it.
     peak: Option<u32>,
+    /// Holds the worker's next ask until it hears or closes, as a worker that stopped reading does.
+    hold: Option<Receiver<()>>,
 }
 
 /// A spawner of scripted workers of job `F`; clones share one script.
@@ -100,6 +104,7 @@ impl<F: Faked> Default for Script<F> {
             tell: None,
             tap: None,
             peak: None,
+            hold: None,
         })))
     }
 }
@@ -169,6 +174,11 @@ impl<F: Faked> Script<F> {
         self.log().tell = Some(to);
     }
 
+    /// Holds the worker's next ask, on the thread that sends it, until `gate` hears or its sender drops.
+    pub fn hold(&self, gate: Receiver<()>) {
+        self.log().hold = Some(gate);
+    }
+
     fn record(&self, call: Call) {
         let mut log = self.log();
         if let Some(tell) = &log.tell {
@@ -214,6 +224,10 @@ pub struct FakeWorker<F: Faked>(Script<F>);
 
 impl<F: Faked> Worker<F> for FakeWorker<F> {
     fn send(&mut self, ask: F::Ask) {
+        let held = self.0.log().hold.take();
+        if let Some(gate) = held {
+            let _ = gate.recv();
+        }
         if let Some((id, call)) = F::note(ask) {
             self.0.log().asked = Some(id);
             self.0.record(call);

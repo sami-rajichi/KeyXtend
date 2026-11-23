@@ -1,16 +1,22 @@
-//! The dictation flow (design "How a dictation runs"): Idle, Listening, Transcribing, Text and Note, on an injected
-//! `Clock`. Pure: inputs in, effects out; the actor carries them out on the ports and the bus.
+//! The dictation flow (design "How a dictation runs"): Idle, Preparing, Listening, Transcribing, Text and Note, on an
+//! injected `Clock`. Pure: inputs in, effects out; the actor carries them out on the ports and the bus.
 
 mod acts;
 mod io;
 mod lend;
+mod net;
 mod notes;
+mod redo;
+mod reply;
 mod take;
 mod text;
 mod view;
+mod wire;
 
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
 pub use lend::Lend;
+pub use net::{Net, Sent, Upload};
+pub(crate) use net::{fault_of, renewal, why as net_why};
 pub(crate) use notes::mic_hint;
 pub(crate) use take::suffixed;
 
@@ -28,6 +34,8 @@ use view::Told;
 enum State {
     /// No bar.
     Idle,
+    /// The run opens the microphone: no bar yet, and the key glows amber.
+    Preparing,
     /// The microphone listens since `since`; `nothing` once `nothing_s` passed with no speech.
     Listening {
         /// When listening began.
@@ -54,6 +62,8 @@ enum State {
         act: Option<BarButton>,
         /// The language, which Download fetches a model for.
         iso: String,
+        /// The service a cloud note the service's own pages settle names, which Open service opens; `None` otherwise.
+        service: Option<String>,
     },
 }
 
@@ -61,6 +71,7 @@ enum State {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Phase {
     Idle,
+    Preparing,
     Listening,
     Transcribing,
     Text,
@@ -133,7 +144,15 @@ impl Flow {
             In::Act(act) => self.act(&act, supply, &mut out),
             In::Ask => self.retell(&mut out),
             In::Panel(panel) => self.set_panel(panel),
-            In::Note { take, note } => self.note(take, note, &mut out),
+            In::Opening => self.opening(&mut out),
+            In::Note { take, note } => self.note(take, note, supply, &mut out),
+            In::Sent {
+                take,
+                round,
+                sent,
+                renews,
+            } => self.sent(take, round, sent, renews, &mut out),
+            In::Keys => self.recheck(supply, &mut out),
             In::Field(change) => self.field(change),
             In::Elsewhere => self.elsewhere(),
             In::Session(note) if note.away() => self.stop_all(&mut out),
@@ -141,7 +160,10 @@ impl Flow {
             In::Layout(layout) => self.front = Lang::from(&layout),
             In::Typed(done) => self.typed(done),
             In::Copied(ok) => self.copied(ok),
-            In::Settings(settings) => self.set_settings(*settings, &mut out),
+            In::Settings(settings) => {
+                self.set_settings(*settings, &mut out);
+                self.recheck(supply, &mut out);
+            }
             In::Tick => self.tick(&mut out),
             In::Lend(lend) => self.lend(lend, &mut out),
             In::Quit => {
@@ -150,7 +172,8 @@ impl Flow {
             }
         }
         // A hidden bar has no pointer over it, so the next bar still fades.
-        self.over &= self.phase() != Phase::Idle;
+        self.over &= !matches!(self.phase(), Phase::Idle | Phase::Preparing);
+        self.refresh(supply);
         self.tell(&mut out);
         out
     }
@@ -177,7 +200,7 @@ impl Flow {
         self.phase() == Phase::Text && self.held()
     }
 
-    /// A dictation listens or writes, so Compare waits (`Facts::dictating`).
+    /// A dictation prepares, listens or writes, so Compare waits (`Facts::dictating`).
     #[must_use]
     pub fn dictating(&self) -> bool {
         self.busy()
@@ -187,6 +210,12 @@ impl Flow {
     #[must_use]
     pub fn no_box(&self) -> bool {
         self.field.kind == FieldKind::None
+    }
+
+    /// The box told last is a password box, so a text is always typed there, never pasted.
+    #[must_use]
+    pub fn password(&self) -> bool {
+        self.field.kind == FieldKind::Password
     }
 
     /// Every run stops: the dictation's bar closes and Compare's run is cancelled.
@@ -199,6 +228,7 @@ impl Flow {
     fn phase(&self) -> Phase {
         match self.state {
             State::Idle => Phase::Idle,
+            State::Preparing => Phase::Preparing,
             State::Listening { .. } => Phase::Listening,
             State::Transcribing => Phase::Transcribing,
             State::Text { .. } => Phase::Text,
@@ -206,9 +236,12 @@ impl Flow {
         }
     }
 
-    /// The microphone listens or the last piece is being written.
+    /// The run opens the microphone, listens, or writes the last piece.
     fn busy(&self) -> bool {
-        matches!(self.phase(), Phase::Listening | Phase::Transcribing)
+        matches!(
+            self.phase(),
+            Phase::Preparing | Phase::Listening | Phase::Transcribing
+        )
     }
 
     /// The take's run is open and still holds the recording.

@@ -1,7 +1,13 @@
 //! Properties over any run of clicks, notes, focus, session, layouts, Compare's lend and time: the key is lit only
 //! while listening, each run gets one Close and no call after it, no run stays open behind a hidden bar, none opens
-//! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, and a take once shown as dots
-//! is never shown or kept again.
+//! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, a take once shown as dots
+//! is never shown or kept again, the gear cancels only what records, and a run it ended types, keeps and counts
+//! nothing until Transcribe anyway.
+
+mod cloud;
+mod gear;
+mod prep;
+mod said;
 
 use super::close::panel;
 use super::*;
@@ -9,6 +15,7 @@ use kx_module_api::ports::SessionNote;
 use proptest::collection::vec;
 use proptest::prelude::*;
 use proptest::sample::select;
+use said::{Said, said};
 use std::collections::BTreeSet;
 
 /// Random runs per property.
@@ -24,70 +31,6 @@ const ON: f64 = 0.8;
 /// How often a note goes to the older take.
 const OLD: f64 = 0.1;
 
-/// The stages a run may tell.
-const STAGES: [SpeechStage; 5] = [
-    SpeechStage::Loading,
-    SpeechStage::Open,
-    SpeechStage::Shut,
-    SpeechStage::Limit,
-    SpeechStage::Silence,
-];
-
-/// The faults a run or a call may tell.
-const FAULTS: [SpeechError; 19] = [
-    SpeechError::Range("model"),
-    SpeechError::BadPath,
-    SpeechError::NoMic,
-    SpeechError::MicBusy,
-    SpeechError::MicRefused,
-    SpeechError::Unplugged,
-    SpeechError::NoFile,
-    SpeechError::BadFile,
-    SpeechError::Language,
-    SpeechError::Runner,
-    SpeechError::NoCard,
-    SpeechError::CardRoom,
-    SpeechError::CardFailed,
-    SpeechError::NoSound,
-    SpeechError::OutOfStep,
-    SpeechError::Memory,
-    SpeechError::Internal,
-    SpeechError::Timeout,
-    SpeechError::Gone,
-];
-
-/// What a run tells, by index into the tables above.
-#[derive(Copy, Clone, Debug)]
-enum Said {
-    Stage(usize),
-    Level(u8),
-    Heard,
-    Quiet,
-    /// A piece at its place, empty when true.
-    Piece(u16, bool),
-    Done,
-    Wiped,
-    Fault(usize),
-}
-
-impl Said {
-    fn note(self) -> SpeechNote {
-        match self {
-            Self::Stage(i) => SpeechNote::Stage(STAGES[i]),
-            Self::Level(level) => SpeechNote::Level(level),
-            Self::Heard => SpeechNote::Heard,
-            Self::Quiet => SpeechNote::Quiet,
-            Self::Piece(index, empty) => {
-                let text = secret(if empty { " " } else { "mot" });
-                SpeechNote::Piece { index, text }
-            }
-            Self::Done => SpeechNote::Done(done(1)),
-            Self::Wiped => SpeechNote::Wiped,
-            Self::Fault(i) => SpeechNote::Fault(FAULTS[i]),
-        }
-    }
-}
-
 /// One thing the flow meets.
 #[derive(Clone, Debug)]
 enum Step {
@@ -98,6 +41,8 @@ enum Step {
     Again,
     Over(bool),
     Panel(bool),
+    /// The gear or the tray: the panel's open reaches the flow, then the panel shows.
+    Gear,
     Field(FieldKind, u64),
     Elsewhere,
     Session(SessionNote),
@@ -106,25 +51,14 @@ enum Step {
     Typed(bool),
     /// A note to the open take, or to the older one when true.
     Said(Said, bool),
+    /// Time passes, in ms, then the open take's microphone opens, as after a slow first start.
+    Open(u64),
     /// Time passes, in ms, then a tick.
     Wait(u64),
     On(bool),
     Quit,
     /// Compare's lend, which changes only while no dictation runs, as Compare starts only then.
     Lend(Lend),
-}
-
-fn said() -> impl Strategy<Value = Said> {
-    prop_oneof![
-        (0..STAGES.len()).prop_map(Said::Stage),
-        any::<u8>().prop_map(Said::Level),
-        Just(Said::Heard),
-        Just(Said::Quiet),
-        (0..3_u16, any::<bool>()).prop_map(|(i, empty)| Said::Piece(i, empty)),
-        Just(Said::Done),
-        Just(Said::Wiped),
-        (0..FAULTS.len()).prop_map(Said::Fault),
-    ]
 }
 
 fn step() -> impl Strategy<Value = Step> {
@@ -142,16 +76,18 @@ fn step() -> impl Strategy<Value = Step> {
         1 => Just(Step::Again),
         1 => any::<bool>().prop_map(Step::Over),
         1 => any::<bool>().prop_map(Step::Panel),
+        1 => Just(Step::Gear),
         1 => (select(kinds.to_vec()), 0..2_u64).prop_map(|(k, b)| Step::Field(k, b)),
         1 => Just(Step::Elsewhere),
         1 => select(SessionNote::ALL.to_vec()).prop_map(Step::Session),
         1 => (0..LANGS.len()).prop_map(Step::Layout),
         1 => any::<bool>().prop_map(Step::Typed),
         6 => (said(), prop::bool::weighted(OLD)).prop_map(|(s, old)| Step::Said(s, old)),
+        2 => (0..MAX_WAIT_MS).prop_map(Step::Open),
         2 => (0..MAX_WAIT_MS).prop_map(Step::Wait),
         1 => prop::bool::weighted(ON).prop_map(Step::On),
         1 => Just(Step::Quit),
-        1 => select(vec![Lend::Off, Lend::Listen, Lend::Write]).prop_map(Step::Lend),
+        1 => select(vec![Lend::Off, Lend::Prep, Lend::Listen, Lend::Write]).prop_map(Step::Lend),
     ]
 }
 
@@ -168,6 +104,7 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
         Step::Again => rig.again(),
         Step::Over(over) => rig.click(VoiceClick::Over(*over)),
         Step::Panel(open) => rig.on(In::Panel(open.then(|| Box::new(panel())))),
+        Step::Gear => rig.gear(),
         Step::Field(kind, box_id) => rig.field(*kind, *box_id),
         Step::Elsewhere => rig.on(In::Elsewhere),
         Step::Session(note) => rig.on(In::Session(*note)),
@@ -177,6 +114,10 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
             let take = rig.take.wrapping_sub(u32::from(*old));
             let note = said.note();
             rig.on(In::Note { take, note })
+        }
+        Step::Open(ms) => {
+            rig.wait(*ms);
+            rig.tell(SpeechNote::Stage(SpeechStage::Open))
         }
         Step::Wait(ms) => rig.tick_after(*ms),
         Step::On(on) => {
@@ -209,8 +150,14 @@ struct Seen {
     closed: BTreeSet<u32>,
     /// The takes shown as dots.
     masked: BTreeSet<u32>,
+    /// The takes the gear ended while they ran, until Transcribe anyway writes them again.
+    geared: BTreeSet<u32>,
+    /// The take opened last, which a text or a count belongs to.
+    live: u32,
     round: u32,
     ask: Option<TextAsk>,
+    /// Paste at once is chosen.
+    paste: bool,
 }
 
 impl Seen {
@@ -239,6 +186,10 @@ impl Seen {
                     self.round = view.0.round;
                 }
                 Out::Type(ask) => self.ask = Some(ask.clone()),
+                Out::Paste(ask) => {
+                    prop_assert!(self.paste, "pasted while typing is chosen");
+                    self.ask = Some(ask.clone());
+                }
                 Out::Keep(kept) => {
                     prop_assert!(
                         !hidden && !self.masked.contains(&kept.take),
@@ -259,7 +210,9 @@ impl Seen {
             !rig.lit || matches!(shown, VoiceBar::Listening(_)),
             "lit on {shown:?}"
         );
-        let closed = shown != VoiceBar::Hidden || self.opened == self.closed;
+        let open: BTreeSet<u32> = self.opened.difference(&self.closed).copied().collect();
+        let preparing = rig.light == VoiceLit::Prep && open == BTreeSet::from([rig.take]);
+        let closed = shown != VoiceBar::Hidden || open.is_empty() || preparing;
         prop_assert!(closed, "a run stays open behind the hidden bar");
         match &shown {
             VoiceBar::Text(text) if text.text == VoiceText::Masked => {
@@ -284,17 +237,31 @@ proptest! {
         hidden in any::<bool>(),
         keep_voice in any::<bool>(),
         silence_stop in any::<bool>(),
+        paste in any::<bool>(),
     ) {
         let mut settings = VoiceSettings::from_defaults().unwrap();
         settings.keep_voice = keep_voice;
         settings.silence_stop = silence_stop;
+        settings.insert = crate::INSERTS[usize::from(paste)].0.into();
         let mut rig = Rig::with(settings, hidden);
-        let mut seen = Seen::default();
+        let mut seen = Seen { paste, ..Seen::default() };
         for step in &steps {
-            let lent = rig.flow.lent.is_some();
+            if matches!(step, Step::On(_)) {
+                seen.paste = false;
+            }
+            let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
+            let was = rig.light;
+            let recording = lent && (was == VoiceLit::Prep || matches!(rig.shown(), VoiceBar::Listening(_)));
             let out = act(&mut rig, step, seen.ask.as_ref());
+            if matches!(step, Step::Gear) {
+                seen.gear(&rig, &out, (busy, busy && was == VoiceLit::Prep), recording)?;
+            }
             seen.effects(&out, hidden, lent)?;
+            seen.after_gear(&out)?;
+            let masked = matches!(rig.shown(), VoiceBar::Text(t) if t.text == VoiceText::Masked);
+            prop_assert!(!masked || !out.iter().any(|o| matches!(o, Out::Paste(_))), "a password box pasted");
             seen.bar(&rig)?;
+            prep::check(&rig, step, was)?;
         }
     }
 }

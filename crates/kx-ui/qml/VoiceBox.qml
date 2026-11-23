@@ -18,7 +18,12 @@ Window {
     required property int round
     required property int rows
     required property bool ar
+    // The keys are aimed at the panel, which only the keyboard knows (ADR-0040).
+    property bool aimed: false
 
+    // A press on the panel, unless it follows another inside the double-click time, or a reader's on a line, aims the
+    // keys at it; they reach it only on a key page's line (ADR-0049).
+    signal aiming
     // A press landed on the panel, which closes the tray menu; the press still reaches the part under it.
     signal touched
     // The display scale changed, so its place, set in the old Qt units, is stale.
@@ -33,6 +38,8 @@ Window {
     readonly property real radius: lk.look.window_radius_px * pn.radius_share
     readonly property var sheet: view.sheet
     readonly property bool asking: view.foot.some(b => b.kind === names.acts.confirm)
+    // A question holds the pages still, but a card's, which asks about the whole card, lets its two parts turn.
+    readonly property bool held: asking && sheet.is !== names.sheets.card
     readonly property int per: Math.max(1, rows)
     // A row fits its tick box, its tile, or its name over its line and a progress line, in the tallest of its fonts, so
     // every page and language keeps the panel's size.
@@ -41,20 +48,34 @@ Window {
     readonly property real lines: nameH + pn.hint_px[1] * s + metaH + (pn.row_pad_px + lk.shape.voice.progress_px) * s
     readonly property real rowH: Math.max(pn.row_px[0] * s, lk.shape.clip.tick_px[0] * s, pn.tile_px[1] * s, lines + 2 * pn.row_pad_px * s)
     readonly property real pageH: per * rowH + (per - 1) * pn.row_px[1] * s
-    // The bands over the list: the page's note, the slow-PC and untested lines, then a note, which readers hear at once.
+    // The bands over the list: the page's note, the slow-PC line and the Cloud side's band with their button to the Cloud
+    // page, the untested line, why cloud services send nothing, a card's or Compare's warning, then a note, which readers
+    // hear at once.
     readonly property var bands: {
         const i = lk.icons.voice;
+        const models = sheet.is === names.sheets.models;
         const all = [];
+        const band = (icon, text, more) => all.push(Object.assign({ icon: icon, text: text, name: "", alert: false, parts: [], warn: false, button: null }, more));
         if (view.top)
-            all.push({ icon: i.panel.tops[view.top.id] || "", text: view.top.text, name: view.top.name || "", alert: false });
+            band(i.panel.tops[view.top.id] || "", view.top.text, { name: view.top.name || "" });
         if (sheet.slow)
-            all.push({ icon: i.panel.slow, text: sheet.slow, name: "", alert: false });
-        if (sheet.untested)
-            all.push({ icon: i.panel.untested, text: sheet.untested, name: "", alert: false });
+            band(i.panel.slow, sheet.slow.text, { button: sheet.slow.button });
+        if (sheet.band)
+            band(i.panel.cloud.switch, sheet.band.text, { button: sheet.band.button });
+        if (models && sheet.untested)
+            band(i.panel.untested, sheet.untested, {});
+        if (sheet.off)
+            band(i.panel.cloud.off, sheet.off, {});
+        if (sheet.warn)
+            band("", sheet.warn.text, { parts: sheet.warn.parts, warn: true });
+        if (sheet.send)
+            band("", sheet.send, { warn: true });
         if (view.note)
-            all.push({ icon: i.notes[view.note.id] || "", text: view.note.text, name: "", alert: true });
+            band(i.notes[view.note.id] || "", view.note.text, { alert: true });
         return all;
     }
+    // The sheets drawn as a page of their own rather than a paged list.
+    readonly property var whole: [names.sheets.ready, names.sheets.card, names.sheets.service]
 
     // The scroll pad pages the panel while it shows (ADR-0029); the mark goes with the window.
     property bool paged: false
@@ -80,10 +101,10 @@ Window {
     function press(b) {
         send(b.kind, b.id, b.arg);
     }
-    // A notch of the wheel: what the page buttons do, silently, and nothing past either end or while a question waits.
+    // A notch of the wheel: what the page buttons do, silently, and nothing past either end or while the pages are held.
     function turn(by) {
         const at = view.pages.at + by;
-        if (!asking && at >= 0 && at < view.pages.count)
+        if (!held && at >= 0 && at < view.pages.count)
             send(names.acts.wheel, "", by);
     }
 
@@ -130,9 +151,22 @@ Window {
             Column {
                 x: box.pn.body_pad_px[1] * box.s
                 width: col.width - 2 * x
-                visible: box.bands.length > 0
+                visible: box.bands.length > 0 || !!box.sheet.switch || !!box.sheet.sides
                 topPadding: box.pn.body_gap_px * box.s
                 spacing: box.pn.body_gap_px * box.s
+                VoiceToggle {
+                    visible: !!box.sheet.switch
+                    width: parent.width
+                    host: box
+                    toggle: box.sheet.switch || ({ kind: "", label: "", value: "", on: false })
+                    icon: box.lk.icons.voice.panel.cloud.switch
+                    uid: box.res.uid(box.names.group, box.names.acts.cloud)
+                }
+                VoiceSides {
+                    visible: !!box.sheet.sides
+                    host: box
+                    sides: box.sheet.sides || ({ name: "", shown: "", chips: [] })
+                }
                 Repeater {
                     model: box.bands
                     delegate: VoiceBand {
@@ -143,16 +177,31 @@ Window {
                         text: modelData.text
                         name: modelData.name
                         alert: modelData.alert
+                        parts: modelData.parts
+                        warn: modelData.warn
+                        button: modelData.button
                     }
                 }
             }
             VoiceList {
-                visible: box.sheet.is !== box.names.sheets.ready
+                visible: box.whole.indexOf(box.sheet.is) < 0
                 width: col.width
                 host: box
             }
             VoiceRead {
                 visible: box.sheet.is === box.names.sheets.ready
+                width: col.width
+                host: box
+            }
+            VoiceCard {
+                id: cardPage
+                visible: cardPage.shows
+                width: col.width
+                host: box
+            }
+            VoiceKeys {
+                id: keyPage
+                visible: keyPage.shows
                 width: col.width
                 host: box
             }
@@ -168,6 +217,7 @@ Window {
         }
         PressWatch {
             onTouched: box.touched()
+            onAlone: box.aiming()
         }
         // Hidden lines laid out as the rows' are, which round each line up, so a row always fits them.
         Label {

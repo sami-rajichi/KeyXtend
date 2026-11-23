@@ -126,12 +126,14 @@ spawn_extensions = ["rs", "h", "hpp", "cpp", "cc", "cxx"]
 banned_spawns = ["std::process::Command", "QProcess"]
 # Build scripts, as paths inside their package; like tests and the test tools, they may start processes.
 build_scripts = ["build.rs", "qtbuild.rs"]
-# The worker's two jobs kept apart (ADR-0042 decision 3, tidy F5): no file of a module, its `.rs` file or its folder,
-# names these crates, so the `voice` job never reaches the network and the `fetch` job never hears the microphone or
-# runs the engine. F5 reads names only; the worker's `tests/root.rs` keeps each crate unrenamed in its manifest.
+# The worker's jobs kept apart (ADR-0042 decision 3, ADR-0047 decision 1, tidy F5): no file of a module, its `.rs`
+# file or its folder, names these crates, so the `voice` job never reaches the network, and the `fetch` and
+# `speech-net` jobs never hear the microphone or run the engine. F5 reads names only; the worker's `tests/root.rs`
+# keeps each crate unrenamed in its manifest.
 apart = [
     { package = "keyxtend-worker", module = "src/voice", banned = ["kx-platform-net"] },
     { package = "keyxtend-worker", module = "src/fetch", banned = ["cpal", "transcribe-cpp"] },
+    { package = "keyxtend-worker", module = "src/net", banned = ["cpal", "transcribe-cpp"] },
 ]
 
 [workspace.metadata.dco]

@@ -30,6 +30,7 @@ fn bonjour() -> HistoryRow {
         model: Redacted::new("Whisper small".to_owned()),
         pinned: true,
         tick: Some(1),
+        cloud: None,
     }
 }
 

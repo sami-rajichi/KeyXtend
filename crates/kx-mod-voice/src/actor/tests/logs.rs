@@ -1,19 +1,22 @@
-//! What the actor logs when a port fails: fixed texts and error kinds, never a dictated text or a folder.
+//! What the actor logs when a port fails: fixed texts and error kinds, never a dictated text, a folder or a cloud key;
+//! a key it cannot read is logged by kind wherever it is read. The device lines are in `cards`.
 
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
 use std::sync::Once;
 
 use kx_module_api::ports::{
-    BarButton, ClipError, FolderError, PanelButton, SealedError, VoiceClick, VoiceTab,
+    BarButton, ClipError, CloudButton, FolderError, PanelButton, SealedError, VoiceClick, VoiceTab,
 };
-use kx_platform_fake::ShelfCall;
+use kx_platform_fake::{CloudAnswer, ShelfCall};
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
-use super::Msg;
 use super::rig::Rig;
+use super::{Msg, cloud};
+
+mod cards;
 
 /// A dictated text that appears nowhere else.
 const SECRET: &str = "zebra-quartz";
@@ -96,4 +99,56 @@ fn a_failed_copy_save_reveal_or_run_logs_no_text_or_folder() {
     for line in &lines {
         assert!(!line.contains(SECRET) && !line.contains(FOLDER), "{line}");
     }
+}
+
+#[test]
+fn a_cloud_dictation_logs_no_key_and_no_reply() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::build(cloud::groq);
+        rig.fake.shelf.fail(ShelfCall::Load, SealedError::Damaged);
+        rig.dictate();
+        cloud::set_key(&rig.fake, &cloud::key());
+        rig.fake.cloud.script(vec![CloudAnswer::text(SECRET); 2]);
+        rig.act(VoiceClick::Bar(BarButton::Again));
+        assert_eq!(rig.typed_texts(), [format!("{SECRET} {SECRET}")]);
+    });
+    assert!(!lines.is_empty(), "the unread key is logged by kind");
+    for line in &lines {
+        assert!(
+            !line.contains(SECRET) && !line.contains(&cloud::key()),
+            "{line}"
+        );
+    }
+}
+
+/// Groq's key page, with the key's next read failing `before` the page opens or else after it.
+fn unread(before: bool) -> Rig {
+    let mut rig = Rig::build(cloud::groq);
+    let damage = |rig: &Rig| rig.fake.shelf.fail(ShelfCall::Load, SealedError::Damaged);
+    rig.send(Msg::Open);
+    rig.act(VoiceClick::Open(VoiceTab::Cloud));
+    rig.act(VoiceClick::Row(0));
+    if before {
+        damage(&rig);
+    }
+    rig.act(VoiceClick::Service(CloudButton::Lines));
+    if !before {
+        damage(&rig);
+    }
+    rig
+}
+
+#[test]
+fn a_key_unread_for_its_dots_or_its_test_is_logged_by_kind_alone() {
+    let lines = lines_of(|| {
+        unread(true);
+        let mut rig = unread(false);
+        rig.act(VoiceClick::Service(CloudButton::Test));
+    });
+    let kinds = lines.iter().filter(|l| l.contains("error=")).count();
+    assert_eq!(kinds, 2, "the dots' read and the test's read: {lines:?}");
+    assert!(
+        lines.iter().all(|l| !l.contains(&cloud::key())),
+        "{lines:?}"
+    );
 }

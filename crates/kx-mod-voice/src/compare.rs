@@ -1,18 +1,18 @@
-//! Compare models (design "Compare models"): the set text is read aloud once into a run that loads no model, then each
-//! ready model writes that recording in a fresh job, one after another. Only the numbers are kept, through
-//! `Scores::put`; a text shows only for a language with no set text, and is never kept. Pure: effects out, notes in.
+//! Compare models (design "Compare models"), pure: the set text is read aloud once, then each ready local model and
+//! ticked cloud model writes that recording in turn. Only the numbers are kept, through `Scores::put`, never a text.
 
 mod act;
 mod end;
+mod net;
 
-pub use act::{Act, Entrant, Line, Plan};
+pub use act::{Act, Entrant, Line, Plan, Remote};
 
 use std::collections::BTreeMap;
 
-use kx_module_api::Secret;
 use kx_module_api::ports::{
-    BarHint, CardId, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
+    BarHint, CardId, CloudFault, Renewal, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
 };
+use kx_module_api::{Redacted, Secret};
 
 use crate::VoiceSettings;
 use crate::flow::{Lend, RunCall};
@@ -31,8 +31,8 @@ enum Stage {
     Results,
 }
 
-/// Each model of a run with where it stands, in turn order.
-pub type Runs<'a> = Vec<(&'a Entrant, RunStep)>;
+/// Each model's name in a run with where it stands: the local ones in turn order, then the cloud ones.
+pub type Runs<'a> = Vec<(&'a Redacted<String>, RunStep)>;
 
 /// A model's turn: the model, its ask and where it stands.
 #[derive(Clone, Debug)]
@@ -51,15 +51,22 @@ pub struct Compare {
     plan: Option<Plan>,
     turns: Vec<Turn>,
     heard: bool,
+    /// The recording's microphone said it opened.
+    open: bool,
     pieces: BTreeMap<u16, Secret>,
     lines: Vec<Line>,
+    /// The cloud models with where each stands, and their texts by model and piece until each ends.
+    remotes: Vec<(Remote, RunStep)>,
+    texts: BTreeMap<(usize, u16), Secret>,
+    /// Why each cloud model that failed did, with a used allowance's renewal, by its place among the cloud models.
+    faults: BTreeMap<usize, (CloudFault, Option<Renewal>)>,
     hint: Option<BarHint>,
 }
 
 impl Compare {
     /// Starts a run of `plan`: its run opens and listens with no model; nothing with no ready model or while busy.
     pub fn start(&mut self, plan: Plan, settings: &VoiceSettings) -> Vec<Act> {
-        if plan.entrants.is_empty() || self.busy() {
+        if (plan.entrants.is_empty() && plan.clouds.is_empty()) || self.busy() {
             return Vec::new();
         }
         let turn = |entrant: &Entrant| Turn {
@@ -72,9 +79,12 @@ impl Compare {
         };
         self.turns = plan.entrants.iter().map(turn).collect();
         self.reset();
+        self.remotes = (plan.clouds.iter())
+            .map(|r| (r.clone(), RunStep::Waiting))
+            .collect();
         self.plan = Some(plan);
         self.take = self.take.wrapping_add(1);
-        self.stage = Stage::Recording;
+        (self.stage, self.open) = (Stage::Recording, false);
         let ask = settings.ask(None, None);
         vec![Act::Open {
             take: self.take,
@@ -123,6 +133,8 @@ impl Compare {
             self.stage = Stage::Ready;
             self.lines.clear();
             self.pieces.clear();
+            (self.remotes, self.texts) = (Vec::new(), BTreeMap::new());
+            self.faults.clear();
             (self.heard, self.hint) = (false, None);
         }
     }
@@ -138,6 +150,10 @@ impl Compare {
                 self.heard = true;
                 Vec::new()
             }
+            SpeechNote::Stage(SpeechStage::Open) => {
+                self.open = true;
+                Vec::new()
+            }
             SpeechNote::Stage(SpeechStage::Limit | SpeechStage::Silence) if self.recording() => {
                 self.stop_self()
             }
@@ -149,7 +165,7 @@ impl Compare {
         }
     }
 
-    /// The user reads the set text now.
+    /// The recording stage: its run prepares, then the user reads the set text.
     #[must_use]
     pub fn recording(&self) -> bool {
         self.stage == Stage::Recording
@@ -161,25 +177,49 @@ impl Compare {
         matches!(self.stage, Stage::Recording | Stage::Running(_))
     }
 
-    /// What it holds of the microphone's run, for the flow (`In::Lend`): the bar while it records, then no dictation
-    /// until it ends.
+    /// What it holds of the microphone's run, for the flow (`In::Lend`): the amber key until its microphone opens, the
+    /// bar while it records, then no dictation until it ends.
     #[must_use]
     pub fn lend(&self) -> Lend {
         match self.stage {
+            Stage::Recording if !self.open => Lend::Prep,
             Stage::Recording => Lend::Listen,
             Stage::Running(_) => Lend::Write,
             Stage::Ready | Stage::Results => Lend::Off,
         }
     }
 
-    /// The one writing (from 0; `None` while the recording ends), and each model to run with where it stands.
+    /// The one the header names (from 0; `None` while the recording ends): the local one writing, then the first cloud
+    /// one still writing. Then each model to run, local then cloud, with where it stands.
     #[must_use]
     pub fn running(&self) -> Option<(Option<usize>, Runs<'_>)> {
         let Stage::Running(at) = self.stage else {
             return None;
         };
-        let runs = self.turns.iter().map(|t| (&t.entrant, t.step));
+        let count = self.turns.len();
+        let writing = self
+            .remotes
+            .iter()
+            .position(|(_, s)| *s == RunStep::Writing);
+        let at = at.map(|at| {
+            if at < count {
+                at
+            } else {
+                writing.map_or(at, |i| count + i)
+            }
+        });
+        let locals = self.turns.iter().map(|t| (&t.entrant.name, t.step));
+        let runs = locals.chain(self.remotes.iter().map(|(r, step)| (&r.name, *step)));
         Some((at, runs.collect()))
+    }
+
+    /// Why cloud model `at` of `running`'s list failed, with a used allowance's renewal, while the run shows.
+    #[must_use]
+    pub fn why(&self, at: usize) -> Option<(CloudFault, Option<Renewal>)> {
+        let remote = at.checked_sub(self.turns.len())?;
+        matches!(self.stage, Stage::Running(_))
+            .then(|| self.faults.get(&remote).copied())
+            .flatten()
     }
 
     /// The results shown, once the run ended.
@@ -231,7 +271,14 @@ impl Compare {
                 self.score(at, done);
                 at + 1
             }
-            Stage::Running(None) | Stage::Recording => 0,
+            // The recording ended: unheard, nothing runs, as at Stop; else it goes to the cloud models first, as the
+            // run hands it over only before `again`.
+            Stage::Recording if !self.heard => return self.nothing(),
+            Stage::Running(None) | Stage::Recording => {
+                let mut acts = self.send();
+                acts.extend(self.next(0));
+                return acts;
+            }
             Stage::Ready | Stage::Results => return Vec::new(),
         };
         self.next(at)
@@ -240,26 +287,14 @@ impl Compare {
     /// Model `at`'s turn, or the end once every model ran.
     fn next(&mut self, at: usize) -> Vec<Act> {
         let Some(turn) = self.turns.get_mut(at) else {
-            return self.finish();
+            return self.settle();
         };
         turn.step = RunStep::Writing;
         let ask = turn.ask.clone();
         self.stage = Stage::Running(Some(at));
         vec![self.call(RunCall::Again(ask))]
     }
-
-    /// Ends the run, cancelled first when `cancel`; the page goes back to the set text.
-    fn end(&mut self, cancel: bool) -> Vec<Act> {
-        let mut acts = Vec::new();
-        if cancel {
-            acts.push(self.call(RunCall::Cancel));
-        }
-        acts.push(self.call(RunCall::Close));
-        self.pieces.clear();
-        self.stage = Stage::Ready;
-        acts
-    }
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

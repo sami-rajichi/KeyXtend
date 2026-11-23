@@ -1,6 +1,6 @@
 // The Voice panel's other pages over the hub's views: devices with their memory, check and mark, Compare's set text,
-// its run with each step's mark and its table, Options with switches and steppers and never a slider, and the drives,
-// in English, French and Arabic.
+// its run with each step's mark and its table, Options with switches, steppers and chips and never a slider, and the
+// drives, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -146,6 +146,32 @@ Item {
             compare(Kit.texts(more.contentItem, more.view.sheet.rows[0].value).length, 1, "Threads reads Automatic");
             verify(!one(more, "voice.plus-3").enabled, "the most texts kept");
             box.visible = more.visible = false;
+        }
+
+        function test_insert_the_text_is_two_chips_and_paste_shows_its_hint_below_data() {
+            return langs_data();
+        }
+        function test_insert_the_text_is_two_chips_and_paste_shows_its_hint_below(d) {
+            const box = make("optionsInsert", d.t);
+            const [pair, hint] = [box.view.sheet.rows[1], box.view.sheet.rows[2]];
+            const chips = Board.all(box.contentItem, o => o.visible && o.Accessible.role === Accessible.RadioButton);
+            compare(chips.map(c => c.Accessible.name), pair.chips.map(c => c.label), "both ways");
+            compare(chips.map(c => c.Accessible.checked), [false, true], "Paste at once chosen");
+            compare(chips.map(c => c.Accessible.id), ["voice.minus-1", "voice.plus-1"], "a stepper's ids");
+            compare(chips.map(c => c.Accessible.description), [hint.label, hint.label], "the hint describes each chip");
+            compare(heard(box.contentItem, pair.label).length, 1, "the row's name");
+            const line = heard(box.contentItem, hint.label);
+            compare(line.length, 1, "the hint takes the next row");
+            verify(!line[0].nameText.truncated, "the hint reads whole");
+            verify(!line[0].takes, "the hint takes no click");
+            const tile = N.lk.icons.voice.panel.hints[hint.key];
+            verify(!!tile && line[0].tile === tile, "the hint's own icon, by its key");
+            mouseClick(chips[0]);
+            mouseClick(chips[1]);
+            mouseClick(line[0]);
+            const r = box.round;
+            compare(acts(box), ["act step minus 1 " + r, "act step plus 1 " + r]);
+            box.visible = false;
         }
 
         function test_the_drives_pick_the_models_folder() {
