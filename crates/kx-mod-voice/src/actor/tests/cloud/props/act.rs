@@ -2,8 +2,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, CloudButton, CloudFault, CloudLine, PanelButton, SpeechNote, SpeechStage,
-    VoiceClick, VoiceTab,
+    BarButton, BarText, CloudButton, CloudFault, CloudLine, PanelButton, SpeechNote, SpeechStage,
+    VoiceBar, VoiceClick, VoiceTab,
 };
 use kx_platform_fake::SpeechCall;
 use proptest::prelude::*;
@@ -144,7 +144,7 @@ impl Seen {
             Act::KeyPaste => self.rig.act(VoiceClick::Paste(CloudLine::Key)),
             Act::Test => self.rig.act(VoiceClick::Service(CloudButton::Test)),
             Act::Compare(ticks) => self.compare(&ticks),
-            Act::Panel(button) => self.rig.act(VoiceClick::Button(button)),
+            Act::Panel(button) => self.panel(button),
             Act::Service(on) => self.switch(on),
             Act::Answer(at, fault) => self.answer(at, fault),
             Act::Write(at) => self.write(at),
@@ -191,6 +191,21 @@ impl Seen {
         self.tell(SpeechNote::Heard);
         self.rig.key();
         self.done()
+    }
+
+    /// A panel button; Try again goes through `try_again`, which first notes whether Undo is off.
+    fn panel(&mut self, button: PanelButton) {
+        if matches!(button, PanelButton::Again) {
+            return self.try_again();
+        }
+        self.rig.act(VoiceClick::Button(button));
+    }
+
+    /// The panel's Try again, after noting whether Undo is off: only then may the text it brings stay out.
+    pub(super) fn try_again(&mut self) {
+        let undo = matches!(self.rig.bar(), VoiceBar::Text(BarText { undo: true, .. }));
+        self.unsure = Some(!undo);
+        self.rig.act(VoiceClick::Button(PanelButton::Again));
     }
 
     /// Paste at once on, or off, as the options page writes it.

@@ -1,9 +1,7 @@
 //! The fakes' answers: the service's texts, faults and cuts, the clipboard history's pastes and takes, the keyboard's
 //! typing and the clock, with the act that answers the oldest thing still out.
 
-use kx_module_api::ports::{
-    ClipTake, ClipText, CloudFault, PanelButton, TextDone, TextPasted, VoiceClick,
-};
+use kx_module_api::ports::{ClipTake, ClipText, CloudFault, TextDone, TextPasted};
 use kx_platform_fake::{CloudAnswer, CloudLog, CloudState};
 
 use super::super::{key, secret};
@@ -42,8 +40,7 @@ impl Seen {
             return;
         };
         let answer = fault.map_or_else(|| self.token(run), CloudAnswer::Fault);
-        let _ = self.rig.fake.cloud.answer(run, vec![answer]);
-        self.rig.pump();
+        self.reply(run, vec![answer]);
     }
 
     /// The service writes every piece left of the sending run at `at`, wrapped.
@@ -54,8 +51,20 @@ impl Seen {
         let log = &self.rig.fake.cloud.calls().runs[run];
         let left = log.sizes.len() - log.told;
         let answers = (0..left).map(|_| self.token(run)).collect();
+        self.reply(run, answers);
+    }
+
+    /// The service tells sending run `run` `answers`. A retried run they end with nothing asked kept its text out, as
+    /// it cannot replace one unconfirmed or undone (`flow/text.rs`), so its tokens are spared the exactly-once check.
+    fn reply(&mut self, run: usize, answers: Vec<CloudAnswer>) {
+        let asked = self.asked();
         let _ = self.rig.fake.cloud.answer(run, answers);
         self.rig.pump();
+        let out = self.asked() == asked && self.retried.contains(&run);
+        if out && whole(&self.runs(), &self.trials, run) {
+            let held = self.tokens.iter().filter(|(_, r)| *r == run);
+            self.lost.extend(held.map(|(t, _)| t.clone()));
+        }
     }
 
     /// Every upload is written and every text out goes in, as the user waits for it, then the panel's Try again
@@ -70,7 +79,7 @@ impl Seen {
         while self.typed < self.rig.asks().len() {
             self.type_answer(true);
         }
-        self.rig.act(VoiceClick::Button(PanelButton::Again));
+        self.try_again();
     }
 
     /// A text no other holds, kept as run `run`'s: a `w`, its number and an `x`, so none sits inside another.

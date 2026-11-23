@@ -5,7 +5,8 @@
 mod act;
 mod ports;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 
 use kx_module_api::ports::RunStep;
 use kx_platform_fake::{CloudLog, RunLog};
@@ -39,13 +40,19 @@ struct Seen {
     taken: HashSet<u32>,
     /// The tokens of a text that rightly never goes in: its erase was refused, or it could not replace the text before.
     lost: HashSet<String>,
+    /// Set by the panel's Try again in this act: true when Undo was off, as the take's last text was unconfirmed or
+    /// undone.
+    unsure: Option<bool>,
+    /// For each speech run the panel's Try again sent again, what `unsure` was at its last such click.
+    takes: HashMap<usize, bool>,
+    /// The cloud runs that send again a take whose last text was unconfirmed or undone, so their text may stay out.
+    retried: HashSet<usize>,
 }
 
-/// What stands before an act: each cloud run's state, the hand-overs, and the texts asked.
+/// What stands before an act: each cloud run's state and each speech run's hand-overs.
 struct Before {
     states: Vec<CloudState>,
-    handed: usize,
-    asked: usize,
+    pieces: Vec<usize>,
 }
 
 impl Seen {
@@ -66,6 +73,9 @@ impl Seen {
             typed: 0,
             taken: HashSet::new(),
             lost: HashSet::new(),
+            unsure: None,
+            takes: HashMap::new(),
+            retried: HashSet::new(),
         }
     }
 
@@ -78,10 +88,10 @@ impl Seen {
 
     /// What stands before an act.
     fn before(&self) -> Before {
+        let speech = self.rig.fake.speech.runs();
         Before {
             states: self.runs().iter().map(|r| r.state).collect(),
-            handed: self.handed(),
-            asked: self.asked(),
+            pieces: speech.iter().map(|r| r.pieces).collect(),
         }
     }
 
@@ -90,9 +100,11 @@ impl Seen {
         self.rig.fake.cloud.calls().runs
     }
 
-    /// The hand-overs of speech so far, over every run.
-    fn handed(&self) -> usize {
-        self.rig.fake.speech.runs().iter().map(|r| r.pieces).sum()
+    /// The speech run that handed its speech over since `before`, if one did.
+    fn gave(&self, before: &Before) -> Option<usize> {
+        let speech = self.rig.fake.speech.runs();
+        let was = |at: usize| before.pieces.get(at).copied().unwrap_or(0);
+        (0..speech.len()).find(|&at| speech[at].pieces > was(at))
     }
 
     /// The texts asked to be typed or pasted so far.
@@ -104,16 +116,15 @@ impl Seen {
     /// asked for before its run ended, an upload or a trial held only while its run is out, the clipboard left to the
     /// history, and each text in once at most.
     fn check(&mut self, before: &Before, trial: bool) -> Result<(), TestCaseError> {
-        let runs = self.runs();
+        let (runs, gave) = (self.runs(), self.gave(before));
         if runs.len() > before.states.len() {
-            let handed = self.handed() > before.handed;
-            prop_assert!(handed, "a request with no speech handed over");
+            prop_assert!(gave.is_some(), "a request with no speech handed over");
         }
         let speech = self.rig.fake.speech.runs();
         let early = speech.iter().all(|r| r.early == 0);
         prop_assert!(early, "speech asked for before its run ended");
         self.trials.resize(runs.len(), trial);
-        self.kept_out(before, &runs);
+        self.retry(before.states.len()..runs.len(), gave);
         let out = |of: bool| {
             let both = runs.iter().zip(&self.trials);
             both.filter(|(r, t)| r.state == CloudState::Sending && **t == of)
@@ -129,18 +140,18 @@ impl Seen {
         self.texts(&runs)
     }
 
-    /// A dictation's run that ended in this act with nothing asked kept its text out, as it cannot replace a text
-    /// whose typing is not confirmed (`flow/text.rs`); its tokens are spared the exactly-once check.
-    fn kept_out(&mut self, before: &Before, runs: &[CloudLog]) {
-        if self.asked() > before.asked {
+    /// Notes what a Try again in this act found for take `gave`, and marks the new cloud runs `new` when they send
+    /// again a take whose last text was unconfirmed or undone at that click.
+    fn retry(&mut self, new: Range<usize>, gave: Option<usize>) {
+        let unsure = self.unsure.take();
+        let Some(take) = gave else {
             return;
+        };
+        if let Some(unsure) = unsure {
+            self.takes.insert(take, unsure);
         }
-        let was = |at: usize| before.states.get(at) == Some(&CloudState::Done);
-        let ended = |at: usize| whole(runs, &self.trials, at) && !was(at);
-        for (token, run) in &self.tokens {
-            if ended(*run) {
-                self.lost.insert(token.clone());
-            }
+        if self.takes.get(&take) == Some(&true) {
+            self.retried.extend(new);
         }
     }
 
@@ -165,7 +176,7 @@ impl Seen {
     }
 
     /// Answers everything out, waits past both waits, then answers again: every paste ended, the flow and Compare
-    /// heard each upload's end, and each token of a dictation's whole run went in once, unless its erase was refused.
+    /// heard each upload's end, and each token of a dictation's whole run went in once, unless it is `lost`.
     fn settle(&mut self) -> Result<(), TestCaseError> {
         self.drain()?;
         self.apply(Act::Wait(false))?;
