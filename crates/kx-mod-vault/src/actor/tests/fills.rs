@@ -1,12 +1,13 @@
-//! Fills through the actor: a row's button sends one `FillType` with the Tab wait; the answer of its round gives the
-//! note, and a typed one moves the entry's last use and saves without moving a row while open; a fill while one waits
-//! is refused; nothing of a value is logged.
+//! Fills through the actor: a row's button sends one `FillType` with the Tab wait, even after the same label names come
+//! again; the answer of its round gives the note, and a typed one moves the entry's last use and saves without moving a
+//! row while open; a fill while one waits is refused; nothing of a value is logged.
 
-use kx_module_api::ports::{FillClick, FillNote, FillPart, FillTyped, RowButton};
+use kx_module_api::ports::{FillAct, FillClick, FillNote, FillPart, FillTyped, RowButton};
 
 use super::super::Msg;
 use super::logs::lines_of;
 use super::rig::{PASSWORD, Rig, USER};
+use crate::find::LabelNames;
 use crate::settings::VaultSettings;
 
 /// Bank's row on the list: Alex, then Bank.
@@ -55,6 +56,21 @@ fn both_sends_one_request_of_the_user_a_tab_and_the_password_and_draws_again() {
     assert_eq!(rig.types()[0].tab_gap, settings.tab_gap());
     assert_eq!(rig.views().len(), views + 1, "drawn again after a fill");
     assert_eq!(rig.page().highlight, Some(BANK));
+}
+
+#[test]
+fn the_same_label_names_again_draw_nothing_so_a_click_on_the_shown_view_still_fills() {
+    let mut rig = Rig::new();
+    rig.open();
+    let names = LabelNames::from([("email".to_owned(), "Email".to_owned())]);
+    rig.send(Msg::Names(names.clone()));
+    let (round, views) = (rig.page().round, rig.views().len());
+    // A late `FillAsk`, as prediction's start, has the ui send the same names again.
+    rig.send(Msg::Names(names));
+    assert_eq!(rig.views().len(), views, "nothing new to draw");
+    let click = bank(RowButton::Both);
+    rig.send(Msg::Act(FillAct { round, click }));
+    assert_eq!(rig.types().len(), 1, "the click on the shown view fills");
 }
 
 #[test]

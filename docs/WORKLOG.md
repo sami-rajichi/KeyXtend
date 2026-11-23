@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-23 14:40 — P11: a Quick-fill click survives the same label names
+On the pull request, the app test that fills a login timed out: prediction started late on the busy runner, its `FillAsk` made the ui send the same label names again, and the panel drew a new round, so the Both click on the shown view was dropped as old. The same names now draw nothing, and new names still draw again. A vault test sends the same names between a view and its click, and fails without the fix.
+
 ## 2026-11-23 12:45 — P11: CI's Qt Quick tests get room to finish
 On the pull request, the Qt Quick tests step stopped at its 10-minute hang guard while every test so far passed, as part 2 grew the suite from 915 to 3511 tests (about 12 minutes on the runner). The guard is now 20 minutes, which still stops a hung test long before the job's limit.
 

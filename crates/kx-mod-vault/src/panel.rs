@@ -180,9 +180,9 @@ impl Panel {
         }
     }
 
-    /// Takes the table labels' texts in the keyboard's language, which search matches.
-    pub fn set_names(&mut self, names: LabelNames) {
-        self.names = names;
+    /// Takes the table labels' texts in the keyboard's language, which search matches; true when they changed.
+    pub fn set_names(&mut self, names: LabelNames) -> bool {
+        std::mem::replace(&mut self.names, names) != self.names
     }
 
     /// Shows `note` until the next change.
