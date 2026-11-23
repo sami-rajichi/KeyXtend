@@ -100,7 +100,7 @@ fn a_dib_comes_back_as_one_dib_image() {
 fn png_is_the_one_image_kept_beside_a_dib() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
-    let png = image(ImageCodec::Png, b"\x89PNG kx-test".to_vec());
+    let png = image(ImageCodec::Png, small_png());
     write(&[png.clone(), image(ImageCodec::Dib, dib(INFO, 1))]);
     assert!(watch.hears(&[png]));
 }

@@ -7,7 +7,9 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::FileFact;
 use kx_module_api::ports::{ClipPart, ImageCodec};
 
-use super::parts::{Formats, Kind, blank, crlf, text_of};
+use super::parts::{
+    CHUNK_CHECK, Formats, Kind, PNG_END, PNG_SIGNATURE, blank, crlf, png_end, text_of,
+};
 use super::*;
 
 #[cfg(windows)]
@@ -32,6 +34,25 @@ const F: Formats = Formats {
 };
 /// A private format nobody keeps.
 const OTHER: u32 = 0xC0FF;
+
+/// The bytes of a PNG header chunk's data.
+const IHDR_LEN: usize = 13;
+
+/// A PNG chunk of `kind` holding `data`, its check left at zero, which no read looks at.
+fn chunk(kind: &[u8], data: &[u8]) -> Vec<u8> {
+    let len = u32::try_from(data.len()).unwrap().to_be_bytes();
+    [&len[..], kind, data, &[0; CHUNK_CHECK]].concat()
+}
+
+/// A PNG's signature and its header chunk, without the end chunk.
+fn png_start() -> Vec<u8> {
+    [PNG_SIGNATURE, &chunk(b"IHDR", &[1; IHDR_LEN])].concat()
+}
+
+/// A small PNG: its signature, a header chunk and its end chunk.
+fn small_png() -> Vec<u8> {
+    [png_start(), chunk(PNG_END, &[])].concat()
+}
 
 #[test]
 fn the_shipped_table_parses_and_its_marker_is_one_the_watch_skips() {

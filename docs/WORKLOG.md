@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-23 16:30 — P11: a stream note stamped in time is waited for, and a PNG ends at its end chunk
+CI's Linux run failed a stream test, as once on 2026-11-17: its spy clock said "stamped" before the reader read the time, so the test could move the clock first; it now reads first. The stream could also call a note late between its reader's stamp and hand-over, so readers count the frames they carry and a wait that ends while one is on its way waits for it; a test holds the reader mid hand-over and failed without that. CI's Windows run read a test PNG back with different bytes, probably past its end, so a PNG is now read up to its `IEND` chunk, and the live test writes a real small PNG and prints the image lengths it heard if it fails again.
+
 ## 2026-11-23 14:40 — P11: a Quick-fill click survives the same label names
 On the pull request, the app test that fills a login timed out: prediction started late on the busy runner, its `FillAsk` made the ui send the same label names again, and the panel drew a new round, so the Both click on the shown view was dropped as old. The same names now draw nothing, and new names still draw again. A vault test sends the same names between a view and its click, and fails without the fix.
 

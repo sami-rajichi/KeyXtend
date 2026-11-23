@@ -1,4 +1,4 @@
-//! The bytes a write sets for each part, and the `CF_HDROP` file list both ways.
+//! The bytes a write sets for each part, a PNG read up to its end chunk, and the `CF_HDROP` file list both ways.
 
 use proptest::prelude::*;
 
@@ -29,6 +29,25 @@ fn html_and_rtf_keep_their_bytes_and_close_with_a_nul() {
     let (html, rtf) = (F.encode(&html), F.encode(&rtf));
     assert_eq!((html[0].0, &*html[0].1), (F.html, &b"<b>x</b>\0"[..]));
     assert_eq!((rtf[0].0, &*rtf[0].1), (F.rtf, &b"{\\rtf1 x}\0"[..]));
+}
+
+#[test]
+fn a_png_read_past_its_end_chunk_keeps_only_the_png() {
+    let png = small_png();
+    assert_eq!(png_end(&png), png.as_slice());
+    let padded = [png.as_slice(), &[0; 4]].concat();
+    assert_eq!(png_end(&padded), png.as_slice());
+}
+
+#[test]
+fn bytes_that_do_not_read_as_a_whole_png_are_kept_whole() {
+    let png = small_png();
+    let cut = &png[..png.len() - 1];
+    assert_eq!(png_end(cut), cut, "its end chunk runs past the bytes");
+    let endless = png_start();
+    assert_eq!(png_end(&endless), endless.as_slice(), "no end chunk");
+    let fake = b"\x89PNG kx-test";
+    assert_eq!(png_end(fake), fake, "no signature");
 }
 
 #[test]
@@ -141,6 +160,11 @@ fn the_header_is_as_long_as_windows_dropfiles() {
 
 /// The longest random file list tried.
 const MAX_LIST: usize = 256;
+/// The most random bytes tried after a PNG or its chunks.
+const MAX_TAIL: usize = 256;
+/// The most random chunks tried after a PNG's signature, and the most data bytes in each.
+const MAX_CHUNKS: usize = 8;
+const MAX_DATA: usize = 16;
 
 proptest! {
     #[test]
@@ -154,5 +178,28 @@ proptest! {
     fn any_paths_round_trip(names in prop::collection::vec("[^\u{0}]{1,12}", 0..5)) {
         let paths: Vec<PathBuf> = names.iter().map(PathBuf::from).collect();
         prop_assert_eq!(hdrop::decode(&hdrop::encode(&paths)), Some(paths));
+    }
+
+    #[test]
+    fn any_bytes_past_a_png_are_dropped(pad in prop::collection::vec(any::<u8>(), 0..MAX_TAIL)) {
+        let png = small_png();
+        let padded = [png.as_slice(), &pad].concat();
+        prop_assert_eq!(png_end(&padded), png.as_slice());
+    }
+
+    #[test]
+    fn random_chunks_after_a_png_signature_never_panic_its_reader(
+        chunks in prop::collection::vec(
+            (any::<[u8; 4]>(), prop::collection::vec(any::<u8>(), 0..MAX_DATA)),
+            0..MAX_CHUNKS,
+        ),
+        tail in prop::collection::vec(any::<u8>(), 0..MAX_TAIL),
+    ) {
+        let mut bytes = PNG_SIGNATURE.to_vec();
+        for (kind, data) in &chunks {
+            bytes.extend(chunk(kind, data));
+        }
+        bytes.extend(&tail);
+        prop_assert!(bytes.starts_with(png_end(&bytes)));
     }
 }
