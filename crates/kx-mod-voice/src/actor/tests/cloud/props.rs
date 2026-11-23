@@ -43,10 +43,11 @@ struct Seen {
     /// Set by the panel's Try again in this act: true when Undo was off, as the take's last text was unconfirmed or
     /// undone.
     unsure: Option<bool>,
-    /// For each speech run the panel's Try again sent again, what `unsure` was at its last such click.
+    /// For each speech run the panel's Try again sent again, true while its last text is unconfirmed or undone: set by
+    /// `unsure` at each such click, cleared once a text of that take is confirmed.
     takes: HashMap<usize, bool>,
-    /// The cloud runs that send again a take whose last text was unconfirmed or undone, so their text may stay out.
-    retried: HashSet<usize>,
+    /// Each cloud run's take: the speech run that handed it the speech.
+    sent: HashMap<usize, usize>,
 }
 
 /// What stands before an act: each cloud run's state and each speech run's hand-overs.
@@ -75,7 +76,7 @@ impl Seen {
             lost: HashSet::new(),
             unsure: None,
             takes: HashMap::new(),
-            retried: HashSet::new(),
+            sent: HashMap::new(),
         }
     }
 
@@ -140,8 +141,7 @@ impl Seen {
         self.texts(&runs)
     }
 
-    /// Notes what a Try again in this act found for take `gave`, and marks the new cloud runs `new` when they send
-    /// again a take whose last text was unconfirmed or undone at that click.
+    /// Notes take `gave` as the new cloud runs `new`'s, and what a Try again in this act found for it.
     fn retry(&mut self, new: Range<usize>, gave: Option<usize>) {
         let unsure = self.unsure.take();
         let Some(take) = gave else {
@@ -150,8 +150,21 @@ impl Seen {
         if let Some(unsure) = unsure {
             self.takes.insert(take, unsure);
         }
-        if self.takes.get(&take) == Some(&true) {
-            self.retried.extend(new);
+        self.sent.extend(new.map(|run| (run, take)));
+    }
+
+    /// True when cloud run `run` sends again a take whose last text is still unconfirmed or undone.
+    fn unsure_of(&self, run: usize) -> bool {
+        let take = self.sent.get(&run);
+        take.and_then(|t| self.takes.get(t)) == Some(&true)
+    }
+
+    /// `text` went in, confirmed: the take its tokens came from has a sure last text, which a later one must replace.
+    fn sure(&mut self, text: &str) {
+        let held = self.tokens.iter().find(|(t, _)| text.contains(t.as_str()));
+        let take = held.and_then(|(_, run)| self.sent.get(run).copied());
+        if let Some(flag) = take.and_then(|t| self.takes.get_mut(&t)) {
+            *flag = false;
         }
     }
 

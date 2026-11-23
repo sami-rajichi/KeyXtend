@@ -54,13 +54,13 @@ impl Seen {
         self.reply(run, answers);
     }
 
-    /// The service tells sending run `run` `answers`. A retried run they end with nothing asked kept its text out, as
-    /// it cannot replace one unconfirmed or undone (`flow/text.rs`), so its tokens are spared the exactly-once check.
+    /// The service tells sending run `run` `answers`. One they end with nothing asked, while its take's last text is
+    /// unconfirmed or undone, kept its text out (`flow/text.rs`), so its tokens are spared the exactly-once check.
     fn reply(&mut self, run: usize, answers: Vec<CloudAnswer>) {
         let asked = self.asked();
         let _ = self.rig.fake.cloud.answer(run, answers);
         self.rig.pump();
-        let out = self.asked() == asked && self.retried.contains(&run);
+        let out = self.asked() == asked && self.unsure_of(run);
         if out && whole(&self.runs(), &self.trials, run) {
             let held = self.tokens.iter().filter(|(_, r)| *r == run);
             self.lost.extend(held.map(|(t, _)| t.clone()));
@@ -120,6 +120,7 @@ impl Seen {
             let tokens = self.tokens.iter();
             let held = tokens.filter(|(t, _)| text.contains(t.as_str()));
             self.first.extend(held.map(|(t, _)| t.clone()));
+            self.sure(text);
         }
         self.rig.send(Msg::Pasted(TextPasted { round, ok }));
     }
@@ -132,6 +133,9 @@ impl Seen {
         self.typed += 1;
         if !ok && ask.erase > 0 && said(&ask.text).is_empty() {
             self.strand();
+        }
+        if ok {
+            self.sure(said(&ask.text));
         }
         let chars = ask.text.expose().chars().count();
         let count = if ok { u32::try_from(chars).unwrap() } else { 0 };
