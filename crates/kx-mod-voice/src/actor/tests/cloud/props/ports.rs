@@ -1,12 +1,14 @@
 //! The fakes' answers: the service's texts, faults and cuts, the clipboard history's pastes and takes, the keyboard's
 //! typing and the clock, with the act that answers the oldest thing still out.
 
-use kx_module_api::ports::{ClipTake, ClipText, CloudFault, TextDone, TextPasted};
+use kx_module_api::ports::{
+    ClipTake, ClipText, CloudFault, PanelButton, TextDone, TextPasted, VoiceClick,
+};
 use kx_platform_fake::{CloudAnswer, CloudLog, CloudState};
 
 use super::super::{key, secret};
 use super::act::Act;
-use super::{Seen, said};
+use super::{Seen, holds, said, whole};
 use crate::actor::Msg;
 use crate::actor::tests::taps::Heard;
 
@@ -42,6 +44,33 @@ impl Seen {
         let answer = fault.map_or_else(|| self.token(run), CloudAnswer::Fault);
         let _ = self.rig.fake.cloud.answer(run, vec![answer]);
         self.rig.pump();
+    }
+
+    /// The service writes every piece left of the sending run at `at`, wrapped.
+    pub(super) fn write(&mut self, at: usize) {
+        let Some(run) = self.pick(at) else {
+            return;
+        };
+        let log = &self.rig.fake.cloud.calls().runs[run];
+        let left = log.sizes.len() - log.told;
+        let answers = (0..left).map(|_| self.token(run)).collect();
+        let _ = self.rig.fake.cloud.answer(run, answers);
+        self.rig.pump();
+    }
+
+    /// Every upload is written and every text out goes in, as the user waits for it, then the panel's Try again
+    /// replaces the last.
+    pub(super) fn redo(&mut self) {
+        while self.pick(0).is_some() {
+            self.write(0);
+        }
+        while !self.unpasted().is_empty() {
+            self.paste_answer(0, true);
+        }
+        while self.typed < self.rig.asks().len() {
+            self.type_answer(true);
+        }
+        self.rig.act(VoiceClick::Button(PanelButton::Again));
     }
 
     /// A text no other holds, kept as run `run`'s: a `w`, its number and an `x`, so none sits inside another.
@@ -86,17 +115,31 @@ impl Seen {
         self.rig.send(Msg::Pasted(TextPasted { round, ok }));
     }
 
-    /// The keyboard answers the oldest text not answered; a refused erase may leave a text waiting for good.
+    /// The keyboard answers the oldest text not answered; a refused erase strands the text a paste waits on.
     pub(super) fn type_answer(&mut self, ok: bool) {
         let Some(ask) = self.rig.asks().get(self.typed).cloned() else {
             return;
         };
         self.typed += 1;
-        self.lost |= !ok && ask.erase > 0;
+        if !ok && ask.erase > 0 && said(&ask.text).is_empty() {
+            self.strand();
+        }
         let chars = ask.text.expose().chars().count();
         let count = if ok { u32::try_from(chars).unwrap() } else { 0 };
         let round = ask.round;
         self.rig.send(Msg::Typed(TextDone { round, count, ok }));
+    }
+
+    /// Marks lost the tokens of a dictation's whole run not yet typed or pasted: the text waiting on the erase.
+    fn strand(&mut self) {
+        let (runs, asks, pastes) = (self.runs(), self.rig.asks(), self.rig.pastes());
+        let typed = |t: &str| asks.iter().any(|a| holds(&a.text, t));
+        let put = |t: &str| pastes.iter().any(|p| holds(&p.text, t));
+        for (token, run) in &self.tokens {
+            if whole(&runs, &self.trials, *run) && !typed(token) && !put(token) {
+                self.lost.insert(token.clone());
+            }
+        }
     }
 
     /// The newest key page's take not answered.

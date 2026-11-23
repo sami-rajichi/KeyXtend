@@ -10,7 +10,7 @@ use proptest::prelude::*;
 use proptest::sample::{select, subsequence};
 
 use super::super::done;
-use super::{INSERT, Seen};
+use super::{INSERT, Seen, awaits};
 use crate::INSERTS;
 use crate::actor::Msg;
 use crate::panel::Do;
@@ -29,8 +29,8 @@ const BAR: [BarButton; 6] = [
     BarButton::Undo,
     BarButton::Close,
 ];
-/// The panel's buttons that stop Compare.
-const PANEL: [PanelButton; 2] = [PanelButton::Cancel, PanelButton::Back];
+/// The panel's buttons: Cancel and Back, which stop Compare, and Try again, which replaces a text put in.
+const PANEL: [PanelButton; 3] = [PanelButton::Cancel, PanelButton::Back, PanelButton::Again];
 /// The set text Compare reads out.
 const SET_TEXT: &str = "hello world";
 
@@ -69,6 +69,10 @@ pub(super) enum Act {
     Service(bool),
     /// The service answers the sending run at this place, wrapped: its next text, else this fault.
     Answer(usize, Option<CloudFault>),
+    /// The service writes every piece left of the sending run at this place, wrapped.
+    Write(usize),
+    /// The uploads are written and the texts go in, then the panel's Try again replaces the last.
+    Redo,
     /// The connection to the sending run at this place, wrapped, drops.
     Cut(usize),
     /// The clipboard history answers the open paste at this place, wrapped: pasted, or refused.
@@ -100,9 +104,11 @@ pub(super) fn act() -> impl Strategy<Value = Act> {
         1 => Just(Act::KeyPaste),
         1 => Just(Act::Test),
         1 => ticks().prop_map(Act::Compare),
-        1 => select(PANEL.to_vec()).prop_map(Act::Panel),
+        3 => select(PANEL.to_vec()).prop_map(Act::Panel),
         1 => any::<bool>().prop_map(Act::Service),
         4 => (at(), fault).prop_map(|(at, fault)| Act::Answer(at, fault)),
+        2 => at().prop_map(Act::Write),
+        2 => Just(Act::Redo),
         1 => at().prop_map(Act::Cut),
         2 => (at(), any::<bool>()).prop_map(|(at, ok)| Act::Pasted(at, ok)),
         2 => any::<bool>().prop_map(Act::Typed),
@@ -141,6 +147,8 @@ impl Seen {
             Act::Panel(button) => self.rig.act(VoiceClick::Button(button)),
             Act::Service(on) => self.switch(on),
             Act::Answer(at, fault) => self.answer(at, fault),
+            Act::Write(at) => self.write(at),
+            Act::Redo => self.redo(),
             Act::Cut(at) => self.cut(at),
             Act::Pasted(at, ok) => self.paste_answer(at, ok),
             Act::Typed(ok) => self.type_answer(ok),
@@ -162,14 +170,14 @@ impl Seen {
         self.rig.pump();
     }
 
-    /// The newest live run, once stopped and not yet ended.
+    /// The newest live run, once stopped and its end still due.
     pub(super) fn stopped(&self) -> Option<usize> {
         let runs = self.rig.fake.speech.runs();
         let at = runs.iter().rposition(|r| !r.closed && !r.dead)?;
-        (runs[at].stops > 0 && runs[at].dones == 0).then_some(at)
+        awaits(&runs[at]).then_some(at)
     }
 
-    /// The stopped run ends, which hands its speech over; true when it is Compare's.
+    /// The stopped run ends, its recording or an `again`'s writing; true when it is Compare's.
     fn done(&mut self) -> bool {
         let Some(at) = self.stopped() else {
             return false;
