@@ -61,7 +61,7 @@ impl Log {
     }
 
     /// Refuses `call` on run `id`: `NoSound` without the recording, or for speech the run cannot hand over, counted
-    /// as early before its `Done`; `Gone` after a death; else the failure set, which kills a `Gone` or `Timeout` one.
+    /// as early before its `Done`; `Gone` after a death; else the failure set, `Gone` or `Timeout` killing the worker.
     pub(super) fn refuse(&mut self, id: usize, call: SpeechCall) -> Result<(), SpeechError> {
         let run = &mut self.runs[id];
         if call == SpeechCall::Pieces && run.dones == 0 {
