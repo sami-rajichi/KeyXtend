@@ -1,7 +1,9 @@
 //! Properties: a random reply never panics the readers, behind a paywall or not, a random JSON error with a used
 //! allowance tells a renewal in range or a wait within a minute, a random `detail[]` names the language only on a 400
 //! or a 422, a body past any cap is refused one byte past it, a run takes exactly the parts that fill its pieces in
-//! order, and texts are told in the pieces' order whatever order they come in.
+//! order, and texts are told in the pieces' order whatever order they come in; the job's asks are in `job`.
+
+mod job;
 
 use super::reply::{NEVER, endless};
 use super::*;
