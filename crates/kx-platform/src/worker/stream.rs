@@ -2,17 +2,19 @@
 //! also sends notes on its own, each a checked frame told in order on the stream's thread. A watched id must hear a
 //! note within its `Wait`, or the worker is ended; a frame its job cannot read ends it too.
 
+mod carry;
 mod flow;
 mod watch;
 
 pub use watch::Wait;
 
 use super::{Frames, Launch, Lost, Spawner, Times, Worker, start};
+use carry::{next, relay};
 use flow::{Flow, Pump};
 use kx_ipc::IpcError;
 use kx_module_api::{Clock, Mono};
-use std::collections::VecDeque;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, ThreadId};
 
@@ -117,14 +119,21 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Stream<S, F> {
             Arc::clone(&clock),
             format!("{name}-{NOTES}"),
         );
-        let pump: Pump<F::Reply> = Box::new(move |nth, notes| {
-            let (feed, stamp) = (feed.clone(), Arc::clone(&stamp));
-            start(&reader, move || relay(nth, &notes, &feed, &*stamp))
+        let carried = Arc::new(AtomicUsize::new(0));
+        let pump: Pump<F::Reply> = Box::new({
+            let carried = Arc::clone(&carried);
+            move |nth, notes| {
+                let (feed, stamp, carried) =
+                    (feed.clone(), Arc::clone(&stamp), Arc::clone(&carried));
+                start(&reader, move || {
+                    relay(nth, &notes, &feed, &*stamp, &carried);
+                })
+            }
         });
         let flow = Flow::new(spawner, clock, times, launch, Box::new(tell), pump);
         let started = thread::Builder::new()
             .name(name.to_owned())
-            .spawn(move || serve(flow, &inbox));
+            .spawn(move || serve(flow, &inbox, &carried));
         let started = started
             .inspect_err(|e| tracing::warn!(thread = name, error = %e, "a stream did not start"))
             .ok();
@@ -230,17 +239,14 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Drop for Stream<S, F> {
 }
 
 /// The stream's thread: it runs each call and takes each frame in turn, and checks its waits only when nothing came
-/// within them, so a frame that waits is taken first.
+/// within them and no reader still carries a frame, so a frame stamped in time is taken first.
 fn serve<S: Spawner<F, Worker: Split<F>>, F: Streams>(
     mut flow: Flow<S, F>,
     inbox: &Receiver<Event<S, F>>,
+    carried: &AtomicUsize,
 ) {
     loop {
-        let next = match flow.wake_in() {
-            Some(wait) => inbox.recv_timeout(wait),
-            None => inbox.recv().map_err(|_| RecvTimeoutError::Disconnected),
-        };
-        match next {
+        match next(inbox, flow.wake_in(), carried) {
             Ok(Event::Task(task)) => task(&mut flow),
             Ok(Event::Heard {
                 nth,
@@ -248,43 +254,13 @@ fn serve<S: Spawner<F, Worker: Split<F>>, F: Streams>(
                 at,
                 taken,
             }) => {
+                carried.fetch_sub(1, SeqCst);
                 flow.heard(nth, frame, at);
                 drop(taken);
             }
             Ok(Event::End) | Err(RecvTimeoutError::Disconnected) => return,
             Err(RecvTimeoutError::Timeout) => flow.tick(),
         }
-    }
-}
-
-/// A reader thread: it stamps each frame of worker `nth` and hands it to the stream, with `IN_FLIGHT` untaken at
-/// most, until one fails or the stream is gone.
-fn relay<S: Spawner<F, Worker: Split<F>>, F: Streams>(
-    nth: u64,
-    notes: &Receiver<Result<F::Reply, IpcError>>,
-    feed: &Sender<Event<S, F>>,
-    clock: &dyn Clock,
-) {
-    let mut untaken = VecDeque::with_capacity(IN_FLIGHT);
-    loop {
-        if untaken.len() >= IN_FLIGHT {
-            // Ends once the stream took the oldest frame, or dropped it with the stream.
-            let _ = untaken
-                .pop_front()
-                .map(|oldest: Receiver<()>| oldest.recv());
-        }
-        let frame = notes.recv().unwrap_or(Err(IpcError::Closed));
-        let (last, at, (taken, room)) = (frame.is_err(), clock.now(), mpsc::channel());
-        let heard = Event::Heard {
-            nth,
-            frame,
-            at,
-            taken,
-        };
-        if feed.send(heard).is_err() || last {
-            return;
-        }
-        untaken.push_back(room);
     }
 }
 
