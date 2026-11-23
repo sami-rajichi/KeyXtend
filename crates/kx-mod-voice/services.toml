@@ -252,12 +252,13 @@ shape = "form"
 form = { lang = "language", list = false, fixed = [] }
 address = "typed"
 header = "bearer"
-# A typed service's rates are unknown: `per_min` and `at_once` are guesses, checked at task 24.
+# A typed service's rates are unknown, and no limit was met at the hands-on check, so `per_min` and `at_once` stay
+# guesses.
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 20, at_once = 2 }
 other = true
 terms = 1
 offered = true
-untested = true
+untested = false
 
 [services.facts]
 read = 2026-11-17
@@ -287,12 +288,12 @@ test = "https://openrouter.ai/api/v1/key"
 header = "bearer"
 keys = "https://openrouter.ai/settings/keys"
 # A piece lasts at most the 60 s upstream timeout a request [R1].
-# `per_min` and `at_once` are not on its pages: guesses, checked at task 24.
+# `per_min` and `at_once` are not on its pages, and no limit was met at the hands-on check, so they stay guesses.
 limits = { cap_mb = 25, max_mb = 23, max_s = 60, per_min = 60, at_once = 4 }
 other = true
 terms = 1
 offered = true
-untested = true
+untested = false
 
 [[services.models]]
 id = "openai/whisper-large-v3-turbo"

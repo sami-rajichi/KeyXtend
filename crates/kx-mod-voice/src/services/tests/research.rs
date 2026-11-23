@@ -32,8 +32,16 @@ const FIRST: (u16, u8, u8) = (2026, 11, 17);
 const AGAIN: (u16, u8, u8) = (2026, 11, 21);
 /// The rows whose pages were read again on check day.
 const REREAD: [&str; 5] = ["groq", "lemonfox", "elevenlabs", "gemini", "assemblyai"];
-/// The rows the owner's real keys passed at the hands-on check (2026-11-21); `OpenRouter` waits for its own.
-const TESTED: [&str; 5] = ["groq", "lemonfox", "elevenlabs", "gemini", "assemblyai"];
+/// The rows the owner's real keys passed by hand: five on 2026-11-21, Custom on 2026-11-22, `OpenRouter` on 2026-11-23.
+const TESTED: [&str; 7] = [
+    "groq",
+    "lemonfox",
+    "custom",
+    "openrouter",
+    "elevenlabs",
+    "gemini",
+    "assemblyai",
+];
 
 #[test]
 fn only_the_rows_the_owners_real_keys_passed_are_marked_tested() {

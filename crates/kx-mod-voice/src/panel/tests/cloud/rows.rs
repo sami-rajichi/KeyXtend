@@ -84,18 +84,17 @@ fn a_row_carries_its_cards_warning_fact_id_and_none_without_one() {
     }
 }
 
-/// The untested mark (edge 18): `OpenRouter`, untested in the table, shows it on its row and its card; Groq does not.
+/// The untested mark (edge 18): a row untested in its table shows it on its row and its card; Groq and `OpenRouter`,
+/// which the owner's real keys passed, do not.
 #[test]
 fn an_untested_row_shows_its_mark_on_the_cloud_page_and_its_card() {
-    let table = services::table().unwrap();
-    assert!(table.get("openrouter").unwrap().untested, "still untested");
-    let mut rig = on_cloud("");
+    let mut rig = on_cloud(ROUTER);
     let rows = every_row(&mut rig);
-    let marks = ["groq", "openrouter"].map(|id| {
-        let row = rows.iter().find(|r| r.name == shown(id)).unwrap();
-        (id, row.untested)
-    });
-    assert_eq!(marks, [("groq", false), ("openrouter", true)]);
-    act(&mut rig, &shown("openrouter"), CloudButton::Facts);
+    let router = named("Router Test");
+    let names = [shown("groq"), shown("openrouter"), router.clone()];
+    let mark = |n: &ServiceName| rows.iter().find(|r| r.name == *n).unwrap().untested;
+    let marks: Vec<bool> = names.iter().map(mark).collect();
+    assert_eq!(marks, [false, false, true], "{names:?}");
+    act(&mut rig, &router, CloudButton::Facts);
     assert!(card(&mut rig).untested, "its card says so too");
 }
