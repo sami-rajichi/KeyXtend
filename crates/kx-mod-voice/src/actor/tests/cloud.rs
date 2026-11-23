@@ -3,13 +3,14 @@
 //! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the key page's effects in `page`, the local
 //! model's take in `local`, the missing port and the row's piece length in `port`, the card's warning in `warn`, Open
 //! service in `settle`, the stop flag's window in `window`, a used allowance's renewal in `renewal`, the run's table in
-//! `table`, and the Models page's side in `side`.
+//! `table`, the Models page's side in `side`, and random acts over every port in `props`.
 
 mod admin;
 mod keys;
 mod local;
 mod page;
 mod port;
+mod props;
 mod remove;
 mod renewal;
 mod settle;
