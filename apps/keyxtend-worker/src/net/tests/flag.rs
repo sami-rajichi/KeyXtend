@@ -17,7 +17,7 @@ const DEEP: usize = 4096;
 fn true_at_the_exact_path_counts_and_any_path_of_a_list_may_hold_it() {
     let both = br#"{"data":{"rate":{"is_management_key":false},"is_management_key":true}}"#;
     assert!(flagged(FLAG, PATH) && flagged(both, PATH));
-    let escaped = br#"{"data":{"is_management_key":true}}"#;
+    let escaped = br#"{"d\u0061ta":{"is\u005fmanagement\u005fkey":true}}"#;
     assert!(flagged(escaped, PATH), "escaped names");
     assert!(flagged(br#"{"a":{"b":{"c":true}}}"#, "a.b.c"));
     let paths = [Cow::Borrowed("data.other"), Cow::Borrowed(PATH)];
