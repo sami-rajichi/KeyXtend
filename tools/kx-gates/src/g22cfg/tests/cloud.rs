@@ -1,5 +1,5 @@
-//! G22's cloud line settings: the shipped ones pass with the daily folder unset, each bad key is refused, and the text
-//! wait stays within the product's own `net_wait_s`.
+//! G22's cloud line settings: the tracked file names no daily folder, the loaded ones pass with or without this PC's,
+//! each bad key is refused, and the text wait stays within the product's own `net_wait_s`.
 
 use std::path::Path;
 
@@ -12,6 +12,8 @@ use crate::config::load;
 
 /// A daily folder as the local file would set it; never a real one.
 const DAILY: &str = r"E:\daily";
+/// The tracked file that holds `[g22_cloud]`, read without this PC's local file.
+const P11: &str = include_str!("../../../kx-gates-p11.toml");
 
 fn shipped() -> G22Cloud {
     load().expect("the settings load").g22_cloud
@@ -45,18 +47,24 @@ fn the_shipped_cloud_line_passes_its_check_and_each_bad_key_is_refused() {
 }
 
 #[test]
+fn the_tracked_settings_name_no_daily_folder() {
+    let p11: toml::Table = P11.parse().expect("the P11 file parses");
+    assert!(p11["g22_cloud"].get("daily_dir").is_none());
+}
+
+#[test]
 fn an_unset_daily_folder_skips_the_line_naming_the_local_file() {
-    let c = shipped();
-    assert_eq!(c.daily(), None, "never in a tracked file");
+    let mut c = shipped();
+    c.daily_dir.clear();
+    assert_eq!(c.daily(), None, "unset, as without the local file");
     let why = G22Cloud::unset();
     assert!(
         why.contains(LOCAL_FILE) && why.contains("daily_dir"),
         "{why}"
     );
     assert!(LOCAL_KEYS.contains(&("g22_cloud", "daily_dir")));
-    let mut set = c;
-    set.daily_dir = DAILY.into();
-    assert_eq!(set.daily(), Some(Path::new(DAILY)));
+    c.daily_dir = DAILY.into();
+    assert_eq!(c.daily(), Some(Path::new(DAILY)));
 }
 
 #[test]
