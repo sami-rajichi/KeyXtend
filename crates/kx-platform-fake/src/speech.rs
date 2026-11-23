@@ -72,6 +72,8 @@ pub struct RunLog {
     pub keeps: usize,
     /// `pieces` calls that handed the speech over.
     pub pieces: usize,
+    /// `pieces` calls refused as no `Done` was told yet, which asked for the speech too early.
+    pub early: usize,
     /// `Done` notes told; after one, a listen-only run's speech can be handed over.
     pub dones: usize,
     /// The recording is held: from the open until a close, a `Wiped` note or a death.
@@ -92,6 +94,7 @@ impl RunLog {
             cancels: 0,
             keeps: 0,
             pieces: 0,
+            early: 0,
             dones: 0,
             held: true,
             dead: false,

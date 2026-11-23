@@ -1,5 +1,6 @@
-//! A listen-only run's speech for a cloud service: handed over only once its `Done` was told, in fresh copies each
-//! call, never for a run with a model, after a Cancel, an `again`, a close or a death, and failed once on cue.
+//! A listen-only run's speech for a cloud service: handed over only once its `Done` was told, an ask before counted as
+//! early, in fresh copies each call, never for a run with a model, after a Cancel, an `again`, a close or a death, and
+//! failed once on cue.
 
 use super::*;
 use kx_module_api::SecretBytes;
@@ -38,6 +39,8 @@ fn a_listen_only_run_hands_over_its_speech_after_done_in_fresh_copies() {
     let second = run.pieces().unwrap();
     assert_eq!((bytes(&first), bytes(&second)), (speech(), speech()));
     assert_eq!(fake.runs()[0].pieces, 2, "each call counts");
+    let early = fake.runs()[0].early;
+    assert_eq!(early, 1, "only the ask before Done was early");
 }
 
 #[test]

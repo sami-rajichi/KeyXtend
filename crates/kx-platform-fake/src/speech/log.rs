@@ -60,10 +60,13 @@ impl Log {
         queued.unwrap_or_default()
     }
 
-    /// Refuses `call` on run `id`: `NoSound` without the recording, or for speech the run cannot hand over, `Gone`
-    /// after a death, else the failure set, which kills the worker when it is `Gone` or `Timeout`.
+    /// Refuses `call` on run `id`: `NoSound` without the recording, or for speech the run cannot hand over, counted
+    /// as early before its `Done`; `Gone` after a death; else the failure set, which kills a `Gone` or `Timeout` one.
     pub(super) fn refuse(&mut self, id: usize, call: SpeechCall) -> Result<(), SpeechError> {
-        let run = &self.runs[id];
+        let run = &mut self.runs[id];
+        if call == SpeechCall::Pieces && run.dones == 0 {
+            run.early += 1;
+        }
         let unheld = matches!(call, SpeechCall::Again | SpeechCall::Keep) && !run.held;
         if unheld || (call == SpeechCall::Pieces && !run.hands_over()) {
             return Err(SpeechError::NoSound);
