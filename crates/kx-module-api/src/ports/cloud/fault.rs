@@ -37,6 +37,9 @@ pub enum CloudFault {
     /// The service is not offered in the user's country or region.
     #[error("the service is not offered in this country or region")]
     Region,
+    /// The key test's reply marks a management key, which manages keys but never transcribes.
+    #[error("the key is a management key, which cannot transcribe")]
+    Admin,
     /// The service sent no text.
     #[error("the service sent no text")]
     Empty,
@@ -68,6 +71,7 @@ impl CloudFault {
             Self::TooBig => "TooBig",
             Self::Language => "Language",
             Self::Region => "Region",
+            Self::Admin => "Admin",
             Self::Empty => "Empty",
             Self::Strange => "Strange",
             Self::Network => "Network",

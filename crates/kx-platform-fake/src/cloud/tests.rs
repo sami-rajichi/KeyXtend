@@ -17,7 +17,7 @@ const SAID: &str = "bonjour-4417";
 /// `SAMPLE` as a plain `Debug` prints it.
 const SAMPLE_SHOWN: &str = "127, 62";
 /// Every fault a run may tell, as `Range` is only `send`'s own refusal.
-const FAULTS: [CloudFault; 14] = [
+const FAULTS: [CloudFault; 15] = [
     CloudFault::Key,
     CloudFault::Credit,
     CloudFault::Account,
@@ -29,6 +29,7 @@ const FAULTS: [CloudFault; 14] = [
     CloudFault::TooBig,
     CloudFault::Language,
     CloudFault::Region,
+    CloudFault::Admin,
     CloudFault::Empty,
     CloudFault::Strange,
     CloudFault::Network,

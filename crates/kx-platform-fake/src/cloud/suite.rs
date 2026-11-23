@@ -110,6 +110,7 @@ pub fn form() -> CloudShape {
         fixed: Vec::new(),
         paywall: false,
         region: None,
+        admin: Vec::new(),
     })
 }
 

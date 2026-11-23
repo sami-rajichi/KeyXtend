@@ -62,6 +62,7 @@ fn form() -> CloudShape {
         fixed: Vec::new(),
         paywall: false,
         region: None,
+        admin: Vec::new(),
     })
 }
 
@@ -257,6 +258,7 @@ fn each_fault_has_its_own_line_and_none_holds_a_secret() {
         CloudFault::TooBig,
         CloudFault::Language,
         CloudFault::Region,
+        CloudFault::Admin,
         CloudFault::Empty,
         CloudFault::Strange,
         CloudFault::Network,

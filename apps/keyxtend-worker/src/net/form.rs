@@ -2,10 +2,12 @@
 //! the row's fixed fields, `response_format=json` and the piece as a WAV file, with the key in its header only. A reply
 //! is `{"text": …}`; anything else is read through one status table from Groq's error page, where a row whose form
 //! names a 403 its paywall reads it as the account's step, and one that names a region code reads that refusal by it.
+//! A key test whose reply flags a management key at the row's paths fails, as that key never transcribes.
 
 #[cfg(test)]
 pub use super::multipart::escape;
 
+use super::flag;
 use super::multipart::{self, FILE, Text};
 use super::reason::Reason;
 use super::reply::{self, ERROR, SAYING};
@@ -134,11 +136,15 @@ impl Shape for Form {
     }
 
     fn tested(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()> {
-        status::tested(head, body, || judge(form(call), head, body))
+        let admin = form(call).map_or(&[][..], |f| f.admin.as_slice());
+        match status::tested(head, body, || judge(form(call), head, body)) {
+            Verdict::Said(()) if flag::any(body, admin) => Verdict::Fault(NetFault::Admin),
+            other => other,
+        }
     }
 }
 
-/// `call`'s form, whose paywall and region code the table reads the replies by.
+/// `call`'s form, whose paywall and region code the table reads the replies by, and whose paths flag a management key.
 fn form<'a>(call: &'a NetCall<'_>) -> Option<&'a NetForm<'a>> {
     match &call.shape {
         NetShape::Form(form) => Some(form),

@@ -83,6 +83,8 @@ pub(crate) enum FaultCode {
     Region = 13,
     /// `NetFault::Account`.
     Account = 14,
+    /// `NetFault::Admin`.
+    Admin = 15,
 }
 
 impl Code for FaultCode {
@@ -101,6 +103,7 @@ impl Code for FaultCode {
         Self::Gone,
         Self::Region,
         Self::Account,
+        Self::Admin,
     ];
 
     fn code(self) -> u8 {

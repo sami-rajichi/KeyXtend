@@ -177,9 +177,10 @@ fn elevenlabs_shape_sends_only_its_language_and_fixed_fields_and_refuses_a_forms
         unreachable!("its own form")
     };
     let as_form = form("language_code", false, own.fixed.clone());
-    // An upload form's list, paywall and region flags are the three bytes `ElevenLabs` never sends.
+    // An upload form's list, paywall and region flags and its count of management-key fields are the four bytes
+    // `ElevenLabs` never sends.
     assert_eq!(
-        shape_bytes(&eleven()).len() + 3,
+        shape_bytes(&eleven()).len() + 4,
         shape_bytes(&as_form).len()
     );
     let test = |shape| NetAsk::Test {

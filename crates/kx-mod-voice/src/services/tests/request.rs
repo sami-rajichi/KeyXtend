@@ -12,6 +12,7 @@ fn form(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
         fixed,
         paywall: false,
         region: None,
+        admin: Vec::new(),
     })
 }
 

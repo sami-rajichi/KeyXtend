@@ -63,6 +63,7 @@ fn form_of(form: FormFields) -> NetForm<'static> {
         fixed: fields_of(form.fixed),
         paywall: form.paywall,
         region: form.region.map(Cow::Owned),
+        admin: form.admin.into_iter().map(Cow::Owned).collect(),
     }
 }
 
@@ -154,6 +155,7 @@ pub(super) fn fault(fault: NetFault) -> CloudFault {
         NetFault::TooBig => CloudFault::TooBig,
         NetFault::Language => CloudFault::Language,
         NetFault::Region => CloudFault::Region,
+        NetFault::Admin => CloudFault::Admin,
         NetFault::Empty => CloudFault::Empty,
         NetFault::Strange => CloudFault::Strange,
         NetFault::Network => CloudFault::Network,

@@ -222,6 +222,7 @@ fn answered(
     let check = match answer {
         Ok(()) => KeyCheck::Works,
         Err(CloudFault::Key) => KeyCheck::Refused,
+        Err(CloudFault::Admin) => KeyCheck::Admin,
         Err(CloudFault::Credit) => KeyCheck::Credit,
         Err(CloudFault::Account) => KeyCheck::Account,
         Err(CloudFault::Region) => KeyCheck::Region,

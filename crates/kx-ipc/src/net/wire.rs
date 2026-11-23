@@ -2,7 +2,7 @@
 
 pub(crate) use crate::fetch::wire::URL;
 use crate::limits::{
-    MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES, MAX_SOUND_BYTES,
+    MAX_ADMIN, MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES, MAX_SOUND_BYTES,
     MAX_SPEECH_PIECES,
 };
 pub(crate) use crate::voice::wire::TAG;
@@ -12,6 +12,8 @@ use crate::wire::{FOUR, ONE, Spec, TWO};
 pub(crate) const VALUE: Spec = Spec::new(ONE, 0, MAX_NAME_BYTES);
 /// The count of a form's fixed fields.
 pub(crate) const FIXED: Spec = Spec::new(ONE, 0, MAX_FIXED);
+/// The count of a form's reply paths, each sent as a `TAG`.
+pub(crate) const ADMIN: Spec = Spec::new(ONE, 0, MAX_ADMIN);
 /// The user's key: visible ASCII.
 pub(crate) const KEY: Spec = Spec::new(TWO, 1, MAX_KEY_BYTES);
 /// The count of a run's pieces, each sent as its size.
@@ -21,15 +23,17 @@ pub(crate) const SOUND: Spec = Spec::new(FOUR, 1, MAX_SOUND_BYTES);
 /// A piece's text, possibly empty.
 pub(crate) const TEXT: Spec = Spec::new(FOUR, 0, MAX_NET_TEXT_BYTES);
 
-/// A form: its language field's name, the list flag, its fixed fields' names and values, the paywall flag, then
-/// whether a region code follows, and the code.
+/// A form: its language field's name, the list flag, its fixed fields' names and values, the paywall flag, whether a
+/// region code follows, the code, then its reply paths.
 const FORM_MOST: usize = TAG.most()
     + ONE
     + FIXED.width
     + FIXED.max * (TAG.most() + VALUE.most())
     + ONE
     + ONE
-    + TAG.most();
+    + TAG.most()
+    + ADMIN.width
+    + ADMIN.max * TAG.most();
 /// A shape: its code, then a form, the largest of what a shape carries.
 const SHAPE_LEAST: usize = ONE;
 const SHAPE_MOST: usize = ONE + FORM_MOST;

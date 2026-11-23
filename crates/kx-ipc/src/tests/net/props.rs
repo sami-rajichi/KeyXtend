@@ -25,9 +25,32 @@ const VALUE: &str = "[ -~]{0,24}";
 const KEY: &str = "[!-~]{1,24}";
 /// A model id: names parted by dots, slashes and colons.
 const MODEL_ID: &str = "[A-Za-z0-9_-]{1,8}([./:][A-Za-z0-9_-]{1,8}){0,2}";
+/// A reply field's path: names parted by dots.
+const PATH: &str = "[A-Za-z0-9_-]{1,8}([.][A-Za-z0-9_-]{1,8}){0,2}";
+
+/// A form's language name, list and paywall flags, fixed fields, region code and reply paths.
+type FormParts = (
+    String,
+    (bool, bool),
+    Vec<NetField<'static>>,
+    (Option<String>, Vec<String>),
+);
 
 fn owned(s: String) -> Cow<'static, str> {
     Cow::Owned(s)
+}
+
+/// A form of these parts, its texts owned.
+fn form_of(parts: FormParts) -> NetForm<'static> {
+    let (lang, (list, paywall), fixed, (region, admin)) = parts;
+    NetForm {
+        lang: owned(lang),
+        list,
+        fixed,
+        paywall,
+        region: region.map(owned),
+        admin: admin.into_iter().map(owned).collect(),
+    }
 }
 
 fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
@@ -37,17 +60,9 @@ fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
     });
     let fixed = prop::collection::vec(field, 0..=MAX_CASE_ITEMS);
     let flags = (any::<bool>(), any::<bool>());
-    let region = prop::option::of(NAME);
-    let form =
-        (NAME, flags, fixed.clone(), region).prop_map(|(lang, (list, paywall), fixed, region)| {
-            NetForm {
-                lang: owned(lang),
-                list,
-                fixed,
-                paywall,
-                region: region.map(owned),
-            }
-        });
+    let paths = prop::collection::vec(PATH, 0..=MAX_CASE_ITEMS);
+    let reads = (prop::option::of(NAME), paths);
+    let form = (NAME, flags, fixed.clone(), reads).prop_map(form_of);
     let own = (NAME, fixed).prop_map(|(lang, fixed)| NetOwn {
         lang: owned(lang),
         fixed,

@@ -1,6 +1,7 @@
 //! The cloud lines as the owner approved them, word for word in each language: a key, address or model refused, an
 //! address that must use HTTPS, speech for a password box, the keep-nothing claim, the training mark, the free
-//! allowance and the least billed, and on 2026-11-21 Open service, the bad port, the pick moved and both renewals.
+//! allowance and the least billed, on 2026-11-21 Open service, the bad port, the pick moved and both renewals, and on
+//! 2026-11-23 a management key's test answer.
 //! No Latin run ends an Arabic line on a neutral mark, so `https://` never reads backwards.
 
 use crate::files::keys_of;
@@ -20,7 +21,7 @@ use kx_ui::{I18n, LANGS};
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
 /// Each reworded line's key and its words in English, French and Arabic, `$https` filled.
-const LINES: [(&str, [&str; 3]); 13] = [
+const LINES: [(&str, [&str; 3]); 14] = [
     (
         "voice.service",
         ["Open service", "Ouvrir le service", "فتح الخدمة"],
@@ -115,6 +116,14 @@ const LINES: [(&str, [&str; 3]); 13] = [
             "The free allowance is used up for now.",
             "Le quota gratuit est épuisé pour l’instant.",
             "نفدت الحصة المجانية حاليًا.",
+        ],
+    ),
+    (
+        "cloud.key-admin",
+        [
+            "This is a management key, which cannot be used for dictation. Make an API key on the service’s page.",
+            "C’est une clé de gestion, qui ne sert pas à la dictée. Créez une clé d’API sur la page du service.",
+            "هذا مفتاح إدارة لا يصلح للإملاء. أنشئ مفتاح API في صفحة الخدمة.",
         ],
     ),
 ];

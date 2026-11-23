@@ -26,6 +26,8 @@ const MODEL_MARKS: &[u8] = b"./:";
 const SEGMENT_MARK: char = '/';
 /// Path segments that would climb or stay in an address's path.
 const DOT_SEGMENTS: [&str; 2] = [".", ".."];
+/// Parts the names in a reply field's path, as in `data.is_management_key`.
+pub const FIELD_MARK: char = '.';
 /// The header a bearer key goes in.
 pub const AUTHORIZATION: &str = "Authorization";
 /// The header that names a body's type, a request's and a form part's.
@@ -86,6 +88,15 @@ pub fn token(text: &str) -> Result<(), IpcError> {
         text.bytes()
             .all(|b| b.is_ascii_alphanumeric() || TOKEN_MARKS.contains(&b)),
     )
+}
+
+/// Refuses a reply field's path unless it is `token` names parted by `FIELD_MARK`, none empty.
+///
+/// # Errors
+/// `BadField` for any other path.
+pub fn field_path(text: &str) -> Result<(), IpcError> {
+    let named = |name: &str| !name.is_empty() && token(name).is_ok();
+    ok_if(text.split(FIELD_MARK).all(named))
 }
 
 /// Refuses a key header's name unless it is a `token` naming none of `SET_HEADERS` but `AUTHORIZATION`, in any case,

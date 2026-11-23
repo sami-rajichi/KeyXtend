@@ -1,14 +1,16 @@
-//! Each request shape reaches the frame whole: an upload form with its paywall and region, `ElevenLabs`' own form, and
-//! `AssemblyAI`'s model header.
+//! Each request shape reaches the frame whole: an upload form with its paywall, region and reply paths, `ElevenLabs`'
+//! own form, and `AssemblyAI`'s model header.
 
 use super::*;
 use kx_module_api::ports::{FormField, OwnFields};
 
 /// `OpenAI`'s error code for a country or region it does not serve.
 const REGION: &str = "unsupported_country_region_territory";
+/// `OpenRouter`'s key-reply field for a management key.
+const ADMIN: &str = "data.is_management_key";
 
 #[test]
-fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
+fn the_rows_form_reaches_the_frame_whole_with_its_paywall_region_and_reply_paths() {
     let (host, script, _) = host();
     let keep = FormField {
         name: "provider".into(),
@@ -20,6 +22,7 @@ fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
         fixed: vec![keep],
         paywall: true,
         region: Some(REGION.into()),
+        admin: vec![ADMIN.into()],
     });
     let (_run, _) = sent(
         &host,
@@ -34,21 +37,17 @@ fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
     let NetShape::Form(form) = &call.shape else {
         panic!("a form, not {:?}", call.shape);
     };
-    assert_eq!(
-        (
-            form.lang.as_ref(),
-            form.list,
-            form.paywall,
-            form.region.as_deref()
-        ),
-        ("languages", true, true, Some(REGION))
-    );
+    let flags = (form.lang.as_ref(), form.list, form.paywall);
+    assert_eq!(flags, ("languages", true, true));
+    assert_eq!(form.region.as_deref(), Some(REGION));
     let fixed: Vec<(&str, &str)> = form
         .fixed
         .iter()
         .map(|f| (f.name.as_ref(), f.value.as_ref()))
         .collect();
     assert_eq!(fixed, [("provider", r#"{"zdr":true}"#)]);
+    let admin: Vec<String> = form.admin.iter().map(ToString::to_string).collect();
+    assert_eq!(admin, [ADMIN]);
 }
 
 #[test]

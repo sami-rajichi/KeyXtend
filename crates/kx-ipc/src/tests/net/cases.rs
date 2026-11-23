@@ -15,6 +15,8 @@ pub(super) const SPOKEN: &[u8] = b"spoken words";
 pub(super) const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
 /// A made-up error code for a country or region a service does not serve.
 pub(super) const REGION: &str = "kx_region_not_served";
+/// `OpenRouter`'s key-reply fields, each marking a management key.
+pub(super) const ADMIN: [&str; 2] = ["data.is_management_key", "data.is_provisioning_key"];
 /// A made-up model id no output may show, as a typed one is the user's.
 pub(super) const MODEL: &str = "made-up-model-v3";
 
@@ -65,6 +67,7 @@ pub(super) fn form(
         fixed,
         paywall: false,
         region: None,
+        admin: Vec::new(),
     })
 }
 
@@ -84,6 +87,17 @@ pub(super) fn regioned(shape: NetShape<'static>, code: &'static str) -> NetShape
     match shape {
         NetShape::Form(form) => NetShape::Form(NetForm {
             region: Some(Cow::Borrowed(code)),
+            ..form
+        }),
+        other => other,
+    }
+}
+
+/// `shape` with its key test reading `paths` for a management key, as `OpenRouter`'s row says.
+pub(super) fn admined(shape: NetShape<'static>, paths: &[&'static str]) -> NetShape<'static> {
+    match shape {
+        NetShape::Form(form) => NetShape::Form(NetForm {
+            admin: paths.iter().map(|&p| Cow::Borrowed(p)).collect(),
             ..form
         }),
         other => other,
@@ -169,10 +183,12 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
     }
 }
 
-/// A run sent to each shape: a plain form, a list field, a fixed keep-nothing field and paywall with a region code, a
-/// form with no model and its key in a named header, `ElevenLabs`, Gemini and `AssemblyAI`.
+/// A run sent to each shape: a plain form, a list field, a fixed keep-nothing field and paywall with a region code and
+/// management-key fields, a form with no model and its key in a named header, `ElevenLabs`, Gemini and `AssemblyAI`.
 fn sends() -> Vec<NetAsk<'static>> {
     let keep = vec![field("keep", r#"{"none":true}"#)];
+    let paid = regioned(paywalled(form("language", false, keep)), REGION);
+    let rules = admined(paid, &ADMIN);
     let named = |name| NetHeader::Named(Cow::Borrowed(name));
     let unnamed = NetAsk::Send {
         id: 4,
@@ -189,13 +205,7 @@ fn sends() -> Vec<NetAsk<'static>> {
             2,
             call(form("languages", true, Vec::new()), NetHeader::Bearer),
         ),
-        send(
-            3,
-            call(
-                regioned(paywalled(form("language", false, keep)), REGION),
-                NetHeader::Bearer,
-            ),
-        ),
+        send(3, call(rules, NetHeader::Bearer)),
         unnamed,
         send(5, call(eleven(), named("xi-api-key"))),
         send(6, call(NetShape::Gemini, named("x-goog-api-key"))),

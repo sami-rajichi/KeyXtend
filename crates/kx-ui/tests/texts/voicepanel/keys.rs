@@ -1,6 +1,6 @@
 //! The Qt Quick tests' key pages: Groq's with its key tested, `OpenRouter`'s, the Custom row's, a typed key,
-//! `AssemblyAI`'s, the answers that draw a warning band, and the Custom row's with its three lines and the longest
-//! answer in each language, also with each line's empty Paste.
+//! `AssemblyAI`'s, the answers that draw a warning band, a management key's among them, and the Custom row's with its
+//! three lines and the longest answer in each language, also with each line's empty Paste.
 
 use super::cloud::named;
 use super::{Shown, shown};
@@ -18,10 +18,11 @@ const RENEWS_MS: i64 = 1_794_700_740_000;
 /// The sealed key's length, after whose dots the caret waits while nothing is typed.
 const DOTS: u32 = 56;
 /// The answers a test draws as a warning band, by the page's name.
-const BANDS: [(&str, KeyCheck); 3] = [
+const BANDS: [(&str, KeyCheck); 4] = [
     ("serviceAllowance", KeyCheck::Allowance),
     ("serviceRate", KeyCheck::Rate),
     ("serviceStrange", KeyCheck::Strange),
+    ("serviceAdmin", KeyCheck::Admin),
 ];
 
 /// Groq's key page with its key tested, the keep-nothing row's with a refused model, or the Custom row's with an
@@ -146,6 +147,17 @@ pub(super) fn panels(tag: &str) -> Vec<(String, Shown)> {
         out.push((name, shown(pasted(tag, line), &[])));
     }
     out
+}
+
+/// A management key's test answer shows its own line, word for word as `approved` pins it, in each language.
+#[test]
+fn a_management_keys_answer_shows_its_own_line_in_each_language() {
+    let key = "cloud.key-admin";
+    for tag in LANGS {
+        let t = lang(tag);
+        let shown = t.voice_key_check(KeyCheck::Admin, None);
+        assert!(t.has(key) && shown == Some(t.text(key)), "{shown:?}");
+    }
 }
 
 /// The long key page shows the key test's longest answer in each language, so the fit test measures it.

@@ -120,6 +120,7 @@ cloud =
     .key-testing = Testing…
     .key-ok = Key works
     .key-bad = Key refused. Check it on the service’s page.
+    .key-admin = This is a management key, which cannot be used for dictation. Make an API key on the service’s page.
     .key-failed = No answer about the key. Check the network and test again.
     .key-unfit = This text cannot be sent as a key, so nothing was kept.
     .key-no-test = No test call here: the first dictation tests the key.

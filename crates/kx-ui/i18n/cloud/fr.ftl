@@ -120,6 +120,7 @@ cloud =
     .key-testing = Test en cours…
     .key-ok = La clé fonctionne
     .key-bad = Clé refusée. Vérifiez-la sur la page du service.
+    .key-admin = C’est une clé de gestion, qui ne sert pas à la dictée. Créez une clé d’API sur la page du service.
     .key-failed = Aucune réponse sur la clé. Vérifiez le réseau et testez de nouveau.
     .key-unfit = Ce texte ne peut pas être envoyé comme clé ; rien n’a donc été gardé.
     .key-no-test = Pas de test possible ici : la première dictée testera la clé.

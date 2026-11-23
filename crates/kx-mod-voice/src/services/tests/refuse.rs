@@ -94,7 +94,7 @@ fn a_row_of_the_dropped_azure_shape_is_refused_as_an_unknown_shape() {
 }
 
 #[test]
-fn a_list_paywall_or_region_is_refused_on_elevenlabs_shape_and_an_odd_region_code_anywhere() {
+fn a_list_or_reply_rule_on_elevenlabs_shape_and_an_odd_region_code_or_reply_path_are_refused() {
     let shape = groq_line("shape");
     let eleven = (shape, "shape = \"eleven\"");
     assert!(edits(&[eleven]).is_ok(), "its form");
@@ -102,11 +102,20 @@ fn a_list_paywall_or_region_is_refused_on_elevenlabs_shape_and_an_odd_region_cod
     let listed = edits(&[eleven, (form(), list.as_str())]);
     let why = matches!(listed, Err(ServicesError::Row { why: E::Form, .. }));
     assert!(why, "its language goes plain: {listed:?}");
-    for rule in ["paywall = true", "region = \"unsupported_country\""] {
+    let rules = [
+        "paywall = true",
+        "region = \"unsupported_country\"",
+        "admin = [\"data.is_management_key\"]",
+    ];
+    for rule in rules {
         refused(shape, &format!("shape = \"eleven\"\n{rule}"), E::Form);
     }
     for code in ["unsupported country", ""] {
         refused(form(), &format!("{}\nregion = \"{code}\"", form()), E::Form);
+    }
+    let admin = |path: &str| format!("{}\nadmin = [\"{path}\"]", form());
+    for path in ["data..key", "data.", "a b", ""] {
+        refused(form(), &admin(path), E::Form);
     }
 }
 

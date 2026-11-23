@@ -1,12 +1,12 @@
 //! Each row's answers read as its own pages say: its text, a bad key, no credit, a spending cap or a 403 behind a
 //! paywall as the account's step or else the key, a country refused by its row's code, a language refused in an
-//! `error` or in a 422's `detail[]`, too big, too many requests and a service down. The fixtures under
-//! `replies/<service>/` copy each page's body with made-up ids and no key; a body the pages do not show is marked as
-//! assumed, for the live check.
+//! `error` or in a 422's `detail[]`, too big, too many requests, a service down and a management key's test. The
+//! fixtures under `replies/<service>/` copy each page's body with made-up ids and no key; a body the pages do not show
+//! is marked as assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_by, tested_by};
 use super::*;
-use kx_ipc::NetFault::{Account, Credit, Key, Language, Network, Region, Strange, TooBig};
+use kx_ipc::NetFault::{Account, Admin, Credit, Key, Language, Network, Region, Strange, TooBig};
 
 /// The text each case of `CASES` reads, in its order.
 pub(super) const TEXTS: [&[u8]; 9] = [
@@ -55,6 +55,11 @@ const ROUTER_CREDIT: &[u8] = include_bytes!("../replies/openrouter/credit.json")
 const ROUTER_BUDGET: &[u8] = include_bytes!("../replies/openrouter/budget.json");
 const ROUTER_RATE: &[u8] = include_bytes!("../replies/openrouter/rate.json");
 const ROUTER_LIMITS: &[u8] = include_bytes!("../replies/openrouter/limits.json");
+/// `OpenRouter`'s key replies naming a management key by each field alone, and an API key; the field names are its key
+/// reference's (read 2026-11-23), the values made up.
+const ROUTER_MANAGEMENT: &[u8] = include_bytes!("../replies/openrouter/management.json");
+const ROUTER_PROVISIONING: &[u8] = include_bytes!("../replies/openrouter/provisioning.json");
+const ROUTER_INFERENCE: &[u8] = include_bytes!("../replies/openrouter/inference.json");
 
 /// One answer: its status, headers and body, and what it reads as.
 type Answer<'a> = (u16, Extra<'a>, &'a [u8], Got);
@@ -199,6 +204,27 @@ fn openrouters_402_is_credit_and_its_capped_key_the_accounts_step() {
         Got::Text(String::new()),
         "its key test reads the key's limits"
     );
+}
+
+#[test]
+fn openrouters_key_test_fails_a_management_key_by_either_field_and_passes_an_api_key() {
+    let tested = |row: Row, body| tested_by(&row.call(), OK, &[], body);
+    let works = || Got::Text(String::new());
+    for body in [ROUTER_MANAGEMENT, ROUTER_PROVISIONING] {
+        let shown = String::from_utf8_lossy(body);
+        assert_eq!(tested(ROUTER, body), Got::Fault(Admin), "{shown}");
+        assert_eq!(tested(ROUTER_OPEN, body), Got::Fault(Admin), "{shown}");
+    }
+    for body in [ROUTER_INFERENCE, ROUTER_LIMITS] {
+        let shown = String::from_utf8_lossy(body);
+        assert_eq!(tested(ROUTER, body), works(), "{shown}");
+    }
+    let bare = Row {
+        admin: &[],
+        ..ROUTER
+    };
+    let bare = tested(bare, ROUTER_MANAGEMENT);
+    assert_eq!(bare, works(), "a row without them tests as before");
 }
 
 #[test]

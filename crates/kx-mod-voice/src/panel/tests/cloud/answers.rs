@@ -63,9 +63,10 @@ const RENEWS: Option<Duration> = Some(Duration::from_hours(5));
 
 #[test]
 fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
-    use KeyCheck::{Account, Allowance, Credit, Failed, Rate, Refused, Region, Strange};
+    use KeyCheck::{Account, Admin, Allowance, Credit, Failed, Rate, Refused, Region, Strange};
     let cases = [
         (CloudFault::Key, Refused),
+        (CloudFault::Admin, Admin),
         (CloudFault::Credit, Credit),
         (CloudFault::Account, Account),
         (CloudFault::Region, Region),

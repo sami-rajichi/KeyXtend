@@ -2,9 +2,9 @@
 //! that carries the key, each refused when it could break a request's head or body.
 
 use super::ask::fits;
-pub use kx_ipc::MAX_FIXED;
 use kx_ipc::ShapeCode;
-use kx_ipc::rules::{AUTHORIZATION, form_value, key_header, token, unset_header};
+use kx_ipc::rules::{AUTHORIZATION, field_path, form_value, key_header, token, unset_header};
+pub use kx_ipc::{MAX_ADMIN, MAX_FIXED};
 
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
 pub const MAX_FIELD_VALUE: usize = kx_ipc::MAX_NAME_BYTES;
@@ -66,7 +66,8 @@ impl CloudShape {
 }
 
 /// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound last, as
-/// Together asks the model before the file. Its `paywall` and `region` are rules for reading the replies, never fields.
+/// Together asks the model before the file. Its `paywall`, `region` and `admin` are rules for reading the replies,
+/// never fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FormFields {
     /// The language field's name, such as `language`.
@@ -81,14 +82,18 @@ pub struct FormFields {
     /// The error code a reply gives where the service is not offered in the user's country or region, a plain name,
     /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
     pub region: Option<String>,
+    /// The key test's reply fields, each a dotted path such as `data.is_management_key`, at most `MAX_ADMIN`; any one
+    /// `true` marks a management key, which cannot transcribe.
+    pub admin: Vec<String>,
 }
 
 impl FormFields {
-    /// True when every name and the region code are plain names and every value fits.
+    /// True when every name and the region code are plain names, every value fits and every reply path is plain names
+    /// parted by dots (`rules::field_path`).
     #[must_use]
     pub fn fits(&self) -> bool {
         let region = self.region.as_deref().is_none_or(name_ok);
-        name_ok(&self.lang) && fixed_fit(&self.fixed) && region
+        name_ok(&self.lang) && fixed_fit(&self.fixed) && region && admin_fit(&self.admin)
     }
 }
 
@@ -112,6 +117,11 @@ impl OwnFields {
 /// True when `fixed` holds at most `MAX_FIXED` fields, each fitting.
 fn fixed_fit(fixed: &[FormField]) -> bool {
     fixed.len() <= MAX_FIXED && fixed.iter().all(FormField::fits)
+}
+
+/// True when `admin` holds at most `MAX_ADMIN` paths, each within `TAG_LEN` and plain names parted by dots.
+fn admin_fit(admin: &[String]) -> bool {
+    admin.len() <= MAX_ADMIN && admin.iter().all(|p| fits(p, field_path))
 }
 
 /// A field a form always sends, such as `OpenRouter`'s `provider` with `{"zdr":true}`.

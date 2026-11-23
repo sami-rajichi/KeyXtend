@@ -124,7 +124,8 @@ pub struct Upload {
 pub(crate) fn why(fault: CloudFault, lang: &VoiceLang, renews: Option<Renewal>) -> CloudWhy {
     match fault {
         CloudFault::Network | CloudFault::Timeout => CloudWhy::Net,
-        CloudFault::Key => CloudWhy::Key,
+        // A management key never transcribes, so its run reads as a refused key.
+        CloudFault::Key | CloudFault::Admin => CloudWhy::Key,
         CloudFault::Credit => CloudWhy::Credit,
         CloudFault::Account => CloudWhy::Account,
         CloudFault::Allowance { .. } => CloudWhy::Allowance { renews_at: renews },

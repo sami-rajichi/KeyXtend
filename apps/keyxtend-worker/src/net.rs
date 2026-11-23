@@ -7,6 +7,7 @@ mod assembly;
 mod base64;
 pub mod clock;
 mod eleven;
+mod flag;
 mod form;
 mod gemini;
 mod job;

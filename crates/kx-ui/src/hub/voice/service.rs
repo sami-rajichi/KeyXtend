@@ -98,6 +98,7 @@ impl Check {
             K::Works => (true, false),
             K::Untested | K::Testing | K::NoTest => (false, false),
             K::Refused
+            | K::Admin
             | K::Failed
             | K::Credit
             | K::Account

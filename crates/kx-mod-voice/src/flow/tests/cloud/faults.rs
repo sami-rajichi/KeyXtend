@@ -13,6 +13,7 @@ fn faults() -> Vec<(CloudFault, CloudWhy)> {
         (CloudFault::Network, CloudWhy::Net),
         (CloudFault::Timeout, CloudWhy::Net),
         (CloudFault::Key, CloudWhy::Key),
+        (CloudFault::Admin, CloudWhy::Key),
         (CloudFault::Credit, CloudWhy::Credit),
         (CloudFault::Account, CloudWhy::Account),
         (

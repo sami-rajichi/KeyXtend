@@ -218,6 +218,7 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
         KeyCheck::Testing => "testing",
         KeyCheck::Works => "ok",
         KeyCheck::Refused => "bad",
+        KeyCheck::Admin => "admin",
         KeyCheck::Failed => "failed",
         KeyCheck::Credit => "credit",
         KeyCheck::Account => "account",

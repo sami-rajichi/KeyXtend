@@ -48,6 +48,8 @@ listed! {
         Works,
         /// The service refused the key.
         Refused,
+        /// The service took the key, but as a management key, which cannot transcribe; the key stays as a refused one.
+        Admin,
         /// The test got no answer about the key, as the network failed; Test may be tried again.
         Failed,
         /// The service answered that the account has no credit left, which no key fixes.

@@ -203,9 +203,10 @@ fn a_typed_model_id_never_prints_in_the_ticks_the_plan_or_the_send() {
 }
 
 /// Every cloud fault, each allowance with and without its renewal.
-const FAULTS: [CloudFault; 15] = [
+const FAULTS: [CloudFault; 16] = [
     CloudFault::Range("model"),
     CloudFault::Key,
+    CloudFault::Admin,
     CloudFault::Credit,
     CloudFault::Account,
     CloudFault::Allowance { renews_in: None },

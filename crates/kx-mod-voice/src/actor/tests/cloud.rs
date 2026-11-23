@@ -5,6 +5,7 @@
 //! service in `settle`, the stop flag's window in `window`, a used allowance's renewal in `renewal`, the run's table in
 //! `table`, and the Models page's side in `side`.
 
+mod admin;
 mod keys;
 mod local;
 mod page;

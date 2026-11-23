@@ -5,6 +5,7 @@
 
 use super::reply::{NEVER, endless};
 use super::*;
+use crate::net::flag::flagged;
 use crate::net::form::Form;
 use crate::net::reply::{drain, seconds, span_s, text};
 use crate::net::run::Run;
@@ -49,7 +50,7 @@ proptest! {
         let call = walled(paywall);
         let _ = Form.read(&call, &head, &body);
         let _ = Form.tested(&call, &head, &body);
-        let _ = text(&body);
+        let _ = (text(&body), flagged(&body, &value));
         let _ = (seconds(&value), span_s(&value));
     }
 

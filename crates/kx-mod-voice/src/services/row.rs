@@ -104,6 +104,9 @@ pub(super) struct RawService {
     /// The error code by which a form's reply says the service is not offered in the user's country or region.
     #[serde(default)]
     region: Option<String>,
+    /// A form's key-test reply fields, each a dotted path; any one true marks a management key.
+    #[serde(default)]
+    admin: Vec<String>,
     /// The only host, or the domain a typed host must be under.
     #[serde(default)]
     host: Option<String>,
@@ -177,7 +180,7 @@ impl Service {
         name_ok(raw.name.as_deref(), &address)?;
         let keep = raw.keep.as_ref().map(form::RawField::field);
         let region = raw.region.as_deref();
-        let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall, region);
+        let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall, region, &raw.admin);
         let header = header(&raw.header)?;
         let model_header = raw.model_header.as_deref();
         let shape = form::shape(&raw.shape, raw.form.as_ref(), model_header, &header, &sent)?;

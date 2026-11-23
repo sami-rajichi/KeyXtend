@@ -17,7 +17,8 @@
 #   it goes as a list (`[]`), and its fixed fields; `model_header`: the header `AssemblyAI`'s model goes in; `keep`: a
 #   field sent while the keep-nothing switch is on, which gives the row that switch; `paywall`: a form's 403 asks the
 #   account to pay (a missing payment method or a spending cap), so it tells the account's step; `region`: the error
-#   code by which a form's reply says the service is not offered in the user's country or region.
+#   code by which a form's reply says the service is not offered in the user's country or region; `admin`: a form's
+#   key-test reply fields, each a dotted path, any one `true` marking a management key, which cannot dictate.
 # - `host`: the only host its requests reach; for a typed address, the `.` domain it must be under, or none for
 #   Custom, which takes any HTTPS host name.
 # - `address`: where the pieces go, or "typed"; `test`: the key's test address, a path under a typed host, or none.
@@ -278,6 +279,8 @@ form = { lang = "language", list = false }
 # Every ZDR endpoint of its models other than GPT Transcribe shows `safety_retention` false (ZDR list read 2026-11-22).
 keep = { name = "provider", value = '{"zdr":true}' }
 paywall = true
+# Its key reply flags a management key, which cannot transcribe (api-keys reference read 2026-11-23).
+admin = ["data.is_management_key", "data.is_provisioning_key"]
 host = "openrouter.ai"
 address = "https://openrouter.ai/api/v1/audio/transcriptions"
 test = "https://openrouter.ai/api/v1/key"

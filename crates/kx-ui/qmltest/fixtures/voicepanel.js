@@ -278,7 +278,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 67,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -418,7 +418,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -565,7 +565,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 61,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -712,7 +712,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 63,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -855,7 +855,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 65,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1006,7 +1006,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1153,7 +1153,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1304,7 +1304,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1451,7 +1451,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1598,7 +1598,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1749,7 +1749,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1896,7 +1896,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 68,
+      "round": 69,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2036,7 +2036,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2183,7 +2183,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 62,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2345,7 +2345,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 64,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2503,7 +2503,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 66,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2665,7 +2665,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2812,7 +2812,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2959,7 +2959,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3106,7 +3106,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3253,7 +3253,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3400,7 +3400,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3894,7 +3894,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4076,7 +4076,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4198,7 +4198,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4384,7 +4384,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4566,7 +4566,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4688,7 +4688,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5290,7 +5290,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 73,
+      "round": 74,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5368,7 +5368,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 74,
+      "round": 75,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5458,7 +5458,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 69,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5542,7 +5542,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 72,
+      "round": 73,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5644,7 +5644,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 71,
+      "round": 72,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5746,7 +5746,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 70,
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -7249,7 +7249,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -8667,6 +8667,182 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "serviceAdmin": {
+      "bar": {
+        "state": "hidden"
+      },
+      "mark": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "يُحفَظ المفتاح مشفّرًا على هذا الحاسوب ولا يُعرض أبدًا.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "admin",
+            "text": "هذا مفتاح إدارة لا يصلح للإملاء. أنشئ مفتاح API في صفحة الخدمة.",
+            "warns": true,
+            "works": false
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 56,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "paste",
+                "label": "لصق",
+                "name": "لصق المفتاح",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
+                "name": "حفظ المفتاح",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "اختبار",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "المفتاح",
+            "dots": 56,
+            "fault": null,
+            "hint": "اكتب مفتاحك أو الصقه",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "إنشاء مفتاح في console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "لصق",
+                "name": "لصق النموذج",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "name": "حفظ النموذج",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "نموذج آخر",
+            "dots": 0,
+            "fault": null,
+            "hint": "معرّف النموذج من صفحة الخدمة",
+            "id": "model",
+            "mask": null,
+            "text": "",
+            "typed": 0,
+            "typing": false
+          },
+          "order": [
+            "key",
+            "model"
+          ]
+        },
+        "sub": "جاهزة",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "serviceAllowance": {
       "bar": {
         "state": "hidden"
@@ -9566,7 +9742,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -9751,7 +9927,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -9941,7 +10117,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -10938,7 +11114,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 67,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11078,7 +11254,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 57,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11225,7 +11401,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 61,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11372,7 +11548,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 63,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11515,7 +11691,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 65,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11666,7 +11842,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11813,7 +11989,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11964,7 +12140,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12111,7 +12287,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12258,7 +12434,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 59,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12409,7 +12585,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12556,7 +12732,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 68,
+      "round": 69,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12696,7 +12872,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 58,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -12843,7 +13019,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 62,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13005,7 +13181,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 64,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13163,7 +13339,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 66,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13325,7 +13501,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13472,7 +13648,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 56,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13619,7 +13795,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13766,7 +13942,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -13913,7 +14089,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 60,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14060,7 +14236,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14554,7 +14730,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14736,7 +14912,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -14858,7 +15034,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15044,7 +15220,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15226,7 +15402,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15348,7 +15524,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15950,7 +16126,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 73,
+      "round": 74,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -16028,7 +16204,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 74,
+      "round": 75,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -16118,7 +16294,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 69,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -16202,7 +16378,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 72,
+      "round": 73,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -16304,7 +16480,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 71,
+      "round": 72,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -16406,7 +16582,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 70,
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -17909,7 +18085,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -19327,6 +19503,182 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "serviceAdmin": {
+      "bar": {
+        "state": "hidden"
+      },
+      "mark": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "The key is kept encrypted on this PC and never shown.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "admin",
+            "text": "This is a management key, which cannot be used for dictation. Make an API key on the service’s page.",
+            "warns": true,
+            "works": false
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 56,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "paste",
+                "label": "Paste",
+                "name": "Paste the key",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
+                "name": "Save the key",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Test",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Key",
+            "dots": 56,
+            "fault": null,
+            "hint": "Type or paste your key",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Make a key at console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Paste",
+                "name": "Paste the model",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "name": "Save the model",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Other model",
+            "dots": 0,
+            "fault": null,
+            "hint": "A model id from the service’s page",
+            "id": "model",
+            "mask": null,
+            "text": "",
+            "typed": 0,
+            "typing": false
+          },
+          "order": [
+            "key",
+            "model"
+          ]
+        },
+        "sub": "Ready",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "serviceAllowance": {
       "bar": {
         "state": "hidden"
@@ -20226,7 +20578,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -20411,7 +20763,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -20601,7 +20953,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -21598,7 +21950,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 67,
+      "round": 68,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21738,7 +22090,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 57,
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -21885,7 +22237,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 61,
+      "round": 62,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22032,7 +22384,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 63,
+      "round": 64,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22175,7 +22527,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 65,
+      "round": 66,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22326,7 +22678,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22473,7 +22825,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22624,7 +22976,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22771,7 +23123,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -22918,7 +23270,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 59,
+      "round": 60,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23069,7 +23421,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23216,7 +23568,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 68,
+      "round": 69,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23356,7 +23708,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 58,
+      "round": 59,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23503,7 +23855,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 62,
+      "round": 63,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23665,7 +24017,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 64,
+      "round": 65,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23823,7 +24175,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 66,
+      "round": 67,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -23985,7 +24337,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24132,7 +24484,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 56,
+      "round": 57,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24279,7 +24631,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24426,7 +24778,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24573,7 +24925,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 60,
+      "round": 61,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -24720,7 +25072,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25214,7 +25566,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25396,7 +25748,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25518,7 +25870,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25704,7 +26056,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -25886,7 +26238,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26008,7 +26360,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26610,7 +26962,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 73,
+      "round": 74,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26688,7 +27040,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 74,
+      "round": 75,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26778,7 +27130,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 69,
+      "round": 70,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26862,7 +27214,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 72,
+      "round": 73,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -26964,7 +27316,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 71,
+      "round": 72,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -27066,7 +27418,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 70,
+      "round": 71,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -28569,7 +28921,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -29987,6 +30339,182 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "serviceAdmin": {
+      "bar": {
+        "state": "hidden"
+      },
+      "mark": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "La clé est chiffrée sur ce PC et jamais affichée.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "admin",
+            "text": "C’est une clé de gestion, qui ne sert pas à la dictée. Créez une clé d’API sur la page du service.",
+            "warns": true,
+            "works": false
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 56,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "paste",
+                "label": "Coller",
+                "name": "Coller la clé",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
+                "name": "Enregistrer la clé",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Tester",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Clé",
+            "dots": 56,
+            "fault": null,
+            "hint": "Tapez ou collez votre clé",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Créer une clé sur console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "paste",
+                "label": "Coller",
+                "name": "Coller le modèle",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Autre modèle",
+            "dots": 0,
+            "fault": null,
+            "hint": "L’identifiant du modèle, sur la page du service",
+            "id": "model",
+            "mask": null,
+            "text": "",
+            "typed": 0,
+            "typing": false
+          },
+          "order": [
+            "key",
+            "model"
+          ]
+        },
+        "sub": "Prêt",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "serviceAllowance": {
       "bar": {
         "state": "hidden"
@@ -30886,7 +31414,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -31071,7 +31599,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -31261,7 +31789,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copié",

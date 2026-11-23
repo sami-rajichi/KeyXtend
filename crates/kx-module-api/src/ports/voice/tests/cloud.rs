@@ -52,11 +52,11 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 #[test]
 fn a_key_tests_answers_are_the_designs_with_a_refusals_own_reasons() {
     use KeyCheck::{
-        Account, Allowance, Credit, Failed, NoTest, Rate, Refused, Region, Strange, Testing, Unfit,
-        Untested, Works,
+        Account, Admin, Allowance, Credit, Failed, NoTest, Rate, Refused, Region, Strange, Testing,
+        Unfit, Untested, Works,
     };
     let checks = [
-        Untested, Testing, Works, Refused, Failed, Credit, Account, Region, Allowance, Rate,
+        Untested, Testing, Works, Refused, Admin, Failed, Credit, Account, Region, Allowance, Rate,
         Strange, Unfit, NoTest,
     ];
     assert_eq!(KeyCheck::ALL, checks);

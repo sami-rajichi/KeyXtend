@@ -1,5 +1,6 @@
 //! Each net note refusal, writing and reading: a text over its cap, past the last piece or not UTF-8, a fault code,
-//! flag or renewal out of range, bytes a fault does not hold, and the account's step as its own code.
+//! flag or renewal out of range, bytes a fault does not hold, and the account's step and a management key as their own
+//! codes.
 
 use super::*;
 use crate::code::Code;
@@ -92,6 +93,19 @@ fn a_step_on_the_services_site_is_its_own_fault_after_the_region_and_reads_back_
     let bytes = net_note_bytes(&note);
     assert_eq!(NetNote::read(&mut &bytes[..]), Ok(note));
     refused_fault(&[FaultCode::Account.code(), 0], Inconsistent);
+}
+
+#[test]
+fn a_management_key_is_its_own_fault_after_the_accounts_step_and_reads_back_whole() {
+    assert_eq!(FaultCode::Admin.code(), FaultCode::Account.code() + 1);
+    assert_eq!(NetFault::Admin.code(), FaultCode::Admin);
+    let note = NetNote::Fault {
+        id: 1,
+        fault: NetFault::Admin,
+    };
+    let bytes = net_note_bytes(&note);
+    assert_eq!(NetNote::read(&mut &bytes[..]), Ok(note));
+    refused_fault(&[FaultCode::Admin.code(), 0], Inconsistent);
 }
 
 #[test]

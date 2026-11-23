@@ -18,6 +18,7 @@ fn every() -> Vec<CloudFault> {
         CloudFault::TooBig,
         CloudFault::Language,
         CloudFault::Region,
+        CloudFault::Admin,
         CloudFault::Empty,
         CloudFault::Strange,
         CloudFault::Network,
@@ -35,6 +36,7 @@ fn every() -> Vec<CloudFault> {
             | CloudFault::TooBig
             | CloudFault::Language
             | CloudFault::Region
+            | CloudFault::Admin
             | CloudFault::Empty
             | CloudFault::Strange
             | CloudFault::Network

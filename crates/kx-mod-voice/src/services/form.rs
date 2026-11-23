@@ -95,29 +95,38 @@ pub(super) struct Sent<'a> {
     paywall: bool,
     /// The error code by which a reply says the service is not offered in the user's country or region.
     region: Option<&'a str>,
+    /// The key test's reply fields, any one true marking a management key.
+    admin: &'a [String],
 }
 
 impl<'a> Sent<'a> {
-    /// What a row with `keep`, `paywall` and `region` sends, under `reply`'s rules.
+    /// What a row with `keep`, `paywall`, `region` and `admin` sends, under `reply`'s rules.
     pub(super) fn new(
         reply: &'a Reply,
         keep: Option<&'a FormField>,
         paywall: bool,
         region: Option<&'a str>,
+        admin: &'a [String],
     ) -> Self {
         Self {
             reply,
             keep,
             paywall,
             region,
+            admin,
         }
+    }
+
+    /// True when the row adds no keep field and no reply rule, which only an upload form takes.
+    fn bare(&self) -> bool {
+        self.keep.is_none() && !self.paywall && self.region.is_none() && self.admin.is_empty()
     }
 }
 
 /// The shape `name` names, with `form`'s fields for an upload form or `ElevenLabs`' own, whose fixed fields and keep
 /// field must fit one request; Gemini takes no form, `ElevenLabs` no list, and `AssemblyAI` only its plain
 /// `model_header`, naming neither `key` nor a header the request sets. Only an upload form takes a keep field, a
-/// paywall or a region code.
+/// paywall, a region code or reply paths.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
@@ -130,8 +139,7 @@ pub(super) fn shape(
         .find(|(n, ..)| *n == name)
         .map(|(_, kind, _)| *kind)
         .ok_or(ServiceError::Shape)?;
-    let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
-    match (kind, form, model_header, bare) {
+    match (kind, form, model_header, sent.bare()) {
         (Kind::Form, Some(form), None, _) => fields(form, sent),
         (Kind::Eleven, Some(form), None, true) if !form.list => {
             own(form, sent).map(CloudShape::Eleven)
@@ -159,7 +167,7 @@ fn own(form: &RawForm, sent: &Sent<'_>) -> Result<OwnFields, ServiceError> {
 }
 
 /// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with the keep field, and a plain reply;
-/// it carries the row's paywall and region code, which must be a plain name.
+/// it carries the row's paywall, its region code, a plain name, and its reply paths, plain names parted by dots.
 fn checked(form: &RawForm, sent: &Sent<'_>) -> Result<FormFields, ServiceError> {
     let fixed: Vec<FormField> = form.fixed.iter().map(RawField::field).collect();
     let mut all = fixed.clone();
@@ -170,6 +178,7 @@ fn checked(form: &RawForm, sent: &Sent<'_>) -> Result<FormFields, ServiceError> 
         fixed,
         paywall: sent.paywall,
         region: sent.region.map(str::to_owned),
+        admin: sent.admin.to_vec(),
     };
     if !shape(all.clone()).fits() || all.len() > MAX_FIXED {
         return Err(ServiceError::Form);

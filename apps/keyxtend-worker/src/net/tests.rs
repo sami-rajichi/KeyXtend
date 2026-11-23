@@ -7,6 +7,7 @@ mod assembly;
 mod base64;
 mod bench;
 mod eleven;
+mod flag;
 mod form;
 mod gemini;
 mod job;
@@ -90,6 +91,7 @@ fn form() -> NetForm<'static> {
         fixed: Vec::new(),
         paywall: false,
         region: None,
+        admin: Vec::new(),
     }
 }
 

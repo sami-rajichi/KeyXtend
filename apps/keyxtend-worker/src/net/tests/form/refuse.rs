@@ -47,6 +47,7 @@ fn a_fixed_field_may_not_repeat_a_list_languages_name() {
             fixed,
             paywall: false,
             region: None,
+            admin: Vec::new(),
         });
         let call = call_to(URL, shape);
         let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();

@@ -146,6 +146,7 @@ fn a_list_language_and_the_rows_fixed_fields_keep_the_rows_order() {
         fixed,
         paywall: false,
         region: None,
+        admin: Vec::new(),
     });
     let call = call_to(URL, shape);
     let req = Form.build(&piece(&call, Some(MODEL), "ar", WAV)).unwrap();

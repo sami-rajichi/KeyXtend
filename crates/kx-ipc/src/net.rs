@@ -60,7 +60,7 @@ impl NetShape<'_> {
 }
 
 /// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound. Its
-/// `paywall` and `region` are rules for reading the service's replies, never form fields.
+/// `paywall`, `region` and `admin` are rules for reading the service's replies, never form fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NetForm<'a> {
     /// The language field's name (`rules::token`).
@@ -75,6 +75,8 @@ pub struct NetForm<'a> {
     /// The error code a reply gives where the service is not offered in the user's country or region (`rules::token`),
     /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
     pub region: Option<Cow<'a, str>>,
+    /// Key-test reply fields (`rules::field_path`), at most `MAX_ADMIN`; any one true marks a management key.
+    pub admin: Vec<Cow<'a, str>>,
 }
 
 /// `ElevenLabs`' own form: it sends the model, the language under `lang`, the fixed fields, then the sound.
@@ -164,6 +166,8 @@ pub enum NetFault {
     Language,
     /// The service is not offered in the user's country or region.
     Region,
+    /// The key test's reply marks a management key, which manages keys but never transcribes.
+    Admin,
     /// The service sent no text.
     Empty,
     /// The reply was not the shape's: a sign-in page, a redirect to another host, or one past `MAX_NET_REPLY_BYTES`.
@@ -190,6 +194,7 @@ impl NetFault {
             FaultCode::TooBig => Self::TooBig,
             FaultCode::Language => Self::Language,
             FaultCode::Region => Self::Region,
+            FaultCode::Admin => Self::Admin,
             FaultCode::Empty => Self::Empty,
             FaultCode::Strange => Self::Strange,
             FaultCode::Network => Self::Network,
@@ -210,6 +215,7 @@ impl NetFault {
             Self::TooBig => FaultCode::TooBig,
             Self::Language => FaultCode::Language,
             Self::Region => FaultCode::Region,
+            Self::Admin => FaultCode::Admin,
             Self::Empty => FaultCode::Empty,
             Self::Strange => FaultCode::Strange,
             Self::Network => FaultCode::Network,

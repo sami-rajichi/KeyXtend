@@ -49,6 +49,27 @@ fn a_key_fits_when_it_is_visible_ascii_within_its_cap() {
 }
 
 #[test]
+fn a_forms_reply_paths_fit_as_plain_names_parted_by_dots_up_to_their_cap() {
+    let with = |admin: Vec<String>| {
+        let CloudShape::Form(plain) = form() else {
+            unreachable!("a form")
+        };
+        CloudShape::Form(FormFields { admin, ..plain })
+    };
+    let router = vec![
+        "data.is_management_key".into(),
+        "data.is_provisioning_key".into(),
+    ];
+    assert!(with(router).fits());
+    let long = "p".repeat(*TAG_LEN.end() + 1);
+    for path in ["data..key", "data.", "", "a b", "a/b", long.as_str()] {
+        assert!(!with(vec![path.to_owned()]).fits(), "{path:?}");
+    }
+    let many = vec!["a".to_owned(); MAX_ADMIN + 1];
+    assert!(!with(many).fits(), "past the cap");
+}
+
+#[test]
 fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
     let named = KeyHeader::Named("xi-api-key".into());
     assert!(form().fits() && KeyHeader::Bearer.fits() && named.fits());
@@ -59,6 +80,7 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
         fixed: Vec::new(),
         paywall: false,
         region: None,
+        admin: Vec::new(),
     });
     assert!(!spaced.fits());
     let long = "r".repeat(*TAG_LEN.end() + 1);

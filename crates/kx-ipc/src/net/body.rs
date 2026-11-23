@@ -3,7 +3,7 @@
 //! and range.
 
 use super::code::{HeaderCode, ShapeCode};
-use super::wire::{FIXED, KEY, SIZES, SOUND, TAG, URL, VALUE};
+use super::wire::{ADMIN, FIXED, KEY, SIZES, SOUND, TAG, URL, VALUE};
 use super::{NetCall, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, NetShape};
 use crate::code::Code;
 use crate::error::IpcError;
@@ -37,8 +37,8 @@ fn read_text<R: Read + ?Sized>(
     Ok(Cow::Owned(text))
 }
 
-/// Sends a shape: its code, then an upload form's language name, list flag, fixed fields, paywall flag and region
-/// code, `ElevenLabs`' language name and fixed fields, or `AssemblyAI`'s model header name.
+/// Sends a shape: its code, then an upload form, `ElevenLabs`' language name and fixed fields, or `AssemblyAI`'s model
+/// header name.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     s.byte(shape.code().code())?;
     match shape {
@@ -52,17 +52,21 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     }
 }
 
-/// Sends an upload form's language name, list flag, fixed fields, paywall flag and region code.
+/// Sends an upload form's language name, list flag, fixed fields, paywall flag, region code and reply paths.
 fn put_form(s: &mut dyn Sink, form: &NetForm<'_>) -> Result<(), IpcError> {
     put_text(s, TAG, &form.lang, rules::token)?;
     s.byte(u8::from(form.list))?;
     put_fixed(s, &form.fixed)?;
     s.byte(u8::from(form.paywall))?;
     s.byte(u8::from(form.region.is_some()))?;
-    match &form.region {
-        Some(code) => put_text(s, TAG, code, rules::token),
-        None => Ok(()),
+    if let Some(code) = &form.region {
+        put_text(s, TAG, code, rules::token)?;
     }
+    s.count(ADMIN, form.admin.len())?;
+    for path in &form.admin {
+        put_text(s, TAG, path, rules::field_path)?;
+    }
+    Ok(())
 }
 
 /// Sends the fixed fields' count, then each name and value.
@@ -104,7 +108,7 @@ fn read_fixed<R: Read + ?Sized>(
     (0..n).map(|_| field(p)).collect()
 }
 
-/// Reads a form's language name, list flag, fixed fields, paywall flag and region code.
+/// Reads a form's language name, list flag, fixed fields, paywall flag, region code and reply paths.
 fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static>, IpcError> {
     let lang = read_text(p, TAG, rules::token)?;
     let list = p.flag()?;
@@ -115,12 +119,16 @@ fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static
     } else {
         None
     };
+    let n = p.count(ADMIN)?;
+    let paths = (0..n).map(|_| read_text(p, TAG, rules::field_path));
+    let admin = paths.collect::<Result<_, _>>()?;
     Ok(NetForm {
         lang,
         list,
         fixed,
         paywall,
         region,
+        admin,
     })
 }
 

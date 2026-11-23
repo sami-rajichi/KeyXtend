@@ -2,6 +2,7 @@
 //! kinds, and `Debug` that shows no key, sound, address, model or text. Refusals, rules and properties have their own
 //! files.
 
+mod admin;
 mod cases;
 mod frames;
 mod ids;
@@ -14,11 +15,11 @@ use super::*;
 use crate::net::{ask as net_ask, note as net_note, wire as net_wire};
 use crate::wire::Spec;
 use crate::{
-    FetchAsk, FetchNote, HTTPS, MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES,
-    MAX_SOUND_BYTES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_URL_BYTES, NET_AT_ONCE, NET_MAX_S,
-    NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, NetAsk, NetCall, NetFault, NetField, NetForm,
-    NetHeader, NetLimits, NetNote, NetOwn, NetRun, NetShape, SAMPLE_BYTES, VaultAsk, VaultReply,
-    VoiceAsk, VoiceNote, Wiped,
+    FetchAsk, FetchNote, HTTPS, MAX_ADMIN, MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES,
+    MAX_NET_TEXT_BYTES, MAX_SOUND_BYTES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_URL_BYTES,
+    NET_AT_ONCE, NET_MAX_S, NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, NetAsk, NetCall,
+    NetFault, NetField, NetForm, NetHeader, NetLimits, NetNote, NetOwn, NetRun, NetShape,
+    SAMPLE_BYTES, VaultAsk, VaultReply, VoiceAsk, VoiceNote, Wiped,
 };
 use cases::*;
 use zeroize::Zeroizing;
@@ -90,6 +91,7 @@ fn longest_call() -> NetCall<'static> {
             fixed: vec![field; MAX_FIXED],
             paywall: true,
             region: Some(tag()),
+            admin: vec![tag(); MAX_ADMIN],
         }),
         url: Cow::Owned(format!("{HTTPS}h/{path}")),
         header: NetHeader::Named(tag()),
@@ -287,9 +289,11 @@ fn each_net_frame_is_refused_by_every_other_reader() {
 }
 
 #[test]
-fn the_key_and_fixed_caps_are_the_frames_own_and_fit_their_widths() {
+fn the_key_fixed_and_admin_caps_are_the_frames_own_and_fit_their_widths() {
     let fits = |spec: Spec| u64::try_from(spec.max).unwrap() < 1u64 << (8 * spec.width);
     assert_eq!(net_wire::KEY.max, MAX_KEY_BYTES, "the port's key cap");
     assert_eq!(net_wire::FIXED.max, MAX_FIXED, "the port's fixed fields");
-    assert!(fits(net_wire::KEY) && fits(net_wire::FIXED));
+    assert_eq!(net_wire::ADMIN.max, MAX_ADMIN, "the port's reply paths");
+    let caps = [net_wire::KEY, net_wire::FIXED, net_wire::ADMIN];
+    assert!(caps.into_iter().all(fits));
 }

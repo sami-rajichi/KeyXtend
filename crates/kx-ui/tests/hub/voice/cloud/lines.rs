@@ -145,8 +145,9 @@ fn the_key_page_says_where_keys_are_made_and_that_the_key_is_sealed() {
 /// A used allowance's renewal: 17:00 UTC on 14 November 2026.
 const RENEWS_MS: i64 = 1_794_675_600_000;
 
-/// Each test answer with a reason, its id and its line, which is that reason's cloud note; and no answer's own line.
-const ANSWERS: [(KeyCheck, &str, &str); 7] = [
+/// Each test answer with a reason, its id and its line, which is that reason's cloud note; and no answer's and a
+/// management key's own lines.
+const ANSWERS: [(KeyCheck, &str, &str); 8] = [
     (
         KeyCheck::Credit,
         "credit",
@@ -181,6 +182,11 @@ const ANSWERS: [(KeyCheck, &str, &str); 7] = [
         KeyCheck::Failed,
         "failed",
         "No answer about the key. Check the network and test again.",
+    ),
+    (
+        KeyCheck::Admin,
+        "admin",
+        "This is a management key, which cannot be used for dictation. Make an API key on the service’s page.",
     ),
 ];
 

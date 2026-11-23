@@ -202,6 +202,8 @@ pub const MAX_KEY_BYTES: usize = KIB;
 /// The most fixed fields an upload form adds: a keep-nothing switch needs one, and 4 leaves room for a new row's own
 /// without a frame change.
 pub const MAX_FIXED: usize = 4;
+/// The most reply fields a form's key test reads for a management key: `OpenRouter` names two, and 4 leaves room.
+pub const MAX_ADMIN: usize = 4;
 /// The longest cloud piece, in seconds: ten minutes, 19.2 MB raw, under the ~25 MB a request most services take; a
 /// longer dictation goes in more pieces.
 const NET_PIECE_MAX_S: u16 = 600;

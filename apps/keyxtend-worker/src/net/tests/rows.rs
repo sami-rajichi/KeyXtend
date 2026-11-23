@@ -22,8 +22,8 @@ const SAID: &str = "Bonjour tout le monde.";
 /// `OpenAI`'s error code for a country or region it does not serve [O5].
 const REGION: &str = "unsupported_country_region_territory";
 
-/// A form row's parameters: the service it stands for, its language field, list flag, fixed fields, paywall and region
-/// code.
+/// A form row's parameters: the service it stands for, its language field, list flag, fixed fields, paywall, region
+/// code and key-reply paths.
 #[derive(Clone, Copy)]
 struct Row {
     name: &'static str,
@@ -32,6 +32,7 @@ struct Row {
     fixed: &'static [(&'static str, &'static str)],
     paywall: bool,
     region: Option<&'static str>,
+    admin: &'static [&'static str],
 }
 
 /// Service `name`'s row with the one `language` field and no reply rule.
@@ -43,6 +44,7 @@ const fn plain(name: &'static str) -> Row {
         fixed: &[],
         paywall: false,
         region: None,
+        admin: &[],
     }
 }
 
@@ -69,10 +71,13 @@ const TOGETHER: Row = Row {
 const LEMONFOX: Row = plain("lemonfox");
 /// `DeepInfra` [D3].
 const DEEPINFRA: Row = plain("deepinfra");
+/// `OpenRouter`'s key-reply fields, either of which marks a management key that cannot transcribe.
+const ROUTER_ADMIN: [&str; 2] = ["data.is_management_key", "data.is_provisioning_key"];
 /// `OpenRouter` with its keep-nothing switch on: its 403 is a key's spending cap [R2][R7].
 const ROUTER: Row = Row {
     fixed: &[ZDR],
     paywall: true,
+    admin: &ROUTER_ADMIN,
     ..plain("openrouter")
 };
 /// `OpenRouter` with its keep-nothing switch off.
@@ -96,6 +101,7 @@ impl Row {
             fixed: fixed.collect(),
             paywall: self.paywall,
             region: self.region.map(Cow::Borrowed),
+            admin: self.admin.iter().map(|&p| Cow::Borrowed(p)).collect(),
         };
         call_to(ADDRESS, NetShape::Form(form))
     }
