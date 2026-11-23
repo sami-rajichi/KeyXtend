@@ -1,8 +1,9 @@
 //! Property: random host asks on a few ids, over a server that answers each request by what it carries, tell each run
 //! or test one outcome on its own id, `Gone` at once for an ask on a live id or a part out of step, and nothing for a
-//! part, run or test that is not live, even once its outcome was told.
+//! part, run or test that is not live, even once its outcome was told; the job holds exactly the ids the model does.
 
 mod fill;
+mod life;
 
 use super::super::bench::{Bench, WAIT, fault, part, send};
 use super::super::*;
@@ -10,6 +11,7 @@ use super::accepts;
 use crate::net::Event;
 use fill::{ByFill, FILLED, Kind, STRAY, holds};
 use kx_ipc::{NetAsk, NetFault, NetNote};
+use life::{Life, Live, Track};
 use proptest::prelude::*;
 use std::collections::HashMap;
 
@@ -17,8 +19,10 @@ use std::collections::HashMap;
 const IDS: u32 = 3;
 /// A key test address the server refuses.
 const REFUSED: &str = "https://stt.example.com/v1/refused";
-/// Each run's starts a minute, as the job tests give.
+/// Starts per minute each run allows, as in the job tests.
 const PER_MIN: u16 = 20;
+/// Bytes per sound sample, so every piece and part is whole samples.
+const SAMPLE: usize = 2;
 
 /// A run's plan: its pieces' sizes, how they are answered, and its requests at once and tries each.
 #[derive(Clone, Debug)]
@@ -43,13 +47,14 @@ enum Op {
     Part(Piece),
     /// Cancel on the id.
     Cancel(u32),
-    /// The job takes one outcome: waiting when one is due, else only one already told.
+    /// The job takes one outcome in flight, waiting for it, while one is out.
     Hand,
 }
 
-/// A random plan, its pieces of an even size of at least `FILLED`.
+/// A random plan, its pieces whole samples of at least `FILLED` bytes.
 fn plan() -> impl Strategy<Value = Plan> {
-    let sizes = prop::collection::vec((2u32..=6).prop_map(|n| n * 2), 1..4);
+    let size = (0usize..=4).prop_map(|n| u32::try_from(FILLED + n * SAMPLE).unwrap());
+    let sizes = prop::collection::vec(size, 1..4);
     let kind = prop::sample::select(Kind::ALL.to_vec());
     (sizes, kind, 1u8..=3, 1u8..=2).prop_map(|(sizes, kind, at_once, tries)| Plan {
         sizes,
@@ -64,103 +69,58 @@ fn op() -> impl Strategy<Value = Op> {
     let id = || 0..IDS;
     let send = (id(), plan()).prop_map(|(id, plan)| Op::Send(id, plan));
     let test = (id(), any::<bool>()).prop_map(|(id, works)| Op::Test(id, works));
-    let size = prop::option::of((1usize..=6).prop_map(|n| n * 2));
+    let size = prop::option::of((1usize..=6).prop_map(|n| n * SAMPLE));
     let part = (id(), prop::option::of(0u16..4), size).prop_map(Op::Part);
     let cancel = id().prop_map(Op::Cancel);
     prop_oneof![2 => send, 1 => test, 4 => part, 1 => cancel, 3 => Just(Op::Hand)]
 }
 
-/// A live run as the model holds it: how its pieces are answered, their sizes, the parts' cursor and the texts told.
-struct Track {
-    kind: Kind,
-    sizes: Vec<u32>,
-    cursor: (usize, usize),
-    told: usize,
-}
-
-impl Track {
-    /// A run of `plan` with nothing taken or told.
-    fn new(plan: Plan) -> Self {
-        let (kind, sizes) = (plan.kind, plan.sizes);
-        Self {
-            kind,
-            sizes,
-            cursor: (0, 0),
-            told: 0,
-        }
-    }
-
-    /// What its current piece still needs; `FILLED` once every piece is full.
-    fn rest(&self) -> usize {
-        let (at, got) = self.cursor;
-        self.sizes.get(at).map_or(FILLED, |&s| s as usize - got)
-    }
-}
-
-/// A live run or key test as the model holds it.
-enum Life {
-    Run(Track),
-    /// A key test, whose key works when true.
-    Test(bool),
-}
-
-impl Life {
-    /// True while one of its requests is out, so an outcome will come.
-    fn due(&self) -> bool {
-        match self {
-            Self::Test(_) => true,
-            Self::Run(run) => run.cursor.0 > run.told,
-        }
-    }
-
-    /// The note that ends it.
-    fn end(&self, id: u32) -> NetNote {
-        match self {
-            Self::Test(true) => NetNote::Done { id },
-            Self::Test(false) => fault(id, NetFault::Key),
-            Self::Run(run) => run.kind.end(id),
-        }
-    }
-}
-
-/// The bench, its server and the live runs and tests by id.
+/// The bench, its server, the live runs and tests by id, the last serial the job gave, and the requests in flight.
 struct Model {
     b: Bench,
     server: Arc<ByFill>,
-    lives: HashMap<u32, Life>,
+    lives: HashMap<u32, Live>,
+    serial: u64,
+    /// Requests started whose outcome the job has not taken, a dead run's too.
+    flying: usize,
 }
 
 impl Model {
-    /// Takes `op` and checks the notes it told.
+    /// Takes `op`, checks the notes it told, then that the job holds the ids the model does.
     fn apply(&mut self, op: Op) -> Result<(), TestCaseError> {
         let before = self.b.out.len();
         match op {
             Op::Send(id, plan) => {
                 let run = run_of(&plan.sizes, plan.tries, plan.at_once, PER_MIN);
                 self.b.ask(send(id, call(), run));
-                self.start(id, before, Life::Run(Track::new(plan)))
+                self.start(id, before, Life::Run(Track::new(plan)))?;
             }
             Op::Test(id, works) => {
                 let url = if works { MODELS } else { REFUSED };
                 let call = call_to(url, NetShape::Form(form()));
                 self.b.ask(NetAsk::Test { id, call });
-                self.start(id, before, Life::Test(works))
+                self.start(id, before, Life::Test(works))?;
             }
-            Op::Part(piece) => self.sound(piece, before),
+            Op::Part(piece) => self.sound(piece, before)?,
             Op::Cancel(id) => {
                 self.lives.remove(&id);
                 self.b.ask(NetAsk::Cancel { id });
-                self.expect(before, &[])
+                self.expect(before, &[])?;
             }
-            Op::Hand => self.hand(),
+            Op::Hand => self.hand()?,
         }
+        self.same_live()
     }
 
-    /// After a send or test on `id`: `Gone` at once if it was live, which ends both, else nothing and `life` starts.
+    /// After a send or test on `id`: `Gone` at once if it was live, which ends both, else `life` starts under the
+    /// next serial, a test with its request out.
     fn start(&mut self, id: u32, before: usize, life: Life) -> Result<(), TestCaseError> {
         let taken = self.lives.remove(&id).is_some();
         if !taken {
-            self.lives.insert(id, life);
+            self.serial += 1;
+            self.flying += usize::from(matches!(life, Life::Test(_)));
+            let serial = self.serial;
+            self.lives.insert(id, Live { serial, life });
         }
         let gone = taken.then(|| fault(id, NetFault::Gone));
         self.expect(before, gone.as_slice())
@@ -172,16 +132,38 @@ impl Model {
         Ok(())
     }
 
-    /// A part: a live run takes it as the model says, `Gone` when out of step; any other is dropped unread.
+    /// Checks that the job holds live exactly the ids the model does.
+    fn same_live(&self) -> Result<(), TestCaseError> {
+        let mut held = self.b.job.live();
+        let mut want: Vec<u32> = self.lives.keys().copied().collect();
+        held.sort_unstable();
+        want.sort_unstable();
+        prop_assert_eq!(held, want, "the live ids");
+        Ok(())
+    }
+
+    /// A part: a live run takes it as the model says and sends what is full, `Gone` when out of step; any other is
+    /// dropped unread.
     fn sound(&mut self, (id, piece, n): Piece, before: usize) -> Result<(), TestCaseError> {
-        let Some(Life::Run(run)) = self.lives.get_mut(&id) else {
-            let stray = sound(n.unwrap_or(FILLED), STRAY);
+        let Some(Live {
+            life: Life::Run(run),
+            ..
+        }) = self.lives.get_mut(&id)
+        else {
+            let stray = sound(n.unwrap_or(FILLED).max(FILLED), STRAY);
             self.b.ask(part(id, piece.unwrap_or(0), stray));
             return self.expect(before, &[]);
         };
         let at = u16::try_from(run.cursor.0).unwrap_or(u16::MAX);
         let (piece, n) = (piece.unwrap_or(at), n.unwrap_or_else(|| run.rest()));
+        let prior = run.cursor.0;
         let took = accepts(&run.sizes, &mut run.cursor, piece, n);
+        if took {
+            if run.cursor.0 > prior {
+                run.filled();
+            }
+            self.flying += run.launch();
+        }
         let fill = run.kind.fill();
         self.b.ask(part(id, piece, sound(n, fill)));
         if !took {
@@ -191,31 +173,41 @@ impl Model {
         self.expect(before, gone.as_slice())
     }
 
-    /// The job takes one outcome, waiting only when one is due, and each note it told is checked in order.
+    /// The job takes one outcome in flight, checking each note it told; its live run then sends what waits.
     fn hand(&mut self) -> Result<(), TestCaseError> {
-        let before = self.b.out.len();
-        let event = if self.lives.values().any(Life::due) {
-            Some(self.b.rx.recv_timeout(WAIT).expect("a due outcome"))
-        } else {
-            self.b.rx.try_recv().ok()
-        };
-        if let Some(Event::Told(told)) = event {
-            self.b.job.told(told, &mut self.b.out).unwrap();
+        if self.flying == 0 {
+            return Ok(());
         }
+        let Event::Told(told) = self.b.rx.recv_timeout(WAIT).expect("an outcome in flight") else {
+            return Err(TestCaseError::fail("only requests tell here"));
+        };
+        self.flying -= 1;
+        let (id, serial, before) = (told.id, told.serial, self.b.out.len());
+        if let Some(run) = own(&mut self.lives, id, serial) {
+            run.flying -= 1;
+        }
+        self.b.job.told(told, &mut self.b.out).unwrap();
         for note in &self.b.out[before..] {
             heard(&mut self.lives, note)?;
+        }
+        if let Some(run) = own(&mut self.lives, id, serial) {
+            self.flying += run.launch();
         }
         Ok(())
     }
 
-    /// Hands every due outcome over, then checks what is left: runs waiting for parts, and no stray part sent.
+    /// Takes every outcome still in flight, a dead run's too, then checks what is left: runs waiting for parts, no
+    /// outcome uncounted, and no stray part sent.
     fn settle(&mut self) -> Result<(), TestCaseError> {
-        while self.lives.values().any(Life::due) {
+        while self.flying > 0 {
             self.hand()?;
         }
-        for (id, life) in &self.lives {
-            let waits = matches!(life, Life::Run(run) if run.cursor.0 < run.sizes.len());
-            prop_assert!(waits, "{id} live with nothing due");
+        self.same_live()?;
+        let quiet = self.b.rx.try_recv().is_err();
+        prop_assert!(quiet, "an outcome the model did not count");
+        for (id, live) in &self.lives {
+            let waits = matches!(&live.life, Life::Run(run) if run.cursor.0 < run.sizes.len());
+            prop_assert!(waits, "{id} live with nothing out");
         }
         let sent = lock(&self.server.0).clone();
         let stray = sent.iter().any(|body| holds(body, STRAY));
@@ -224,10 +216,21 @@ impl Model {
     }
 }
 
+/// The run live on `id` under `serial`, when an outcome of that serial is its own.
+fn own(lives: &mut HashMap<u32, Live>, id: u32, serial: u64) -> Option<&mut Track> {
+    match lives.get_mut(&id) {
+        Some(Live {
+            serial: s,
+            life: Life::Run(run),
+        }) if *s == serial => Some(run),
+        _ => None,
+    }
+}
+
 /// Checks `note` against `lives`: a text run's next text, or the end of a live run or test, which ends it.
-fn heard(lives: &mut HashMap<u32, Life>, note: &NetNote) -> Result<(), TestCaseError> {
+fn heard(lives: &mut HashMap<u32, Live>, note: &NetNote) -> Result<(), TestCaseError> {
     let id = note.id();
-    let Some(life) = lives.get_mut(&id) else {
+    let Some(Live { life, .. }) = lives.get_mut(&id) else {
         return Err(TestCaseError::fail(format!("{note:?} for nothing live")));
     };
     if let (NetNote::Text { index, .. }, Life::Run(run)) = (note, &mut *life) {
@@ -254,7 +257,8 @@ proptest! {
     ) {
         let server = Arc::new(ByFill::default());
         let b = Bench::new(server.clone(), &Arc::new(Still::default()));
-        let mut model = Model { b, server, lives: HashMap::new() };
+        let lives = HashMap::new();
+        let mut model = Model { b, server, lives, serial: 0, flying: 0 };
         for op in ops {
             model.apply(op)?;
         }

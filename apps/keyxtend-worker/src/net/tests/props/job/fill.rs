@@ -4,9 +4,9 @@
 use super::super::super::bench::fault;
 use super::super::super::*;
 use kx_ipc::{NetFault, NetNote};
-use kx_platform_net::{Call, Hop, Http, NetError, Reply, Verb};
+use kx_platform_net::{Call, Hop, Http, NetError, Reply, Target, Verb};
 
-/// A piece's least size, so its fill shows as a run of this many bytes.
+/// The bytes of one fill in a row that mark a body; every piece and stray part holds at least this many.
 pub(super) const FILLED: usize = 4;
 /// The fill of a part for no live run, which no request may carry.
 pub(super) const STRAY: u8 = 0x5A;
@@ -71,7 +71,7 @@ impl Http for ByFill {
         let act = if call.verb != Verb::Get {
             let kind = Kind::ALL.into_iter().find(|k| holds(call.body, k.fill()));
             kind.map_or_else(|| said(SAID), Kind::answer)
-        } else if MODELS.ends_with(call.target.path()) {
+        } else if Target::parse(MODELS).is_ok_and(|t| t.path() == call.target.path()) {
             reply(OK, LIST)
         } else {
             reply(401, KEY_BAD)
