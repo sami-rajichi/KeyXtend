@@ -4,6 +4,7 @@
 //! own adapter.
 
 use super::eleven::own_form;
+use super::rows::{ROUTER_ADMIN, ROUTER_MANAGEMENT};
 use super::*;
 use crate::net::send::{Sending, piece, test};
 use crate::net::shape::{self, Piece};
@@ -142,6 +143,16 @@ fn a_final_fault_is_never_tried_again() {
         let (got, http, _) = post([act, said("x")], 3);
         assert_eq!((got, http.called().len()), (Err(fault), 1), "{fault:?}");
     }
+}
+
+#[test]
+fn a_management_keys_test_fails_once_and_is_never_tried_again() {
+    let admin = ROUTER_ADMIN.map(Cow::Borrowed).into();
+    let shape = NetShape::Form(NetForm { admin, ..form() });
+    let acts = [reply(OK, ROUTER_MANAGEMENT), reply(OK, LIST)];
+    let (http, clock) = (Arc::new(FakeHttp::new(acts)), Arc::new(Still::default()));
+    let got = test(&kit(&http, &clock), &sending(call_to(MODELS, shape), 3));
+    assert_eq!((got, http.called().len()), (Err(NetFault::Admin), 1));
 }
 
 #[test]

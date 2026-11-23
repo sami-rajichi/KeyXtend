@@ -1,8 +1,8 @@
 //! The `OpenAI`-style upload form (ADR-0047 decision 5), moved from the spike's `cloud.rs`: the model, the language,
 //! the row's fixed fields, `response_format=json` and the piece as a WAV file, with the key in its header only. A reply
 //! is `{"text": …}`; anything else is read through one status table from Groq's error page, where a row whose form
-//! names a 403 its paywall reads it as the account's step, and one that names a region code reads that refusal by it.
-//! A key test whose reply flags a management key at the row's paths fails, as that key never transcribes.
+//! names a 403 its paywall reads it as the account's step, and one that names a region code reads that refusal by it,
+//! and a key test whose reply flags a management key at the row's paths fails.
 
 #[cfg(test)]
 pub use super::multipart::escape;

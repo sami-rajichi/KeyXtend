@@ -4,6 +4,8 @@
 
 mod replies;
 
+pub(super) use replies::ROUTER_MANAGEMENT;
+
 use super::form::{names, parts, piece};
 use super::*;
 use crate::net::form::Form;
@@ -72,7 +74,7 @@ const LEMONFOX: Row = plain("lemonfox");
 /// `DeepInfra` [D3].
 const DEEPINFRA: Row = plain("deepinfra");
 /// `OpenRouter`'s key-reply fields, either of which marks a management key that cannot transcribe.
-const ROUTER_ADMIN: [&str; 2] = ["data.is_management_key", "data.is_provisioning_key"];
+pub(super) const ROUTER_ADMIN: [&str; 2] = ["data.is_management_key", "data.is_provisioning_key"];
 /// `OpenRouter` with its keep-nothing switch on: its 403 is a key's spending cap [R2][R7].
 const ROUTER: Row = Row {
     fixed: &[ZDR],

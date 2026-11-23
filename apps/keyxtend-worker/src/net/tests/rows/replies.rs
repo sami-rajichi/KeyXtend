@@ -57,7 +57,8 @@ const ROUTER_RATE: &[u8] = include_bytes!("../replies/openrouter/rate.json");
 const ROUTER_LIMITS: &[u8] = include_bytes!("../replies/openrouter/limits.json");
 /// `OpenRouter`'s key replies naming a management key by each field alone, and an API key; the field names are its key
 /// reference's (read 2026-11-23), the values made up.
-const ROUTER_MANAGEMENT: &[u8] = include_bytes!("../replies/openrouter/management.json");
+pub(in crate::net::tests) const ROUTER_MANAGEMENT: &[u8] =
+    include_bytes!("../replies/openrouter/management.json");
 const ROUTER_PROVISIONING: &[u8] = include_bytes!("../replies/openrouter/provisioning.json");
 const ROUTER_INFERENCE: &[u8] = include_bytes!("../replies/openrouter/inference.json");
 
