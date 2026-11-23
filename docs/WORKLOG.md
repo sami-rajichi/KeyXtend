@@ -4,6 +4,24 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-23 03:30 — P11: the owner's hands-on check of the cloud
+The owner checked all seven offered services with their own keys, and the re-check passed every fix ([test report](test-reports/2026-11-21-p11-voice-cloud.md)); OpenRouter and Custom now ship tested like the other five. G22's local line passed twice with no word wrong. Its cloud line passed Groq, ElevenLabs, Gemini and AssemblyAI, and recorded Lemonfox's Arabic and OpenRouter Turbo's English as readings past the one-word limit. A gate test no longer reads this PC's own gate file.
+
+## 2026-11-23 01:55 — P11: Test tells a management key apart
+An OpenRouter management key passed Test but could never dictate. Test now reads the key reply's fields that OpenRouter's row names in the services table, and such a key fails with its own line in EN, FR and AR, while the key stays for a new one to paste over. The worker reads those fields in one pass per path, keeps nothing, and never tries the call again.
+
+## 2026-11-22 22:20 — P11: the bar holds still through a dictation
+The bar keeps one width and height from the first Listening view to the text, through Stop and Transcribing, so Cancel and Stop never move under the finger; its text width grew to 650 px so every service name shows whole. A model on this PC shows its picture and a short name beside the language, and Custom has a short chip name while readers hear its full name. The first dictation's warning stays under the row until the text, in the keyboard's language.
+
+## 2026-11-22 12:55 — P11: every voice choice is remembered
+A service switched Off keeps its typed address, model, picks and keep-nothing aside, and its own Confirm brings them back; the Cloud switch and declined terms no longer drop a pick either. Home names a pick waiting for its service, and Start shows the Off note with Open service. Restart tests pin every panel choice end to end, and the keys one act changes go in one save.
+
+## 2026-11-22 09:00 — P11 and P8: a pasted key leaves no copy in the history
+Pasting a key on the key line makes KeyXtend's history forget it, with one app's second write of it within `take_wait_ms`, and a text that left the history stays out until it is copied again. Paste at once never puts back a taken or deleted copy, and a copy whose save failed is not counted as gone. The limits left are stated in the clipboard's security note.
+
+## 2026-11-22 03:05 — P11: the first hands-on check's fixes
+The key line shows a sealed key's dots at once, Compare can tick cloud models, and a row with no test call shows no Test. The address and model lines each have Paste, and a typed address's key page is one page, address first. Models from Home opens on the Cloud side at the pick's page, and the five rows the owner's real keys passed ship tested.
+
 ## 2026-11-21 18:20 — P11: the whole-branch review's fixes
 Every finding of part 2's final, file, security and code reviews is fixed: keys and their Base64 stay in wiped memory, WinHTTP never signs in on its own, a removed key can never serve again, and Paste at once lends text with the markers that keep it out of Windows' clipboard history. On the Cloud page a ticked service with a key shows Remove key in the footer, the notes can open the service's page, and a spent allowance says when it renews, in local time and the app's date form. Tests read service facts from the table, with dated facts in one research folder, and the owner approved the new texts, Compare's list form and attached و in Arabic lists (ADR-0053). In Windows' contrast themes Preparing wears a ring, only Recording fills, and no glow leaves the system colours.
 
