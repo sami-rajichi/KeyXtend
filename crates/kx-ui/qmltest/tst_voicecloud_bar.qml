@@ -257,6 +257,21 @@ Item {
             }
         }
 
+        // On the first dictation to a service that warns, readers are told the hub's sentence with the warning in full.
+        function test_readers_are_told_the_warning_in_full_as_it_listens_data() {
+            return langs_data();
+        }
+        function test_readers_are_told_the_warning_in_full_as_it_listens(d) {
+            const told = [];
+            const bar = make("cloudWarned", d.t, { announce: said => told.push(said) });
+            const text = bar.view.bar.warn;
+            verify(!!text, "the card's warning");
+            verify(bar.spoken().indexOf(text) >= 0, "readers hear it in full");
+            compare(bar.spoken(), Voice.views[d.t].cloudWarned.bar.said, "in the hub's sentence");
+            compare(told, [bar.spoken()], "told once");
+            bar.visible = false;
+        }
+
         // Each new state is told to readers once: the hub's sentence as it listens, then the text it wrote.
         function test_each_new_state_is_told_to_readers_once_data() {
             return langs_data();
