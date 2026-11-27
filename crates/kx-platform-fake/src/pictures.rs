@@ -1,10 +1,10 @@
-//! A fake pictures service: each draw or DIB takes the answer the test queued for its kind, the latest repeating, and
-//! the fake records the session's config and counts the asks. It never sleeps: a hung worker is a queued `Timeout`.
+//! A fake pictures service: each draw, DIB or PNG takes the answer the test queued for its kind, the latest repeating,
+//! and the fake records the session's config and counts the asks. It never sleeps: a hung worker is a queued `Timeout`.
 
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
+    DibAsk, EncodeAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
 };
 use std::collections::VecDeque;
 use std::fmt;
@@ -41,13 +41,16 @@ impl<T: Clone> Answers<T> {
 struct Log {
     draws: Answers<Pixels>,
     dibs: Answers<Vec<u8>>,
+    pngs: Answers<Vec<u8>>,
     last_ask: Option<PictureAsk>,
     last_dib: Option<DibAsk>,
+    last_encode: Option<EncodeAsk>,
     config: Option<PictureConfig>,
     opens: usize,
     stops: usize,
     asks: usize,
     dib_asks: usize,
+    encode_asks: usize,
 }
 
 /// The log, and the signal each ask gives, for a test waiting on another thread.
@@ -57,7 +60,7 @@ struct Shared {
     asked: Condvar,
 }
 
-/// Pictures shared by their clones: each draw or DIB of any session takes the next answer queued for its kind, the
+/// Pictures shared by their clones: each draw, DIB or PNG of any session takes the next answer queued for its kind, the
 /// latest repeating once they run out, and `Gone` before any.
 #[derive(Clone, Default)]
 pub struct FakePictures {
@@ -79,6 +82,23 @@ impl FakePictures {
     /// Queues `made` for a later DIB, given back as it is, even past the ask's cap.
     pub fn queue_dib(&self, made: Result<Vec<u8>, PictureError>) {
         lock(&self.shared.log).dibs.queued.push_back(made);
+    }
+
+    /// Queues `made` for a later PNG, given back as it is.
+    pub fn queue_png(&self, made: Result<Vec<u8>, PictureError>) {
+        lock(&self.shared.log).pngs.queued.push_back(made);
+    }
+
+    /// How many PNGs were asked, failed ones too.
+    #[must_use]
+    pub fn encode_asks(&self) -> usize {
+        lock(&self.shared.log).encode_asks
+    }
+
+    /// The latest PNG's ask, failed or not.
+    #[must_use]
+    pub fn last_encode(&self) -> Option<EncodeAsk> {
+        lock(&self.shared.log).last_encode.clone()
     }
 
     /// How many sessions opened.
@@ -145,7 +165,10 @@ impl fmt::Debug for FakePictures {
             .field("opens", &log.opens)
             .field("asks", &log.asks)
             .field("dib_asks", &log.dib_asks)
-            .field("queued", &log.draws.queued.len())
+            .field("encode_asks", &log.encode_asks)
+            .field("draws_queued", &log.draws.queued.len())
+            .field("dibs_queued", &log.dibs.queued.len())
+            .field("pngs_queued", &log.pngs.queued.len())
             .finish_non_exhaustive()
     }
 }
@@ -184,6 +207,17 @@ impl PictureRun for FakePictureRun {
         log.last_dib = Some(ask);
         self.shared.asked.notify_all();
         log.dibs.next().map(Redacted::new)
+    }
+
+    /// Pixels past `EncodeAsk::MAX_BYTES` are `TooBig`, as the port says, after the ask is kept.
+    fn encode(&mut self, ask: EncodeAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        let mut log = lock(&self.shared.log);
+        log.encode_asks += 1;
+        let checked = ask.check();
+        log.last_encode = Some(ask);
+        self.shared.asked.notify_all();
+        checked?;
+        log.pngs.next().map(Redacted::new)
     }
 }
 

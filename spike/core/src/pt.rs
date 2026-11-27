@@ -1,4 +1,4 @@
-//! The screen point the spike's tools and kx-gates share.
+//! The screen point the spike's test panel and kx-gates share.
 
 /// A screen point in physical pixels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

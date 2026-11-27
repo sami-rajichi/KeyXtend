@@ -14,6 +14,7 @@ mod clip;
 mod fill;
 mod layer;
 mod pad;
+mod snip;
 mod voice;
 mod voicepanel;
 
@@ -278,10 +279,11 @@ fn in_high_contrast_each_opaque_pair_is_one_windows_pairs() {
     ]
     .map(Rgba::from);
     for (at, v) in views(&t, &hc()) {
-        // Faded marks blend their ink; only full-strength inks are system colours.
+        // Faded marks blend their ink; only full-strength inks are system colours. A step's number on its ink is the
+        // picture's own colour, which high contrast keeps.
         let opaque = drawn(&v, TEST_ROW_PX)
             .into_iter()
-            .filter(|d| system.contains(&d.ink));
+            .filter(|d| system.contains(&d.ink) && !d.name.starts_with(crate::drawn::snip::NUMBER));
         for d in opaque {
             assert!(
                 pairs.contains(&(d.ink, d.bg)),

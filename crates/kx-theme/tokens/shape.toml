@@ -169,19 +169,6 @@ words_radius_px = 14.0
 shimmer_px = [10.0, 6.0]
 shimmer_span = 2.0
 
-[snip]
-# The snip overlay (mock-up .snip-rect .dims, .snip-bar, .hintx): size tag text size, weight, padding, radius and
-# gap above the region; hint bar gap from the top, padding (3 around 28 px buttons, here text only), radius, text size.
-tag_px = 11.0
-tag_weight = 500
-tag_pad_px = [2.0, 6.0]
-tag_radius_px = 4.0
-tag_gap_px = 22.0
-bar_top_px = 10.0
-bar_pad_px = [8.0, 9.0]
-bar_radius_px = 9.0
-hint_px = 11.0
-
 [panel]
 # The Arabic test panel (mock-up .pop, .clip width): width, radius share of the window radius, header padding (top, end,
 # bottom, start) and gap, title size and weight, icon buttons (.ib: side, radius, icon, also the header's icon), list padding

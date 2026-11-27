@@ -1,8 +1,8 @@
 //! The worker's command words and exit codes, set once for the host that starts it and the worker itself.
 
 use crate::{
-    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, REFUSED_EXIT, SOUND_FLAG,
-    VAULT_JOB, VOICE_JOB,
+    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, PICK_JOB, RECORD_JOB, REFUSED_EXIT,
+    SOUND_FLAG, VAULT_JOB, VOICE_JOB,
 };
 
 #[test]
@@ -14,7 +14,9 @@ fn a_clean_exit_reads_as_success_and_a_refusal_does_not() {
 #[test]
 fn the_jobs_are_distinct_words_and_the_flags_long_flags() {
     let flag = |w: &str| w.starts_with("--") && !w.contains(char::is_whitespace);
-    let jobs = [MEDIA_JOB, VAULT_JOB, VOICE_JOB, FETCH_JOB, NET_JOB];
+    let jobs = [
+        MEDIA_JOB, VAULT_JOB, VOICE_JOB, FETCH_JOB, NET_JOB, RECORD_JOB, PICK_JOB,
+    ];
     for (i, job) in jobs.iter().enumerate() {
         assert!(!job.is_empty() && !flag(job), "{job}");
         assert!(!jobs[..i].contains(job), "{job} twice");
@@ -23,4 +25,9 @@ fn the_jobs_are_distinct_words_and_the_flags_long_flags() {
         assert!(flag(f), "{f}");
     }
     assert_ne!(MAX_PIXELS_FLAG, SOUND_FLAG);
+}
+
+#[test]
+fn the_snip_jobs_are_the_adrs_words() {
+    assert_eq!((RECORD_JOB, PICK_JOB), ("record", "pick"), "ADR-0056");
 }

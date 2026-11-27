@@ -25,8 +25,8 @@ pub const QT_POOL_BYTES: u32 = 2 * 1024 * 1024;
 /// Ends each name in a list of names, as it ends a C string.
 pub const NAME_END: u8 = 0;
 
-/// The frame timing and buffer pool variables the app sets after the clear, from the `[ui]` settings `s`. The timing
-/// defaults are Qt's own, and the pool's keeps no spare buffer (ADR-0028).
+/// The frame timing and buffer pool variables the app sets after the clear, from the `[ui]` settings `s`. By default no
+/// frame start waits (ADR-0061), the other timing is Qt's own, and the pool keeps no spare buffer (ADR-0028).
 #[must_use]
 pub fn timing_vars(s: &UiSettings) -> [(&'static str, String); 4] {
     [

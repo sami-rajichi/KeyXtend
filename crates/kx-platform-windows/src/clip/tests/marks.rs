@@ -80,10 +80,20 @@ fn a_put_back_checks_only_the_presence_markers_our_put_backs_never_set() {
 }
 
 #[test]
+fn a_private_copy_has_a_shipped_presence_marker_and_number_markers_at_0_alone_are_not_one() {
+    use crate::clip::private_by;
+    assert!(!private_by(|_| false, |_| Some(0)), "our put-back's zeros");
+    assert!(private_by(|n| n == "Clipboard Viewer Ignore", |_| None));
+    assert!(private_by(|_| true, |_| Some(1)), "every format there");
+    assert!(!private_by(|_| false, |_| None), "a plain copy");
+}
+
+#[test]
 #[cfg(windows)]
 fn only_a_lent_write_sets_the_presence_markers_and_every_write_sets_ours() {
+    use write::Kind::{Lent, Marked};
     let t = Table::parse(TABLE).unwrap();
-    let (plain, lent) = (write::marks(&t, false), write::marks(&t, true));
+    let (plain, lent) = (write::marks(&t, Marked), write::marks(&t, Lent));
     assert_eq!(plain, [t.marker.clone(), t.cloud_off.clone()]);
     let presence = t.marks().presence();
     assert!(
@@ -95,4 +105,14 @@ fn only_a_lent_write_sets_the_presence_markers_and_every_write_sets_ours() {
         "each presence marker"
     );
     assert!(plain.iter().all(|n| lent.contains(n)), "and ours");
+}
+
+#[test]
+#[cfg(windows)]
+fn a_kept_write_sets_no_marker_so_both_histories_and_the_cloud_keep_it() {
+    let t = Table::parse(TABLE).unwrap();
+    let kept = write::marks(&t, write::Kind::Kept);
+    assert!(kept.is_empty(), "{kept:?}");
+    let set = |n: &str| kept.iter().any(|k| k.eq_ignore_ascii_case(n));
+    assert!(!t.marks().marked(set, |_| None), "our own watch reads it");
 }

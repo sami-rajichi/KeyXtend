@@ -41,6 +41,8 @@ pub enum Tapped {
     Fill,
     /// The Dictation key: nothing was sent and the latches stay; the face asks the voice module to start or stop.
     Voice,
+    /// The Snip key: nothing was sent and the latches stay; the face asks the snip module to start or end a capture.
+    Snip,
     /// The layer's Next key: nothing was sent and the latches stay; the face turns the page.
     Next,
     /// A key from a later version: nothing happened.

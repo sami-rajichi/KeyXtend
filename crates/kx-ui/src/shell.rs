@@ -9,6 +9,7 @@ use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_adapter, pin_imports, unpin_adapter};
 use crate::bridges::installed;
 use crate::bridges::shadows::serve_shadows;
+use crate::bridges::snips::{ShowWatch, serve_snips};
 use crate::bridges::tint::serve_icons;
 use crate::device::{Cause, Next, Rebuilds, Remake};
 use crate::hub::Hub;
@@ -41,6 +42,8 @@ pub struct Shell {
     engine: UniquePtr<QQmlApplicationEngine>,
     device: Option<Device>,
     watch: Watch,
+    /// Keeps each window of ours that shows during a capture's aside out of captures before it shows.
+    _shows: ShowWatch,
     /// The folder QML imports are pinned to, as the uiAccess build pins them.
     pinned: Option<PathBuf>,
     pick: Pick,
@@ -71,6 +74,7 @@ impl Shell {
             engine: UniquePtr::null(),
             device,
             watch: Watch::new(),
+            _shows: ShowWatch::new(),
             pinned: pinned.map(Path::to_path_buf),
             pick,
             rebuilds: Rebuilds::default(),
@@ -195,6 +199,7 @@ impl Shell {
         serve_icons(engine.as_mut());
         serve_clips(engine.as_mut());
         serve_shadows(engine.as_mut());
+        serve_snips(engine.as_mut());
         let loaded = root(engine);
         if !loaded {
             tracing::error!(url = MAIN_QML, "the root QML did not load");

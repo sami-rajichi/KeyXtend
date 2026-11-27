@@ -7,12 +7,14 @@ use serde::{Deserialize, Serialize};
 mod chips;
 mod clip;
 mod fill;
+mod snip;
 mod voice;
 mod voicepanel;
 
 pub use chips::ChipsIcons;
 pub use clip::ClipIcons;
 pub use fill::FillIcons;
+pub use snip::SnipIcons;
 pub use voice::VoiceIcons;
 pub use voicepanel::VoicePanelIcons;
 
@@ -108,6 +110,8 @@ pub struct TrayIcons {
     pub voice: String,
     /// Quit.
     pub quit: String,
+    /// Snip, which opens the Snip panel.
+    pub snip: String,
 }
 
 /// The chip lane: its chip kinds as the lane names them, the password note, the menu button and the menu's items.
@@ -195,12 +199,14 @@ pub struct Icons {
     pub fill: FillIcons,
     /// The dictation bar.
     pub voice: VoiceIcons,
+    /// Snip's capture windows and editor.
+    pub snip: SnipIcons,
 }
 
 impl Icons {
     /// Every name with where it is used, such as `bar.theme` or `shortcuts.copy`.
     fn named(&self) -> Vec<(String, &str)> {
-        let (b, d, l, t) = (&self.bar, &self.dpad, &self.lang, &self.tray);
+        let (b, d, l) = (&self.bar, &self.dpad, &self.lang);
         let fixed = [
             ("bar.grip", &b.grip),
             ("bar.mode", &b.mode),
@@ -224,11 +230,8 @@ impl Icons {
             ("page.back", &self.page.back),
             ("page.on", &self.page.on),
             ("notice.icon", &self.notice.icon),
-            ("tray.glyph", &t.glyph),
-            ("tray.show", &t.show),
-            ("tray.voice", &t.voice),
-            ("tray.quit", &t.quit),
         ];
+        let fixed = fixed.into_iter().chain(self.tray.named());
         let fixed = fixed.map(|(at, v)| (at.to_string(), v.as_str()));
         let panels = self.words.named().into_iter().chain(self.chips.named());
         let panels = panels.chain(self.clip.named()).chain(self.fill.named());
@@ -238,6 +241,7 @@ impl Icons {
             .chain(panels.map(|(at, v)| (at.to_string(), v)))
             .chain(self.voice.named())
             .chain(self.voice.panel.named())
+            .chain(self.snip.named())
             .collect()
     }
 
@@ -245,6 +249,19 @@ impl Icons {
     #[must_use]
     pub fn names(&self) -> Vec<&str> {
         self.named().into_iter().map(|(_, n)| n).collect()
+    }
+}
+
+impl TrayIcons {
+    /// Every name with where it is used, such as `tray.show`.
+    fn named(&self) -> [(&'static str, &String); 5] {
+        [
+            ("tray.glyph", &self.glyph),
+            ("tray.show", &self.show),
+            ("tray.voice", &self.voice),
+            ("tray.quit", &self.quit),
+            ("tray.snip", &self.snip),
+        ]
     }
 }
 

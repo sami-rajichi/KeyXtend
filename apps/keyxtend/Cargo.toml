@@ -13,7 +13,7 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault", "mod-voice"]
+default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-snip", "mod-vault", "mod-voice"]
 mod-clipboard = ["dep:kx-mod-clipboard"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
@@ -22,6 +22,7 @@ mod-power = ["dep:kx-mod-power"]
 mod-predict = ["dep:kx-mod-predict"]
 mod-scroll = ["dep:kx-mod-scroll"]
 mod-selection = ["dep:kx-mod-selection"]
+mod-snip = ["dep:kx-mod-snip"]
 mod-vault = ["dep:kx-mod-vault"]
 mod-voice = ["dep:kx-mod-voice"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
@@ -47,6 +48,7 @@ kx-mod-power = { path = "../../crates/kx-mod-power", optional = true }
 kx-mod-predict = { path = "../../crates/kx-mod-predict", optional = true }
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll", optional = true }
 kx-mod-selection = { path = "../../crates/kx-mod-selection", optional = true }
+kx-mod-snip = { path = "../../crates/kx-mod-snip", optional = true }
 kx-mod-vault = { path = "../../crates/kx-mod-vault", optional = true }
 kx-mod-voice = { path = "../../crates/kx-mod-voice", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
@@ -82,4 +84,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault", "mod-voice"]
+required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-snip", "mod-vault", "mod-voice"]

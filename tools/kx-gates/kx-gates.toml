@@ -272,16 +272,6 @@ user_name = "kx-user"
 pass_name = "kx-pass"
 field_css = "font:20px sans-serif;margin:24px;display:block"
 
-[g24]
-# Typed into target-window so the snip holds a known pattern; the caret ends up right of the region.
-text = "KeyXtend snip 0123456789 ABCDEFGHIJ abcdefghij KeyXtend snip"
-# Region from the text box's top-left: x, y, width, height in logical px.
-region_px = [4.0, 4.0, 160.0, 28.0]
-# Longest wait for the overlay to show or the snip file to appear, in ms.
-wait_ms = 5000
-# Window class of the taskbar, which the overlay must cover.
-taskbar_class = "Shell_TrayWnd"
-
 [g25]
 # Copied and pasted in Notepad; also the prefix removed from Windows clipboard history after.
 text = "kx-keys-alpha"

@@ -11,8 +11,8 @@ impl Shape {
     /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (a list
     /// line's caret and underline, Quick-fill's width, `panel.min_fit`, `panel.wheel_notch`, `panel.wheel_rest_s` and the
     /// others in `check_sizes`), no kind row, a gap or place below 0, a lit dot no larger than the others, and a D-pad
-    /// hub or Stop inset of half the pad or more or a Stop wider than the hub, an odd selection keycap size, and an odd
-    /// dictation size (`VoiceShape::check`).
+    /// hub or Stop inset of half the pad or more or a Stop wider than the hub, an odd selection keycap size, an odd Snip size
+    /// (`SnipShape::check`), and an odd dictation size (`VoiceShape::check`).
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -21,6 +21,7 @@ impl Shape {
         self.check_counts()?;
         self.check_shares()?;
         self.check_insets()?;
+        self.snip.check()?;
         self.voice.check()
     }
 
@@ -93,7 +94,6 @@ impl Shape {
             ("lang.side_weight", self.lang.side_weight),
             ("tip.weight", self.tip.weight),
             ("caption.status_weight", self.caption.status_weight),
-            ("snip.tag_weight", self.snip.tag_weight),
             ("panel.title_weight", self.panel.title_weight),
             ("panel.count_weight", self.panel.count_weight),
             ("notice.button_weight", self.notice.button_weight),

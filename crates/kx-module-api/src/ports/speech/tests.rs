@@ -21,10 +21,10 @@ fn secret(text: &str) -> Secret {
 }
 
 #[test]
-fn the_speech_service_is_named_and_gated_by_the_microphone() {
+fn the_speech_service_is_named_and_gated_by_speech_not_the_microphone() {
     assert_eq!(SpeechKey::ID.as_str(), "speech");
-    let gate = Some(Capability::Microphone);
-    assert_eq!(SpeechKey::CAPABILITY, gate, "ADR-0042 decision 8");
+    let gate = Some(Capability::Speech);
+    assert_eq!(SpeechKey::CAPABILITY, gate, "ADR-0058 decision 1");
 }
 
 #[test]

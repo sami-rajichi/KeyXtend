@@ -28,19 +28,21 @@ impl<T> Ear<T> {
         }
     }
 
-    /// Tells `notes` in order while the ear is open, holding the callback while it hears.
-    pub(crate) fn tell(&self, notes: impl IntoIterator<Item = T>) {
+    /// Tells `notes` in order while the ear is open, holding the callback while it hears; false when one was not told.
+    pub(crate) fn tell(&self, notes: impl IntoIterator<Item = T>) -> bool {
+        let mut notes = notes.into_iter();
         let held = self.held();
         let Some(tell) = held.as_ref() else {
-            return;
+            return notes.next().is_none();
         };
         let _telling = Telling::start();
         for note in notes {
             if !self.open.load(Ordering::Acquire) {
-                break;
+                return false;
             }
             tell(note);
         }
+        true
     }
 
     /// Closes the ear: a note being told on another thread ends first, and the callback is dropped. From inside a
@@ -86,9 +88,10 @@ mod tests {
         let ear = Ear::new(Box::new(move |n: u8| {
             let _ = said.send(n);
         }));
-        ear.tell([1, 2]);
+        assert!(ear.tell([1, 2]));
         ear.close();
-        ear.tell([3]);
+        assert!(!ear.tell([3]), "a note a closed ear did not tell");
+        assert!(ear.tell([]), "no note, nothing untold");
         assert_eq!(heard.try_iter().collect::<Vec<_>>(), [1, 2]);
     }
 
@@ -104,8 +107,8 @@ mod tests {
             }
         })));
         let _ = me.set(Arc::clone(&ear));
-        ear.tell([1, 2]);
-        ear.tell([3]);
+        assert!(!ear.tell([1, 2]));
+        assert!(!ear.tell([3]));
         assert_eq!(heard.try_iter().collect::<Vec<_>>(), [1]);
     }
 }

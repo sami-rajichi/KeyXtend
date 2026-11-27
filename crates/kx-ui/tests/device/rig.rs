@@ -7,8 +7,8 @@ use cxx::UniquePtr;
 use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Pick, Shell, UiPorts, UiSettings};
@@ -116,6 +116,7 @@ impl Rig {
             memory: memory.clone(),
             speaker: Arc::new(FakeSpeaker::new()),
             reveal: Arc::new(FakeReveal::new()),
+            esc: Arc::new(FakeEscWatch::new()),
         };
         let (hub, _requests) = Hub::new(ports).map_err(|e| e.to_string())?;
         let face = Arc::new(Face::new(f64::from(board::row()))?);

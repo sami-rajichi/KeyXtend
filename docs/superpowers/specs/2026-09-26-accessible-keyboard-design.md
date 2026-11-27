@@ -55,7 +55,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - Quick-fill vault.
 - Selection helper.
 - Voice typing.
-- Snip with annotation and OCR.
+- Snip and screen recording, with a small editor ([design](2026-11-23-snip-design.md), ADR-0056); OCR left v1 (ADR-0055).
 - Power key.
 - Settings window.
 
@@ -305,7 +305,7 @@ The full design is in `ARCHITECTURE.md`; the reasons are in `docs/adr/`.
 - **Main process `keyxtend` (uiAccess, signed, installed in Program Files):**
   - Qt UI, kernel and trusted modules: keyboard, layouts, input, mouse assist, scroll, prediction, overlays, vault UI.
   - **No network. No parsing of untrusted media.** (ADR-0003)
-- **Worker processes (normal rights):** voice (mic + network), OCR, media thumbnails, and the update check. They talk to the main process over an authenticated local pipe with a versioned schema (ADR-0004).
+- **Worker processes (normal rights):** voice (mic + network), screen recording and the Save dialog (ADR-0056), media thumbnails, and the update check; OCR left v1 (ADR-0055). They talk to the main process over an authenticated local pipe with a versioned schema (ADR-0004).
 - **Micro-kernel with "Lego" modules** (ADR-0005), inspired by DeepSeek Harness/Cordis:
   - each module declares a manifest (id, requires/provides services, capabilities, settings version);
   - the kernel starts modules in dependency order and contains failures;

@@ -225,6 +225,17 @@ window =
     .fill = Remplissage rapide de { -app }
     .voice = Barre de dictée de { -app }
     .voice-panel = Réglages de la dictée de { -app }
+    .snip-panel = Réglages de la capture d’écran de { -app }
+    .snip-screen = Écran figé de { -app }
+    .snip-bar = Barre de capture de { -app }
+    .snip-hint = Conseil de capture de { -app }
+    .snip-strip = Actions de la capture de { -app }
+    .snip-count = Compte à rebours de { -app }
+    .snip-record = Barre d’enregistrement de { -app }
+    .snip-edge = Bord d’enregistrement de { -app }
+    .snip-editor = Éditeur de capture de { -app }
+    .snip-ask = Question de la capture de { -app }
+    .shadow = Ombre d’une fenêtre de { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -237,11 +248,12 @@ badge =
     .fast = rapide
     .join = {", "}
 
-## Les lignes du menu de la zone de notification ; Dictée ouvre le panneau de la dictée.
+## Les lignes du menu de la zone de notification ; Dictée ouvre le panneau de la dictée, Capture d’écran celui de la capture.
 tray =
     .show = Afficher le clavier
     .voice = Dictée
     .quit = Quitter
+    .snip = Capture d’écran
 
 ## Boutons d’une notification.
 button =
@@ -317,6 +329,7 @@ module =
     .predict = Suggestions de mots
     .scroll = Pavé de défilement
     .selection = Aide à la sélection
+    .snip = Capture d’écran
     .ui = Apparence
     .vault = Remplissage rapide
     .voice = Dictée

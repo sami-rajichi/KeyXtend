@@ -1,4 +1,5 @@
 //! A buffered read whose buffer is wiped after each frame and when dropped; a large read skips it, as `BufReader`'s does.
+//! A wait holds a frame's first bytes, so the reader learns that frame's bound only once it began.
 
 use kx_module_api::Zeroizing;
 use std::io::{self, Read};
@@ -35,6 +36,29 @@ impl<R: Read> Wipe<R> {
         drop(Zeroizing::new(self.buf[left..].iter_mut()));
         (self.at, self.end) = (0, left);
     }
+
+    /// Waits until a byte is held or the stream ends, so the read after it starts at once.
+    ///
+    /// # Errors
+    /// The stream's own error.
+    pub(super) fn wait(&mut self) -> io::Result<()> {
+        if self.at == self.end {
+            self.fill()?;
+        }
+        Ok(())
+    }
+
+    /// Reads the next bytes into the empty buffer.
+    fn fill(&mut self) -> io::Result<()> {
+        let n = loop {
+            match self.inner.read(&mut self.buf) {
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+                read => break read?,
+            }
+        };
+        (self.at, self.end) = (0, n.min(self.buf.len()));
+        Ok(())
+    }
 }
 
 impl<R: Read> Read for Wipe<R> {
@@ -43,8 +67,7 @@ impl<R: Read> Read for Wipe<R> {
             if out.len() >= self.buf.len() {
                 return self.inner.read(out);
             }
-            let n = self.inner.read(&mut self.buf)?;
-            (self.at, self.end) = (0, n.min(self.buf.len()));
+            self.fill()?;
         }
         let n = out.len().min(self.end - self.at);
         out[..n].copy_from_slice(&self.buf[self.at..self.at + n]);
@@ -93,6 +116,20 @@ mod tests {
         assert_eq!(all, bytes);
         wipe.wipe();
         assert!(wipe.buf.iter().all(|&b| b == 0), "nothing is left");
+    }
+
+    #[test]
+    fn a_wait_holds_the_first_bytes_for_the_next_read_and_ends_at_the_end() {
+        let bytes = vec![5; SMALL];
+        let mut wipe = Wipe::new(Cursor::new(bytes.clone()));
+        wipe.wait().unwrap();
+        assert_eq!(wipe.buf[..SMALL], bytes[..], "held before any read");
+        wipe.wait().unwrap();
+        let mut all = Vec::new();
+        wipe.read_to_end(&mut all).unwrap();
+        assert_eq!(all, bytes, "a second wait reads nothing more");
+        wipe.wait().unwrap();
+        assert_eq!(wipe.read(&mut [0; 1]).unwrap(), 0, "the end stays the end");
     }
 
     #[test]

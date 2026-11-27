@@ -1,4 +1,4 @@
-//! What the voice module declares (ADR-0042 decision 8): the microphone through the speech port, downloads the user
+//! What the voice module declares (ADR-0042, ADR-0058): the microphone through the speech port, downloads the user
 //! asks for, its sealed store on its own shelf, the focused box, Copy, the calendar's dates and its models folder
 //! shown (ADR-0046), the cloud port, a card's link and the key page's Paste (ADR-0047); it never types.
 
@@ -32,7 +32,7 @@ pub static MANIFEST: Manifest = Manifest {
     provides: &[],
     capabilities: &[
         Capability::Voice,
-        Capability::Microphone,
+        Capability::Speech,
         Capability::Network,
         Capability::SecretStore,
         Capability::ReadFocusedText,
@@ -56,9 +56,10 @@ mod tests {
 
     #[test]
     fn it_holds_the_plans_capabilities_and_never_injects_input() {
+        // Speech reaches the microphone through its own gate; `Microphone` is Snip's recorder pass (ADR-0058).
         let want = [
             Capability::Voice,
-            Capability::Microphone,
+            Capability::Speech,
             Capability::Network,
             Capability::SecretStore,
             Capability::ReadFocusedText,
@@ -69,6 +70,7 @@ mod tests {
         ];
         assert_eq!(MANIFEST.capabilities, want);
         assert!(!MANIFEST.capabilities.contains(&Capability::InjectInput));
+        assert!(!MANIFEST.capabilities.contains(&Capability::Microphone));
     }
 
     #[test]

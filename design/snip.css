@@ -1,0 +1,79 @@
+/* Snip mock-up: the page, the desktop scene and the keyboard (from selection-chips.html). Every colour comes from KeyXtend's themes. */
+html,body{height:100%}
+body{margin:0; overflow:hidden; background:var(--pop-bg,#F9F9F9); color:var(--pop-ink,#1B1B1B); font:13px/1.35 var(--f-latin,"Segoe UI",sans-serif);
+  padding:10px max(16px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; gap:8px; box-sizing:border-box}
+#bar{flex:none; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:flex-end}
+.grp{display:flex; flex-direction:column; gap:3px; min-width:0}
+.grp>b{font-size:11px; font-weight:600; color:var(--pop-muted)}
+.opts{display:flex; flex-wrap:wrap; gap:3px}
+.o{min-height:32px; padding:0 10px; border:1px solid var(--pop-line); border-radius:var(--r-key); background:transparent; color:var(--pop-ink); font:inherit; font-weight:500; cursor:pointer}
+.o:hover{background:var(--pop-hover)}
+.o[aria-pressed="true"]{background:var(--pop-sel); border-color:var(--ring)}
+button:focus-visible{outline:2px solid var(--ring); outline-offset:1px}
+#say{flex:none; min-height:36px; color:var(--pop-muted); max-width:120ch}
+#say strong{color:var(--pop-ink); font-weight:600}
+#fit{flex:1; min-height:0; position:relative; overflow:hidden}
+#stage{position:absolute; left:0; top:0; transform-origin:0 0; overflow:hidden; border-radius:var(--r-win); background:var(--wall)}
+.i{display:block; flex:none; width:16px; height:16px}
+.i-fb{display:grid; place-items:center; font-size:11px; font-weight:600}
+.w.ar,[dir="rtl"]{font-family:var(--f-arabic)}
+.w.ar{font-size:calc(1em*var(--ar))}
+
+/* The desktop: a web page with a chart, a notes window and the taskbar. */
+.win{position:absolute; background:var(--a-bg); color:var(--a-ink); border-radius:8px; box-shadow:0 8px 24px #00000038, 0 0 0 1px var(--a-line); overflow:hidden; font-family:"Segoe UI",sans-serif; display:flex; flex-direction:column}
+.w-top{flex:none; height:32px; background:var(--a-top); display:flex; align-items:center; padding:0 12px; font-size:12px; color:var(--a-mute)}
+.w-url{flex:none; height:28px; display:flex; align-items:center; padding:0 12px; font-size:12px; color:var(--a-mute); border-bottom:1px solid var(--a-line)}
+.w-body{flex:1; min-height:0; padding:16px 40px; font-size:14px; line-height:1.55}
+.w-body h2{font:600 22px/1.25 "Segoe UI",sans-serif; margin:0 0 8px}
+.w-body p{margin:0 0 10px}
+.notes .w-body{padding:14px 18px; font-size:15px}
+.chart{border:1px solid var(--a-line); border-radius:8px; padding:12px 16px; width:400px; font-size:12px}
+.chart b{font-weight:600}
+.bars{height:150px; display:flex; align-items:flex-end; gap:22px; padding-top:10px}
+.bar-c{flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; color:var(--a-mute); font-size:11px}
+.bar-c i{width:100%; background:var(--a-bar); border-radius:3px 3px 0 0}
+.mail{color:var(--a-mute); font-size:12.5px; margin-top:12px}
+.task{position:absolute; left:0; right:0; bottom:0; height:40px; background:var(--task); color:var(--a-ink); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(20px)}
+.task .clock{position:absolute; right:16px; font-size:12px}
+
+/* The keyboard, as the product draws it. */
+.kb{position:absolute; left:50%; transform:translateX(-50%); z-index:30; --u:calc(33px*var(--s)); --h:calc(31px*var(--s)); --gp:calc(var(--g)*1px*var(--s));
+  background:var(--plate); border-radius:var(--r-win); padding:calc(6px*var(--s)) calc(7px*var(--s)) calc(7px*var(--s)); box-shadow:var(--win-shadow); font-family:var(--f-latin); color:var(--legend)}
+.kb .i{width:calc(14px*var(--s)); height:calc(14px*var(--s))}
+.kb-top{display:flex; align-items:center; gap:calc(4px*var(--s)); height:calc(24px*var(--s)); margin-bottom:calc(4px*var(--s))}
+.lane{flex:1; min-width:0; display:flex; gap:calc(4px*var(--s))}
+.wchip{height:calc(20px*var(--s)); padding:0 calc(9px*var(--s)); border-radius:calc(var(--r-key)*.8); background:var(--chip-bg); font:500 calc(11.5px*var(--s))/1 var(--f-latin); display:inline-flex; align-items:center}
+.wchip.ar{font-family:var(--f-arabic); font-size:calc(12.5px*var(--s))}
+.tb{width:calc(24px*var(--s)); height:calc(22px*var(--s)); color:var(--legend-2); display:grid; place-items:center; cursor:pointer}
+.kb-body{display:flex; gap:calc(8px*var(--s))}
+.kb-main{width:calc(var(--u)*16); display:grid; grid-template-rows:repeat(5,var(--h))}
+.row{display:grid; grid-template-columns:repeat(64,minmax(0,1fr)); min-height:0}
+.kb-side{display:grid; grid-template-columns:repeat(3,calc(var(--u)*1.22)); grid-template-rows:repeat(5,var(--h))}
+.dpad{position:relative}
+.dpad .d{position:absolute; display:grid; place-items:center}
+.dpad .up{top:7%; left:50%; transform:translateX(-50%)}
+.dpad .bt{bottom:7%; left:50%; transform:translateX(-50%)}
+.dpad .lf{left:7%; top:50%; transform:translateY(-50%)}
+.dpad .rt{right:7%; top:50%; transform:translateY(-50%)}
+.key{padding:calc(var(--gp,3px)/2); min-width:0; min-height:0; --top:var(--key); --ink:var(--legend)}
+.key.mod,.key.lang{--top:var(--key-mod); --ink:var(--legend-mod)}
+.key.act{--top:var(--key-act); --ink:var(--legend-act)}
+.key.enter{--top:var(--enter); --ink:var(--enter-ink)}
+.key.danger{--top:var(--danger); --ink:var(--danger-ink)}
+.key.on .cap{box-shadow:var(--key-shadow), inset 0 0 0 2px var(--ring)}
+.cap{position:relative; display:flex; align-items:center; justify-content:center; gap:calc(4px*var(--s,1)); width:100%; height:100%; overflow:hidden; background:var(--top); color:var(--ink); border-radius:var(--r-key); box-shadow:var(--key-shadow); box-sizing:border-box}
+.cap>*{position:relative; z-index:1}
+.lg{font-size:calc(var(--fs)*var(--s)); font-weight:var(--fw); line-height:1}
+.lg.ar{font-family:var(--f-arabic); font-size:calc(var(--fs)*var(--ar)*var(--s))}
+.lbl{font-size:calc(var(--fs-mod)*var(--s)); line-height:1; white-space:nowrap}
+.lbl.ar,.spn.ar{font-family:var(--f-arabic)}
+.spn{font-size:calc(10.5px*var(--s)); color:var(--legend-2); white-space:nowrap}
+[data-style="et66"] .cap{background:linear-gradient(180deg,color-mix(in srgb,var(--top) 93%,#fff) 0%,var(--top) 55%,color-mix(in srgb,var(--top) 93%,#000) 100%)}
+[data-style="dolch"] .key{--sk:var(--key-sk)}
+[data-style="dolch"] .key.mod,[data-style="dolch"] .key.lang,[data-style="dolch"] .key.act{--sk:var(--mod-sk)}
+[data-style="dolch"] .key.enter{--sk:var(--enter-sk)}
+[data-style="dolch"] .key.danger{--sk:var(--danger-sk)}
+[data-style="dolch"] .cap{background:var(--sk)}
+[data-style="dolch"] .cap::before{content:""; position:absolute; z-index:0; inset:calc(1px*var(--s,1)) calc(3px*var(--s,1)) calc(4px*var(--s,1)); border-radius:calc(4px*var(--s,1)); background:linear-gradient(180deg,color-mix(in srgb,var(--top) 88%,#fff),var(--top) 70%)}
+.bubble{position:absolute; z-index:30; width:48px; height:48px; border-radius:50%; border:0; background:var(--plate); color:var(--legend); box-shadow:var(--win-shadow); display:grid; place-items:center; cursor:pointer}
+.bubble .i{width:22px; height:22px}

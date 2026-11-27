@@ -1,8 +1,9 @@
-//! Voice typing's grants (ADR-0042, ADR-0046, ADR-0047): its feature is a default and the build ships it, the keyboard
-//! and the ui hold `Voice` as an event gate only, the module alone holds the microphone, the network and the folder
-//! reveal and asks for speech, cloud speech, the model files, the session watch and its shelf, speech, cloud speech and
-//! the model files reach it alone, `OpenLink` and `ReadClipboard` each gain exactly the voice module, its shelf and the
-//! cloud port reach only it in a run, either run, and the session watch needs no gate.
+//! Voice typing's grants (ADR-0042, ADR-0046, ADR-0047, ADR-0058): its feature is a default and the build ships it,
+//! the keyboard and the ui hold `Voice` as an event gate only, the module alone holds speech and the network, Snip
+//! alone the microphone, and both the folder reveal; it alone asks for speech, cloud speech, the model files, the
+//! session watch and its shelf, and speech, cloud speech and the model files reach it alone; `OpenLink` and
+//! `ReadClipboard` each gain exactly the voice module, its shelf and the cloud port reach only it in a run, either run,
+//! and the session watch needs no gate.
 
 use super::clip::readers;
 use super::sel::linkers;
@@ -48,14 +49,17 @@ fn voice_goes_to_the_module_and_as_an_event_gate_to_the_keyboard_and_the_ui() {
 }
 
 #[test]
-fn only_the_voice_module_holds_the_microphone_the_network_and_the_folder_reveal() {
-    for cap in [
-        Capability::Microphone,
-        Capability::Network,
-        Capability::OpenFolder,
-    ] {
-        assert_eq!(holders(cap), voice(), "{cap:?}");
-    }
+fn voice_alone_holds_speech_and_the_network_snip_alone_the_microphone_and_both_the_folder_reveal() {
+    assert_eq!(holders(Capability::Speech), voice(), "ADR-0058 decision 1");
+    assert_eq!(holders(Capability::Network), voice(), "ADR-0047");
+    let snip = BTreeSet::from([kx_mod_snip::ID]);
+    assert_eq!(holders(Capability::Microphone), snip, "ADR-0058 decision 2");
+    let both = BTreeSet::from([kx_mod_voice::ID, kx_mod_snip::ID]);
+    assert_eq!(
+        holders(Capability::OpenFolder),
+        both,
+        "ADR-0056 decision 10"
+    );
 }
 
 #[test]
@@ -79,7 +83,7 @@ fn speech_cloud_speech_and_the_model_files_reach_the_voice_module_alone() {
     let speech: Arc<dyn Speech> = Arc::new(FakeSpeech::new());
     let cloud: Arc<dyn CloudSpeech> = Arc::new(FakeCloud::new());
     let files: Arc<dyn ModelFiles> = Arc::new(FakeModelFiles::new());
-    assert_eq!(reached::<SpeechKey>(&rig, &speech), voice(), "ADR-0042");
+    assert_eq!(reached::<SpeechKey>(&rig, &speech), voice(), "ADR-0058");
     assert_eq!(reached::<CloudSpeechKey>(&rig, &cloud), voice(), "ADR-0047");
     assert_eq!(reached::<ModelFilesKey>(&rig, &files), voice(), "ADR-0042");
 }
@@ -114,7 +118,7 @@ fn the_voice_shelf_reaches_only_the_secret_store_holders() {
 
 /// The holders of `api`, which `put` sets among the services, beyond the test's and the kernel's own after the
 /// shipped app's start in `run`, then after its stop, with module `off` switched off.
-fn held<T: ?Sized>(
+pub(super) fn held<T: ?Sized>(
     api: &Arc<T>,
     put: impl FnOnce(&mut Services, Arc<T>),
     run: &Run,
@@ -125,7 +129,7 @@ fn held<T: ?Sized>(
         let section = format!("[kernel]\ndisabled = [\"{id}\"]\n");
         std::fs::write(rig.files().settings, section).unwrap();
     }
-    let mut services = rig.services();
+    let mut services = rig.services(run);
     put(&mut services, Arc::clone(api));
     let mut boot = rig.load_with(run, services);
     let own = Arc::strong_count(api);

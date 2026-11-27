@@ -2,8 +2,8 @@
 
 use kx_module_api::ports::{
     BlobName, Calendar, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard,
-    ClipboardWriter, DibAsk, FileFact, LocalTime, PictureAsk, PictureConfig, PictureError,
-    PictureRun, Pictures, Pixels, Room, SealedError, SealedShelf,
+    ClipboardWriter, DibAsk, EncodeAsk, FileFact, LocalTime, PictureAsk, PictureConfig,
+    PictureError, PictureRun, Pictures, Pixels, Room, SealedError, SealedShelf,
 };
 use kx_module_api::{Redacted, Secret};
 use std::path::PathBuf;
@@ -47,6 +47,10 @@ impl ClipboardWriter for Stuck {
     fn write_lent(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
         Err(ClipError::Busy)
     }
+
+    fn write_kept(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
+        Err(ClipError::Busy)
+    }
 }
 
 impl SealedShelf for Stuck {
@@ -85,6 +89,10 @@ impl PictureRun for Stuck {
     }
 
     fn dib(&mut self, _: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        Err(PictureError::Gone)
+    }
+
+    fn encode(&mut self, _: EncodeAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
         Err(PictureError::Gone)
     }
 }

@@ -1,4 +1,4 @@
-//! Every event name in the crate before voice typing, so the voice events' names stay unique.
+//! Every event name in the crate before voice typing, so the voice and snip events' names stay unique.
 
 use crate::ports::{
     AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, BoardPlace, BoardPlaceAsk,
@@ -14,7 +14,7 @@ use crate::ports::{
 use crate::{Event, ModuleStateChanged, Notice, NoticeAnswered, SettingsChanged};
 
 /// The older names, from the kernel's notices to the selection chips.
-pub(super) fn older() -> impl Iterator<Item = &'static str> {
+pub(in crate::ports) fn older() -> impl Iterator<Item = &'static str> {
     kernel()
         .into_iter()
         .chain(typing())

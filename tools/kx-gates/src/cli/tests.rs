@@ -89,7 +89,8 @@ const NAME_ONLY: &[&str] = &[
     "g22 bench",
     "g22 staged",
     "g23 keyxtend",
-    "g24 qt",
+    "g24 keyxtend",
+    "g24 trap",
     "g25 notepad",
     "close qt",
     "close keyxtend",
@@ -158,7 +159,7 @@ const BAD_INPUT: &[&str] = &[
     "g25 notepad --attach",
     "g23 keyxtend --seed 2",
     "g23 qt",
-    "g24 qt --clicks 3",
+    "g24 qt",
     "g7 qt --seed 1",
     "g12 keyxtend --seed 1",
     "g12 keyxtend --clicks 5",
@@ -167,7 +168,9 @@ const BAD_INPUT: &[&str] = &[
     "g3 qt",
     "g4 qt --clicks 5",
     "g7 keyxtend",
-    "g24 keyxtend",
+    "g24 keyxtend --clicks 3",
+    "g24 trap --seed 1",
+    "g23 trap",
 ];
 
 #[test]
@@ -261,6 +264,12 @@ fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate
         Mouse::Held,
         "only G19's"
     );
+}
+
+#[test]
+fn g24s_trap_part_holds_the_mouse_as_its_full_run_does() {
+    assert_eq!(mouse("g24", crate::g24::TRAP), Mouse::Held);
+    assert_eq!(mouse("g24", crate::product::NAME), Mouse::Held);
 }
 
 #[test]

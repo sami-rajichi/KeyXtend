@@ -71,6 +71,8 @@ pub enum Plan {
     Fill,
     /// The Dictation key: the face asks the voice module to start or stop; nothing goes to the app.
     Voice,
+    /// The Snip key: the face asks the snip module to start or end a capture; nothing goes to the app.
+    Snip,
     /// A layer cell: the platform sends the shortcut with every latch held; then the latches let go as after any key,
     /// and a dead key's wait ends.
     Shortcut(ShortcutId),
@@ -100,6 +102,7 @@ impl fmt::Debug for Plan {
             Self::Clip => f.write_str("Clip"),
             Self::Fill => f.write_str("Fill"),
             Self::Voice => f.write_str("Voice"),
+            Self::Snip => f.write_str("Snip"),
             Self::Shortcut(_) => f.write_str("Shortcut"),
             Self::Next => f.write_str("Next"),
             Self::Later => f.write_str("Later"),
@@ -140,6 +143,7 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Clip, _) => Plan::Clip,
         (Role::Fill, _) => Plan::Fill,
         (Role::Voice, _) => Plan::Voice,
+        (Role::Snip, _) => Plan::Snip,
         _ => Plan::Later,
     }
 }

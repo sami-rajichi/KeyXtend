@@ -32,6 +32,9 @@ Item {
 
         // A short wait before a tip shows, read from the settings like the default, so a pass over every button is quick.
         readonly property int waitMs: 100
+        // How far from the screen's corner the keyboard sits: past Qt's offscreen pointer at (10, 10) device pixels, and
+        // close enough that every key stays on the screen.
+        readonly property int offCorner: 12
 
         // Any warning fails the test, so the run stays clean.
         function init() {
@@ -59,6 +62,9 @@ Item {
             Pointer.through([app.face, app.bubble]);
             app.ui.settings = Object.assign({}, En.settings, { tipMs: waitMs });
             tryVerify(() => app.face.visible, 2000, "the keyboard shows");
+            // Offscreen, Qt's pointer rests near the screen's corner and enters each window that shows over it, which
+            // would hover the grip; the keyboard sits clear of it, as the real pointer passes through.
+            app.face.at = Qt.point(offCorner, offCorner);
             waitForRendering(app.face.contentItem);
             compare(Board.tipOf(app.face).ms, waitMs, "the wait comes from the settings");
             compare(Board.tipOf(app.bubble).ms, waitMs, "the bubble's wait too");

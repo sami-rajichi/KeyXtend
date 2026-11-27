@@ -8,7 +8,9 @@ use crate::worker::fake::{Act, Call, Hands, Script};
 use kx_ipc::{Ask, Codec, IpcError, Reply, Why};
 use std::borrow::Cow;
 
+mod front;
 mod props;
+mod relaunch;
 
 /// Test values; the real ones come from each port's config.
 const TIMES: Times = Times {
@@ -68,7 +70,7 @@ fn ping(host: &mut Media) -> Result<u32, Miss> {
     host.call(make, |reply| match reply {
         Reply::Pixels { id, .. } => Some(Ok(id)),
         Reply::Failed { .. } => Some(Err(Miss::Refused)),
-        Reply::Dib { .. } => None,
+        Reply::Dib { .. } | Reply::Png { .. } => None,
     })
 }
 

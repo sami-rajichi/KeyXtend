@@ -173,17 +173,14 @@ fn the_device_retry_may_be_at_once_but_not_past_its_range() {
     assert!(unparsed(&with("device_retry_ms", -1)));
 }
 
-/// Qt 6.11.2's own frame latency (`QRhiD3D11::maxFrameLatency`) and update timer (`QPlatformWindow::requestUpdate`).
-const QT_LATENCY: u32 = 2;
+/// Qt 6.11.2's own update timer (`QPlatformWindow::requestUpdate`).
 const QT_IDLE_MS: u64 = 5;
 
 #[test]
-fn the_frame_timing_knobs_default_to_what_qt_does_alone() {
+fn frames_skip_qts_latency_wait_and_keep_its_other_timing() {
     let s = UiSettings::from_defaults().unwrap();
-    assert_eq!(
-        (s.frame_latency, s.update_idle_ms),
-        (QT_LATENCY, QT_IDLE_MS)
-    );
+    assert_eq!(s.frame_latency, 0, "Qt's wait stalls a window shown again");
+    assert_eq!(s.update_idle_ms, QT_IDLE_MS);
     assert!(s.vblank_updates);
 }
 

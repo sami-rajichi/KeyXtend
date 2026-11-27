@@ -1,8 +1,9 @@
 //! The watch's run: the box told last, the module's callback until the run drops, and reads handed to the watch's
 //! thread, each answered within `read_ms` or given up.
 
+use crate::lock;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -58,11 +59,6 @@ struct State {
 pub struct Shared {
     state: Mutex<State>,
     tell: Mutex<Option<Tell>>,
-}
-
-/// Locks `m`, taking the value even when a panicking thread poisoned it.
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl Shared {

@@ -1,5 +1,5 @@
-//! Our panels in the face's state (spec §7, §8.1): the one open, as the bus tells, the keys it takes while aimed at, and
-//! whether the vault module runs.
+//! Our panels in the face's state (spec §7, §8.1, ADR-0057): the one open, as the bus tells, the keys it or Snip's
+//! windows take while aimed at, and whether the vault module runs.
 
 use super::Inner;
 use crate::panel::{Panel, PanelUse};
@@ -8,12 +8,13 @@ use kx_module_api::ports::FillLive;
 use std::collections::HashMap;
 
 impl Inner {
-    /// Takes a module's word that `panel` opened, with `clicks` outside clicks heard so far; the next relabel redraws a
-    /// change. The one opened last takes the keys, so one shows at a time, it aims unless the word only repeats, and it
-    /// closes the language list. True when it newly opened.
+    /// Takes a module's word that `panel` opened, with `clicks` outside clicks heard so far: the one opened last shows
+    /// beside Snip's windows and, unless the word only repeats, takes the keys and aims. It closes the language list,
+    /// the next relabel redraws a change, and it returns true when newly opened.
     pub(in crate::face) fn panel_opened(&mut self, panel: Panel, clicks: u64) -> bool {
         let new = self.open.replace(panel) != Some(panel);
         if new {
+            self.snip_leave();
             self.aim_fresh(clicks);
             self.unshown = true;
         }
@@ -23,12 +24,14 @@ impl Inner {
         new
     }
 
-    /// Takes a module's word that `panel` closed, which ends the aim; closing another panel changes nothing.
+    /// Takes a module's word that `panel` closed, which ends its aim, and Snip's windows take the free place unaimed
+    /// while their line shows; closing another panel changes nothing.
     pub(in crate::face) fn panel_shut(&mut self, panel: Panel) {
         if self.open == Some(panel) {
             self.open = None;
             self.aim_end();
             self.unshown = true;
+            self.snip_back();
         }
     }
 
@@ -48,9 +51,9 @@ impl Inner {
         self.vault.live
     }
 
-    /// Key `id` from our panels' key list `uses`, for the panel open now and aimed at, with `clicks` outside clicks
-    /// heard so far: a move, or what a character key gives its search or line, after a burst left open ends as before a
-    /// tap. `None` while no panel is open or aimed at, or for a key it does not take, as the Voice panel's Esc;
+    /// Key `id` from our panels' key list `uses`, for the panel that holds the place and is aimed at, with `clicks`
+    /// outside clicks heard so far: a move, or what a character key gives its search or line, after a burst left open
+    /// ends as before a tap. `None` while none is aimed at, or for a key it does not take, as the Voice panel's Esc;
     /// `Pass` for a key Ctrl, Alt or Win acts on.
     pub(in crate::face) fn took(
         &mut self,
@@ -58,7 +61,7 @@ impl Inner {
         uses: &HashMap<String, PanelUse>,
         clicks: u64,
     ) -> Option<(Panel, ToPanel)> {
-        let panel = self.open?;
+        let panel = self.place()?;
         self.settle_aim(clicks);
         if !self.aimed() {
             return None;

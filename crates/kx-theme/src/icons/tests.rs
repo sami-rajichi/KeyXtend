@@ -285,3 +285,6 @@ fn the_voice_panel_shows_the_mock_ups_icons() {
             .contains("voice.panel.kinds.built-in")
     );
 }
+
+/// Snip's keys, tools and tray row.
+mod snip;

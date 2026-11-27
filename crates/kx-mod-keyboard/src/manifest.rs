@@ -1,7 +1,8 @@
 //! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
 //! shortcuts, it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`, it tells and types words behind
 //! `ReadFocusedText`, it sends the clipboard panel's keys and pastes behind the clipboard gates, Quick-fill's keys
-//! and fills behind `Vault`, the selection chips' edit keys behind `Selection`, and dictated texts behind `Voice`.
+//! and fills behind `Vault`, the selection chips' edit keys behind `Selection`, dictated texts behind `Voice`, and the
+//! Snip key and its windows' keys behind `Snip`.
 
 use crate::settings::SPEC;
 use kx_module_api::ports::{
@@ -14,8 +15,9 @@ pub const ID: ModuleId = ModuleId::new("keyboard");
 
 /// The module's manifest: `InjectInput` gates all four services it needs, `KeyboardUi` the face it provides,
 /// `ReadFocusedText` the typed pieces, the typing mode and the picked words, and `ReadClipboard` and `WriteClipboard`
-/// the panel's state and keys and the paste requests, `Vault` Quick-fill's, `Selection` the chips' edit requests and
-/// `Voice` the Dictation key and its texts; it needs no clipboard, vault, selection or speech service.
+/// the panel's state and keys and the paste requests, `Vault` Quick-fill's, `Selection` the chips' edit requests,
+/// `Voice` the Dictation key and its texts and `Snip` the Snip key and its windows' keys; it needs no clipboard, vault,
+/// selection, speech or capture service.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -38,6 +40,8 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::Selection,
         // An event gate only too: the Dictation key, its light and the texts to type need it (ADR-0042 decision 7).
         Capability::Voice,
+        // An event gate only too: the Snip key, its light and the snip windows' line need it (ADR-0056).
+        Capability::Snip,
     ],
     settings: Some(&SPEC),
 };
@@ -50,8 +54,9 @@ mod tests {
         AimedLine, BoxesKey, ClipKey, ClipLine, ClipPanel, ClipboardKey, ClipboardWriterKey,
         EditAsk, EditDone, FillAsk, FillClose, FillKey, FillLine, FillLive, FillOpen, FillPanel,
         FillType, FillTyped, PanelPressesWanted, PasteAsk, Pasted, PlacesKey, PressesAsk,
-        SpeechKey, TextAsk, TextDone, TypeWord, Typed, TypingMode, TypingModeAsk, VaultStoreKey,
-        VoiceAsk, VoiceClose, VoiceKey, VoiceLine, VoiceLineKey, VoiceLit,
+        ScreenFreezeKey, SnipAsk, SnipLine, SnipLineKey, SnipLit, SnipStart, SpeechKey, TextAsk,
+        TextDone, TypeWord, Typed, TypingMode, TypingModeAsk, VaultStoreKey, VoiceAsk, VoiceClose,
+        VoiceKey, VoiceLine, VoiceLineKey, VoiceLit,
     };
 
     #[test]
@@ -82,6 +87,7 @@ mod tests {
             Capability::Vault,
             Capability::Selection,
             Capability::Voice,
+            Capability::Snip,
         ];
         assert_eq!(MANIFEST.capabilities, want);
         let gates = [
@@ -168,6 +174,21 @@ mod tests {
         assert_eq!(voice, [Some(Capability::Voice); 8]);
         assert!(!MANIFEST.requires.contains(&SpeechKey::ID));
         assert!(!MANIFEST.capabilities.contains(&Capability::Microphone));
+    }
+
+    #[test]
+    fn the_snip_gate_covers_the_key_its_light_the_line_and_the_ask_and_no_capture() {
+        assert!(MANIFEST.capabilities.contains(&Capability::Snip));
+        let snip = [
+            SnipStart::CAPABILITY,
+            SnipLit::CAPABILITY,
+            SnipLine::CAPABILITY,
+            SnipLineKey::CAPABILITY,
+            SnipAsk::CAPABILITY,
+        ];
+        assert_eq!(snip, [Some(Capability::Snip); 5]);
+        assert!(!MANIFEST.requires.contains(&ScreenFreezeKey::ID));
+        assert!(!MANIFEST.capabilities.contains(&Capability::ScreenCapture));
     }
 
     #[test]

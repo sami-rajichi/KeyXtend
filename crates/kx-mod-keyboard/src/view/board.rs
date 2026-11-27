@@ -76,6 +76,7 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
                 | Role::Clip
                 | Role::Fill
                 | Role::Voice
+                | Role::Snip
         ),
         dim,
         tip: dim.then_some(LATER_TIP),

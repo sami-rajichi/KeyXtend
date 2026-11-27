@@ -44,7 +44,7 @@ impl Inner {
     /// the app; a burst ends and the latches let go as after a letter.
     fn line_word(&mut self, erase: u16, text: &Redacted<String>) -> Option<Panel> {
         let search = matches!(self.aimed_line(), PanelLine::Search(_));
-        let panel = self.open.filter(|_| search && !self.filling())?;
+        let panel = self.place().filter(|_| search && !self.filling())?;
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();
         let io = self.ports.io(&table, &cells);

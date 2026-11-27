@@ -7,6 +7,8 @@ use kx_module_api::ports::{self, BASE_DPI, Point, Rect};
 mod win;
 
 #[cfg(windows)]
+pub(crate) use win::whole_screens;
+#[cfg(windows)]
 pub use win::{WinScreens, cursor, dpi_of, screen_of, window_dpi, work_area};
 
 /// `USER_DEFAULT_SCREEN_DPI`: the ports' `BASE_DPI` (96 dots per inch) is 100 %.

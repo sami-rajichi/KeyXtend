@@ -3,17 +3,22 @@
 mod boxes;
 mod command;
 mod dib;
+mod encode;
 mod fetch;
 mod gate;
 mod net;
+mod pick;
 mod props;
+mod record;
 mod refuse;
 mod vault;
 mod voice;
 
 use crate::code::{Code, Kind};
 use crate::frame::{Head, grow, read_tail};
-use crate::limits::{HEADER_LEN, MAGIC, MAX_SIDE, READ_CHUNK, RGBA_BYTES, VERSION};
+use crate::limits::{
+    HEADER_LEN, MAGIC, MAX_DRAW_LEN, MAX_PIXELS_LEN, MAX_SIDE, READ_CHUNK, RGBA_BYTES, VERSION,
+};
 use crate::{
     Ask, Codec, IpcError, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, READ_TIMES, Reply, Why,
 };
@@ -147,7 +152,7 @@ fn frames_in_one_stream_read_back_in_order_and_then_close() {
 fn the_largest_pixels_round_trip() {
     let largest = pixels(9, MAX_SIDE, MAX_SIDE);
     let bytes = reply_bytes(&largest);
-    assert_eq!(bytes.len(), HEADER_LEN + MAX_REPLY_LEN);
+    assert_eq!(bytes.len(), HEADER_LEN + MAX_PIXELS_LEN);
     assert_eq!(Reply::read(&mut &bytes[..]), Ok(largest));
 }
 
@@ -155,12 +160,12 @@ fn the_largest_pixels_round_trip() {
 fn the_largest_image_is_written_and_its_header_is_read() {
     let image = vec![0; MAX_IMAGE_BYTES];
     assert_eq!(draw(1, &image).write(&mut io::sink()), Ok(()));
-    let len = u32::try_from(MAX_ASK_LEN).unwrap();
+    let len = u32::try_from(MAX_DRAW_LEN).unwrap();
     let raw = head(MAGIC, VERSION, Kind::Draw.code(), 1, len);
     let want = Head {
         kind: Kind::Draw,
         id: 1,
-        len: MAX_ASK_LEN,
+        len: MAX_DRAW_LEN,
     };
     assert_eq!(Head::read(&mut &raw[..], &[Kind::Draw]), Ok(want));
 }

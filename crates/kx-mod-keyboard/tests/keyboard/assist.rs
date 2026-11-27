@@ -130,7 +130,7 @@ fn the_board_makes_both_keys_checkable_and_never_dims_them_and_the_later_side_ke
     for k in keys.iter().filter(|k| k["side"] == true) {
         let assist = k["id"] == "rclick" || k["id"] == "grab";
         let live = assist
-            || ["shortcuts", "mic", "clip", "fill", "power"]
+            || ["shortcuts", "mic", "clip", "snip", "fill", "power"]
                 .iter()
                 .any(|id| k["id"] == *id);
         assert_eq!(k["checkable"], live && k["id"] != "power", "{}", k["id"]);

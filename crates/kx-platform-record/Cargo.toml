@@ -1,0 +1,62 @@
+[package]
+name = "kx-platform-record"
+description = "Worker-only screen recording, re-timed copies and the system's file dialogs (P12)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# The scripted studio and its parts, for the worker's record tests; no shipped build turns `fake` on.
+fake = []
+
+[dependencies]
+# The record frames' part, ends, faults and switches, one copy for the host, the job and this crate.
+kx-ipc = { path = "../kx-ipc" }
+thiserror.workspace = true
+# The adapter table (`record.toml`) is TOML read into checked structs, as kx-platform-windows' tables are.
+serde.workspace = true
+toml.workspace = true
+
+# The recorder and the dialog are Windows-only; the command lines and result lines build and test everywhere.
+[target.'cfg(windows)'.dependencies]
+# The microphone and the PC's sound (WASAPI loopback); already in the worker for the voice job.
+cpal.workspace = true
+# Windows Graphics Capture (`Graphics_Capture`, `Graphics_DirectX*`, `Win32_System_WinRT*`) over a Direct3D 11 device
+# (`Win32_Graphics_Direct3D*`, `Win32_Graphics_Dxgi*`) on the part's monitor (`Win32_Graphics_Gdi`), at physical pixels
+# (`Win32_UI_HiDpi`); Media Foundation's Sink Writer and Source Reader (`Win32_Media_MediaFoundation`,
+# `Win32_System_Com*`, `Win32_System_Variant`), loaded only when a video job asks (`Win32_System_LibraryLoader`); a
+# high-resolution timer paces the frames (`Win32_System_Threading`); free space on the drive (`Win32_Storage_FileSystem`);
+# the Save dialog (`Win32_UI_Shell*`) over a hidden topmost owner window (`Win32_UI_WindowsAndMessaging`).
+windows = { workspace = true, features = [
+    "Foundation",
+    "Graphics_Capture",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_MediaFoundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_System_WinRT",
+    "Win32_System_WinRT_Direct3D11",
+    "Win32_System_WinRT_Graphics_Capture",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+] }

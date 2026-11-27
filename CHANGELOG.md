@@ -30,9 +30,11 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - The selection helper (P10): a strip of keys beside text selected in any app that tells its selection, with Copy, Cut, Paste and Translate by the kind of box, Paste after a click at a caret, and Translate that opens the site in the browser after a yes; no text is read before a click (ADR-0041).
 - Voice typing on this PC (P11, part 1): the Dictation key and its bar with a live wave, ten local models through one engine with a default per language, a models folder the user picks with checked downloads, the processor or a checked graphics card, Compare models, a sealed history and optional recordings (ADR-0042 to ADR-0046).
 - Cloud voice typing with your own key (P11, part 2): seven offered services (Groq, Lemonfox, OpenRouter, ElevenLabs, Gemini, AssemblyAI and a Custom address), each checked by the owner with their own key, a key Test that tells a management key apart, Paste at once, a Preparing state while a model loads, the gear that ends a dictation, and a graphics card check on a clip in the language in front (ADR-0047 to ADR-0052).
+- Snip and screen recording (P12): the Snip key freezes the screens for a picture of a region, a window or the screen, or records a video with the microphone and the computer's sound off until switched on; a strip copies, edits or saves it through the system's Save dialog, a region's frame and the editor's Crop move by eight handles, a small editor marks up pictures, a video's strip plays it at the speed picked, and nothing is kept unless asked. OCR left v1 (ADR-0055 to ADR-0061).
 
 ### Changed
 - The licence: KeyXtend is now view only, all rights reserved, and the app is sold under its own user licence (ADR-0030). Versions published before keep the GPL-3.0-or-later.
+- `[ui] frame_latency` defaults to 0, so a window shown again draws at once (ADR-0061).
 
 ### Removed
 - The Slint and Tauri prototype keyboards from the toolkit test round.

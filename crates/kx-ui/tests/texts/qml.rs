@@ -8,8 +8,8 @@ use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect, Screen,
 };
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
@@ -119,6 +119,7 @@ fn system(tag: &str) -> Arc<Hub> {
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
         reveal: Arc::new(FakeReveal::new()),
+        esc: Arc::new(FakeEscWatch::new()),
     };
     Hub::new(ports).expect("the hub starts").0
 }
@@ -251,13 +252,14 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
     written.push(fixture("words.js".into(), &words()));
     let order = var("texts", &crate::filled::order(), true);
     written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
-    // The clipboard, Quick-fill, strip and dictation views are checked by their own tests, so blessing one touches no
-    // other fixture.
+    // The clipboard, Quick-fill, strip, dictation and Snip views are checked by their own tests, so blessing one
+    // touches no other fixture.
     written.push(crate::clipview::FILE.into());
     written.push(crate::fillview::FILE.into());
     written.push(crate::selview::FILE.into());
     written.push(crate::voiceview::FILE.into());
     written.push(crate::voicepanel::FILE.into());
+    written.push(crate::snipview::FILE.into());
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()

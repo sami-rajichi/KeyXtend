@@ -1,5 +1,5 @@
-// The tray icon's menu and picture over the stand-in Ui: the menu offers Show, Dictation and Quit, opens by the icon,
-// closes on a pick or another click, and the picture is drawn in the theme and handed to the Ui.
+// The tray icon's menu and picture over the stand-in Ui: the menu offers Show, Dictation, Screen snip and Quit, opens
+// by the icon, closes on a pick or another click, and the picture is drawn in the theme and handed to the Ui.
 import QtQuick
 import QtTest
 import "../qml"
@@ -62,10 +62,10 @@ Item {
             return all(menu.contentItem, o => o.Accessible.role === Accessible.MenuItem);
         }
 
-        function test_the_menu_offers_show_dictation_and_quit_and_takes_no_focus() {
+        function test_the_menu_offers_show_dictation_snip_and_quit_and_takes_no_focus() {
             const [menu] = makeMenu();
-            compare(items(menu).map(o => o.Accessible.name), [En.texts["tray.show"], En.texts["tray.voice"], En.texts["tray.quit"]]);
-            compare(items(menu).map(o => o.part), ["show", "voice", "quit"], "icons.toml [tray] items");
+            compare(items(menu).map(o => o.Accessible.name), [En.texts["tray.show"], En.texts["tray.voice"], En.texts["tray.snip"], En.texts["tray.quit"]]);
+            compare(items(menu).map(o => o.part), ["show", "voice", "snip", "quit"], "icons.toml [tray] items");
             compare(menu.title, En.texts["window.menu"]);
             verify(menu.flags & Qt.WindowDoesNotAcceptFocus, "never takes focus");
             const popup = all(menu.contentItem, o => o.Accessible.role === Accessible.PopupMenu)[0];
@@ -102,14 +102,15 @@ Item {
             const asked = [];
             menu.showKeyboard.connect(() => asked.push(["show", menu.visible]));
             menu.openVoice.connect(() => asked.push(["voice", menu.visible]));
+            menu.openSnip.connect(() => asked.push(["snip", menu.visible]));
             menu.quitApp.connect(() => asked.push(["quit", menu.visible]));
-            for (const at of [0, 1, 2]) {
+            for (const at of [0, 1, 2, 3]) {
                 menu.toggle(300, 500);
                 waitForRendering(menu.contentItem);
                 mouseClick(items(menu)[at]);
                 verify(!menu.visible, "closed on a pick");
             }
-            compare(asked, [["show", false], ["voice", false], ["quit", false]], "closed before it asks");
+            compare(asked, [["show", false], ["voice", false], ["snip", false], ["quit", false]], "closed before it asks");
         }
 
         function test_a_long_translation_widens_the_menu() {

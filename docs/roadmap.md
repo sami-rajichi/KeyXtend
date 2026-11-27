@@ -235,10 +235,19 @@ Versions are pre-1.0 until the Windows feature set is complete.
   - a model file that fails the hash check;
   - the user cancels while transcribing.
 
-## Phase 12 — Snip + OCR — v0.8
+## Phase 12 — Snip and screen recording — v0.8
 
-- `kx-mod-snip` plus the `ocr` worker.
-- Capture modes (Region, Window, Full screen, Scrolling, timer), the compact editor, OCR fallback chain, pin on screen.
+- `kx-mod-snip` plus the worker's `record` and `pick` jobs in `kx-platform-record` (ADR-0055, ADR-0056, [design](superpowers/specs/2026-11-23-snip-design.md)).
+- One click on Snip freezes the screens. Region, Window and Full screen take a picture; Video region and Video full screen record, with the microphone and the computer's sound each one click away.
+- A keycap strip copies, edits or saves, and plays and speeds a video (ADR-0060); a small editor for pictures with eleven tools, undo and redo; the system's Save dialog; the Snip panel. The keyboard waits as its bubble and is in a capture only when asked.
+- Out (owner, 2026-11-23): OCR (ADR-0055), pin on screen, scrolling capture, a timer for pictures, drawing on, trimming or pausing a video, GIF and auto-save.
+- **Edge cases:**
+  - closing a snip that was neither copied nor saved;
+  - the drive running low, or the longest video reached, mid-recording;
+  - no microphone, or a Windows N edition without Media Foundation;
+  - the worker dying mid-recording;
+  - a part across two screens of different scaling;
+  - Arabic text in the editor.
 
 ## Phase 13 — Themes, settings, i18n — v0.9
 

@@ -152,8 +152,8 @@ fn the_shipped_board_has_one_layer_key_and_one_power_key() {
 }
 
 #[test]
-fn the_layer_power_and_voice_roles_belong_to_the_side_block() {
-    for role in [Role::Layer, Role::Power, Role::Voice] {
+fn the_layer_power_voice_and_snip_roles_belong_to_the_side_block() {
+    for role in [Role::Layer, Role::Power, Role::Voice, Role::Snip] {
         let mut s = spec();
         named_mut(&mut s, "lang").role = role;
         assert_eq!(s.check(), Err(BoardError::Role("lang".into())), "{role:?}");

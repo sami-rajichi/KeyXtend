@@ -5,8 +5,8 @@ use crate::ui_module::MANIFEST;
 use kx_module_api::ports::{BASE_DPI, ChipPicked, Point, Rect, Screen};
 use kx_module_api::{Bus, Capability, Event, EventError};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_test_support::host::FakeCore;
 use std::sync::Arc;
@@ -44,6 +44,7 @@ pub(in crate::hub) fn hub() -> Arc<Hub> {
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
         reveal: Arc::new(FakeReveal::new()),
+        esc: Arc::new(FakeEscWatch::new()),
     };
     Hub::new(ports).expect("the hub starts").0
 }

@@ -39,7 +39,7 @@ Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046 to ADR-0052): speak, and th
 | Capability | Why |
 |---|---|
 | `Voice` | It gates the voice key, its light, the bar, the text to type and the typed lines' events (ADR-0042 decision 8, ADR-0049). |
-| `Microphone` | It gates `SpeechKey`. |
+| `Speech` | It gates `SpeechKey`; only this module holds it (ADR-0058). |
 | `Network` | It gates `ModelFilesKey`, for the model downloads the user asks for, and `CloudSpeechKey`, for the services the user switched on. |
 | `SecretStore` | It gates `VoiceShelfKey`, which seals `<data>/voice/`: the history, kept recordings, counts, card checks, compare numbers and cloud keys. |
 | `ReadFocusedText` | It gates `FieldWatchKey`. |

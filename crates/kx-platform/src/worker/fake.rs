@@ -3,22 +3,26 @@
 //! silent worker is late at once, and the clock moves only when a test moves it.
 
 mod fetch;
+mod hands;
 mod media;
 mod net;
+mod pick;
+mod record;
 mod vault;
 pub mod voice;
 
 pub use fetch::FetchAct;
+pub use hands::Hands;
 pub use media::Act;
+pub use pick::PickAct;
+pub use record::RecordAct;
 pub use vault::VaultAct;
 pub use voice::VoiceAct;
 
 use super::{Frames, Heard, Launch, SpawnError, Spawner, Split, Worker};
-use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, NetAsk, VaultAsk, VoiceAsk};
-use kx_module_api::{Clock, Mono};
+use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, NetAsk, PickAsk, RecordAsk, VaultAsk, VoiceAsk};
 use std::collections::VecDeque;
 use std::fmt::Debug;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
@@ -49,16 +53,20 @@ pub trait Faked: Frames {
     }
 }
 
-/// What the host did to a worker, in order, with the waits it gave; a vault, voice, fetch or net ask is kept whole,
-/// as its `Debug` hides its values.
+/// What the host did to a worker, in order, with the waits it gave; a vault, voice, fetch, net, record or pick ask is
+/// kept whole, as its `Debug` hides its values, and `Front` is a grant of the foreground.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
     Dib { id: u32, max_bytes: u32 },
+    Encode { id: u32, width: u32, height: u32 },
     Vault(VaultAsk<'static>),
     Voice(VoiceAsk<'static>),
     Fetch(FetchAsk<'static>),
     Net(NetAsk<'static>),
+    Record(RecordAsk<'static>),
+    Pick(PickAsk<'static>),
+    Front,
     Bye,
     Reply { within: Duration },
     End,
@@ -262,6 +270,11 @@ impl<F: Faked> Worker<F> for FakeWorker<F> {
     fn peak_mb(&mut self) -> Option<u32> {
         self.0.log().peak
     }
+
+    fn grant_front(&mut self) -> bool {
+        self.0.record(Call::Front);
+        true
+    }
 }
 
 impl<F: Faked> Split<F> for FakeWorker<F> {
@@ -269,23 +282,5 @@ impl<F: Faked> Split<F> for FakeWorker<F> {
         let (tap, notes) = mpsc::channel();
         self.0.log().tap = Some(tap);
         notes
-    }
-}
-
-/// A clock that moves only when the test says; clones share it.
-#[derive(Clone, Default)]
-pub struct Hands(Arc<AtomicU64>);
-
-impl Hands {
-    /// Moves the time on by `by`.
-    pub fn advance(&self, by: Duration) {
-        let us = u64::try_from(by.as_micros()).unwrap_or(u64::MAX);
-        self.0.fetch_add(us, Ordering::SeqCst);
-    }
-}
-
-impl Clock for Hands {
-    fn now(&self) -> Mono {
-        Mono::from_us(self.0.load(Ordering::SeqCst))
     }
 }

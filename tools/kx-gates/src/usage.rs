@@ -10,7 +10,7 @@ use crate::g22cfg::DAILY;
 use crate::product::NAME;
 use crate::{
     capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
-    g20, g21, g22, g25, hand, workertok,
+    g20, g21, g22, g24, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -27,6 +27,7 @@ fn product_lines() -> String {
     let (hook, hook_weak, predict) = (g8hook::HOOK, g8hook::HOOK_WEAK, g8predict::PREDICT);
     let (apps, records, clip) = (names(&g6::APPS), g6rec::NAMES.join("|"), g8clip::CLIP);
     let (bench, staged, device) = (g22::BENCH, g22::STAGED, g22::DEVICE_FLAG);
+    let trap = g24::TRAP;
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
@@ -41,17 +42,29 @@ fn product_lines() -> String {
        {PROG} g22 <{NAME}|{bench}|{staged}>
        {PROG} g22 {NAME} [{device} <pick>]
        {PROG} g23 <{NAME}>
+       {PROG} g24 <{NAME}|{trap}>
        {PROG} g26 <{NAME}>
        {PROG} g27 <{NAME}>"
     )
 }
 
-/// The help lines of the gates that still drive the frozen spike face.
+/// The help lines of the gates that still drive the frozen spike face, or either.
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
+    )
+}
+
+/// The help lines of P12's snip gate.
+fn snip_lines() -> String {
+    let trap = g24::TRAP;
+    format!(
+        "g24 {NAME} starts the test build twice on a data folder it makes, so close the product first; it snips and \
+         records target-window by clicks, puts the owner's clipboard back, removes its pictures from Windows' \
+         clipboard history, and the folder with every video goes at the end.
+g24 {trap} does only the trap part, in about a minute on one copy with its keyboard as a bubble, so close the product \
+         first: our windows over the frozen screens, and each way out."
     )
 }
 
@@ -177,6 +190,7 @@ fn notes() -> String {
         clip_lines(),
         sel_lines(),
         voice_lines(),
+        snip_lines(),
     ]
     .join("\n")
 }

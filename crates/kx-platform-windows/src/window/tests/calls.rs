@@ -5,9 +5,10 @@ use kx_platform::ui::{FocusToken, UiError};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{DeleteObject, HRGN, PtInRegion};
 
+use super::super::focus::{gives_back, token_of, window_of};
 use super::super::from_raw;
 use super::super::guard::add_kept;
-use super::super::win::{gives_back, region, token_of, window_of};
+use super::super::shape::region;
 use super::Hidden;
 
 /// Which of `points` lie in region `all`, which is then deleted.

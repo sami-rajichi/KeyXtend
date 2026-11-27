@@ -1,5 +1,5 @@
-//! The command line: the media job with its count, the vault, voice, fetch and speech jobs alone, and every other form
-//! refused.
+//! The command line: the media job with its count, the vault, voice, fetch, speech, record and pick jobs alone, and every
+//! other form refused.
 
 use super::*;
 
@@ -64,12 +64,14 @@ fn an_extra_argument_is_refused() {
 }
 
 #[test]
-fn the_vault_voice_fetch_and_speech_jobs_take_nothing_after_them() {
+fn the_vault_voice_fetch_speech_record_and_pick_jobs_take_nothing_after_them() {
     let jobs = [
         (VAULT_JOB, Job::Vault),
         (VOICE_JOB, Job::Voice),
         (FETCH_JOB, Job::Fetch),
         (NET_JOB, Job::SpeechNet),
+        (RECORD_JOB, Job::Record),
+        (PICK_JOB, Job::Pick),
     ];
     for (word, job) in jobs {
         assert_eq!(parse_all(&[word]), Ok(job));
@@ -77,7 +79,17 @@ fn the_vault_voice_fetch_and_speech_jobs_take_nothing_after_them() {
             assert_eq!(parse_all(extra), Err(ArgError::Alone(word)), "{extra:?}");
         }
     }
-    for word in ["Vault", "Voice", "voices", "speech", "Speech-Net"] {
+    for word in [
+        "Vault",
+        "Voice",
+        "voices",
+        "speech",
+        "Speech-Net",
+        "Record",
+        "probe-record",
+        "probe-pick",
+        "Pick",
+    ] {
         let job = ArgError::Job(word.to_string());
         assert_eq!(parse_all(&[word]), Err(job));
     }
@@ -95,6 +107,8 @@ fn each_refusal_is_one_short_line_naming_the_usage() {
                 VOICE_JOB,
                 FETCH_JOB,
                 NET_JOB,
+                RECORD_JOB,
+                PICK_JOB,
             ][..],
         ),
         (ArgError::Usage, &[MEDIA_JOB, MAX_PIXELS_FLAG]),
@@ -102,6 +116,8 @@ fn each_refusal_is_one_short_line_naming_the_usage() {
         (ArgError::Alone(VOICE_JOB), &[VOICE_JOB]),
         (ArgError::Alone(FETCH_JOB), &[FETCH_JOB]),
         (ArgError::Alone(NET_JOB), &[NET_JOB]),
+        (ArgError::Alone(RECORD_JOB), &[RECORD_JOB]),
+        (ArgError::Alone(PICK_JOB), &[PICK_JOB]),
     ];
     for (e, words) in cases {
         let line = e.to_string();

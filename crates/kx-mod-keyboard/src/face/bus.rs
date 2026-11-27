@@ -11,8 +11,8 @@ use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, ClipLine, ClipPanel, EditAsk, FillAsk, FillLine,
     FillLive, FillPanel, FillType, HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged,
     LatchesUsed, PanelPressesWanted, PasteAsk, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
-    PressesAsk, Scan, ScrollAsk, ScrollChanged, TextAsk, Toggle, TypeWord, TypingMode,
-    TypingModeAsk, VoiceAsk, VoiceLine, VoiceLit,
+    PressesAsk, Scan, ScrollAsk, ScrollChanged, SnipAsk, SnipLine, SnipLit, TextAsk, Toggle,
+    TypeWord, TypingMode, TypingModeAsk, VoiceAsk, VoiceLine, VoiceLit,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -148,12 +148,14 @@ impl Face {
         self.tell(false);
     }
 
-    /// Forgets the mouse, scroll, power, clipboard, vault and voice modules' states, as each may have changed unheard
-    /// while the keyboard was down: their keys and the pad dim, every panel counts as shut, the history chord as
-    /// unwanted and the Dictation key as unlit until told again; the next live peek also tells a pointer that left.
+    /// Forgets the mouse, scroll, power, clipboard, vault, voice and snip modules' states, as each may have changed
+    /// unheard while the keyboard was down: their keys and the pad dim, every panel and Snip's windows count as shut,
+    /// the history chord as unwanted and the Dictation and Snip keys as unlit until told again; the next live peek also
+    /// tells a pointer that left.
     fn forget(&self) {
         {
             let mut inner = self.lock();
+            inner.forget_snip();
             inner.heard(AssistChanged::OFF);
             inner.heard_scroll(ScrollChanged::OFF);
             inner.heard_power(PowerChanged::OFF);
@@ -168,16 +170,16 @@ impl Face {
     }
 }
 
-/// Hears the mouse, scroll, power, clipboard, vault and voice modules' states, the latch events, the mode and presses
-/// asks, picked words, pointer presses, panel lines, paste and edit requests, fills and texts for `face` until the
-/// module stops, then tells the latched set and typing mode, forgets the six modules' states and asks for them, as each
-/// may have missed the others while it was down.
+/// Hears the mouse, scroll, power, clipboard, vault, voice and snip modules' states, the latch events, the mode and
+/// presses asks, picked words, pointer presses, panel lines, paste and edit requests, fills and texts for `face` until
+/// the module stops, then tells the latched set and typing mode, forgets the seven modules' states and asks each again,
+/// as each may have changed while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, `ReadFocusedText`, which
 /// picked words and the mode ask need, `ReadClipboard`, which the panel's state needs, `WriteClipboard`, which paste
-/// requests need, `Vault`, which Quick-fill's state and fills need, `Selection`, which edit requests need, or `Voice`,
-/// which the Dictation key's light and texts need.
+/// requests need, `Vault`, which Quick-fill's state and fills need, `Selection`, which edit requests need, `Voice`,
+/// which the Dictation key's light and texts need, or `Snip`, which the Snip key's light and line need.
 pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
@@ -190,6 +192,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, _: &PressesAsk| f.tell_presses())?;
     on(cx, face, |f, e: &VoiceLit| f.heard_lit(*e))?;
     on(cx, face, |f, e: &TextAsk| f.type_text(e))?;
+    on(cx, face, |f, e: &SnipLit| f.heard_snip_lit(*e))?;
     panels(cx, face)?;
     face.tell_all();
     face.forget();
@@ -198,11 +201,12 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     cx.bus().publish(&PowerAsk)?;
     cx.bus().publish(&HistoryAsk)?;
     cx.bus().publish(&VoiceAsk)?;
+    cx.bus().publish(&SnipAsk)?;
     cx.bus().publish(&FillAsk)
 }
 
-/// Hears our panels' states and lines, the Voice panel's too, the history chord's wish, and the paste, edit and fill
-/// requests for `face`.
+/// Hears our panels' states and lines, the Voice panel's and Snip's windows' too, the history chord's wish, and the
+/// paste, edit and fill requests for `face`.
 ///
 /// # Errors
 /// `EventError::NotGranted` as for `listen`.
@@ -232,6 +236,7 @@ fn panels(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &VoiceLine| {
         f.heard_voice_line(e.0.as_ref());
     })?;
+    on(cx, face, |f, e: &SnipLine| f.heard_snip_line(e.0.as_ref()))?;
     on(cx, face, |f, e: &FillType| f.fill(e))
 }
 

@@ -51,16 +51,21 @@ fn clear() -> Rgba {
     Rgba::CLEAR
 }
 
-/// The plate text token, and the token whose value it takes when a mode table leaves it out.
-const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
+/// Tokens a mode table may leave out, each with the token whose value it then takes: the plate text, the ring on a
+/// side keycap and the video ways' red light.
+const DEFAULTS: [(&str, &str); 3] = [
+    ("legend_2_plate", "legend_2"),
+    ("ring_act", "ring"),
+    ("rec_light", "rec"),
+];
 
 /// The press shade token, which a mode table writes only to replace the shade made from `[common] press`.
 const PRESS: &str = "press";
 
 /// How many key, light and warning tokens `named` starts with.
-const KEY_TOKENS: usize = 25;
+const KEY_TOKENS: usize = 26;
 /// How many panel and state tokens follow them.
-const REST_TOKENS: usize = 14;
+const REST_TOKENS: usize = 15;
 /// How many colour tokens a palette names; each part's array holds its own count, so none is dropped.
 const TOKENS: usize = KEY_TOKENS + REST_TOKENS;
 
@@ -69,14 +74,29 @@ pub(crate) fn own_press(t: &toml::Table) -> bool {
     t.contains_key(PRESS)
 }
 
-/// Gives mode table `t` its plate text from `legend_2` when the file does not write one.
-pub(crate) fn plate_default(t: &mut toml::Table) {
-    let (plate, from) = PLATE_TEXT;
-    if !t.contains_key(plate)
-        && let Some(v) = t.get(from).cloned()
-    {
-        t.insert(plate.into(), v);
+/// Gives mode table `t` each of `DEFAULTS` it does not write, from the token it falls back to, then its `named` ones.
+pub(crate) fn defaults(t: &mut toml::Table) {
+    for (name, from) in DEFAULTS {
+        if !t.contains_key(name)
+            && let Some(v) = t.get(from).cloned()
+        {
+            t.insert(name.into(), v);
+        }
     }
+    named(t);
+}
+
+/// A token of table `t` written as another token's name takes that token's colour, one step only, so a colour two
+/// tokens share is written once.
+pub(crate) fn named(t: &mut toml::Table) {
+    let named: Vec<(String, toml::Value)> = t
+        .iter()
+        .filter_map(|(name, v)| {
+            let to = t.get(v.as_str()?)?;
+            to.is_str().then(|| (name.clone(), to.clone()))
+        })
+        .collect();
+    t.extend(named);
 }
 
 /// Every colour of one theme in one mode; the names follow the mock-up's CSS tokens.
@@ -121,6 +141,9 @@ pub struct Palette {
     pub rec: Rgba,
     /// Legend on the recording key.
     pub rec_ink: Rgba,
+    /// Snip's video ways' red light on their side keycap, at 3:1 on it at rest, hovered and pressed; a palette that
+    /// leaves it out takes `rec`.
+    pub rec_light: Rgba,
     /// The Dictation key while the microphone starts: the amber stand-by light.
     pub prep: Rgba,
     /// Legend on the preparing key.
@@ -135,6 +158,8 @@ pub struct Palette {
     pub led_on: Rgba,
     /// The hold ring.
     pub ring: Rgba,
+    /// The ring on a side keycap, as Snip's picked way; a palette that leaves it out takes `ring`.
+    pub ring_act: Rgba,
     /// Mode badge background.
     pub badge_bg: Rgba,
     /// Mode badge text.
@@ -225,6 +250,7 @@ impl Palette {
             ("lock_ink", self.lock_ink),
             ("rec", self.rec),
             ("rec_ink", self.rec_ink),
+            ("rec_light", self.rec_light),
             ("prep", self.prep),
             ("prep_ink", self.prep_ink),
             ("warn", self.warn),
@@ -238,6 +264,7 @@ impl Palette {
     fn rest_named(&self) -> [(&'static str, Rgba); REST_TOKENS] {
         [
             ("ring", self.ring),
+            ("ring_act", self.ring_act),
             ("badge_bg", self.badge_bg),
             ("badge_ink", self.badge_ink),
             ("pop_bg", self.pop_bg),

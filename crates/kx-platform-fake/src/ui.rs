@@ -58,7 +58,7 @@ impl Screens for FakeScreens {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GuardCall {
     /// `guard_own(spare, top)`.
-    GuardOwn(Option<String>, Option<String>),
+    GuardOwn(Vec<String>, Option<String>),
     /// `shape(title, rects)`.
     Shape(String, Vec<Rect>),
     /// `lift_alone(title)`.
@@ -69,8 +69,12 @@ pub enum GuardCall {
     UnwatchEntries(String),
     /// `lay_under(title, under)`.
     LayUnder(String, String),
+    /// `lay_low(title)`.
+    LayLow(String),
     /// `mark_pages(title)`.
     MarkPages(String),
+    /// `shield(title, on)`.
+    Shield(String, bool),
     /// `remember`, with the token it gave.
     Remember(FocusToken),
     /// `give_back(token)`.
@@ -83,6 +87,12 @@ pub struct FakeWindowGuard {
     count: AtomicUsize,
     unguarded: AtomicBool,
     error: Mutex<Option<UiError>>,
+    /// The error `shield` alone gives, after `error`.
+    shield_error: Mutex<Option<UiError>>,
+    /// The titles `shield` fails on, each with its error, before `shield_error`.
+    failing: Mutex<Vec<(String, UiError)>>,
+    /// The titles shielded now, the latest last.
+    shields: Mutex<Vec<String>>,
     calls: Mutex<Vec<GuardCall>>,
     last: AtomicU64,
 }
@@ -107,10 +117,38 @@ impl FakeWindowGuard {
         self.unguarded.store(unguarded, Ordering::SeqCst);
     }
 
-    /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries`, `lay_under` and `mark_pages` calls with
-    /// `error`, or takes them again with `None`.
+    /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries`, `lay_under`, `lay_low`, `mark_pages` and
+    /// `shield` calls with `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<UiError>) {
         *lock(&self.error) = error;
+    }
+
+    /// Refuses later `shield` calls alone with `error`, as a system that cannot keep a window out, or takes them again
+    /// with `None`.
+    pub fn set_shield_error(&self, error: Option<UiError>) {
+        *lock(&self.shield_error) = error;
+    }
+
+    /// Has later `shield` calls find no window titled one of `titles`, as one Qt has not made yet, in place of the
+    /// titles set before.
+    pub fn set_absent(&self, titles: &[&str]) {
+        self.fail(titles, UiError::NoWindow);
+    }
+
+    /// Has later `shield` calls of `titles` alone refused with `error`, in place of the titles set before.
+    pub fn set_refused(&self, titles: &[&str], error: UiError) {
+        self.fail(titles, error);
+    }
+
+    /// Has later `shield` calls of `titles` fail with `error`.
+    fn fail(&self, titles: &[&str], error: UiError) {
+        *lock(&self.failing) = titles.iter().map(|t| ((*t).to_owned(), error)).collect();
+    }
+
+    /// The titles kept out of captures now: each shield taken and not since let back in, the latest last.
+    #[must_use]
+    pub fn shielded(&self) -> Vec<String> {
+        lock(&self.shields).clone()
     }
 
     /// Every call so far, oldest first.
@@ -127,8 +165,9 @@ impl FakeWindowGuard {
 }
 
 impl WindowGuard for FakeWindowGuard {
-    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
-        let call = GuardCall::GuardOwn(spare.map(str::to_owned), top.map(str::to_owned));
+    fn guard_own(&self, spare: &[&str], top: Option<&str>) -> Result<usize, UiError> {
+        let spare = spare.iter().map(|s| (*s).to_owned()).collect();
+        let call = GuardCall::GuardOwn(spare, top.map(str::to_owned));
         self.record(call)?;
         Ok(self.count.load(Ordering::SeqCst))
     }
@@ -159,8 +198,31 @@ impl WindowGuard for FakeWindowGuard {
         self.record(GuardCall::LayUnder(title.to_owned(), under.to_owned()))
     }
 
+    fn lay_low(&self, title: &str) -> Result<(), UiError> {
+        self.record(GuardCall::LayLow(title.to_owned()))
+    }
+
     fn mark_pages(&self, title: &str) -> Result<(), UiError> {
         self.record(GuardCall::MarkPages(title.to_owned()))
+    }
+
+    /// A refusal other than `NoWindow` lets every window of that title back in, as Windows does.
+    fn shield(&self, title: &str, on: bool) -> Result<(), UiError> {
+        let every = self.record(GuardCall::Shield(title.to_owned(), on)).err();
+        let failed = lock(&self.failing)
+            .iter()
+            .find(|(t, _)| t == title)
+            .map(|(_, e)| *e);
+        let refused = every.or(failed).or(*lock(&self.shield_error));
+        let mut shields = lock(&self.shields);
+        if refused != Some(UiError::NoWindow) {
+            shields.retain(|t| t != title);
+        }
+        refused.map_or(Ok(()), Err)?;
+        if on {
+            shields.push(title.to_owned());
+        }
+        Ok(())
     }
 
     fn remember(&self) -> FocusToken {

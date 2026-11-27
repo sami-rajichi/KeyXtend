@@ -251,7 +251,7 @@ fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
         r.typing.tap(&io, "lang", true),
         Ok(Tapped::Lang { back: true })
     );
-    assert_eq!(r.tap("snip"), Ok(Tapped::Later));
+    assert_eq!(r.tap("settings"), Ok(Tapped::Later));
     assert_eq!(r.tap("mic"), Ok(Tapped::Voice));
     assert_eq!(r.tap("rclick"), Ok(Tapped::Assist(Toggle::RightClick)));
     assert_eq!(r.tap("shortcuts"), Ok(Tapped::Layer));

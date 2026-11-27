@@ -19,6 +19,7 @@ Glow {
 
     transientParent: null
     lk: face.lk
+    res: face.res
     box: Qt.rect(bar.x, bar.y, bar.width, bar.height)
     radius: bar.body.radius
     follow: bar.body
@@ -41,6 +42,7 @@ Glow {
         id: panels
         active: glow.face.ready && !!bar.view && !!bar.view.panel && glow.held !== null
         sourceComponent: VoicePanel {
+            hush: glow.hush
             win: glow.face
             bar: glow.bar
             view: glow.held.panel

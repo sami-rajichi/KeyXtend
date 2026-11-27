@@ -1,7 +1,6 @@
 //! The Win32 side of the reveals: Explorer's desktop shell object opens the folder there, through `crate::explorer`.
 
 use std::fs::{File, Metadata, OpenOptions};
-use std::os::windows::ffi::OsStrExt;
 use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 use std::path::Path;
 
@@ -11,11 +10,10 @@ use windows::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
     FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FILE_SHARE_READ, FILE_SHARE_WRITE,
 };
-use windows::core::BSTR;
 
 use super::plain::{Found, Plain, found, show_plain};
 use super::{Os, show};
-use crate::explorer::Explorer;
+use crate::explorer::{Explorer, bstr};
 use crate::places::fixed_drives;
 
 /// Shows a folder in Explorer: the running Explorer opens it itself (Raymond Chen's "launch from the shell" route), so
@@ -55,7 +53,7 @@ impl Os for Win32 {
     }
 
     fn open(&self, explorer: &Explorer, folder: &Path) -> Result<(), i32> {
-        explorer.open(&wide(folder))
+        explorer.open(&bstr(folder))
     }
 }
 
@@ -98,7 +96,7 @@ impl Plain for Win32 {
     }
 
     fn explore(&self, explorer: &Explorer, folder: &Path) -> Result<(), i32> {
-        explorer.explore(&wide(folder))
+        explorer.explore(&bstr(folder))
     }
 }
 
@@ -106,12 +104,6 @@ impl Plain for Win32 {
 fn kind(meta: &Metadata) -> Found {
     let reparse = meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT.0 != 0;
     found(meta.is_dir(), reparse)
-}
-
-/// `folder` as the shell takes it.
-fn wide(folder: &Path) -> BSTR {
-    let wide: Vec<u16> = folder.as_os_str().encode_wide().collect();
-    BSTR::from_wide(&wide)
 }
 
 #[cfg(test)]

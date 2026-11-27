@@ -2,7 +2,7 @@
 #![cfg(windows)]
 
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf, Prefix};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
@@ -67,6 +67,28 @@ pub fn plain(path: &Path) -> Result<PathBuf, String> {
     let full = std::fs::canonicalize(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let text = full.to_string_lossy();
     Ok(PathBuf::from(text.strip_prefix(VERBATIM).unwrap_or(&text)))
+}
+
+/// `path` in full form as Windows names a running program, from its text alone: `.` and `..` resolved, `/` as `\`
+/// and no `\\?\` prefix. Unlike `plain`, the file need not exist.
+pub fn full(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::Prefix(p) => match p.kind() {
+                Prefix::VerbatimDisk(d) => out.push(format!("{}:", char::from(d))),
+                _ => out.push(p.as_os_str()),
+            },
+            Component::CurDir => {}
+            Component::ParentDir => match out.components().next_back() {
+                Some(Component::Normal(_)) => drop(out.pop()),
+                Some(Component::RootDir | Component::Prefix(_)) => {}
+                _ => out.push(".."),
+            },
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// A `file:///` URL for an absolute Windows path.
@@ -168,6 +190,28 @@ mod tests {
         assert_eq!(pass(true, false), json!(PARTIAL));
         assert_eq!(pass(false, true), json!(false));
         assert_eq!(pass(false, false), json!(false));
+    }
+
+    #[test]
+    fn a_path_is_put_in_full_by_its_text_as_windows_names_a_running_program() {
+        let p = |s: &str| full(Path::new(s));
+        assert_eq!(p(r"D:\a\b\../../c/./d.exe"), PathBuf::from(r"D:\c\d.exe"));
+        assert_eq!(
+            p(r"D:\..\a"),
+            PathBuf::from(r"D:\a"),
+            "no higher than the root"
+        );
+        assert_eq!(
+            p(r"\\?\D:\a\b"),
+            PathBuf::from(r"D:\a\b"),
+            "a canonical one"
+        );
+        assert_eq!(
+            p(r"..\a"),
+            PathBuf::from(r"..\a"),
+            "a relative one keeps what it cannot drop"
+        );
+        assert_eq!(p(r"a\..\..\b"), PathBuf::from(r"..\b"));
     }
 
     #[test]

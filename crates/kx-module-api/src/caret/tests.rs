@@ -16,6 +16,15 @@ const RLM: &str = "\u{200f}";
 const BEH_FATHA: usize = 4;
 
 #[test]
+fn a_letter_and_its_marks_count_once_and_hidden_marks_not_at_all() {
+    assert_eq!(graphemes(BEH_FATHA_TEH), 2);
+    assert_eq!(graphemes("مَرْحَبًا"), 5);
+    assert_eq!(graphemes(FAMILY), 1);
+    assert_eq!(graphemes(&format!("{RLM}a{RLM}")), 1);
+    assert_eq!(graphemes(""), 0);
+}
+
+#[test]
 fn a_step_takes_a_base_letter_and_its_harakat_as_one() {
     assert_eq!(on(BEH_FATHA_TEH, 0), BEH_FATHA);
     assert_eq!(on(BEH_FATHA_TEH, BEH_FATHA), BEH_FATHA_TEH.len());

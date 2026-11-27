@@ -109,7 +109,7 @@ pub(super) fn home(exe: &Path) -> Result<Home, SpawnError> {
         || refused("read the worker's environment table")(ERROR_INVALID_DATA.to_hresult().into());
     let table = table().ok_or_else(broken)?;
     let folders = [
-        system(GetSystemDirectoryW, "find the system folder")?,
+        system_dir()?,
         system(GetSystemWindowsDirectoryW, "find the Windows folder")?,
     ];
     let vars = table.vars(std::env::vars_os(), &folders);
@@ -119,6 +119,11 @@ pub(super) fn home(exe: &Path) -> Result<Home, SpawnError> {
         env: block(&vars),
         dir,
     })
+}
+
+/// The system folder, System32.
+pub(crate) fn system_dir() -> Result<PathBuf, SpawnError> {
+    system(GetSystemDirectoryW, "find the system folder")
 }
 
 /// The system folder `ask` names, such as System32.

@@ -116,8 +116,8 @@ pub enum FileFact {
     Unchecked,
 }
 
-/// The separators a copied path may use.
-pub(super) const SEPARATORS: &[u8] = br"\/";
+// The separators a copied path may use, the frames' own.
+pub(super) use kx_ipc::rules::SEPARATORS;
 
 /// True only for an absolute drive path such as `C:\…`, which Windows parses as `Prefix::Disk` then `RootDir`. Every
 /// other form (a share, a device, an NT path, a relative path or a bare `C:foo`) could reach another machine, so no
@@ -156,7 +156,7 @@ pub trait ClipRun: Send {}
 /// Watches the system clipboard; the platform provides it.
 pub trait Clipboard: Send + Sync {
     /// Starts a watch as `cfg` says; `tell` hears each copy, skip and clear, on any thread. Our own writes carry the
-    /// marker, so they come back as `Marked`, unread.
+    /// marker, so they come back as `Marked`, unread, but for a kept one (`write_kept`).
     ///
     /// # Errors
     /// `Refused` when the OS refuses to watch.
@@ -200,6 +200,13 @@ pub trait ClipboardWriter: Send + Sync {
     /// # Errors
     /// As `write`.
     fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
+
+    /// Sets the clipboard as `write` does, but with none of our markers, so our own and the system's clipboard
+    /// histories both keep it, as a copied snip (ADR-0056 decision 2).
+    ///
+    /// # Errors
+    /// As `write`.
+    fn write_kept(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
 }
 
 /// The clipboard watch service; it needs `ReadClipboard`.

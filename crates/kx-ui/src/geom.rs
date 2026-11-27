@@ -29,10 +29,6 @@ fn px(v: f64) -> i32 {
 
 /// `v` rounded to a whole pixel; it saturates at the ends of the range, and NaN is 0.
 #[must_use]
-#[cfg_attr(
-    not(feature = "qt"),
-    allow(dead_code, reason = "only the Qt bridges round QML's numbers")
-)]
 pub fn whole(v: f64) -> i32 {
     px(v.round())
 }
@@ -59,13 +55,19 @@ pub fn outward(a: &Area, dpr: f64) -> Rect {
 /// The screen whose work area holds `at`, else the primary, else the first.
 #[must_use]
 pub fn screen_at(at: Point, screens: &[Screen]) -> Option<&Screen> {
+    screen_holding(at, screens).or_else(|| main_screen(screens))
+}
+
+/// The screen whose work area holds `at`; `None` off every work area.
+#[must_use]
+pub fn screen_holding(at: Point, screens: &[Screen]) -> Option<&Screen> {
     let holds = |s: &&Screen| {
         let (x, y) = (i64::from(at.x), i64::from(at.y));
         let (left, top) = (i64::from(s.rect.x), i64::from(s.rect.y));
         (left..left + i64::from(s.rect.w)).contains(&x)
             && (top..top + i64::from(s.rect.h)).contains(&y)
     };
-    screens.iter().find(holds).or_else(|| main_screen(screens))
+    screens.iter().find(holds)
 }
 
 /// The main screen: the primary one, else the first.
@@ -110,7 +112,7 @@ pub struct Size {
 }
 
 /// `v` kept from `lo` to `hi`; `lo` wins when there is no room between them.
-fn fit_in(v: i64, lo: i64, hi: i64) -> i32 {
+pub(crate) fn fit_in(v: i64, lo: i64, hi: i64) -> i32 {
     clamp(v.min(hi).max(lo))
 }
 

@@ -2,6 +2,7 @@
 //! second copy's commands, Try again, the answers to asking notices, and the one quit path.
 //! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
+use super::aside::Way;
 use super::notices::retry_of;
 use super::{Hub, Live, Request, Wake, Waker, json};
 use kx_module_api::ports::{Board, FaceAction};
@@ -22,11 +23,12 @@ pub enum Mode {
     Minimised,
 }
 
-/// The mode as QML's `away` and `minimised` hold it.
+/// The mode as QML's `away` and `minimised` hold it, and how the keyboard is aside for a capture.
 #[derive(Serialize)]
 struct Flags {
     away: bool,
     minimised: bool,
+    aside: Option<Way>,
 }
 
 impl Mode {
@@ -70,19 +72,20 @@ impl Hub {
         self.lock().mode
     }
 
-    /// The mode as JSON `{away, minimised}`, as QML holds it.
+    /// The mode as JSON `{away, minimised, aside}`, as QML holds it; `aside` is `bubble`, `hidden` or null.
     #[must_use]
     pub fn mode_json(&self) -> String {
-        let mode = self.mode();
+        let (mode, aside) = self.mode_aside();
         json(&Flags {
             away: mode != Mode::Shown,
             minimised: mode == Mode::Minimised,
+            aside,
         })
     }
 
-    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, and an overlay, scroll,
-    /// clipboard or selection wake QML has not read. A second waker replaces the first, which then hears nothing; that
-    /// is a bug, so it warns.
+    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, an overlay, scroll,
+    /// clipboard or selection wake QML has not read, and an aside still on. A second waker replaces the first, which
+    /// then hears nothing; that is a bug, so it warns.
     pub fn set_waker(&self, waker: Waker) {
         let (pending, replaced) = {
             let mut live = self.lock();
@@ -99,6 +102,7 @@ impl Hub {
         self.rewake_scroll();
         self.rewake_clip();
         self.rewake_sel();
+        self.rewake_aside();
     }
 
     /// Lets the waker go before the windows are made again: `Show` and `End` wait for the next `Ui` object, and an `End`

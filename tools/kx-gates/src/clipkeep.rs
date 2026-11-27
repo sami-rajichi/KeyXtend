@@ -76,22 +76,37 @@ fn raw_ok(format: u32) -> bool {
 /// Saves every format; refuses a private copy, pictures and other handles, and more than `max_bytes`.
 pub fn save(wait: ClipWait, max_bytes: usize) -> Result<Saved, String> {
     let open = open::open(wait).map_err(|e| e.to_string())?;
-    // Putting a password back would restart its life: the password manager's auto-clear would miss it.
-    if clip::marked(&open) {
+    let read =
+        |f, left: usize| open::with_data(&open, f, |b| (b.len() <= left).then(|| b.to_vec()));
+    let (has, dword) = clip::probes(&open);
+    keep_from(has, dword, open::formats(&open), max_bytes, read)
+}
+
+/// What `save` keeps of a clipboard holding `formats`, each read by `read` while it fits what is left. It refuses a
+/// private copy, which `has` a presence marker (`clip::private_by`), as putting a password back would restart its life
+/// past its manager's auto-clear. Number markers by `dword`, such as our own put-back's, are kept byte for byte.
+fn keep_from(
+    has: impl Fn(&str) -> bool,
+    dword: impl Fn(&str) -> Option<u32>,
+    formats: Vec<u32>,
+    max_bytes: usize,
+    read: impl Fn(u32, usize) -> Option<Option<Vec<u8>>>,
+) -> Result<Saved, String> {
+    if clip::private_by(has, dword) {
         return Err(
             "the clipboard holds a private copy, such as a password; try again once it clears"
                 .to_string(),
         );
     }
     let (mut saved, mut left) = (Vec::new(), max_bytes);
-    for format in open::formats(&open) {
+    for format in formats {
         if !raw_ok(format) {
             return Err(format!(
                 "the clipboard holds format {format}, which we could not put back"
             ));
         }
         // The size is checked before the copy, so a huge clipboard is never duplicated.
-        match open::with_data(&open, format, |b| (b.len() <= left).then(|| b.to_vec())) {
+        match read(format, left) {
             None => {}
             Some(None) => return Err(format!("the clipboard holds more than {max_bytes} bytes")),
             Some(Some(data)) => {
@@ -109,12 +124,14 @@ pub fn restore(saved: &Saved, wait: ClipWait) -> Result<(), String> {
     let put = || {
         let open = open::open(wait)?;
         open::empty(&open)?;
-        saved
-            .0
-            .iter()
-            .try_for_each(|(f, data)| open::put(&open, *f, data))
+        put_all(saved, |f, data| open::put(&open, f, data))
     };
     put().map_err(|e| e.to_string())
+}
+
+/// Puts each format `saved` holds with `put`, in order and byte for byte, stopping at the first refused.
+fn put_all<E>(saved: &Saved, mut put: impl FnMut(u32, &[u8]) -> Result<(), E>) -> Result<(), E> {
+    saved.0.iter().try_for_each(|(f, data)| put(*f, data))
 }
 
 /// Puts `saved` back with `put` when dropped before `done`, as when the test panics.
@@ -184,96 +201,4 @@ pub fn keep_changed<T>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use windows::Win32::System::Ole::{
-        CF_BITMAP, CF_ENHMETAFILE, CF_METAFILEPICT, CF_OWNERDISPLAY, CF_PALETTE,
-    };
-
-    #[test]
-    fn memory_formats_can_be_saved_raw() {
-        for f in [CF_UNICODETEXT, CF_TEXT, CF_LOCALE, CF_HDROP] {
-            assert!(raw_ok(u32::from(f.0)), "{}", f.0);
-        }
-        assert!(raw_ok(FIRST_NAMED), "a registered format such as HTML");
-    }
-
-    #[test]
-    fn picture_and_handle_formats_cannot() {
-        let handles = [
-            CF_BITMAP,
-            CF_METAFILEPICT,
-            CF_PALETTE,
-            CF_ENHMETAFILE,
-            CF_OWNERDISPLAY,
-        ];
-        for f in handles {
-            assert!(!raw_ok(u32::from(f.0)), "{}", f.0);
-        }
-        assert!(
-            !raw_ok(0x0200) && !raw_ok(0x0300),
-            "private and GDI object ranges"
-        );
-    }
-
-    #[test]
-    fn an_untouched_clipboard_is_never_written_back() {
-        use std::cell::Cell;
-        let puts = Cell::new(0);
-        let put = || {
-            puts.set(puts.get() + 1);
-            Ok(())
-        };
-        assert_eq!(put_if(7, 7, put), Ok(()));
-        assert_eq!(puts.get(), 0, "the same sequence number");
-        assert_eq!(put_if(7, 8, put), Ok(()));
-        assert_eq!(puts.get(), 1, "something wrote it");
-    }
-
-    #[test]
-    fn the_clipboard_goes_back_once_after_the_test_even_when_it_panics() {
-        use std::cell::Cell;
-        use std::panic::{AssertUnwindSafe, catch_unwind};
-        let puts = Cell::new(0);
-        let put = |(): &()| {
-            puts.set(puts.get() + 1);
-            Ok(())
-        };
-        assert_eq!(kept((), put, || Ok(7)), Ok(7));
-        assert_eq!(puts.get(), 1, "once after a run");
-        let panicked = catch_unwind(AssertUnwindSafe(|| {
-            kept((), put, || -> Result<(), String> { panic!("a test broke") })
-        }));
-        assert!(panicked.is_err());
-        assert_eq!(puts.get(), 2, "once after a panic");
-        let failed = kept((), |(): &()| Err("busy".into()), || Ok(1));
-        assert!(failed.expect_err("not put back").contains("busy"));
-        let both = kept(
-            (),
-            |(): &()| Err("busy".into()),
-            || -> Result<(), String> { Err("no strip".into()) },
-        );
-        assert!(both.expect_err("both").starts_with("no strip"));
-    }
-
-    #[test]
-    fn a_wait_past_what_the_product_holds_is_capped() {
-        assert_eq!(ms(250), 250);
-        assert_eq!(ms(u64::MAX), u32::MAX);
-    }
-
-    #[test]
-    fn a_test_that_reaches_a_clipboard_writer_panics_before_anything_is_written() {
-        assert!(refused(live), "the guard");
-        assert!(
-            refused(|| drop(restore(&Saved(Vec::new()), NOW))),
-            "restore"
-        );
-        assert!(
-            refused(|| _ = write_text(Some("x"), &[], NOW)),
-            "write_text"
-        );
-        assert!(refused(|| _ = write_text(None, &[], NOW)), "an empty write");
-        assert!(!refused(|| ()), "only the guard's refusal counts");
-    }
-}
+mod tests;

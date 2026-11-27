@@ -104,8 +104,10 @@ Item {
             const i = createTemporaryObject(iconC, root, { icon: "minus", base: root.res.icons, ext: "svg", px: 48, tint: tint });
             waitForRendering(i);
             const shot = grabImage(i);
-            // The grab is in device pixels; Lucide's minus is a line across the middle.
-            const at = (x, y) => shot.pixel(Math.round(x * shot.width / i.width), Math.round(y * shot.height / i.height));
+            // The grab is in device pixels from the icon's corner, so the window's scale finds a point; offscreen cuts it at
+            // the icon's size in Qt units, which still holds every point read. Lucide's minus is a line across the middle.
+            const dpr = i.Window.window.devicePixelRatio;
+            const at = (x, y) => shot.pixel(Math.round(x * dpr), Math.round(y * dpr));
             verify(Qt.colorEqual(at(24, 24), tint), "the stroke is the tint: " + at(24, 24));
             verify(!Qt.colorEqual(at(24, 4), tint), "and nothing else is");
         }
@@ -185,7 +187,7 @@ Item {
         }
 
         function test_a_dimmed_key_neither_sinks_nor_marks_the_hover() {
-            const k = makeKey("snip");
+            const k = makeKey("settings");
             verify(Qt.colorEqual(k.fillColour, N.lk.palette.dim), "dimmed");
             mousePress(k);
             verify(!k.down, "a press does not hold it down");
@@ -219,11 +221,11 @@ Item {
         }
 
         function test_a_dimmed_key_tip_says_when_it_comes() {
-            const k = makeKey("snip");
+            const k = makeKey("settings");
             const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
             mouseMove(k, k.width / 2, k.height / 2);
             compare(spy.count, 1);
-            compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.snip"], En.texts["tip.later"]));
+            compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.settings"], En.texts["tip.later"]));
         }
 
         // The lone language's tip goes as the pointer leaves, though a second layout took the note away meanwhile.

@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
-pub use writer::FakeClipboardWriter;
+pub use writer::{FakeClipboardWriter, WriteKind};
 
 /// The callback a watch tells each note.
 type Tell = Box<dyn Fn(ClipNote) + Send>;

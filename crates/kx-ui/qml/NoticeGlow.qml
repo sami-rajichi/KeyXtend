@@ -16,6 +16,7 @@ Glow {
 
     transientParent: null
     lk: face.lk
+    res: face.res
     box: Qt.rect(notice.x, notice.y, notice.width, notice.height)
     radius: notice.radius
     follow: notice.body

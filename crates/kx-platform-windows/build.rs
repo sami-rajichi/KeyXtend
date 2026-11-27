@@ -1,6 +1,7 @@
 //! Sets `kx_live_clipboard` when `KX_LIVE_CLIPBOARD=1`, so the tests that write the real clipboard run, as in CI's
-//! Windows job, and `kx_live_hidden` when `KX_LIVE_HIDDEN=1`, so the probe of the real app-data folder runs. Without
-//! them those tests report as ignored, and a local `cargo test` leaves the owner's clipboard and folders alone.
+//! Windows job, `kx_live_hidden` when `KX_LIVE_HIDDEN=1`, so the probe of the real app-data folder runs, and
+//! `kx_live_snip` when `KX_LIVE_SNIP=1`, so the P12 probes show windows, record and open the Save dialog. Without them
+//! those tests report as ignored, and a local `cargo test` leaves the owner's clipboard, folders and screen alone.
 
 use std::env;
 
@@ -14,6 +15,10 @@ const LIVE_CFG: &str = "kx_live_clipboard";
 const HIDDEN_VAR: &str = "KX_LIVE_HIDDEN";
 /// The cfg the live hidden-run probe reads.
 const HIDDEN_CFG: &str = "kx_live_hidden";
+/// The variable that opts in to the live P12 probes; CI never sets it.
+const SNIP_VAR: &str = "KX_LIVE_SNIP";
+/// The cfg the live P12 probes read.
+const SNIP_CFG: &str = "kx_live_snip";
 /// The compile-time variable that hands `LIVE_VAR=LIVE_ON` to the crate, so a test checks that CI sets it.
 const OPT_IN_ENV: &str = "KX_LIVE_OPT_IN";
 
@@ -24,7 +29,12 @@ const OPT_IN_ENV: &str = "KX_LIVE_OPT_IN";
 fn main() {
     println!("cargo::rustc-env={OPT_IN_ENV}={LIVE_VAR}={LIVE_ON}");
     println!("cargo::rerun-if-changed=build.rs");
-    for (var, cfg) in [(LIVE_VAR, LIVE_CFG), (HIDDEN_VAR, HIDDEN_CFG)] {
+    let live = [
+        (LIVE_VAR, LIVE_CFG),
+        (HIDDEN_VAR, HIDDEN_CFG),
+        (SNIP_VAR, SNIP_CFG),
+    ];
+    for (var, cfg) in live {
         println!("cargo::rustc-check-cfg=cfg({cfg})");
         println!("cargo::rerun-if-env-changed={var}");
         if env::var(var).is_ok_and(|v| v == LIVE_ON) {

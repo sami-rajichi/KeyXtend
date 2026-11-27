@@ -1,7 +1,7 @@
 //! The cloud speech port from outside the crate (ADR-0047): only `Network` reaches it, an ask is built from public
 //! parts, an address is only ever HTTPS, and a platform's run tells its notes until it is dropped.
 
-use kx_module_api::Capability::{Microphone, Network, Voice};
+use kx_module_api::Capability::{Network, Speech, Voice};
 use kx_module_api::ports::{
     CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,
     CloudSpeechKey, CloudTest, FormFields, HttpsUrl, JobLimits, KeyHeader,
@@ -19,7 +19,7 @@ static VOICE: Manifest = Manifest {
     version: env!("CARGO_PKG_VERSION"),
     requires: &[CloudSpeechKey::ID],
     provides: &[],
-    capabilities: &[Voice, Microphone, Network],
+    capabilities: &[Voice, Speech, Network],
     settings: None,
 };
 
@@ -124,7 +124,7 @@ fn ask() -> CloudAsk {
 
 #[test]
 fn only_the_network_reaches_cloud_speech() {
-    let mut bare = host(&[Voice, Microphone], Arc::default());
+    let mut bare = host(&[Voice, Speech], Arc::default());
     let refused = ServiceError::NotGranted(CloudSpeechKey::ID, Network);
     let got = ModuleCx::new(&mut bare).service::<CloudSpeechKey>();
     assert_eq!(got.err(), Some(refused));

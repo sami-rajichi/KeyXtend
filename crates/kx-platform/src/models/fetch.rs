@@ -4,7 +4,9 @@
 
 use super::{Disk, fault};
 use crate::ear::Ear;
-use crate::worker::{FetchFrames, Launch, Spawner, Split, Stream, Times, Told, Unsent, Wait};
+use crate::worker::{
+    FetchFrames, Launch, NEVER_IDLE_S, Spawner, Split, Stream, Times, Told, Unsent, Wait,
+};
 use kx_ipc::{FETCH_JOB, FetchAsk as Get, FetchNote as Note};
 use kx_module_api::Clock;
 use kx_module_api::ports::{FetchAsk, FetchNote, FetchRun, JobLimits, ModelError};
@@ -19,8 +21,6 @@ use std::time::Duration;
 const THREAD: &str = "kx-fetch";
 /// Bytes in one MB of `min_free_mb`.
 const MIB: u64 = 1 << 20;
-/// A download's job never ends on its own when idle: it lives while its run does, reading or paused.
-const NEVER_IDLE_S: u32 = u32::MAX;
 /// The value `start` names for a file whose part has no name, which `FetchAsk::check` already refuses.
 const FILE: &str = "file";
 

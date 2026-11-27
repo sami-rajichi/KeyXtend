@@ -1,19 +1,20 @@
-// The app's windows over the Ui, Keyboard, QuickFill and Voice objects: the keyboard, its minimise bubble, the notice
-// banner, the tray menu, the selection strip and the dictation bar, each over a click-through shadow window, the pointer
-// overlay, the scroll outline and the tray icon's picture. A shadow window owns its window, so Windows keeps the window
-// just above it; owners show first.
+// The app's windows over the Ui, Keyboard, QuickFill, Voice and Snip objects: the keyboard, its minimise bubble, the
+// notice banner, the tray menu, the selection strip and the dictation bar, each over a click-through shadow window, the
+// pointer overlay, the scroll outline, Snip's windows and the tray icon's picture. A shadow window owns its window, so
+// Windows keeps the window just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 QtObject {
     id: app
 
-    // The hub's Ui, Keyboard, QuickFill and Voice objects, or the tests' stand-ins; without the last two no Quick-fill
-    // or dictation bar shows.
+    // The hub's Ui, Keyboard, QuickFill, Voice and Snip objects, or the tests' stand-ins; without the last three no
+    // Quick-fill, dictation bar or snip shows.
     required property QtObject ui
     required property QtObject keyboard
     property QtObject fill: null
     property QtObject voice: null
+    property QtObject snip: null
     // The clock in ms for the tray menu and the overlay's reads; tests set their own.
     property var now: () => Date.now()
     // Minimise or Close put the keyboard away; it comes back from the bubble or a second copy's Show.
@@ -60,6 +61,7 @@ QtObject {
 
     property Glow kbGlow: Glow {
         lk: face.lk
+        res: face.res
         box: Qt.rect(face.origin.x, face.origin.y, face.drawn.width, face.drawn.height)
         radius: face.lk ? face.lk.look.window_radius_px : 0
         hidden: face.resizing
@@ -81,6 +83,7 @@ QtObject {
     property Glow bubbleGlow: Glow {
         transientParent: null
         lk: face.lk
+        res: face.res
         box: Qt.rect(bubble.x, bubble.y, bubble.width, bubble.height)
         radius: bubble.width / 2
 
@@ -105,6 +108,7 @@ QtObject {
     property Glow menuGlow: Glow {
         transientParent: null
         lk: face.lk
+        res: face.res
         box: Qt.rect(trayMenu.x, trayMenu.y, trayMenu.width, trayMenu.height)
         radius: trayMenu.sh.radius_px
         follow: trayMenu.body
@@ -122,6 +126,7 @@ QtObject {
             onShowing: on => app.shadow(app.menuGlow, on, trayMenu)
             onShowKeyboard: app.open()
             onOpenVoice: if (app.voice) app.voice.open()
+            onOpenSnip: if (app.snip) app.snip.open()
             onQuitApp: app.ui.quit()
         }
     }
@@ -151,6 +156,7 @@ QtObject {
             res: face.res
             st: app.assist
             spots: face.spots
+            hush: app.aside.hidden
             ours: [face, bubble, app.notice, trayMenu, app.strip.chips, app.dictation.bar, app.dictation.panel ? app.dictation.panel.pane : null, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
@@ -160,6 +166,23 @@ QtObject {
     property Outline outline: Outline {
         ui: app.ui
         face: face
+    }
+    // Snip's capture windows, made once the look is in; a press on one with a line aims the keyboard's letters at Snip.
+    property Loader snips: Loader {
+        active: !!app.snip && !!face.lk
+        sourceComponent: SnipApp {
+            snip: app.snip
+            lk: face.lk
+            res: face.res
+            tipMs: face.cfg.tipMs
+            aim: () => face.redraw(app.keyboard.aimSnip())
+            win: face
+            hush: app.aside.hidden
+        }
+    }
+    // The keyboard steps aside while Snip captures, and comes back.
+    property Aside aside: Aside {
+        app: app
     }
     // Draws the tray icon's picture in the look and hands it to the Ui object.
     property TrayPicture trayPicture: TrayPicture {

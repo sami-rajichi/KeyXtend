@@ -96,6 +96,8 @@ FakeSelUi {
     signal wordsChanged
     // The clipboard panel shows a new view or closes: read `clip` again.
     signal clipChanged
+    // The keyboard steps aside for a capture or comes back: read `modeJson` again, whose `aside` a test sets.
+    signal asideAsked
 
     function note(call) {
         calls = calls.concat([call]);

@@ -46,7 +46,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Clipboard history:** text, links, images and files, newest first, with pins and "Paste together".
 - **Quick-fill:** a notebook of saved logins, details and notes, which types any value at the caret in one click, with a locked backup that keeps itself up to date.
 - **Selection helper:** select text and a strip of keys beside it copies, cuts, pastes or translates it.
-- **Snip:** capture a region without dragging, annotate it, and copy its text with OCR.
+- **Snip and screen recording:** take a picture of a region, a window or the screen without dragging, or record a video with the sound off unless you switch it on, then copy or save it; mark up a picture in a small editor, or play a video and speed it up from its strip; nothing is kept unless you ask.
 - **Power key:** opens the system's own shut-down dialog.
 - **Themes:** Native Adaptive, ET66 and Modern Dolch, each in light and soft dark, in sizes from small to large.
 

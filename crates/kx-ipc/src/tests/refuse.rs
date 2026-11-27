@@ -69,10 +69,10 @@ fn each_side_reads_only_the_other_sides_kinds() {
 fn a_length_past_its_kind_is_refused_before_the_payload() {
     let over = |n: usize| u32::try_from(n + 1).unwrap();
     let cases: [(Kind, u32, Reader); 6] = [
-        (Kind::Draw, over(MAX_ASK_LEN), read_ask),
+        (Kind::Draw, over(MAX_DRAW_LEN), read_ask),
         (Kind::Draw, u32::MAX, read_ask),
         (Kind::Bye, 1, read_ask),
-        (Kind::Pixels, over(MAX_REPLY_LEN), read_reply),
+        (Kind::Pixels, over(MAX_PIXELS_LEN), read_reply),
         (Kind::Pixels, u32::MAX, read_reply),
         (Kind::Failed, over(FAILED_LEN), read_reply),
     ];
@@ -125,7 +125,7 @@ fn pixels_that_are_not_width_by_height_are_inconsistent() {
 
 #[test]
 fn a_lying_pixel_length_is_refused_before_the_pixels() {
-    let len = u32::try_from(MAX_REPLY_LEN).unwrap();
+    let len = u32::try_from(MAX_PIXELS_LEN).unwrap();
     let raw = head(MAGIC, VERSION, Kind::Pixels.code(), 1, len);
     let fields = pixel_payload(1, 1, 0);
     let mut r = Counted::new((&raw[..]).chain(&fields[..]).chain(io::repeat(0)));

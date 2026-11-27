@@ -1,9 +1,11 @@
-//! The real worker, started as the host starts it: it draws through the host, its words and exit codes match the
-//! host's, a missing or relative program is missing, and the command line reads back as written.
+//! The real worker, started as the host starts it: it draws and encodes through the host, its words and exit codes
+//! match the host's, a missing or relative program is missing, and the command line reads back as written.
 
 use super::*;
 use kx_ipc::{Ask, CLEAN_EXIT, MAX_PIXELS_FLAG as MAX_PIXELS, MEDIA_JOB as MEDIA, REFUSED_EXIT};
-use kx_module_api::ports::{ImageCodec, PictureAsk, PictureConfig, PictureError, Pictures};
+use kx_module_api::ports::{
+    EncodeAsk, ImageCodec, PictureAsk, PictureConfig, PictureError, Pictures, Shot,
+};
 use kx_module_api::{Clock, Mono, Redacted};
 use kx_platform::pictures::WorkerPictures;
 use kx_platform::worker::{MediaFrames, Worker};
@@ -15,7 +17,9 @@ use std::process::Command;
 use std::sync::{Arc, OnceLock};
 
 mod home;
+mod limits;
 mod rights;
+mod snip;
 mod vault;
 mod verdict;
 
@@ -144,6 +148,21 @@ fn the_real_worker_draws_through_the_host() {
     let junk = ask(ImageCodec::Png, b"junk".to_vec());
     assert_eq!(run.draw(junk), Err(PictureError::Refused));
     assert!(run.draw(dib).is_ok(), "a refused image keeps the worker");
+}
+
+#[test]
+fn the_real_worker_encodes_through_the_host_and_draws_its_png_back() {
+    let pictures = WorkerPictures::new(spawner(), Arc::new(Still));
+    let mut run = pictures.open(CFG);
+    let bgrx = vec![3, 2, 1, 0, 30, 20, 10, 0];
+    let shot = Shot::new(2, 1, bgrx).unwrap();
+    let png = run.encode(EncodeAsk { shot }).unwrap().into_inner();
+    let drawn = run.draw(ask(ImageCodec::Png, png)).unwrap();
+    assert_eq!((drawn.width(), drawn.height()), (2, 1));
+    assert_eq!(
+        drawn.rgba().expose().as_ref(),
+        [1, 2, 3, 255, 10, 20, 30, 255]
+    );
 }
 
 #[test]

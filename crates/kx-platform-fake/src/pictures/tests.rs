@@ -3,7 +3,7 @@
 
 use super::*;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ImageCodec, RGBA_BYTES};
+use kx_module_api::ports::{BGRX_BYTES, EncodeAsk, ImageCodec, RGBA_BYTES, Shot};
 use std::thread;
 
 /// How long a test waits for another thread; it never sleeps.
@@ -155,4 +155,29 @@ fn a_dib_takes_its_own_queued_answers_and_its_ask_is_kept_and_counted() {
     );
     assert_eq!((pics.dib_asks(), pics.asks()), (4, 0), "draws count apart");
     assert_eq!(pics.last_dib(), Some(dib(4)));
+}
+
+#[test]
+fn an_encode_takes_its_own_queued_answers_and_its_ask_is_kept_and_counted() {
+    let pics = FakePictures::new();
+    let mut run = pics.open(CFG);
+    let encode = |n: u8| EncodeAsk {
+        shot: Shot::new(1, 1, vec![n; BGRX_BYTES]).unwrap(),
+    };
+    assert_eq!(
+        run.encode(encode(1)),
+        Err(PictureError::Gone),
+        "nothing queued"
+    );
+    pics.queue_png(Ok(vec![137, 80]));
+    pics.queue_png(Err(PictureError::TooBig));
+    let made = run.encode(encode(2)).map(Redacted::into_inner);
+    assert_eq!(made, Ok(vec![137, 80]));
+    assert_eq!(run.encode(encode(3)), Err(PictureError::TooBig));
+    let counts = (pics.encode_asks(), pics.dib_asks(), pics.asks());
+    assert_eq!(counts, (3, 0, 0), "each kind counts apart");
+    assert_eq!(pics.last_encode(), Some(encode(3)));
+    pics.queue_png(Ok(Vec::new()));
+    let shown = format!("{pics:?}");
+    assert!(shown.contains("pngs_queued: 1"), "{shown}");
 }

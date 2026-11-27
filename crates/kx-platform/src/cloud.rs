@@ -9,6 +9,7 @@ mod live;
 mod size;
 mod tick;
 
+use crate::lock;
 use crate::worker::{NetFrames, Spawner, Split};
 use board::Board;
 use job::NetJob;
@@ -18,8 +19,10 @@ use kx_module_api::ports::{
     CloudAsk, CloudFault, CloudNote, CloudRun, CloudSpeech, CloudTest, JobLimits,
 };
 use live::Tell;
+use std::sync::Arc;
+#[cfg(test)]
+use std::sync::Mutex;
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 /// The value `Range` names when the job's shape refuses a value the frames let through: the row's request.
 pub const SHAPE: &str = "shape";
@@ -130,11 +133,6 @@ impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> CloudSpeech for WorkerClou
             CloudNote::Piece { .. } => Err(CloudFault::Gone),
         }
     }
-}
-
-/// Locks `m`, taking the value even when a panicking thread poisoned it.
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[cfg(test)]

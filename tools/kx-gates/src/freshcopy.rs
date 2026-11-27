@@ -165,10 +165,6 @@ impl<'a> Fresh<'a> {
     }
 
     /// Writes the copy's settings file `table` into its data folder, before a copy starts.
-    #[cfg_attr(
-        not(feature = "voice"),
-        allow(dead_code, reason = "Only the voice gates call it.")
-    )]
     pub fn write(&self, table: &toml::Table) -> Result<(), String> {
         let file = product::files(&self.program)?.settings;
         std::fs::write(&file, table.to_string()).map_err(|e| format!("the copy's settings: {e}"))
@@ -207,10 +203,6 @@ impl<'a> Fresh<'a> {
     }
 
     /// The copy's data folder, which the gate made and removes at the end.
-    #[cfg_attr(
-        not(feature = "voice"),
-        allow(dead_code, reason = "Only the voice gates call it.")
-    )]
     pub fn data(&self) -> &Path {
         &self.data
     }

@@ -288,6 +288,10 @@ pub mod qobject {
         /// The selection strip shows a new view or hides: read `sel`.
         #[qsignal]
         fn sel_changed(self: Pin<&mut Self>);
+
+        /// The keyboard steps aside for a capture or comes back, already shielded: read `mode_json` again.
+        #[qsignal]
+        fn aside_asked(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}

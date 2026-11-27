@@ -1,8 +1,9 @@
-//! The app before Qt: the hub first, with the clipboard history's folder, then the kernel with the platform's services
-//! and every shipped module, readied for a normal or a hidden run. The hub hears the kernel's bus before the settings
-//! load, so no notice is missed; the app opens its log between load and start.
+//! The app before Qt: the hub first, with the clipboard history's folder, the Snips folder, then the kernel with the
+//! platform's services and every shipped module, readied for a normal or a hidden run. The hub hears the kernel's bus
+//! before the settings load, so no notice is missed; the app opens its log between load and start.
 
 use crate::hidden::Run;
+use crate::snip;
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter,
@@ -79,6 +80,8 @@ pub struct Services {
     pub session: Arc<dyn SessionWatch>,
     /// Keeps voice typing's history, recordings and counts sealed in its own folder, under its own key.
     pub voice_shelf: Arc<dyn SealedShelf>,
+    /// Snip's freeze, Snips folder, recorder, dialogs and player, with the app's microphone seal (ADR-0056).
+    pub snip: snip::Ports,
 }
 
 /// The modules this build ships for `run`; the `ui` module feeds `hub`, and `os`, the system's display language, is
@@ -124,6 +127,8 @@ fn picked(os: &str, run: &Run) -> Vec<Box<dyn Module>> {
     } else {
         kx_mod_voice::VoiceModule::new()
     }));
+    #[cfg(feature = "mod-snip")]
+    list.push(Box::new(kx_mod_snip::SnipModule::new()));
     list
 }
 
@@ -168,7 +173,8 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<CloudSpeechKey>(services.cloud)?;
     kernel.provide_platform::<ModelFilesKey>(services.models)?;
     kernel.provide_platform::<SessionWatchKey>(services.session)?;
-    kernel.provide_platform::<VoiceShelfKey>(services.voice_shelf)
+    kernel.provide_platform::<VoiceShelfKey>(services.voice_shelf)?;
+    services.snip.provide(kernel)
 }
 
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.
@@ -183,12 +189,15 @@ pub struct Boot {
     pub heard: Vec<Subscription>,
     /// Why the history's folder could not be made; the run says so once its log is open.
     pub no_clip_dir: Option<ErrorKind>,
+    /// Why the Snips folder or its unsaved part could not be made; the run says so too.
+    pub no_snip_dir: Option<ErrorKind>,
 }
 
 impl Boot {
     /// Makes the hub before any window, makes the history's folder under `platform`'s data folder and hands it to the
-    /// hub unless `run` is hidden, readies the kernel for `run`, adds `services` and every module, and loads the
-    /// settings; nothing starts. The system's display language is read once here, from `ports`' look.
+    /// hub and makes the Snips folder with its unsaved part, unless `run` is hidden, readies the kernel for `run`, adds
+    /// `services` and every module, and loads the settings; nothing starts. The system's display language is read once
+    /// here, from `ports`' look.
     ///
     /// # Errors
     /// When the hub's compiled-in data is broken, or the kernel or its bus refuses a step.
@@ -205,6 +214,7 @@ impl Boot {
         if !run.is_hidden() {
             hub.set_clip_folder(folder);
         }
+        let no_snip_dir = snip::make(run, platform.dirs(), services.snip.guarded);
         let modules = modules(&hub, &os, run);
         let mut kernel = Kernel::new(platform, policy(&modules));
         run.ready(&mut kernel, &hub)?;
@@ -220,6 +230,7 @@ impl Boot {
             requests,
             heard,
             no_clip_dir,
+            no_snip_dir,
         })
     }
 

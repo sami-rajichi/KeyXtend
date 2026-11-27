@@ -158,7 +158,7 @@ fn a_guarded_shadow_and_its_keyboard_stay_topmost_when_both_are_dropped_in_turn(
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
     let shadow = Hidden::tip("KeyXtend test: shadow", None);
     let kb = Hidden::topmost("KeyXtend test: shadowed keyboard", Some(shadow.0));
-    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
     put_after(&kb, HWND_NOTOPMOST);
     put_after(&shadow, HWND_NOTOPMOST);
     assert!(topmost(&kb), "the keyboard stays");
@@ -173,7 +173,7 @@ fn a_shadow_comes_back_with_its_keyboard_after_an_outside_drop_even_when_it_hear
     for (deaf, drop_kb) in [(false, true), (false, false), (true, true), (true, false)] {
         let shadow = Hidden::tip("KeyXtend test: owner shadow", None);
         let kb = Hidden::topmost("KeyXtend test: owned keyboard", Some(shadow.0));
-        guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+        guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
         if deaf {
             deafen(&shadow);
         }
@@ -248,10 +248,10 @@ fn a_pop_up_shown_again_lands_in_front_when_guarded_as_top() {
     let kb = Hidden::topmost("KeyXtend test: menu's keyboard", None);
     guard(kb.0).unwrap();
     assert!(above(&kb, &menu), "the keyboard lifted while the menu hid");
-    assert_eq!(guard_these(listed(&[&kb, &menu]), None, None), Ok(2));
+    assert_eq!(guard_these(listed(&[&kb, &menu]), &[], None), Ok(2));
     assert!(above(&kb, &menu), "a run with no top keeps the order");
     let top = Some("KeyXtend test: menu");
-    assert_eq!(guard_these(listed(&[&kb, &menu]), None, top), Ok(2));
+    assert_eq!(guard_these(listed(&[&kb, &menu]), &[], top), Ok(2));
     assert!(above(&menu, &kb), "the menu lands in front");
 }
 
@@ -265,10 +265,10 @@ fn a_guard_run_keeps_the_banner_above_the_keyboard_only_while_the_tip_hides() {
     guard(kb.0).unwrap();
     guard(banner.0).unwrap();
     front(tip.0).unwrap();
-    guard_these(listed(&[&kb, &banner]), None, None).unwrap();
+    guard_these(listed(&[&kb, &banner]), &[], None).unwrap();
     assert!(above(&banner, &kb), "the tip hid: the banner stays above");
     front(tip.0).unwrap();
-    guard_these(listed(&[&kb, &banner, &tip]), None, None).unwrap();
+    guard_these(listed(&[&kb, &banner, &tip]), &[], None).unwrap();
     assert!(
         above(&kb, &banner),
         "a shown tip pulls its keyboard over it"

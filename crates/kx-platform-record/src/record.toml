@@ -1,0 +1,34 @@
+# The recorder's fixed values (ADR-0056 decisions 3 to 5), compiled in. They are not user settings: fps, the part, the
+# sound switches, the longest length and the free-space floor come in each start ask.
+
+# Media Foundation's libraries. The worker's build delay-loads them and a video job loads them first, so a system
+# without them (a Windows N edition) still runs every other job and answers `NoVideo` (edge 14).
+media_dlls = ["mfplat.dll", "mfreadwrite.dll"]
+
+[video]
+# The H.264 video's bits a second.
+bits_s = 8_000_000
+# The longest wait for the capture's first frame, in ms.
+first_frame_ms = 1_000
+# Frames the capture's pool holds: one being copied while the next arrives.
+buffers = 2
+
+[sound]
+# The AAC track's bytes a second: 24 000 is 192 kbit/s, the most the system's encoder takes.
+aac_bytes_s = 24_000
+# The most sound a source keeps waiting, in ms; older sound is dropped.
+queue_ms = 1_000
+# How far the written sound stays behind the picture's clock, in ms, so a late packet still lands in its place.
+cushion_ms = 100
+# How far a packet may stray from where the last one ended, in ms, and still follow it with no gap.
+drift_ms = 20
+
+# Each channel's [left, right] gains by the source's channel count, in the system's order (front left, front right,
+# centre, low, back or side left, back or side right, side left, side right), each side scaled to add up to 1 so it
+# never clips. A count not listed sends its first channel left, its second right and the rest to both.
+[sound.downmix]
+1 = [[1.0, 1.0]]
+2 = [[1.0, 0.0], [0.0, 1.0]]
+4 = [[1.0, 0.0], [0.0, 1.0], [0.707, 0.0], [0.0, 0.707]]
+6 = [[1.0, 0.0], [0.0, 1.0], [0.707, 0.707], [0.0, 0.0], [0.707, 0.0], [0.0, 0.707]]
+8 = [[1.0, 0.0], [0.0, 1.0], [0.707, 0.707], [0.0, 0.0], [0.707, 0.0], [0.0, 0.707], [0.707, 0.0], [0.0, 0.707]]

@@ -5,6 +5,8 @@
 # Sizes all themes share are in shape.toml, timings in motion.toml and icons in icons.toml.
 # A palette's dim and dim_ink come from shape.toml [dim] and its badge_shadow from [common], so none is written here.
 # legend_2_plate colours secondary text and icons on the plate; a palette writes it only where it differs from legend_2.
+# ring_act and rec_light likewise fall back to ring and rec. A token may name another of its table, as "led_on", to
+# take that colour, so a colour two tokens share is written once.
 # A palette may write its own press; else a light one lays [common] press over its hover (the owner's choice of
 # 2026-10-11), and a dark one takes [common] press.
 
@@ -13,12 +15,28 @@
 # A colour marked "owner 2026-09-30", "2026-10-02", "2026-10-11" or "2026-11-17" was nudged just enough to pass it.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), which light
-# palettes lay over their hover, the caption's recording dot (.rec-dot), the snip overlay (.snip-dim, .snip-rect, .dims)
-# and the mode badge's shadow (.badge box-shadow).
+# palettes lay over their hover, the caption's recording dot (.rec-dot), the snip overlay (design/snip-data.js DIM, EDGE,
+# TAG, the white .tag and .hint text, and REC for the red edge) and the mode badge's shadow (.badge box-shadow). The six
+# snip_ink_* are the editor's inks (snip-data.js INK), the picture's own colours, so high contrast keeps them; each
+# snip_num_* is a step's number on that ink at 4.5:1. On green neither ink reaches it, so its number is black.
 [common]
 press = "#0000000F"
 rec_dot = "#E5484D"
 snip_dim = "#0000006B"
 snip_edge = "#FFFFFF"
 snip_tag = "#00000099"
+snip_tag_ink = "#FFFFFF"
+snip_rec = "#E81123"
+snip_ink_red = "#E81123"
+snip_ink_yellow = "#FFD400"
+snip_ink_green = "#10893E"
+snip_ink_blue = "#0063B1"
+snip_ink_black = "#1B1B1B"
+snip_ink_white = "#FFFFFF"
+snip_num_red = "snip_ink_white"
+snip_num_yellow = "snip_ink_black"
+snip_num_green = "#000000"
+snip_num_blue = "snip_ink_white"
+snip_num_black = "snip_ink_white"
+snip_num_white = "snip_ink_black"
 badge_shadow = { x = 0.0, y = 3.0, blur = 10.0, spread = 0.0, color = "#00000047" }

@@ -1,10 +1,9 @@
 //! The worker's reduced rights, read from outside: its token is restricted, with no uiAccess and Medium integrity, for
-//! both jobs, it holds none of our inheritable handles and has no console host, and its job caps it at each job's own
-//! memory, bars it from shared UI and ends it when asked or let go.
+//! every job, it holds none of our inheritable handles and has no console host, and its job ends it when asked or let go.
 
 use super::*;
 use crate::worker::access::{self, Rights};
-use crate::worker::job::{ALONE, ENDED, LIMITS, MIB};
+use crate::worker::job::ENDED;
 use crate::worker::label::MEDIUM;
 use crate::worker::token;
 use std::os::windows::io::FromRawHandle;
@@ -15,14 +14,6 @@ use windows::Win32::Security::{
 };
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
-};
-use windows::Win32::System::JobObjects::{
-    IsProcessInJob, JOB_OBJECT_UILIMIT_DESKTOP, JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
-    JOB_OBJECT_UILIMIT_EXITWINDOWS, JOB_OBJECT_UILIMIT_GLOBALATOMS, JOB_OBJECT_UILIMIT_HANDLES,
-    JOB_OBJECT_UILIMIT_READCLIPBOARD, JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS,
-    JOB_OBJECT_UILIMIT_WRITECLIPBOARD, JOBOBJECT_BASIC_UI_RESTRICTIONS,
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectBasicUIRestrictions,
-    JobObjectExtendedLimitInformation, QueryInformationJobObject,
 };
 use windows::Win32::System::Threading::{CreateEventW, GetCurrentProcess, GetProcessId};
 use windows::core::PCWSTR;
@@ -189,67 +180,6 @@ fn the_worker_starts_no_console_host() {
         started.is_empty(),
         "a console host would need a desktop the worker may not reach: {started:?}"
     );
-}
-
-#[test]
-fn the_job_caps_each_job_alone_in_it() {
-    for launch in [Launch::media(&CFG), Launch::vault()] {
-        let (_input, _output, child) = spawner().start(&launch).unwrap();
-        let mb = usize::try_from(launch.memory_mb).unwrap();
-        capped(&child, mb * MIB);
-    }
-}
-
-/// Checks that `child` runs alone in its job, under `bytes` of memory and the job's limits.
-#[allow(unsafe_code, reason = "Reads the limits and members of our own job.")]
-fn capped(child: &WinChild, bytes: usize) {
-    let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
-    let size = size32::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
-    let mut inside = false.into();
-    // SAFETY: our live job and process handles, and locals of the sizes passed.
-    unsafe {
-        let info = (&raw mut limits).cast();
-        let class = JobObjectExtendedLimitInformation;
-        QueryInformationJobObject(Some(child.job.handle()), class, info, size, None).unwrap();
-        IsProcessInJob(
-            raw(&child.process),
-            Some(child.job.handle()),
-            &raw mut inside,
-        )
-        .unwrap();
-    }
-    assert!(inside.as_bool());
-    let basic = limits.BasicLimitInformation;
-    assert_eq!(basic.LimitFlags.0 & LIMITS.0, LIMITS.0);
-    assert_eq!(basic.ActiveProcessLimit, ALONE);
-    assert_eq!(limits.ProcessMemoryLimit, bytes);
-}
-
-#[test]
-#[allow(unsafe_code, reason = "Reads the UI limits of our own job.")]
-fn the_job_bars_the_worker_from_shared_ui() {
-    let worker = spawn();
-    let mut ui = JOBOBJECT_BASIC_UI_RESTRICTIONS::default();
-    let size = size32::<JOBOBJECT_BASIC_UI_RESTRICTIONS>();
-    // SAFETY: our live job handle and a local of the size passed.
-    unsafe {
-        let info = (&raw mut ui).cast();
-        let job = Some(worker.child().job.handle());
-        QueryInformationJobObject(job, JobObjectBasicUIRestrictions, info, size, None).unwrap();
-    }
-    let barred = [
-        JOB_OBJECT_UILIMIT_HANDLES,
-        JOB_OBJECT_UILIMIT_READCLIPBOARD,
-        JOB_OBJECT_UILIMIT_WRITECLIPBOARD,
-        JOB_OBJECT_UILIMIT_GLOBALATOMS,
-        JOB_OBJECT_UILIMIT_DESKTOP,
-        JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
-        JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS,
-        JOB_OBJECT_UILIMIT_EXITWINDOWS,
-    ];
-    for limit in barred {
-        assert!(ui.UIRestrictionsClass.contains(limit), "{:#x}", limit.0);
-    }
 }
 
 #[test]

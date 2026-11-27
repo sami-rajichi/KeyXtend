@@ -182,7 +182,10 @@ fn a_quit_the_app_can_no_longer_hear_ends_the_ui_itself() {
 fn a_new_hub_keeps_the_keyboard_shown() {
     let rig = Rig::new();
     assert_eq!(rig.hub.mode(), Mode::Shown);
-    assert_eq!(rig.hub.mode_json(), r#"{"away":false,"minimised":false}"#);
+    assert_eq!(
+        rig.hub.mode_json(),
+        r#"{"away":false,"minimised":false,"aside":null}"#
+    );
 }
 
 #[test]
@@ -192,9 +195,15 @@ fn the_mode_the_ui_keeps_outlives_it_for_the_next() {
     rig.hub.drop_waker();
     rig.hub.set_waker(keeper(&Arc::default()));
     assert_eq!(rig.hub.mode(), Mode::Minimised);
-    assert_eq!(rig.hub.mode_json(), r#"{"away":true,"minimised":true}"#);
+    assert_eq!(
+        rig.hub.mode_json(),
+        r#"{"away":true,"minimised":true,"aside":null}"#
+    );
     rig.hub.keep_mode(Mode::of(true, false));
-    assert_eq!(rig.hub.mode_json(), r#"{"away":true,"minimised":false}"#);
+    assert_eq!(
+        rig.hub.mode_json(),
+        r#"{"away":true,"minimised":false,"aside":null}"#
+    );
     assert!(rig.wakes().is_empty(), "keeping it wakes nothing");
 }
 

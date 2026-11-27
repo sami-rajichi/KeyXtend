@@ -1,7 +1,7 @@
 //! The frames between the keyboard and its worker processes, the worker's command words and exit codes, and the backup
-//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042, ADR-0047). A frame has a
-//! fixed header and a payload capped by its kind, and every field is checked before it is trusted or a buffer is
-//! allocated.
+//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042, ADR-0047, ADR-0056). A
+//! frame has a fixed header and a payload capped by its kind, and every field is checked before it is trusted or a
+//! buffer is allocated.
 
 #![forbid(unsafe_code)]
 
@@ -14,6 +14,8 @@ mod frame;
 pub mod gate;
 mod limits;
 mod net;
+mod pick;
+mod record;
 mod reply;
 pub mod rules;
 mod vault;
@@ -24,20 +26,24 @@ mod wire;
 pub use ask::Ask;
 pub use code::{Codec, Fault, Why};
 pub use command::{
-    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, REFUSED_EXIT, SOUND_FLAG,
-    VAULT_JOB, VOICE_JOB,
+    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, PICK_JOB, RECORD_JOB, REFUSED_EXIT,
+    SOUND_FLAG, VAULT_JOB, VOICE_JOB,
 };
 pub use error::IpcError;
 pub use fetch::ask::FetchAsk;
 pub use fetch::note::FetchNote;
 pub use fetch::{FetchFault, part_path};
+pub use limits::snip::{
+    BGRX_BYTES, MAX_ENCODE_BYTES, MAX_FILE_NAME_BYTES, MAX_VIDEO_MS, MP4_EXT, PNG_EXT, SNIP_FPS,
+    SNIP_MAX_MIN, SNIP_MIN_FREE_MB, SNIP_RECORD_MB, SNIP_SHOT_MB, SNIP_SPEEDS,
+};
 pub use limits::{
     BOX_EXT, BOX_MARK, BOX_NAME, BOX_PARTS, BOX_VERSION, DECODE_BYTES, MAX_AES_ROUNDS, MAX_ASK_LEN,
     MAX_BOX_BYTES, MAX_BOX_WORK, MAX_ENTRIES, MAX_ENTRIES_BYTES, MAX_FIELD_BYTES, MAX_FIELD_CHARS,
     MAX_FIELDS, MAX_IMAGE_BYTES, MAX_KDF_BYTES, MAX_KDF_LANES, MAX_KDF_PASSES, MAX_KEEPASS_BYTES,
-    MAX_LOCKED_BYTES, MAX_PARTS, MAX_PASSWORD_BYTES, MAX_RECIPIENT_BYTES, MAX_REPLY_LEN,
-    MAX_RGBA_BYTES, MAX_SIDE, MIN_BOX_WORK, NOTEBOOK_PART, READ_TIMES, RGBA_BYTES, VAULT_MEMORY_MB,
-    VERSION,
+    MAX_LOCKED_BYTES, MAX_PARTS, MAX_PASSWORD_BYTES, MAX_PNG_BYTES, MAX_RECIPIENT_BYTES,
+    MAX_REPLY_LEN, MAX_RGBA_BYTES, MAX_SIDE, MIN_BOX_WORK, NOTEBOOK_PART, READ_TIMES, RGBA_BYTES,
+    VAULT_MEMORY_MB, VERSION, png_most,
 };
 pub use limits::{
     HTTPS, LEVEL_HZ, MAX_DEVICES, MAX_HOST_BYTES, MAX_HOSTS, MAX_LANGS, MAX_MODEL_BYTES,
@@ -57,6 +63,12 @@ pub use net::note::NetNote;
 pub use net::{
     NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, NetShape,
 };
+pub use pick::FileKind;
+pub use pick::ask::PickAsk;
+pub use pick::reply::PickReply;
+pub use record::ask::RecordAsk;
+pub use record::note::RecordNote;
+pub use record::{Area, RecordEnd, RecordFault, Switch};
 pub use reply::Reply;
 pub use vault::ask::VaultAsk;
 pub use vault::reply::VaultReply;

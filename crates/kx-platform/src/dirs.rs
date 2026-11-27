@@ -20,6 +20,26 @@ pub const VAULT_DIR: &str = "quickfill";
 /// The folder under the data folder that holds voice typing's sealed history, recordings and counts (ADR-0042).
 pub const VOICE_DIR: &str = "voice";
 
+/// The folder under the data folder that holds Snip's files (ADR-0056); a hidden run makes none.
+pub const SNIP_DIR: &str = "snips";
+
+/// The part of the Snips folder where a video is recorded and kept until it goes (ADR-0056 decision 3).
+pub const UNSAVED_DIR: &str = "unsaved";
+
+/// The Snips folder under `data` and its unsaved part, as the app makes them at boot.
+#[must_use]
+pub fn snip_dirs(data: &Path) -> (PathBuf, PathBuf) {
+    let snips = data.join(SNIP_DIR);
+    let unsaved = unsaved_dir(&snips);
+    (snips, unsaved)
+}
+
+/// The unsaved part of the Snips folder `snips`.
+#[must_use]
+pub fn unsaved_dir(snips: &Path) -> PathBuf {
+    snips.join(UNSAVED_DIR)
+}
+
 /// The folders an OS adapter reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppDirs {
@@ -112,6 +132,17 @@ mod tests {
         assert!(apart, "{dirs:?}");
         assert_eq!(VAULT_DIR, "quickfill", "ADR-0038 decision 2");
         assert_eq!(VOICE_DIR, "voice", "the voice design's store");
+    }
+
+    #[test]
+    fn the_snips_folder_is_apart_from_the_others_and_holds_its_unsaved_part() {
+        assert_eq!((SNIP_DIR, UNSAVED_DIR), ("snips", "unsaved"), "the plan's");
+        let others = [CLIP_DIR, SEALED_DIR, VAULT_DIR, VOICE_DIR, PORTABLE_DIR];
+        assert!(!others.contains(&SNIP_DIR), "{others:?}");
+        let data = Path::new("data");
+        let unsaved = snip_dirs(data);
+        assert_eq!(unsaved.0, data.join(SNIP_DIR));
+        assert_eq!(unsaved.1, data.join(SNIP_DIR).join(UNSAVED_DIR));
     }
 
     #[test]

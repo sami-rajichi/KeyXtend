@@ -59,6 +59,6 @@ fn a_running_mouse_module_lights_each_key_by_its_mode_with_its_own_tip() {
 #[test]
 fn the_other_side_keys_stay_dim_with_no_tip_whatever_the_mouse_module_says() {
     let s = with(live(true, GrabState::Armed));
-    let snip = &s.keys["snip"];
-    assert_eq!((snip.paint, snip.tip, snip.dim), (DIM, None, true));
+    let later = &s.keys["settings"];
+    assert_eq!((later.paint, later.tip, later.dim), (DIM, None, true));
 }

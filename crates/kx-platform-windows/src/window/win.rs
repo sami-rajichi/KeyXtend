@@ -1,26 +1,25 @@
-//! The Windows side of the guard: our windows and their titles, the focus, and the shape that takes clicks.
+//! The Windows side of the guard: the guard port, and our windows, their titles and where they stand.
 
 use kx_module_api::ports::{Point, Rect};
 use kx_platform::ui::{FocusToken, UiError, Watched, WindowGuard};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
-use windows::Win32::Graphics::Gdi::{
-    CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
-};
+use windows::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
 use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GA_ROOT, GetAncestor, GetForegroundWindow, GetWindowRect,
-    GetWindowThreadProcessId, InternalGetWindowText, IsWindow, IsWindowVisible,
-    SetForegroundWindow, WindowFromPoint,
+    EnumWindows, GA_ROOT, GW_OWNER, GWL_EXSTYLE, GetAncestor, GetWindow, GetWindowLongPtrW,
+    GetWindowRect, GetWindowThreadProcessId, InternalGetWindowText, IsWindowVisible,
+    WindowFromPoint,
 };
 use windows::core::BOOL;
 
+use super::focus::{foreground, give_back, token_of, window_of};
 use super::guard::guard;
-use super::top::{lay_under, lift_alone};
-use super::{entry, pages};
-use super::{guard_order, ours_by, should_give_back, spared};
-use crate::screen::edges;
-use crate::{failed, refused};
+use super::shape::shape;
+use super::top::{lay_low, lay_under, lift_alone};
+use super::{entry, pages, shield};
+use super::{guard_order, ours_by, spared};
+use crate::refused;
 
 /// Longest window title read, in UTF-16 units.
 const TITLE_CAP: usize = 512;
@@ -30,7 +29,7 @@ const TITLE_CAP: usize = 512;
 pub struct WinGuard;
 
 impl WindowGuard for WinGuard {
-    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
+    fn guard_own(&self, spare: &[&str], top: Option<&str>) -> Result<usize, UiError> {
         guard_own(spare, top)
     }
 
@@ -54,8 +53,16 @@ impl WindowGuard for WinGuard {
         lay_under(title, under)
     }
 
+    fn lay_low(&self, title: &str) -> Result<(), UiError> {
+        lay_low(title)
+    }
+
     fn mark_pages(&self, title: &str) -> Result<(), UiError> {
         pages::mark_pages(title)
+    }
+
+    fn shield(&self, title: &str, on: bool) -> Result<(), UiError> {
+        shield::shield(title, on)
     }
 
     fn remember(&self) -> FocusToken {
@@ -67,25 +74,6 @@ impl WindowGuard for WinGuard {
             give_back(noted);
         }
     }
-}
-
-/// `hwnd` as a focus token.
-pub(super) fn token_of(hwnd: HWND) -> FocusToken {
-    FocusToken::new(u64::try_from(hwnd.0.addr()).unwrap_or_default())
-}
-
-/// The window `token` names; `None` when it does not fit a handle.
-pub(super) fn window_of(token: FocusToken) -> Option<HWND> {
-    let addr = usize::try_from(token.raw()).ok()?;
-    Some(HWND(std::ptr::without_provenance_mut(addr)))
-}
-
-/// The window in front now; null when there is none.
-#[must_use]
-#[allow(unsafe_code, reason = "A plain window query.")]
-pub fn foreground() -> HWND {
-    // SAFETY: a plain query.
-    unsafe { GetForegroundWindow() }
 }
 
 /// A window handle from its raw value, as kept to cross threads.
@@ -129,9 +117,26 @@ fn hit(p: Point) -> HWND {
 
 /// True while `hwnd` is shown.
 #[allow(unsafe_code, reason = "A plain window query.")]
-fn visible(hwnd: HWND) -> bool {
+pub(crate) fn visible(hwnd: HWND) -> bool {
     // SAFETY: a plain query; a gone window reads as hidden.
     unsafe { IsWindowVisible(hwnd) }.as_bool()
+}
+
+/// The extended style of `hwnd`; 0 for a gone window.
+#[allow(unsafe_code, reason = "A plain style query.")]
+pub(crate) fn ex_of(hwnd: HWND) -> u32 {
+    // SAFETY: a plain query; a gone window gives 0.
+    u32::try_from(unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) }).unwrap_or_default()
+}
+
+/// True while the system cloaks `hwnd`, so it does not show though Windows calls it visible.
+#[allow(unsafe_code, reason = "A window attribute read into a local.")]
+pub(crate) fn cloaked(hwnd: HWND) -> bool {
+    let mut value = 0u32;
+    let size = u32::try_from(size_of::<u32>()).unwrap_or_default();
+    // SAFETY: the call writes one u32 into a local that outlives it; a refusal reads as not cloaked.
+    let read = unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut value).cast(), size) };
+    read.is_ok() && value != 0
 }
 
 /// This process's visible top-level windows, front first.
@@ -177,6 +182,14 @@ pub fn title(hwnd: HWND) -> String {
     String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
 
+/// The window that owns `hwnd`, if any.
+#[allow(unsafe_code, reason = "A plain owner query.")]
+pub(super) fn owner(hwnd: HWND) -> Option<HWND> {
+    // SAFETY: a plain query; a window with no owner gives an error.
+    let owner = unsafe { GetWindow(hwnd, GW_OWNER) }.ok()?;
+    (!owner.is_invalid()).then_some(owner)
+}
+
 /// Our visible window titled `title_is`.
 #[must_use]
 pub fn own_titled(title_is: &str) -> Option<HWND> {
@@ -196,12 +209,12 @@ pub fn own_bounds(title_is: &str) -> Result<RECT, UiError> {
     Ok(r)
 }
 
-/// Guards our visible windows except the one titled `spare`, back to front, with the one titled `top` last
-/// so it ends on top; says how many it guarded.
+/// Guards our visible windows but those titled one of `spare`, with their shadows and tips, back to front, with the
+/// one titled `top` last so it ends on top; says how many it guarded.
 ///
 /// # Errors
 /// `Refused` when Windows will not guard a window, as from a thread that does not own it.
-pub fn guard_own(spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
+pub fn guard_own(spare: &[&str], top: Option<&str>) -> Result<usize, UiError> {
     guard_these(own_windows(), spare, top)
 }
 
@@ -211,88 +224,23 @@ pub fn guard_own(spare: Option<&str>, top: Option<&str>) -> Result<usize, UiErro
 /// `Refused` when Windows will not guard a window.
 pub(super) fn guard_these(
     front_first: Vec<HWND>,
-    spare: Option<&str>,
+    spare: &[&str],
     top: Option<&str>,
 ) -> Result<usize, UiError> {
-    let named = front_first.into_iter().map(|w| (w, title(w)));
-    let kept: Vec<(HWND, String)> = named.filter(|(_, t)| !spared(t, spare)).collect();
-    let order = guard_order(kept, |(_, t)| top == Some(t.as_str()));
+    let named: Vec<(HWND, String)> = front_first.into_iter().map(|w| (w, title(w))).collect();
+    let marks: Vec<_> = named
+        .iter()
+        .map(|(w, t)| (*w, owner(*w), spare.contains(&t.as_str())))
+        .collect();
+    let left = spared(&marks);
+    let kept = named
+        .into_iter()
+        .zip(left)
+        .filter(|(_, l)| !l)
+        .map(|(n, _)| n);
+    let order = guard_order(kept.collect(), |(_, t)| top == Some(t.as_str()));
     for (hwnd, _) in &order {
         guard(*hwnd)?;
     }
     Ok(order.len())
-}
-
-/// Cuts our window titled `title_is` to `rects` (physical pixels from its top-left corner), so clicks
-/// elsewhere reach the app below; Windows also draws nothing outside them.
-///
-/// # Errors
-/// `NoWindow` for a window not shown, `Refused` when Windows says no.
-#[allow(unsafe_code, reason = "Hands a region to our own window.")]
-pub fn shape(title_is: &str, rects: &[Rect]) -> Result<(), UiError> {
-    let hwnd = own_titled(title_is).ok_or(UiError::NoWindow)?;
-    let all = region(rects)?;
-    // SAFETY: `all` is ours until SetWindowRgn takes it; `hwnd` is one of our live windows.
-    if unsafe { SetWindowRgn(hwnd, Some(all), true) } == 0 {
-        // SAFETY: Windows did not take the region, so we delete it, once.
-        let _ = unsafe { DeleteObject(all.into()) };
-        return Err(failed());
-    }
-    Ok(())
-}
-
-/// One region covering every rect; the caller owns it.
-#[allow(unsafe_code, reason = "Makes a region and deletes it on failure.")]
-pub(super) fn region(rects: &[Rect]) -> Result<HRGN, UiError> {
-    // SAFETY: makes an empty region, which the caller owns.
-    let all = unsafe { CreateRectRgn(0, 0, 0, 0) };
-    if all.is_invalid() {
-        return Err(failed());
-    }
-    for r in rects {
-        if let Err(e) = add(all, *r) {
-            // SAFETY: deletes the region made above, once.
-            let _ = unsafe { DeleteObject(all.into()) };
-            return Err(e);
-        }
-    }
-    Ok(all)
-}
-
-/// Adds rect `r` to region `all`.
-#[allow(unsafe_code, reason = "Makes, joins and deletes one region.")]
-fn add(all: HRGN, r: Rect) -> Result<(), UiError> {
-    let [left, top, right, bottom] = edges(r);
-    // SAFETY: makes one region, deleted below.
-    let one = unsafe { CreateRectRgn(left, top, right, bottom) };
-    if one.is_invalid() {
-        return Err(failed());
-    }
-    // SAFETY: both regions are ours and live.
-    let joined = unsafe { CombineRgn(Some(all), Some(all), Some(one), RGN_OR) };
-    let result = if joined == RGN_ERROR {
-        Err(failed())
-    } else {
-        Ok(())
-    };
-    // SAFETY: deletes the region made above, once.
-    let _ = unsafe { DeleteObject(one.into()) };
-    result
-}
-
-/// Gives the focus back to `noted` when one of ours took it and `noted` is another app's live window.
-#[allow(unsafe_code, reason = "A focus change Windows allows us.")]
-pub fn give_back(noted: HWND) {
-    if gives_back(noted) {
-        // SAFETY: one of our windows is in front, so Windows allows the change.
-        let _ = unsafe { SetForegroundWindow(noted) };
-    }
-}
-
-/// True when the focus should go back to `noted`: one of ours is in front and `noted` is another app's live window.
-#[allow(unsafe_code, reason = "A plain window query.")]
-pub(super) fn gives_back(noted: HWND) -> bool {
-    // SAFETY: a plain query; a null or gone window reads as not a window.
-    let alive = unsafe { IsWindow(Some(noted)) }.as_bool();
-    should_give_back(alive, is_ours(foreground()), is_ours(noted))
 }

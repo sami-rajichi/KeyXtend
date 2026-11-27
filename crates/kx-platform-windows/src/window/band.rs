@@ -1,11 +1,17 @@
 //! The topmost band rules the guard follows after a move: which window is out, which one it lifts back, and the order
 //! it brings the windows that one owns back in. Pure, so they are tested everywhere.
 
-use super::WS_EX_TOPMOST;
+use super::{WS_EX_NOACTIVATE, WS_EX_TOPMOST};
 
 /// True when extended style `ex` puts the window in the topmost band.
 pub(super) fn is_top(ex: u32) -> bool {
     ex & WS_EX_TOPMOST != 0
+}
+
+/// True when extended style `ex` keeps the window from taking the focus, as every window of ours but Settings does;
+/// the IME window Windows makes for our thread does not.
+pub(super) fn no_focus(ex: u32) -> bool {
+    ex & WS_EX_NOACTIVATE != 0
 }
 
 /// True when a window of `chain`, as (topmost, lifting), is out of the topmost band: the guard checks it again later,
@@ -24,6 +30,22 @@ pub(super) fn to_lift(chain: &[(bool, bool)]) -> Option<usize> {
     } else {
         None
     }
+}
+
+/// Which of our windows `z` lifts, back to front, so the frozen screens lie under the rest of ours (ADR-0059). `z` holds
+/// each of ours as (low, topmost), front first; none until one sits under a frozen screen.
+pub(super) fn to_raise(z: &[(bool, bool)]) -> Vec<usize> {
+    let ours = |&(low, top): &(bool, bool)| !low && top;
+    let first = z.iter().position(|&(low, top)| low && top);
+    if !first.is_some_and(|at| z[at..].iter().any(ours)) {
+        return Vec::new();
+    }
+    (0..z.len()).rev().filter(|&i| ours(&z[i])).collect()
+}
+
+/// Runs every one of `tries`, whatever each gives, and keeps the first error: one refused lift leaves the rest to go up.
+pub(super) fn first_error<E>(tries: impl IntoIterator<Item = Result<(), E>>) -> Result<(), E> {
+    tries.into_iter().fold(Ok(()), Result::and)
 }
 
 /// The windows `root` owns, directly or not, in the order the guard brings them to the front after lifting it: each
@@ -97,7 +119,83 @@ mod rules {
         );
     }
 
+    #[test]
+    fn a_frozen_screen_made_last_sends_every_other_window_of_ours_in_the_band_up() {
+        // Front first, each as (low, topmost): Qt makes a new frozen screen on top of the band.
+        let (screen, bar, off) = ((true, true), (false, true), (false, false));
+        assert_eq!(
+            to_raise(&[screen, bar, bar]),
+            [2, 1],
+            "the one behind first"
+        );
+        assert_eq!(
+            to_raise(&[bar, screen, bar]),
+            [2, 0],
+            "all go, so they keep their order"
+        );
+        assert!(to_raise(&[bar, screen, screen]).is_empty(), "already under");
+        assert!(
+            to_raise(&[screen, off]).is_empty(),
+            "Settings stays off the band"
+        );
+        assert!(
+            to_raise(&[(true, false), bar]).is_empty(),
+            "a screen off the band lies under it"
+        );
+        assert!(to_raise(&[bar]).is_empty() && to_raise(&[]).is_empty());
+    }
+
+    #[test]
+    fn only_a_no_focus_window_is_one_of_ours_to_stack() {
+        assert!(no_focus(KEPT) && no_focus(WS_EX_NOACTIVATE));
+        assert!(
+            !no_focus(WS_EX_TOPMOST),
+            "the thread's IME window, which Windows puts in the band"
+        );
+        assert!(!no_focus(0), "Settings");
+    }
+
+    #[test]
+    fn a_refused_lift_leaves_the_rest_to_go_up_and_its_error_is_kept() {
+        let mut tried = Vec::new();
+        let answers = [Ok(()), Err(5), Ok(()), Err(7)];
+        let got = first_error(answers.iter().enumerate().map(|(i, &a)| {
+            tried.push(i);
+            a
+        }));
+        assert_eq!(got, Err(5), "the first refusal");
+        assert_eq!(tried, [0, 1, 2, 3], "every lift was tried");
+        assert_eq!(first_error::<u8>([Ok(()), Ok(())]), Ok(()));
+    }
+
+    /// `z` once each window `lifts` names went to the front in turn.
+    fn lifted<T: Copy>(z: &[T], lifts: &[usize]) -> Vec<T> {
+        let mut now: Vec<usize> = (0..z.len()).collect();
+        for &i in lifts {
+            now.retain(|&w| w != i);
+            now.insert(0, i);
+        }
+        now.into_iter().map(|i| z[i]).collect()
+    }
+
     proptest! {
+        #[test]
+        fn after_the_lifts_every_frozen_screen_lies_under_ours_which_keep_their_order(
+            z in prop::collection::vec(any::<(bool, bool)>(), 0..10),
+        ) {
+            let lifts = to_raise(&z);
+            let ids: Vec<(usize, (bool, bool))> = z.iter().copied().enumerate().collect();
+            let after = lifted(&ids, &lifts);
+            let first = after.iter().position(|&(_, (low, top))| low && top);
+            let late = |at: usize| after[at..].iter().any(|&(_, (low, top))| !low && top);
+            prop_assert!(!first.is_some_and(late), "none of ours under a screen");
+            let others = |v: &[(usize, (bool, bool))]| -> Vec<usize> {
+                v.iter().filter(|(_, (low, top))| !low && *top).map(|&(i, _)| i).collect()
+            };
+            prop_assert_eq!(others(&after), others(&ids), "ours keep their order");
+            prop_assert!(lifts.iter().all(|&i| !z[i].0 && z[i].1), "only ours in the band move");
+        }
+
         #[test]
         fn a_family_lists_each_window_once_after_its_owner(owners in prop::collection::vec(0u8..12, 0..12)) {
             // Window i + 1 is owned by a window numbered below it, so owners never loop.

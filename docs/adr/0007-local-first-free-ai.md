@@ -1,7 +1,7 @@
 # 7. AI features are local-first and free
 
 - **Date:** 2026-09-26
-- **Status:** Accepted. Its engine lines and benchmark button are superseded by ADR-0043 (2026-11-14), and its cloud lines and secret-store line for keys by ADR-0047 (2026-11-17).
+- **Status:** Accepted. Its engine lines and benchmark button are superseded by ADR-0043 (2026-11-14), its cloud lines and secret-store line for keys by ADR-0047 (2026-11-17), and its OCR line by ADR-0055 (2026-11-23).
 
 ## Context
 There is no budget. Users need good Arabic, French and English speech-to-text, word prediction and OCR. Privacy matters.

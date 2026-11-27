@@ -1,5 +1,5 @@
-//! Sizes of the small windows beside the keyboard: the selection strip, the dictation bar, the snip overlay, the Arabic
-//! panel, the hold ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
+//! Sizes of the small windows beside the keyboard: the selection strip, the dictation bar, the Arabic panel, the hold
+//! ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
 
 use serde::{Deserialize, Serialize};
 
@@ -65,30 +65,6 @@ pub struct CaptionShape {
     pub shimmer_px: [f32; 2],
     /// The shimmer's light band repeats every this many bar widths.
     pub shimmer_span: f32,
-}
-
-/// The snip overlay (mock-up `.snip-rect .dims` and `.snip-bar`).
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct SnipShape {
-    /// Size tag text size.
-    pub tag_px: f32,
-    /// Size tag text weight.
-    pub tag_weight: u16,
-    /// Size tag padding: top and bottom, sides.
-    pub tag_pad_px: [f32; 2],
-    /// Size tag corner radius.
-    pub tag_radius_px: f32,
-    /// How far the size tag sits above the region.
-    pub tag_gap_px: f32,
-    /// Gap between the hint bar and the top of the screen.
-    pub bar_top_px: f32,
-    /// Hint bar padding: top and bottom, sides.
-    pub bar_pad_px: [f32; 2],
-    /// Hint bar corner radius.
-    pub bar_radius_px: f32,
-    /// Hint text size.
-    pub hint_px: f32,
 }
 
 /// The Arabic test panel (mock-up `.pop`, `.pop-h`, `.lrow`, `.pg`, `.lfoot`); it grows with the keyboard.

@@ -1,0 +1,82 @@
+# What the keyboard does during a capture: "bubble" waits as its bubble, "hidden" shows nothing of it until the
+# capture ends, "shown" stays in place and is in the picture or video.
+keyboard = "bubble"
+# The folder the Save dialog opens at; empty means the Snips folder in KeyXtend's data folder.
+save_dir = ""
+# The seconds a video counts down before it records.
+countdown_s = 3
+# The countdown's step on the Snip panel, in seconds.
+countdown_step_s = 1
+# A video's frames a second: one of the recorder's rates (RecordAsk::FPS).
+fps = 30
+# The longest video, in minutes; then it stops by itself and is kept, with a note.
+max_min = 30
+# The longest video's step on the Snip panel, in minutes; its minus and plus stop on the step's multiples.
+max_min_step = 5
+# The microphone records from a video's start.
+mic_on = false
+# What the computer plays records from a video's start.
+sound_on = false
+# Days a copied video stays in the Snips folder's unsaved part, so a paste from the clipboard history still works.
+copied_days = 1
+# The room, in MB, a video's drive keeps free; Record dims under it, and a recording stops before it.
+min_free_mb = 2048
+# The most steps the editor's Undo takes back.
+undo_max = 50
+# The most points one pen or highlighter stroke keeps; a longer one keeps its first points.
+stroke_max = 10000
+# The largest frozen copy of the screens, in MB; past it a capture does not start, with a note.
+shot_cap_mb = 256
+# The recording job's memory cap, in MB.
+record_mb = 512
+# The longest a recording's job may take to say it started, in ms.
+record_start_ms = 15000
+# The longest a recording may stay silent, in ms; it tells its time each second.
+record_tick_ms = 5000
+# The longest a recording's job may take to end after Stop, or to quit, in ms.
+record_end_ms = 30000
+# The longest the Mic or Sound switch waits for the recording's answer, in ms.
+switch_ms = 5000
+# The least time a speed copy may take, in ms.
+speed_ms = 30000
+# The more time a speed copy may take for each MB of its video, in ms.
+speed_mb_ms = 4000
+# The Save and folder dialogs' job memory cap, in MB.
+pick_mb = 128
+# How long a Save or folder dialog may stay open, in minutes; then it closes.
+dialog_min = 60
+# How long the dialogs' job waits for the next dialog before it stops, in seconds.
+pick_idle_s = 60
+# The wait before a failed dialogs' job starts again, in ms; it doubles with each failure in a row.
+pick_restart_ms = 1000
+# The longest such wait, in ms; never less than pick_restart_ms.
+pick_restart_max_ms = 30000
+# The least time a picture's PNG may take in the media worker before it is stopped, in ms.
+encode_ms = 5000
+# The more time a PNG may take for each MB of its pixels, in ms; a weak PC takes more.
+encode_mb_ms = 100
+# How long the media worker may idle after a PNG, in seconds; each PNG opens its own session.
+encode_idle_s = 5
+# The wait before a failed media worker starts again, in ms.
+encode_restart_ms = 1000
+# The longest Copy waits for another app to let go of the clipboard, in ms.
+copy_ms = 250
+# How often Copy tries again within that wait, in ms; never more than copy_ms.
+copy_poll_ms = 10
+# How many times Copy tries a busy clipboard again, after a pause, before its note.
+copy_again = 2
+# The pause before each new try, in ms.
+copy_again_ms = 400
+# How long a note shows, in seconds.
+note_s = 4
+# How long the tick of a Copy or Save shows, in ms: on the strip before the snip ends, in the editor before it fades.
+shown_ms = 1100
+# How long the freeze waits for the keyboard to step aside, in ms; then the screens freeze anyway.
+aside_ms = 500
+# The smallest side, in physical pixels, a region's or a crop's frame keeps once a handle moves.
+frame_min_px = 8
+# The editor's last size and place in physical pixels, as x, y, w and h; empty until it is first moved, resized or
+# maximised.
+editor = {}
+# The work area the editor filled when last maximised, which names its screen, as x, y, w and h; empty when it is not.
+editor_full = {}

@@ -34,7 +34,7 @@ kx-module-api = { path = "../../crates/kx-module-api" }
 kx-crypto = { path = "../../crates/kx-crypto", optional = true }
 # G8's bus publish time on the product's own event bus.
 kx-kernel = { path = "../../crates/kx-kernel" }
-# The product's board (key ids, roles), its legend naming rule (`legend`) and the boxes (`Area`) the spike's tools-row maths returns.
+# The product's board (key ids, roles, latches), its settings, its legend naming rule (`legend`) and its language key.
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The scan list the product reads labels for, which `capture-layouts` follows.
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
@@ -52,6 +52,8 @@ kx-mod-vault = { path = "../../crates/kx-mod-vault" }
 kx-mod-selection = { path = "../../crates/kx-mod-selection" }
 # Voice typing's models table, [voice] defaults and scorer: G22's bench takes each language's default and its ask.
 kx-mod-voice = { path = "../../crates/kx-mod-voice" }
+# Snip's settings, defaults and section: G24's copy takes them with its keyboard way, and its video cap is `record_mb`.
+kx-mod-snip = { path = "../../crates/kx-mod-snip" }
 # The product's commands: `close` posts Quit to the running copy; the speech host G22's bench drives.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes, and the fake speech G22's bench tests drive.
@@ -70,6 +72,8 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_Storage_FileSystem",
+    # PrintWindow, which draws G24's bubble as a reference.
+    "Win32_Storage_Xps",
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_DataExchange",

@@ -35,10 +35,16 @@ fn ids(ids: &[&str]) -> Vec<String> {
 }
 
 #[test]
-fn every_key_but_the_character_language_power_and_dictation_keys_gets_a_step() {
+fn every_key_but_the_character_language_power_dictation_and_snip_keys_gets_a_step() {
+    let skipped = |r: &Role| {
+        matches!(
+            r,
+            Role::Char | Role::Lang | Role::Power | Role::Voice | Role::Snip
+        )
+    };
     let want: Vec<String> = roles()
         .into_iter()
-        .filter(|(_, r, _)| !matches!(r, Role::Char | Role::Lang | Role::Power | Role::Voice))
+        .filter(|(_, r, _)| !skipped(r))
         .map(|(id, ..)| id)
         .collect();
     let got: Vec<String> = steps(false).into_iter().map(|s| s.key).collect();
@@ -51,6 +57,10 @@ fn every_key_but_the_character_language_power_and_dictation_keys_gets_a_step() {
     assert!(
         !got.contains(&"mic".to_string()),
         "it would open the microphone"
+    );
+    assert!(
+        !got.contains(&"snip".to_string()),
+        "it would freeze the screens"
     );
 }
 
@@ -184,10 +194,10 @@ fn the_owner_checks_a_latch_that_never_read_or_that_a_failed_step_may_have_left_
 
 #[test]
 fn a_key_of_a_later_version_must_send_nothing() {
-    let snip = step_of(false, "snip");
+    let later = step_of(false, "settings");
     assert_eq!(
-        (snip.presses, snip.expect),
-        (ids(&["snip"]), Expect::Nothing)
+        (later.presses, later.expect),
+        (ids(&["settings"]), Expect::Nothing)
     );
 }
 
@@ -214,7 +224,7 @@ fn only_the_keys_pressed_twice_put_their_mode_back_even_after_the_guard_stops() 
     for id in ["rclick", "grab", "shortcuts", "clip", "fill"] {
         assert!(step_of(false, id).puts_back, "{id}");
     }
-    for id in ["esc", "caps", "shift", "snip"] {
+    for id in ["esc", "caps", "shift", "settings"] {
         assert!(!step_of(true, id).puts_back, "{id}");
     }
 }

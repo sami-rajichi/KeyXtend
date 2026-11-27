@@ -1,16 +1,19 @@
-//! The QML module loads: the root file finds `KeyXtend.Ui`, its `Ui` object starts over the hub and follows the
-//! system look, the tray icon gets the picture the root draws with the icon provider, and every bundled font loads
-//! from the compiled-in resources (the tint test checks the icons). Qt wants its app object on the main thread, so
-//! this binary runs without the test harness.
+//! The QML module loads: the root file finds `KeyXtend.Ui`, its `Ui` object starts over the hub and follows the system
+//! look, the tray icon gets the picture the root draws with the icon provider, and every bundled font loads from the
+//! compiled-in resources (the tint test checks the icons); in debug builds, the Snip editor, its close question and its
+//! panel are each made, hidden, after the shadow that owns it, before they first show. Qt wants its app object on the
+//! main thread, so this binary runs without the test harness.
 
 use cxx::UniquePtr;
 use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform::ui::SysLook;
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
+#[cfg(debug_assertions)]
+use kx_ui::i18n::keys::{WINDOW_SNIP_ASK, WINDOW_SNIP_EDITOR, WINDOW_SNIP_PANEL};
 use kx_ui::{ASSETS, Hub, MAIN_QML, UiPorts};
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -43,6 +46,7 @@ fn hub() -> Option<(Arc<Hub>, Arc<FakeSystemLook>, Arc<FakeTray>)> {
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
         reveal: Arc::new(FakeReveal::new()),
+        esc: Arc::new(FakeEscWatch::new()),
     };
     Hub::new(ports)
         .ok()
@@ -136,7 +140,29 @@ fn run() -> Result<(), String> {
         return Err("the Ui object did not start following the system look".into());
     }
     check_assets(&mut app)?;
-    check_tray(&mut app, &tray)
+    check_tray(&mut app, &tray)?;
+    check_made_ahead(&hub)
+}
+
+/// The real Snip editor's, question's and panel's `make` made each window and the shadow that owns it, both hidden,
+/// before they first show.
+#[cfg(debug_assertions)]
+fn check_made_ahead(hub: &Hub) -> Result<(), String> {
+    for key in [WINDOW_SNIP_EDITOR, WINDOW_SNIP_ASK, WINDOW_SNIP_PANEL] {
+        let title = hub.i18n().text(key);
+        if !kx_ui::titled_owner_made(&title) {
+            return Err(format!(
+                "{title} and its shadow were not both made, hidden, before it first showed"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// A release build has no probe to read the windows with, so it checks nothing here.
+#[cfg(not(debug_assertions))]
+fn check_made_ahead(_: &Hub) -> Result<(), String> {
+    Ok(())
 }
 
 /// Runs the asset check to its end; an error when a font failed, or no font is bundled.

@@ -26,9 +26,16 @@ mod plural;
 mod qml;
 mod sel;
 mod selview;
+mod snip;
+mod snipedit;
+mod snipedits;
+mod snipframes;
+mod snipview;
+mod snipwords;
 #[path = "../shared/suggest.rs"]
 mod suggest;
 mod sync;
+mod titled;
 mod voice;
 mod voicepanel;
 mod voiceview;

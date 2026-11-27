@@ -22,8 +22,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P9 | Quick-fill (vault) and one data folder | Done (v0.6) |
 | P10 | Selection helper | Done (v0.6) |
 | P11 | Voice typing ([design](superpowers/specs/2026-11-10-voice-typing-design.md)) | Done (v0.7) |
-| P12 | Snip + OCR | Ready |
-| P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Waiting |
+| P12 | Snip and screen recording | Done (v0.8) |
+| P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Ready |
 | P14 | Release pipeline and v1.0 | Waiting |
 | P15 | macOS, then Linux | Waiting |
 

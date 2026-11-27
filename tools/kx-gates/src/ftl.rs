@@ -15,34 +15,41 @@ const QUOTE: char = '"';
 /// Starts an escape inside a string literal, which this reader never reads.
 const ESCAPE: char = '\\';
 
-/// Each language's tag, main file, clipboard panel file and selection strip file, which kx-ui loads into one bundle;
-/// workspace paths from this file, all of kx-ui's (checked).
-const FILES: [(&str, &str, &str, &str); 3] = [
+/// Each language's tag and its main, clipboard panel, selection strip and Snip files, which kx-ui loads into one
+/// bundle; workspace paths from this file, all of kx-ui's (checked).
+const FILES: [(&str, [&str; 4]); 3] = [
     (
         "en",
-        include_str!("../../../crates/kx-ui/i18n/en.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/clip/en.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/sel/en.ftl"),
+        [
+            include_str!("../../../crates/kx-ui/i18n/en.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/clip/en.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/sel/en.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/snip/en.ftl"),
+        ],
     ),
     (
         "fr",
-        include_str!("../../../crates/kx-ui/i18n/fr.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/clip/fr.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/sel/fr.ftl"),
+        [
+            include_str!("../../../crates/kx-ui/i18n/fr.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/clip/fr.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/sel/fr.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/snip/fr.ftl"),
+        ],
     ),
     (
         "ar",
-        include_str!("../../../crates/kx-ui/i18n/ar.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/clip/ar.ftl"),
-        include_str!("../../../crates/kx-ui/i18n/sel/ar.ftl"),
+        [
+            include_str!("../../../crates/kx-ui/i18n/ar.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/clip/ar.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/sel/ar.ftl"),
+            include_str!("../../../crates/kx-ui/i18n/snip/ar.ftl"),
+        ],
     ),
 ];
 
 /// Each language's tag and its files as one text, as kx-ui's bundle holds them.
 fn bundles() -> impl Iterator<Item = (&'static str, String)> {
-    FILES
-        .iter()
-        .map(|(lang, main, clip, sel)| (*lang, format!("{main}\n{clip}\n{sel}")))
+    FILES.iter().map(|(lang, parts)| (*lang, parts.join("\n")))
 }
 
 /// The text of `key` in `ftl`, with each `{ -term }` filled in: `group.name` names a message's attribute, a plain name

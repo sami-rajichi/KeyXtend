@@ -27,6 +27,7 @@ mod win;
 use kx_module_api::Mono;
 use kx_module_api::ports::{Point, PointerAct};
 
+pub(crate) use accept::{KEY_DOWNS, KEY_UPS, VK_ESCAPE, ours};
 use inbox::Inbox;
 
 #[cfg(windows)]

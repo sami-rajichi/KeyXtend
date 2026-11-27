@@ -35,6 +35,8 @@ pub(crate) struct Host<S: Spawner<F>, F: Frames> {
     backoff: Backoff,
     /// The next ask's id; ids start at 1.
     next: u32,
+    /// Its job shows system dialogs, so the worker is granted the foreground before each ask.
+    front: bool,
 }
 
 impl<S: Spawner<F>, F: Frames> Host<S, F> {
@@ -54,7 +56,14 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
             used: Mono::default(),
             backoff: Backoff::new(times),
             next: 1,
+            front: false,
         }
+    }
+
+    /// The same host, whose worker is granted the foreground before each ask, as a job that shows dialogs needs.
+    pub(crate) const fn fronted(mut self) -> Self {
+        self.front = true;
+        self
     }
 
     /// Sends the ask `make` builds with the next id, the worker started first if need be, and reads its reply with
@@ -69,8 +78,11 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
         let id = self.next;
         let ask = make(id)?;
         self.next = id.checked_add(1).unwrap_or(1);
-        let deadline = ms(self.times.deadline_ms);
+        let (deadline, front) = (ms(self.times.deadline_ms), self.front);
         let worker = self.start()?;
+        if front && !worker.grant_front() {
+            tracing::debug!(job = F::JOB, "the system refused a worker the foreground");
+        }
         worker.send(ask);
         let heard = worker.reply(deadline);
         self.judge(id, heard, take)
@@ -82,6 +94,15 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
         self.worker
             .as_ref()
             .map(|_| self.idle_time().saturating_sub(since))
+    }
+
+    /// Starts the next worker as `times` and `launch` say; a worker started otherwise says goodbye first.
+    pub(crate) fn relaunch(&mut self, times: Times, launch: Launch) {
+        if (self.times, &self.launch) != (times, &launch) {
+            self.stop();
+            self.backoff.retime(times);
+            (self.times, self.launch) = (times, launch);
+        }
     }
 
     /// Stops the worker once it has been idle for its time.

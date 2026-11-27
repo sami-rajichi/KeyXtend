@@ -1,4 +1,5 @@
-//! The UI ports' shared types: the watch guard, the focus token, the default look and the errors.
+//! The UI ports' shared types: the watch guard, the focus token, the default look and the errors. `shield` is proved
+//! on each adapter, in the fake's `ui` tests and Windows' `window/tests/shield.rs`.
 
 use super::*;
 use std::sync::Arc;

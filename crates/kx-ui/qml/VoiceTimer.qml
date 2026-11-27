@@ -14,6 +14,8 @@ Label {
     required property real from
     required property real at
     property var now: () => Date.now()
+    // It counts on from `from`; false shows `from` alone, as a video's length.
+    property bool runs: true
 
     // The time shown in ms, and the tick, for the tests.
     property real elapsed: from
@@ -33,6 +35,7 @@ Label {
 
     onFromChanged: count()
     onAtChanged: count()
+    onRunsChanged: count()
     Component.onCompleted: count()
 
     // The time `ms` as the words order its minutes and two-digit seconds; nothing before any words came.
@@ -44,9 +47,9 @@ Label {
     }
     // Reads the clock, shows the time and waits for the next whole second.
     function count() {
-        elapsed = from + Math.max(0, now() - at);
+        elapsed = from + (runs ? Math.max(0, now() - at) : 0);
         tick.interval = msPerS - elapsed % msPerS;
-        if (visible)
+        if (visible && runs)
             tick.restart();
     }
 

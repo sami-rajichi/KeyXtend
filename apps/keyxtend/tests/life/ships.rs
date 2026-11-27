@@ -3,8 +3,8 @@
 //! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
 //! to the modules that read typed text, and the shortcuts reach the keyboard's layer. `clip` pins the clipboard's
 //! gates and services, `vault` Quick-fill's, `sel` the selection chips', `folder` the folder reveal's, `voice` voice
-//! typing's, and `tree` keeps the media decoders, the box formats and the speech, audio and network crates out of the
-//! app.
+//! typing's, `snip` Snip's, and `tree` keeps the media decoders, the box formats, the recorder and the speech, audio
+//! and network crates out of the app.
 
 use crate::rig::{OS, Rig};
 use keyxtend::boot::{modules, policy};
@@ -30,6 +30,7 @@ mod ci;
 mod clip;
 mod folder;
 mod sel;
+mod snip;
 mod tree;
 mod vault;
 mod voice;

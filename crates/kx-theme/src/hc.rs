@@ -34,7 +34,8 @@ pub fn contrast_palette(base: &Palette, s: &SysColors, edge_px: f32) -> Palette 
 }
 
 /// The plate, every key face and its legends, the preparing key's too, as its ring marks it, dimmed keys in
-/// `GrayText`, the LED at rest, chips and the hover tint.
+/// `GrayText`, the LED at rest, chips and the hover tint. Snip's ring and red light on a side key take `ButtonText`,
+/// since `Highlight` is not made to read on `ButtonFace`.
 fn keys(p: &mut Palette, s: &SysColors) {
     let (face, ink): (Rgba, Rgba) = (s.button.into(), s.button_text.into());
     p.plate = s.window.into();
@@ -56,6 +57,8 @@ fn keys(p: &mut Palette, s: &SysColors) {
         &mut p.legend_act,
         &mut p.danger_ink,
         &mut p.prep_ink,
+        &mut p.ring_act,
+        &mut p.rec_light,
     ] {
         *c = ink;
     }
@@ -117,7 +120,8 @@ pub fn hover_line(s: &SysColors) -> Rgba {
     s.highlight.into()
 }
 
-/// The shared colours in system colours, keeping the see-through share of the snip layers from `common`.
+/// The shared colours in system colours, keeping the see-through share of the snip layers and the editor's inks and
+/// step numbers from `common`.
 #[must_use]
 pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
     let (window, highlight): (Rgba, Rgba) = (s.window.into(), s.highlight.into());
@@ -137,8 +141,11 @@ pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
             a: common.snip_tag.a,
             ..window
         },
+        snip_tag_ink: s.window_text.into(),
+        snip_rec: highlight,
         // A face never reads it here; `contrast_palette` drops each palette's copy.
         badge_shadow: common.badge_shadow,
+        ..*common
     }
 }
 

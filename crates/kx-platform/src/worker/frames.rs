@@ -1,15 +1,20 @@
 //! Each job's frames from `kx-ipc`: the media and vault jobs' asks and replies, and the voice, fetch and speech-net
-//! jobs' asks and the notes they send on their own.
+//! jobs' asks and the notes they send on their own; Snip's record and pick jobs are in `snip`.
+
+mod snip;
+
+pub(crate) use snip::sound_fault;
+pub use snip::{PickFrames, RecordFrames};
 
 use super::{Frames, Streams};
 use kx_ipc::{
     Ask, FETCH_JOB, FetchAsk, FetchNote, IpcError, MEDIA_JOB, NET_JOB, NetAsk, NetNote, Reply,
-    Stage, VAULT_JOB, VOICE_JOB, VaultAsk, VaultReply, VoiceAsk, VoiceNote,
+    Stage, VAULT_JOB, VOICE_JOB, VaultAsk, VaultReply, VoiceAsk, VoiceNote, png_most,
 };
 use kx_module_api::ports::SpeechError;
 use std::io::{Read, Write};
 
-/// The media job's frames: draws and DIBs.
+/// The media job's frames: draws, DIBs and encodes.
 #[derive(Debug)]
 pub struct MediaFrames;
 
@@ -32,6 +37,21 @@ impl Frames for MediaFrames {
 
     fn read<R: Read + ?Sized>(r: &mut R) -> Result<Reply, IpcError> {
         Reply::read(r)
+    }
+
+    /// An encode's PNG may take `png_most` of the pixels sent; every other reply keeps `Reply::read`'s bound.
+    fn most(ask: &Ask<'static>) -> Option<usize> {
+        match ask {
+            Ask::Encode { bgrx, .. } => Some(png_most(bgrx.len())),
+            Ask::Draw { .. } | Ask::Dib { .. } | Ask::Bye => None,
+        }
+    }
+
+    fn read_within<R: Read + ?Sized>(r: &mut R, most: Option<usize>) -> Result<Reply, IpcError> {
+        match most {
+            Some(most) => Reply::read_within(r, most),
+            None => Reply::read(r),
+        }
     }
 }
 

@@ -1,9 +1,11 @@
-//! The uiAccess app decodes no media, opens no box, hears no microphone, downloads nothing and uploads nothing
-//! (ADR-0004, ADR-0034, ADR-0038, ADR-0042, ADR-0047): tidy bans `png`, `fdeflate`, `age`, `keepass`, the speech
-//! engine, `cpal` and the HTTPS crate from its tree, and no crate it builds with, its tests' and the cloud relay's
-//! included, reaches them, any of tidy's network crates or the worker, which alone does each.
+//! The uiAccess app decodes no media, opens no box, hears no microphone, records no screen, downloads nothing and
+//! uploads nothing (ADR-0004, ADR-0034, ADR-0038, ADR-0042, ADR-0047, ADR-0056): tidy bans `png`, `fdeflate`, `age`,
+//! `keepass`, the speech engine, `cpal`, the recorder and the HTTPS crate from its tree, and no crate it builds with,
+//! its tests' and the cloud relay's included, reaches them, any of tidy's network crates or the worker, which alone
+//! does each. Another member's own tests never build into the app, so their dev-dependencies are left out.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 /// The lock file, which lists every package with its dependencies of every kind.
 const LOCK: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.lock"));
@@ -21,8 +23,11 @@ const VOICE: [&str; 3] = ["transcribe-cpp", "transcribe-cpp-sys", "cpal"];
 const NETWORK: [&str; 1] = ["kx-platform-net"];
 /// The app's crate that relays a cloud dictation's sound to `speech-net` unread (ADR-0047 decision 3).
 const RELAY: &str = "kx-platform";
+/// The screen recorder, video encoder and file dialogs, which only the worker's `record` and `pick` jobs may use.
+const RECORDER: &str = "kx-platform-record";
 
-/// Each package's dependency names, its versions merged: the lock names one as `name`, `name version` or more.
+/// Each package's dependency names, its versions merged: the lock names one as `name`, `name version` or more. A
+/// member other than the app loses the ones only its own tests build with.
 fn graph() -> BTreeMap<String, BTreeSet<String>> {
     let lock: toml::Table = LOCK.parse().unwrap();
     let mut graph: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -36,7 +41,48 @@ fn graph() -> BTreeMap<String, BTreeSet<String>> {
             .or_default()
             .extend(firsts.map(str::to_owned));
     }
+    for (member, tests) in test_only().into_iter().filter(|(m, _)| m != APP) {
+        graph
+            .entry(member)
+            .or_default()
+            .retain(|d| !tests.contains(d));
+    }
     graph
+}
+
+/// Each workspace member's name with the packages only its tests build with: named as dev-dependencies alone.
+fn test_only() -> BTreeMap<String, BTreeSet<String>> {
+    let root: toml::Table = ROOT.parse().unwrap();
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let members = root["workspace"]["members"].as_array().unwrap();
+    let paths = members.iter().filter_map(toml::Value::as_str);
+    let read = |p: &str| std::fs::read_to_string(dir.join(p).join("Cargo.toml")).unwrap();
+    let manifests = paths.map(|p| read(p).parse::<toml::Table>().unwrap());
+    let split = |m: toml::Table| {
+        let mut built = named(&m, "dependencies");
+        built.extend(named(&m, "build-dependencies"));
+        let tests: BTreeSet<String> = named(&m, "dev-dependencies")
+            .difference(&built)
+            .cloned()
+            .collect();
+        (m["package"]["name"].as_str().unwrap().to_owned(), tests)
+    };
+    manifests.map(split).collect()
+}
+
+/// The packages `manifest`'s `kind` tables name, its targets' included; a renamed one by its package.
+fn named(manifest: &toml::Table, kind: &str) -> BTreeSet<String> {
+    let targets = manifest.get("target").and_then(toml::Value::as_table);
+    let scopes = targets
+        .into_iter()
+        .flat_map(|t| t.values().filter_map(toml::Value::as_table));
+    let tables = std::iter::once(manifest).chain(scopes);
+    let deps = tables.filter_map(|t| t.get(kind).and_then(toml::Value::as_table));
+    let package = |(key, dep): (&String, &toml::Value)| {
+        let renamed = dep.get("package").and_then(toml::Value::as_str);
+        renamed.unwrap_or(key).to_owned()
+    };
+    deps.flat_map(|t| t.iter().map(package)).collect()
 }
 
 /// Every package `from` reaches in `graph`, itself included.
@@ -109,6 +155,17 @@ fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_a_voice_crate_or_t
         assert!(graph.contains_key(*banned), "the lock lists {banned}");
         assert!(!reached.contains(*banned), "{APP} reaches {banned}");
     }
+}
+
+#[test]
+fn the_app_links_no_recorder_which_tidy_bans_from_it_and_the_worker_alone_builds() {
+    assert!(tidy_list("banned_media").iter().any(|b| b == RECORDER));
+    let graph = graph();
+    assert!(graph.contains_key(RECORDER), "the lock lists {RECORDER}");
+    assert!(!reached(&graph, APP).contains(RECORDER), "ADR-0056");
+    let worker = metadata(&["stage", "worker"]);
+    let worker = reached(&graph, worker.as_str().unwrap());
+    assert!(worker.contains(RECORDER), "the worker records");
 }
 
 #[test]

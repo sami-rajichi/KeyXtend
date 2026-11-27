@@ -13,6 +13,7 @@ Glow {
     readonly property alias list: list
 
     lk: win.lk
+    res: win.res
     box: Qt.rect(list.x, list.y, list.width, list.height)
     radius: list.radius
     follow: list.body

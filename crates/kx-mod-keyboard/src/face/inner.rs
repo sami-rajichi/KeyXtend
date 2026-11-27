@@ -1,5 +1,5 @@
 //! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list, the
-//! shortcuts layer, the other modules' states, our open panel and a fill waiting its gap.
+//! shortcuts layer, the other modules' states, our open panel and Snip's windows, and a fill waiting its gap.
 
 mod aim;
 mod assist;
@@ -15,6 +15,7 @@ mod list;
 mod pad;
 mod panels;
 mod power;
+mod snip;
 mod voice;
 mod words;
 
@@ -44,6 +45,7 @@ use kx_module_api::ports::{
     PowerChanged, Screen, ScrollChanged, ShortcutInfo, VoiceLit,
 };
 use lines::Lines;
+use snip::Snip;
 use std::sync::Arc;
 
 /// Everything a click can change.
@@ -82,9 +84,10 @@ pub(super) struct Inner {
     power: PowerChanged,
     /// The vault module's state, as the bus last told it.
     vault: FillLive,
-    /// Our panel that takes the keys while aimed at, as the bus last told: the one opened last, so one at a time.
+    /// Our panel open now, as the bus last told: the one opened last, so one at a time; Snip's windows may show beside
+    /// it (`snip.rs`).
     open: Option<Panel>,
-    /// Whether the open panel's line is aimed at, and which line it shows.
+    /// Whether the line of the panel that holds the place is aimed at, and the open panel's line.
     aim: Aim,
     /// The line prediction heard last, and what waits behind a change.
     lines: Lines,
@@ -94,6 +97,8 @@ pub(super) struct Inner {
     fill: Option<Waiting>,
     /// The voice module's light, as the bus last told it, so the Dictation key glows amber or red.
     voice: VoiceLit,
+    /// Snip's line and light, as the bus last told them, a click on the Snip key, and whether they hold the place.
+    snip: Snip,
     /// The module runs, so a picked word may type.
     running: bool,
 }
@@ -135,6 +140,7 @@ impl Inner {
             unshown: false,
             fill: None,
             voice: VoiceLit::Off,
+            snip: Snip::default(),
             running: false,
         }
     }
@@ -225,7 +231,8 @@ impl Inner {
             | FaceAction::Leave
             | FaceAction::Pad { .. }
             | FaceAction::PadHover { .. }
-            | FaceAction::AimPanel => Ok(FaceReply::default()),
+            | FaceAction::AimPanel
+            | FaceAction::AimSnip => Ok(FaceReply::default()),
         }
     }
 
@@ -260,8 +267,9 @@ impl Inner {
             power: self.power,
             fill: self.vault,
             panel: self.open,
-            aimed: self.aimed(),
+            aim: self.aimed_at(),
             voice: self.voice,
+            snip: self.snip_lit(),
         })
     }
 }

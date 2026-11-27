@@ -3,7 +3,7 @@
 
 use crate::error::IpcError;
 use crate::frame::{read_array, read_exact, read_tail, read_wiped};
-use crate::limits::SAMPLE_BYTES;
+use crate::limits::{MAX_PATH_BYTES, SAMPLE_BYTES};
 use crate::rules::ok_if;
 use std::io::{Read, Write};
 use zeroize::Zeroizing;
@@ -16,6 +16,9 @@ pub(crate) const TWO: usize = size_of::<u16>();
 pub(crate) const FOUR: usize = size_of::<u32>();
 /// Bytes in an eight-byte number.
 pub(crate) const EIGHT: usize = size_of::<u64>();
+
+/// A voice or Snip job's file or folder path: UTF-8, one byte at least, within `MAX_PATH_BYTES`.
+pub(crate) const PATH: Spec = Spec::new(TWO, 1, MAX_PATH_BYTES);
 
 /// A field: the width of the length or count before it, and the range that length or count may take.
 #[derive(Copy, Clone, Debug)]
@@ -78,6 +81,11 @@ pub(crate) trait Sink {
 
     /// Takes a four-byte number.
     fn u32(&mut self, n: u32) -> Result<(), IpcError> {
+        self.raw(&n.to_le_bytes())
+    }
+
+    /// Takes a signed four-byte number.
+    fn i32(&mut self, n: i32) -> Result<(), IpcError> {
         self.raw(&n.to_le_bytes())
     }
 
@@ -200,6 +208,11 @@ impl<'r, R: Read + ?Sized> Payload<'r, R> {
     /// Reads a four-byte number.
     pub(crate) fn u32(&mut self) -> Result<u32, IpcError> {
         Ok(u32::from_le_bytes(self.array()?))
+    }
+
+    /// Reads a signed four-byte number.
+    pub(crate) fn i32(&mut self) -> Result<i32, IpcError> {
+        Ok(i32::from_le_bytes(self.array()?))
     }
 
     /// Reads an eight-byte number.

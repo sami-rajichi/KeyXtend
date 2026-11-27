@@ -4,6 +4,7 @@
 
 mod assist;
 mod board;
+mod debug;
 mod layer;
 mod pad;
 mod paint;
@@ -30,11 +31,10 @@ use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
 use kx_module_api::ports::{
     AssistChanged, FillLive, KeyName, LangLabel, LayoutTable, Point, PowerChanged, ScrollChanged,
-    VoiceLit,
+    SnipLit, VoiceLit,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
-use std::fmt;
 
 /// Starts a named key's name, a translation key such as `key.esc`.
 pub const NAME_PREFIX: &str = "key.";
@@ -175,26 +175,10 @@ pub struct StateView {
     pub dpad: PadState,
     /// The shortcuts layer and its page.
     pub layer: LayerState,
-    /// A panel is open and its line takes the keys, so that line draws its caret and ring (ADR-0040).
+    /// Our open panel's line takes the keys, so it draws its caret and ring (ADR-0040); never while Snip's do.
     pub aimed: bool,
-}
-
-/// Shows no field: its legends and lights tell the latches and Caps Lock, as `Latches` hides them.
-impl fmt::Debug for KeyState {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KeyState").finish_non_exhaustive()
-    }
-}
-
-/// Shows the language key, the list and the place, never the keys' states.
-impl fmt::Debug for StateView {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StateView")
-            .field("lang", &self.lang)
-            .field("list", &self.list)
-            .field("at", &self.at)
-            .finish_non_exhaustive()
-    }
+    /// The panel whose line takes the keys, Snip's windows too, so only its line draws a caret (ADR-0057).
+    pub aim: Option<Panel>,
 }
 
 /// What the state is made from.
@@ -231,10 +215,12 @@ pub struct StateInput<'a> {
     pub fill: FillLive,
     /// Our panel open now, as the bus last told it.
     pub panel: Option<Panel>,
-    /// The open panel's line takes the keys.
-    pub aimed: bool,
+    /// The panel whose line takes the keys.
+    pub aim: Option<Panel>,
     /// The Dictation key's light, as the voice module last told it.
     pub voice: VoiceLit,
+    /// The Snip key's light, as the snip module last told it.
+    pub snip: SnipLit,
 }
 
 /// Every key's state, the language key, the list, the place, the pad and the layer.
@@ -256,7 +242,8 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
         at: i.at,
         dpad: pad_state(i.scroll),
         layer: layer::layer_state(i.layer),
-        aimed: i.aimed,
+        aimed: i.aim.is_some_and(|p| p != Panel::Snip),
+        aim: i.aim,
     }
 }
 

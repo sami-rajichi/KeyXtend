@@ -9,7 +9,7 @@ use std::collections::HashSet;
 mod cloud;
 mod compare;
 mod lines;
-mod names;
+pub(in crate::ports) mod names;
 mod note;
 mod options;
 mod panel;

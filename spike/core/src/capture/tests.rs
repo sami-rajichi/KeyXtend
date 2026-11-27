@@ -33,20 +33,6 @@ fn header_describes_a_top_down_32_bit_picture() {
 }
 
 #[test]
-fn a_region_is_the_same_whatever_corner_comes_first() {
-    let (a, b) = (Pt { x: 5, y: 9 }, Pt { x: 2, y: 3 });
-    let want = RECT {
-        left: 2,
-        top: 3,
-        right: 6,
-        bottom: 10,
-    };
-    assert_eq!(region(a, b), want);
-    assert_eq!(region(b, a), want);
-    assert_eq!(region(Pt { x: 2, y: 9 }, Pt { x: 5, y: 3 }), want);
-}
-
-#[test]
 fn crop_keeps_the_overlap_only() {
     let s = shot();
     let r = RECT {
@@ -68,28 +54,12 @@ fn crop_keeps_the_overlap_only() {
 }
 
 #[test]
-fn a_bmp_reads_back_the_same_pixels() {
+fn a_bmp_is_the_header_then_the_pixels() {
     let s = shot();
-    let back = from_bmp(&s.to_bmp().expect("fits"), CAP).expect("reads");
-    assert_eq!((back.width, back.height, back.bgra), (3, 2, s.bgra));
-}
-
-#[test]
-fn a_bad_or_short_bmp_is_refused() {
-    let mut b = shot().to_bmp().expect("fits");
-    assert!(from_bmp(&b[..60], CAP).is_err(), "short");
-    b[0] = b'X';
-    assert!(from_bmp(&b, CAP).is_err(), "bad magic");
-    assert!(from_bmp(&[], CAP).is_err());
-}
-
-#[test]
-fn a_bottom_up_or_oversize_bmp_is_refused() {
-    let good = shot().to_bmp().expect("fits");
-    let mut up = good.clone();
-    up[22..26].copy_from_slice(&2i32.to_le_bytes());
-    assert!(from_bmp(&up, CAP).is_err(), "bottom-up");
-    assert!(from_bmp(&good, 3 * 2 * 4 - 1).is_err(), "over the cap");
+    let b = s.to_bmp().expect("fits");
+    let at = PIXELS_AT as usize;
+    assert_eq!(b[..at], header(3, 2, 3 * 2 * 4)[..]);
+    assert_eq!(b[at..], s.bgra[..]);
 }
 
 #[test]

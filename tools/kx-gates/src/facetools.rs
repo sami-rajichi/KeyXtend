@@ -1,83 +1,9 @@
-//! The running face's tool buttons and windows: found by title, clicked only where they are on top.
+//! Our windows found by title, and clicks only where the window is on top: G7's panel and G25's keys.
 #![cfg(windows)]
 
-use kx_platform_windows::screen;
-use spike_core::config::ToolButton;
-use spike_core::place;
-use spike_core::pt::Pt;
-use windows::Win32::Foundation::{HWND, POINT, RECT};
-use windows::Win32::UI::WindowsAndMessaging::{
-    SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
-};
+use windows::Win32::Foundation::{HWND, POINT};
 
-use crate::apps::Ctx;
-use crate::mouse::{self, Face};
-use crate::win;
-
-/// A running face window and where it is.
-pub struct FaceWin {
-    /// The face's window.
-    pub hwnd: HWND,
-    /// Its client origin and DPI.
-    pub face: Face,
-}
-
-impl FaceWin {
-    /// The running face called `name`.
-    pub fn find(ctx: &Ctx, name: &str) -> Result<FaceWin, String> {
-        let hwnd = mouse::find_face(ctx.spike, name)?;
-        Ok(FaceWin {
-            hwnd,
-            face: mouse::face(hwnd)?,
-        })
-    }
-
-    /// The running face `name`, moved to the bottom-right corner so it covers no test app, as a docked keyboard would.
-    #[allow(unsafe_code, reason = "Plain call on our own face window.")]
-    pub fn parked(ctx: &Ctx, name: &str) -> Result<FaceWin, String> {
-        let hwnd = mouse::find_face(ctx.spike, name)?;
-        let r = win::rect(hwnd)?;
-        let p = corner(&r, &screen::work_area(&r).map_err(|e| e.to_string())?);
-        // SAFETY: plain call on our own face window; a failure is returned.
-        unsafe {
-            SetWindowPos(
-                hwnd,
-                None,
-                p.x,
-                p.y,
-                0,
-                0,
-                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
-            )
-        }
-        .map_err(|e| format!("moving the face: {e}"))?;
-        FaceWin::find(ctx, name)
-    }
-
-    /// The screen centre of tool button `b`, at its place in the frozen face's row.
-    pub fn button(&self, ctx: &Ctx, b: ToolButton) -> POINT {
-        let at = place::tool_box(ctx.spike, b).unwrap_or_default();
-        mouse::centre(&at, self.face.origin, self.face.dpi)
-    }
-
-    /// Clicks tool button `b`.
-    pub fn press(&self, ctx: &Ctx, b: ToolButton) -> Result<(), String> {
-        click_on(self.hwnd, self.button(ctx, b))
-    }
-}
-
-/// Where window `face` goes to sit in the bottom-right corner of `area`.
-fn corner(face: &RECT, area: &RECT) -> POINT {
-    POINT {
-        x: area.right - (face.right - face.left),
-        y: area.bottom - (face.bottom - face.top),
-    }
-}
-
-/// `p` as a Win32 point.
-pub fn at(p: Pt) -> POINT {
-    POINT { x: p.x, y: p.y }
-}
+use crate::{mouse, win};
 
 /// Clicks `p` only when `owner` is the window on top there, so no other window is ever clicked.
 pub fn click_on(owner: HWND, p: POINT) -> Result<(), String> {
@@ -88,39 +14,9 @@ pub fn click_on(owner: HWND, p: POINT) -> Result<(), String> {
     mouse::click_at(p)
 }
 
-/// The window called `title` while it shows: visible and not cloaked.
-pub fn shown(title: &str) -> Option<HWND> {
-    win::seen_windows()
-        .into_iter()
-        .find(|&w| win::title(w) == title)
-}
-
 /// Process `pid`'s window called `title` while it shows; windows of other programs never count.
 pub fn shown_by(pid: u32, title: &str) -> Option<HWND> {
     win::seen_windows()
         .into_iter()
         .find(|&w| win::owner(w).0 == pid && win::title(w) == title)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_face_parks_in_the_bottom_right_corner_of_the_work_area() {
-        let face = RECT {
-            left: 128,
-            top: 128,
-            right: 928,
-            bottom: 508,
-        };
-        let area = RECT {
-            left: 0,
-            top: 0,
-            right: 1920,
-            bottom: 1032,
-        };
-        let p = corner(&face, &area);
-        assert_eq!((p.x, p.y), (1120, 652));
-    }
 }

@@ -1,0 +1,21 @@
+# The system's privacy switches for the microphone, as Settings > Privacy & security > Microphone writes them; the
+# recorder's facts read them, never the microphone itself (edge 11). Any one switch off refuses the microphone.
+
+# The value each key holds, and what it reads when its switch is off.
+value = "Value"
+deny = "Deny"
+
+# Microphone access for the whole PC.
+[[mic]]
+hive = "machine"
+key = 'SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone'
+
+# Microphone access for this user's apps.
+[[mic]]
+hive = "user"
+key = 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone'
+
+# Microphone access for this user's desktop apps, which KeyXtend is.
+[[mic]]
+hive = "user"
+key = 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged'

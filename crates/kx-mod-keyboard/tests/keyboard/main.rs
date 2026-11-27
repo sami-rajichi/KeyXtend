@@ -24,6 +24,7 @@ mod place;
 mod power;
 mod rig;
 mod size;
+mod snip;
 mod stops;
 mod told;
 mod typing;
