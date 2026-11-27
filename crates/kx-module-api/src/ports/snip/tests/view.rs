@@ -5,7 +5,7 @@ use super::{PIXELS, SECRETS, hidden, holds, keeps, shot};
 use crate::ports::snip::*;
 use crate::ports::{Point, Rect};
 use crate::{REDACTED_MARKER, Redacted};
-use std::path::PathBuf;
+use kx_test_support::paths::native_path;
 
 /// The 2 by 1 part every page here takes.
 fn part() -> Part {
@@ -79,7 +79,7 @@ pub(super) fn editor() -> Editor {
 
 /// A page with `stage` over a frozen screen, the question and the Capture page open.
 fn page(stage: SnipStage) -> SnipPage {
-    let folder = PathBuf::from(format!(r"C:\Users\{}\snips", SECRETS[2]));
+    let folder = native_path(&format!(r"C:\Users\{}\snips", SECRETS[2]));
     let sheet = CaptureSheet {
         keyboard: SnipKeyboard::Bubble,
         folder: crate::ports::FolderPath::new(folder).ok(),

@@ -28,7 +28,7 @@ A detail section of [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the ov
   - `record` films a part with Windows Graphics Capture, pointer on and border off, and hands each frame to Media Foundation on the graphics card. H.264 and AAC go into an MP4, with the microphone and the computer's sound mixed through `cpal`.
   - A re-timed copy decodes and encodes on the processor. Media Foundation is delay-loaded from System32 only when a video job asks, so a Windows N edition runs every other job and dims video (`NoVideo`).
   - The encoder's fixed values (bit rates, first-frame wait, buffers, sound queue, cushion, drift, downmix) sit in the adapter table `record.toml`, not in the settings.
-  - `pick` shows one dialog at a time, owned by a hidden topmost window, with `FOS_DONTADDTORECENT`. It tells a path only once `PickAsk::check` passes it: a drive path of the asked type within `MAX_PATH_BYTES`.
+  - `pick` shows one dialog at a time, owned by a hidden topmost window, with `FOS_DONTADDTORECENT`. It tells a path only once `PickAsk::check` passes it: an absolute path of the asked type in the system's style (ADR-0062) within `MAX_PATH_BYTES`.
   - `media` gains `Encode`: raw pixels in, a PNG out, within `png_most` of the pixels.
 - **The hosts (`kx-platform` `snip`).**
   - `Freezer` reads an adapter's `Desk` (screens, one grab of all of them, windows and the pointer) and checks the cap before any grab. `offered` keeps the windows the Window way may take (edge 3).

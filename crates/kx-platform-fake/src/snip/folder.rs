@@ -64,8 +64,8 @@ pub struct FakeSnipFolder {
 }
 
 impl FakeSnipFolder {
-    /// The folder `snips` with its unsaved part `unsaved`, empty, aging its files by `clock`. Spell every test path
-    /// with `/`, as `C:/Snips`, or build it with `Path::join`, never with `\`, so it matches on Linux too.
+    /// The folder `snips` with its unsaved part `unsaved`, empty, aging its files by `clock`. Write each test path for
+    /// Windows and wrap it in `kx_test_support::paths::native_path`, so it matches on every system (ADR-0062).
     #[must_use]
     pub fn new(clock: Arc<dyn Clock>, snips: FolderPath, unsaved: FolderPath) -> Self {
         Self::with(clock, Some(Dirs { snips, unsaved }))

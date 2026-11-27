@@ -1,5 +1,5 @@
 //! The folder list, to pick the models folder with one finger: the drives, then a folder's subfolders, Back up one
-//! level and Here to use the folder shown. A folder that is no plain drive path is refused (edge 38).
+//! level and Here to use the folder shown. A folder that is no plain absolute path is refused (edge 38).
 
 use std::path::{Path, PathBuf};
 

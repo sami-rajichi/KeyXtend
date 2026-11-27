@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use kx_module_api::ports::{DibAsk, FileFact, PictureError, Pictures};
 use kx_platform_fake::{FakeClipboard, FakePictures};
+use kx_test_support::paths::native;
 
 use super::*;
 use crate::fixture::{DEFAULTS, files, text};
@@ -100,10 +101,11 @@ fn a_failed_draw_is_told_as_it_is() {
 
 #[test]
 fn a_look_tells_each_entrys_facts_in_order() {
+    let [a, gone, b] = [r"C:\a", r"C:\gone", r"E:\b"].map(native);
     let clip = FakeClipboard::new();
-    clip.set_file("C:\\a", FileFact::Size(5));
-    clip.set_file("E:\\b", FileFact::Away);
-    let ClipPart::Files(paths) = files(&["C:\\a", "C:\\gone", "E:\\b"]) else {
+    clip.set_file(&a, FileFact::Size(5));
+    clip.set_file(&b, FileFact::Away);
+    let ClipPart::Files(paths) = files(&[&a, &gone, &b]) else {
         unreachable!()
     };
     let facts = look(
@@ -176,7 +178,7 @@ fn the_files_thread_looks_and_ends_with_its_inbox() {
         let _ = tell.send(f);
     })
     .unwrap();
-    let ClipPart::Files(paths) = files(&["C:\\x"]) else {
+    let ClipPart::Files(paths) = files(&[&native(r"C:\x")]) else {
         unreachable!()
     };
     looks

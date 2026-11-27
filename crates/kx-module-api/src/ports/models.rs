@@ -6,8 +6,7 @@ mod fetch;
 
 pub use fetch::{FetchAsk, FetchNote, FetchRun, PART_EXT, host_ok, link_named};
 
-use super::clip::SEPARATORS;
-use super::probe_ok;
+use super::clip::{PathRoot, SEPARATORS};
 use super::sealed::names_device;
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use kx_ipc::FetchFault;
@@ -16,28 +15,35 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-/// True for an absolute drive path (`probe_ok`) in UTF-8 within the frames' `MAX_PATH_BYTES`, with no control
-/// character, no part made only of dots and spaces (read as `.` or `..`), no device name (`names_device`) and no
-/// colon after the drive's, which names a stream.
+/// True for an absolute path in this system's style (`probe_ok`) in UTF-8 within the frames' `MAX_PATH_BYTES`, with
+/// no control character, no part made only of dots and spaces (read as `.` or `..`), no device name (`names_device`)
+/// and no colon after its root, which names a stream.
 #[must_use]
 pub fn path_ok(path: &Path) -> bool {
+    path_ok_in(PathRoot::NATIVE, path)
+}
+
+/// `path_ok` in `root`'s style, so both styles are tested on every system.
+pub(crate) fn path_ok_in(root: PathRoot, path: &Path) -> bool {
     let fits = |text: &&str| text.len() <= kx_ipc::MAX_PATH_BYTES;
     let Some(text) = path.to_str().filter(fits) else {
         return false;
     };
-    let bytes = text.as_bytes();
+    let Some(start) = root.len_of(text.as_bytes()) else {
+        return false;
+    };
     let dots = |part: &&str| !part.is_empty() && part.bytes().all(|b| b" .".contains(&b));
     let mut parts = text.split(|c: char| u8::try_from(c).is_ok_and(|b| SEPARATORS.contains(&b)));
     let odd = parts.any(|part| dots(&part) || names_device(part));
-    let stream = bytes
-        .get(DRIVE_LEN..)
-        .is_some_and(|rest| rest.contains(&b':'));
+    let stream = text
+        .get(start..)
+        .is_some_and(|rest| rest.contains(STREAM_MARK));
     let control = text.chars().any(char::is_control);
-    probe_ok(path) && !odd && !stream && !control
+    !odd && !stream && !control
 }
 
-/// Bytes in a drive's prefix, such as `C:`, whose colon is the only one a path may hold.
-const DRIVE_LEN: usize = 2;
+/// Names a stream after a file's name, as in `x.gguf:zone`; no path holds one after its root.
+const STREAM_MARK: char = ':';
 
 /// A fixed drive and its room.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -135,8 +141,8 @@ pub enum ModelError {
     /// The ask's value of this name is outside its range.
     #[error("the ask's {0} is outside its range")]
     Range(&'static str),
-    /// The path is not an absolute drive path, or climbs or names a stream (`path_ok`).
-    #[error("the path is not a plain drive path")]
+    /// The path is not an absolute path, or climbs or names a stream (`path_ok`).
+    #[error("the path is not a plain absolute path")]
     BadPath,
     /// The folder, the file or its drive is gone.
     #[error("the folder or its drive is gone")]

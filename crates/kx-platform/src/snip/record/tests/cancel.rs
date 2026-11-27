@@ -7,7 +7,7 @@ use crate::worker::Told;
 
 /// The video a test run records.
 fn video() -> SnipFile {
-    SnipFile::new(unsaved().expose().join("1.mp4"), FileKind::Mp4).unwrap()
+    SnipFile::new(unsaved_at("1.mp4"), FileKind::Mp4).unwrap()
 }
 
 /// A route recording `file` into the rig's folder, its start heard.

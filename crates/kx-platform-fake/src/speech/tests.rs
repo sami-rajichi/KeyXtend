@@ -4,7 +4,7 @@
 use super::*;
 use kx_module_api::Secret;
 use kx_module_api::ports::{CardId, CardUse, LEVEL_FULL, SpeechDone, SpeechModel, SpeechStage};
-use std::path::{Path, PathBuf};
+use kx_test_support::paths::native_path;
 use std::thread::{self, ThreadId};
 
 mod info;
@@ -13,7 +13,7 @@ mod pieces;
 
 /// How long a test waits for another thread; it never sleeps.
 const WITHIN: Duration = Duration::from_secs(10);
-/// The model a run is opened with.
+/// The model a run is opened with, written for Windows; `model` reads it through `native_path`.
 const FILE: &str = r"D:\Models\parakeet.gguf";
 /// The model Try again takes.
 const OTHER: &str = r"D:\Models\cohere.gguf";
@@ -38,7 +38,7 @@ fn job() -> JobLimits {
 
 fn model(file: &str) -> SpeechModel {
     SpeechModel {
-        file: Redacted::new(PathBuf::from(file)),
+        file: Redacted::new(native_path(file)),
         lang: "fr".into(),
         runner: "transducer".into(),
         cpu_mb: 1_200,
@@ -219,7 +219,10 @@ fn debug_never_prints_text_or_sound() {
     fake.on(SpeechCall::Stop, vec![piece(0)]);
     let (_run, _heard) = opened(&fake);
     let shown = format!("{fake:?} {:?}", fake.runs());
-    assert!(!shown.contains(SAID) && !shown.contains(FILE), "{shown}");
+    assert!(
+        !shown.contains(SAID) && !shown.contains("parakeet"),
+        "{shown}"
+    );
     let bytes = format!("{:?}", SOUND.to_vec());
     assert!(!shown.contains(&bytes[1..bytes.len() - 1]), "{shown}");
     assert!(shown.contains("runs: 1"), "{shown}");

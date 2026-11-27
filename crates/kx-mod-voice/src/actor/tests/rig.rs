@@ -15,7 +15,7 @@ use kx_platform_fake::SpeechCall;
 use kx_test_support::host::FakeHost;
 
 use super::super::{Actor, Msg, Ports};
-pub(super) use super::fakes::{DIR, Fakes, done, english, english_layout};
+pub(super) use super::fakes::{Fakes, dir, done, english, english_layout};
 use super::taps::{Heard, in_place, listen, typist};
 use crate::module::read;
 use crate::{MANIFEST, VoiceSettings};
@@ -92,7 +92,7 @@ impl Rig {
     ) -> Self {
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();
-        host.put("models_dir", DIR.into());
+        host.put("models_dir", dir().into());
         setup(&fake, &mut host);
         let settings = read(&ModuleCx::new(&mut host));
         let (tx, inbox) = mpsc::channel();

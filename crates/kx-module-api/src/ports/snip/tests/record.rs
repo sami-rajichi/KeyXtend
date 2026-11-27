@@ -6,8 +6,8 @@ use crate::ports::snip::{
     RecordWaits, SnipFile, Source, Speed, SpeedAsk,
 };
 use crate::ports::{MB, Rect};
+use kx_test_support::paths::native_path;
 use std::collections::HashSet;
-use std::path::PathBuf;
 
 /// A plain ask: a 640 by 360 part at the first rate, both sounds off, every value at the start of its range.
 fn ask() -> RecordAsk {
@@ -43,7 +43,7 @@ pub(super) const fn waits() -> RecordWaits {
 
 /// A video at `name` in the Snips folder, or a picture when `kind` says so.
 fn file(name: &str, kind: FileKind) -> SnipFile {
-    SnipFile::new(PathBuf::from(format!(r"C:\Snips\unsaved\{name}")), kind).unwrap()
+    SnipFile::new(native_path(&format!(r"C:\Snips\unsaved\{name}")), kind).unwrap()
 }
 
 /// A 2x copy of one recording into a new video of the unsaved part.

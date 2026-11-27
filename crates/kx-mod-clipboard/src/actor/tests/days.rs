@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use kx_module_api::ports::FileFact;
+use kx_test_support::paths::native;
 
 use super::super::days::until_midnight;
 use super::rig::{Rig, TODAY};
@@ -11,9 +12,10 @@ use crate::fixture::{at, date, files};
 
 #[test]
 fn media_leaves_after_media_days_and_a_day_past_keep_days_drops_whole() {
+    let clip = native(r"C:\clip.mp4");
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("C:\\clip.mp4", FileFact::Size(5));
-    rig.copy(vec![files(&["C:\\clip.mp4"])], None);
+    rig.fakes.clip.set_file(&clip, FileFact::Size(5));
+    rig.copy(vec![files(&[&clip])], None);
     rig.text("words");
     rig.open();
     assert!(rig.page().rows[1].expires, "media goes tonight");

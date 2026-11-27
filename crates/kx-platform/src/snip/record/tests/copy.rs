@@ -5,7 +5,7 @@ use super::*;
 
 /// A recording held in the unsaved part, as the fake folder keeps it.
 fn recorded(rig: &Rig, name: &str) -> SnipFile {
-    let video = SnipFile::new(unsaved().expose().join(name), FileKind::Mp4).unwrap();
+    let video = SnipFile::new(unsaved_at(name), FileKind::Mp4).unwrap();
     rig.folder.put(
         video.clone(),
         Stored::Video {
@@ -58,11 +58,12 @@ fn a_copy_runs_a_job_of_its_own_into_a_new_video_and_says_goodbye_once_done() {
 fn a_copy_is_refused_as_the_port_says_before_any_job() {
     let rig = Rig::new();
     let from = recorded(&rig, "a.mp4");
-    let picture = SnipFile::new(unsaved().expose().join("a.png"), FileKind::Png).unwrap();
-    let elsewhere = SnipFile::new(PathBuf::from(SNIPS).join("b.mp4"), FileKind::Mp4).unwrap();
+    let picture = SnipFile::new(unsaved_at("a.png"), FileKind::Png).unwrap();
+    let elsewhere = native_path(&format!("{SNIPS}/b.mp4"));
+    let elsewhere = SnipFile::new(elsewhere, FileKind::Mp4).unwrap();
     rig.folder
         .put(elsewhere.clone(), Stored::Video { length_ms: 1 });
-    let gone = SnipFile::new(unsaved().expose().join("c.mp4"), FileKind::Mp4).unwrap();
+    let gone = SnipFile::new(unsaved_at("c.mp4"), FileKind::Mp4).unwrap();
     let big = SpeedAsk {
         job_mb: *RecordAsk::JOB_MB.end() + 1,
         ..speed(from.clone())

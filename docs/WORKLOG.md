@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-27 21:18 — P12: the path rules take each system's own paths
+PR #28's Linux job failed because the shared path rules took only Windows drive paths, so Linux's `/tmp/…` was refused. kx-ipc's `PathRoot` now checks drive paths on Windows, exactly as before, and `/` paths elsewhere, just as strictly (ADR-0062); both styles are tested on every system, and tests write their example paths for Windows and wrap them in `native`. The models folder tests, kept to Windows only for the old rule, now run on Linux too, and `--cfg kx_slash_paths` runs Linux's rules on Windows before a push.
+
 ## 2026-11-27 19:34 — P12: the final review's fixes and the last live check
 Four reviewers read the whole handfeel round; one fix wave closed their findings, among them a 2× Save whose strip lost stay-on-top and a close question kept over the editor only by declaration order, now tested. The install with the shipped `frame_latency = 0` passed G24, the trap run and three G8 key-light runs (median 14–15 ms, as ADR-0025 measured). The owner's final check passed the countdown after a Cancel, a video Save at 2× and the close question.
 

@@ -27,7 +27,7 @@
 | Copy marks | Public (an empty file named after its video) | Beside the copied video in `unsaved/` | No | Deleted with its video, or by a sweep once the video is gone |
 | Sound from the microphone and the computer | Secret | Only inside a recording, and only while its switch is on | No | As the recording |
 | Text typed into the editor's Text drawings (`SnipLineKey` letters) | Sensitive (typed text) | Memory only, as `Redacted<String>` in the editor's model (`edit/text.rs`) and the view, whose `Debug` never shows it (`typed_text_never_prints`); it reaches pixels only in a flattened picture the user copies or saves | No | Until its drawing is erased or undone, or the snip ends |
-| The Save and folder dialogs' answers | Sensitive (a path may name the user) | Memory only; checked as a drive path of the asked type, outside `unsaved/`, before anything is written | No | Until used; `save_dir` keeps a picked folder |
+| The Save and folder dialogs' answers | Sensitive (a path may name the user) | Memory only; checked as an absolute path of the asked type in the system's style (ADR-0062), outside `unsaved/`, before anything is written | No | Until used; `save_dir` keeps a picked folder |
 | `[snip]` settings, `save_dir` included | Sensitive (`save_dir` may name the user) | `settings.toml` (only the user's changes) | No | Until the user changes them |
 
 Nothing here is ever logged: no pixel, picture, recording, sound, typed text or path. The actor's warnings carry a fixed line and an error kind only, and its timing line at debug carries milliseconds only.
@@ -49,7 +49,7 @@ Nothing here is ever logged: no pixel, picture, recording, sound, typed text or 
   - A key click names its view's round, so one on an older view is dropped. The ui's own answers (`Fit`, `Screens`, `Bare`, `Placed`) the tray's `Open` and the hand's `Esc` act on any round, and `Aside` only on the round told with its step aside or a newer one (`actor/clicks.rs`).
   - The recorder opens only the passes of the app's one `MicSeal`, checked before the platform hears them (`keyxtend.md`).
 - **Tampering:**
-  - A dialog's answer is checked as a drive path of the asked type in the worker and again in the host (`PickAsk::check`) before anything is written. A Save writes a new `.kxpart` file and renames it over the target only when whole.
+  - A dialog's answer is checked as an absolute path of the asked type in the system's style (ADR-0062) in the worker and again in the host (`PickAsk::check`) before anything is written. A Save writes a new `.kxpart` file and renames it over the target only when whole.
   - Deletes, marks and the sweep act only inside `unsaved/`, through the `SnipFolder` port. A copy mark is removed, then made new (`create_new`), so a link planted at its name is never followed.
   - A bad `[snip]` value goes back to its default with the settings notice (Inputs).
 - **Logging / repudiation:** no pixel, picture, sound, typed text or path is logged; warnings carry a fixed line and an error kind only, and the timing line milliseconds only. `Shot`'s `Debug` shows only its size, and typed text is `Redacted`.

@@ -10,13 +10,17 @@ use kx_platform_fake::{
     FakeCalendar, FakeClipboardWriter, FakeClock, FakeCloud, FakeFieldWatch, FakeFolderReveal,
     FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
+use kx_test_support::paths::native;
 
 use crate::models::{Row, table};
 
-/// The models folder the rig holds.
-pub(super) const DIR: &str = r"D:\KeyXtend\models";
 /// When the rig's clock starts.
 const START: Mono = Mono::from_us(1_000);
+
+/// The models folder the rig holds, in this system's form.
+pub(super) fn dir() -> String {
+    native(r"D:\KeyXtend\models")
+}
 
 /// The fakes behind the actor's ports, shared with it.
 #[derive(Clone)]
@@ -51,13 +55,13 @@ impl Fakes {
             link: Arc::new(FakeWebLink::new()),
         };
         let drive = Drive {
-            root: Redacted::new(r"D:\".into()),
+            root: Redacted::new(native(r"D:\").into()),
             name: Redacted::new("D:".into()),
             free: 900_000 * MB,
         };
         fakes.files.set_drives(vec![drive]);
         let row = english();
-        let file = Path::new(DIR).join(&row.file);
+        let file = Path::new(&dir()).join(&row.file);
         fakes.files.add_file(&file, row.bytes, row.print);
         fakes
     }

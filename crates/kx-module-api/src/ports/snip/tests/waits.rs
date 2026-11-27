@@ -5,8 +5,8 @@ use super::record::waits;
 use crate::ports::Rect;
 use crate::ports::snip::{AskError, FileKind, PickLimits, RecordAsk, RecordError, RecordWaits};
 use crate::ports::snip::{Part, SnipFile, Speed, SpeedAsk};
+use kx_test_support::paths::native_path;
 use std::ops::RangeInclusive;
-use std::path::PathBuf;
 
 /// A value's name, its range, and how to set it.
 type Field<T, V> = (&'static str, RangeInclusive<V>, fn(&mut T, V));
@@ -95,7 +95,7 @@ fn asks(waits: RecordWaits) -> (RecordAsk, SpeedAsk) {
         job_mb: *RecordAsk::JOB_MB.start(),
         waits,
     };
-    let file = SnipFile::new(PathBuf::from(r"C:\Snips\unsaved\a.mp4"), FileKind::Mp4);
+    let file = SnipFile::new(native_path(r"C:\Snips\unsaved\a.mp4"), FileKind::Mp4);
     let speed = SpeedAsk {
         from: file.unwrap(),
         speed: Speed::new(SpeedAsk::SPEEDS[0]).unwrap(),

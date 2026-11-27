@@ -101,7 +101,7 @@ impl<S: Spawner<FetchFrames, Worker: Split<FetchFrames>> + 'static> ModelFiles f
     }
 }
 
-/// Refuses a path that is no plain drive path (`path_ok`).
+/// Refuses a path that is no plain absolute path (`path_ok`).
 fn plain(path: &Path) -> Result<(), ModelError> {
     if path_ok(path) {
         Ok(())

@@ -4,6 +4,7 @@
 use super::*;
 use kx_module_api::parse_as;
 use kx_module_api::ports::{BarPlace, CardId, FetchAsk, Hundredths, JobLimits, SpeechAsk};
+use kx_test_support::paths::native;
 use std::time::Duration;
 
 mod cloud;
@@ -181,18 +182,23 @@ fn place_is_one_of_its_three_names() {
 }
 
 #[test]
-fn models_dir_is_empty_or_a_plain_drive_path() {
-    for good in ["", r"D:\KeyXtend\models", r"C:\Users\مستخدم\models"] {
-        assert!(taken(&with("models_dir", good)), "{good}");
+fn models_dir_is_empty_or_a_plain_absolute_path() {
+    let goods = ["", r"D:\KeyXtend\models", r"C:\Users\مستخدم\models"];
+    for good in goods.map(native) {
+        assert!(taken(&with("models_dir", good.as_str())), "{good}");
     }
-    for bad in [
+    let bads = [
         "models",
         r"\\server\share\models",
         r"D:\a\..\b",
         "C:foo",
         r"D:\NUL\x",
-    ] {
-        assert!(refused(&with("models_dir", bad), "models_dir"), "{bad}");
+    ];
+    for bad in bads.map(native) {
+        assert!(
+            refused(&with("models_dir", bad.as_str()), "models_dir"),
+            "{bad}"
+        );
     }
 }
 

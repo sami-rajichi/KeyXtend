@@ -1,5 +1,5 @@
-//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, the errors, and the one path
-//! form an adapter may probe.
+//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, the errors, and the path
+//! forms an adapter may probe, one per system.
 
 use super::*;
 use crate::REDACTED_MARKER;
@@ -26,8 +26,20 @@ const FAR: [&str; 14] = [
     r"1:\a.txt",
     "",
 ];
-/// Absolute drive paths, the one form an adapter may probe.
+/// Absolute drive paths, the one form an adapter may probe on Windows.
 const NEAR: [&str; 4] = [r"C:\a.txt", "c:/a.txt", r"Z:\docs\تقرير.pdf", r"C:\"];
+/// Paths no adapter may probe off Windows: a leading `//`, a backslash, a relative path and a drive path.
+const UNIX_FAR: [&str; 7] = [
+    "//host/share/a.txt",
+    r"/docs\a.txt",
+    r"\a.txt",
+    "a.txt",
+    "docs/تقرير.pdf",
+    r"C:\a.txt",
+    "",
+];
+/// Absolute Unix paths, the one form an adapter may probe off Windows.
+const UNIX_NEAR: [&str; 3] = ["/home/a.txt", "/docs/تقرير.pdf", "/"];
 
 /// Secret `n` as text.
 fn text(n: usize) -> String {
@@ -127,23 +139,36 @@ fn each_error_says_something_else() {
 }
 
 #[test]
-fn only_an_absolute_drive_path_may_be_probed() {
-    for path in FAR {
-        assert!(!probe_ok(Path::new(path)), "{path}");
+fn only_an_absolute_path_of_each_style_may_be_probed() {
+    let styles = [
+        (PathRoot::Drive, &FAR[..], &NEAR[..]),
+        (PathRoot::Slash, &UNIX_FAR[..], &UNIX_NEAR[..]),
+    ];
+    for (root, far, near) in styles {
+        for path in far {
+            assert!(!probe_in(root, Path::new(path)), "{root:?} {path}");
+        }
+        for path in near {
+            assert!(probe_in(root, Path::new(path)), "{root:?} {path}");
+        }
     }
-    for path in NEAR {
-        assert!(probe_ok(Path::new(path)), "{path}");
-    }
+    let ours = if PathRoot::NATIVE == PathRoot::Drive {
+        NEAR[0]
+    } else {
+        UNIX_NEAR[0]
+    };
+    assert!(probe_ok(Path::new(ours)), "the native style");
 }
 
 #[cfg(windows)]
 #[test]
-fn the_rule_matches_a_drive_prefix_then_a_root_as_windows_parses_them() {
+fn the_drive_rule_matches_a_drive_prefix_then_a_root_as_windows_parses_them() {
     use std::path::{Component, Prefix};
     for path in FAR.iter().chain(&NEAR) {
         let mut parts = Path::new(path).components();
         let disk = matches!(parts.next(), Some(Component::Prefix(p)) if matches!(p.kind(), Prefix::Disk(_)));
         let rooted = parts.next() == Some(Component::RootDir);
-        assert_eq!(probe_ok(Path::new(path)), disk && rooted, "{path}");
+        let probed = probe_in(PathRoot::Drive, Path::new(path));
+        assert_eq!(probed, disk && rooted, "{path}");
     }
 }

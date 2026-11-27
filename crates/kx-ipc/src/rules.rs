@@ -4,8 +4,8 @@
 
 mod paths;
 
-pub use paths::{RESERVED_NAMES, SEPARATORS, names_device};
-pub(crate) use paths::{drive_path, file_name, path, plain_path, typed};
+pub use paths::{PathRoot, RESERVED_NAMES, SEPARATORS, names_device};
+pub(crate) use paths::{file_name, path, plain_path, rooted_path, typed};
 
 use crate::error::IpcError;
 use crate::limits::{HTTPS, MAX_HOST_BYTES, MAX_RECORD_BYTES, SAMPLE_BYTES};

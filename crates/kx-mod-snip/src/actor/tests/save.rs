@@ -8,6 +8,7 @@ use kx_module_api::ports::{
     SnipStage, StripKey, Taken,
 };
 use kx_platform_fake::{Pick, Stored};
+use kx_test_support::paths::native;
 use toml::Value;
 
 use super::fakes::{CHOSEN, Fakes, PNG, SNIPS, dir, file};
@@ -48,7 +49,7 @@ fn save_proposes_the_snips_date_and_time_in_the_snips_folder_and_writes_the_png_
 
 #[test]
 fn save_opens_at_save_dir_when_it_is_set() {
-    let mut rig = Rig::build(|_, host| host.put("save_dir", Value::String(CHOSEN.into())));
+    let mut rig = Rig::build(|_, host| host.put("save_dir", Value::String(native(CHOSEN))));
     rig.snap();
     rig.keep(Keep::Save);
     let proposed = file(CHOSEN, "2026-11-24 14-05-00.png", FileKind::Png);

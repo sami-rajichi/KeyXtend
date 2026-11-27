@@ -1,6 +1,6 @@
 # The whole feature: the Dictation key, the bar, the Voice panel and the worker's voice jobs.
 on = true
-# The models folder, an absolute drive path; empty until the first download asks for it.
+# The models folder, an absolute path (a drive path on Windows); empty until the first download asks for it.
 models_dir = ""
 # The user's model per keyboard language, by row id, file name or `<service>:<model>` for a cloud one; a language left
 # out, or a bad pick, takes the table's default.

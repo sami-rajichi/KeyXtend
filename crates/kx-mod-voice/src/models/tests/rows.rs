@@ -7,7 +7,6 @@ use kx_module_api::ports::{
     CardId, CardUse, Fingerprint, LINK_SCHEME, Link, PART_EXT, SpeechModel, TAG_LEN, fits_iso,
 };
 use std::collections::BTreeSet;
-use std::path::Path;
 
 /// Hugging Face's download hosts by region, from its firewall table (huggingface.co/docs/hub/models-downloading) and
 /// its Xet bridge.
@@ -117,14 +116,14 @@ fn every_row_makes_a_download_the_port_takes() {
     let s = VoiceSettings::from_defaults().unwrap();
     for row in shipped().rows() {
         let ask = row
-            .fetch(Path::new(FOLDER), s.job(), s.min_free_mb, s.stall_s)
+            .fetch(&folder(), s.job(), s.min_free_mb, s.stall_s)
             .unwrap();
         assert_eq!(ask.check(), Ok(()), "{}", row.id);
         assert_eq!(
             (ask.bytes, ask.print, ask.links.len()),
             (row.bytes, row.print, row.links.len())
         );
-        assert_eq!(ask.file.expose(), &Path::new(FOLDER).join(&row.file));
+        assert_eq!(ask.file.expose(), &folder().join(&row.file));
         let part = ask.part().unwrap();
         assert!(part.to_string_lossy().ends_with(PART_EXT), "{}", row.id);
         assert_eq!(ask.hosts, row.hosts);
@@ -136,7 +135,7 @@ fn every_rows_download_may_follow_hugging_faces_redirects_in_every_region() {
     let s = VoiceSettings::from_defaults().unwrap();
     for row in shipped().rows() {
         let ask = row
-            .fetch(Path::new(FOLDER), s.job(), s.min_free_mb, s.stall_s)
+            .fetch(&folder(), s.job(), s.min_free_mb, s.stall_s)
             .unwrap();
         for host in REGIONS {
             assert!(ask.reaches(host), "{} {host}", row.id);
@@ -169,7 +168,7 @@ fn every_row_names_its_languages_with_the_models_own_codes() {
                 TAG_LEN.contains(&code.len()) && code.bytes().all(|b| b.is_ascii_graphic()),
                 "{code}"
             );
-            let model = row.model(Path::new(FOLDER), lang).unwrap();
+            let model = row.model(&folder(), lang).unwrap();
             assert_eq!(
                 (model.lang.as_str(), model.runner.as_str()),
                 (code.as_str(), "transcribe")
@@ -183,7 +182,7 @@ fn every_row_names_its_languages_with_the_models_own_codes() {
             );
         }
         assert!(
-            row.model(Path::new(FOLDER), "kl").is_none(),
+            row.model(&folder(), "kl").is_none(),
             "no model knows Greenlandic"
         );
     }

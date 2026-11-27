@@ -40,10 +40,11 @@ fn a_key_the_panel_writes_gives_the_settings_after_it() {
     let s = VoiceSettings::from_defaults().unwrap();
     let moved = s.with(DEVICE, "cpu".into()).unwrap();
     assert_eq!(moved.device(), DevicePick::Cpu);
-    let dir = moved.with(MODELS_DIR, r"D:\m".into()).unwrap();
+    let m = native(r"D:\m");
+    let dir = moved.with(MODELS_DIR, m.as_str().into()).unwrap();
     assert_eq!(
         (dir.models_dir.as_str(), dir.device()),
-        (r"D:\m", DevicePick::Cpu)
+        (m.as_str(), DevicePick::Cpu)
     );
     assert!(
         s.with(DEVICE, "gpu!".into()).is_none(),

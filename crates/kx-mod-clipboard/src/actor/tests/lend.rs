@@ -9,6 +9,7 @@ use kx_module_api::ports::{
     ClipAct, ClipError, ClipNote, ClipPart, FileFact, ImageCodec, PasteText, TextPasted,
 };
 use kx_module_api::{Clock, Mono, Redacted, Zeroizing};
+use kx_test_support::paths::native;
 
 use super::super::Msg;
 use super::ears::Heard;
@@ -29,8 +30,8 @@ const ASKER: u32 = 7;
 const WAIT_MS: u32 = 2000;
 /// The text the asker hands over.
 const SAID: &str = "hello ";
-/// A copied file.
-const PATH: &str = "C:\\a.txt";
+/// A copied file, written for Windows; `native` gives this system's form.
+const PATH: &str = r"C:\a.txt";
 
 /// The ask for `SAID`.
 fn said() -> PasteText {
@@ -131,9 +132,10 @@ fn pictures_and_files_come_back_whole_and_a_png_alone_is_refused() {
     };
     let mut rig = holding(vec![image(), dib.clone()]);
     assert_eq!(round_trip(&mut rig), [image(), dib]);
-    let mut rig = Rig::build(|f, _| f.clip.set_file(PATH, FileFact::Size(1)));
-    rig.copy(vec![files(&[PATH])], None);
-    assert_eq!(round_trip(&mut rig), [files(&[PATH])]);
+    let path = native(PATH);
+    let mut rig = Rig::build(|f, _| f.clip.set_file(&path, FileFact::Size(1)));
+    rig.copy(vec![files(&[&path])], None);
+    assert_eq!(round_trip(&mut rig), [files(&[&path])]);
     let mut rig = holding(vec![image()]);
     lend(&mut rig);
     assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));

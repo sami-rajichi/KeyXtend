@@ -3,21 +3,24 @@
 
 use super::*;
 use kx_module_api::ports::{ModelFacts, ModelFile, SpeechError};
+use kx_test_support::paths::{native, native_path};
 
 mod supply;
 
-/// The folder the tests use.
-const DIR: &str = r"D:\KeyXtend\models";
+/// The folder the tests use, in this system's form.
+fn dir() -> String {
+    native(r"D:\KeyXtend\models")
+}
 
 /// The row of `id`.
 fn row(id: &str) -> &'static Row {
     table().unwrap().get(id).unwrap()
 }
 
-/// A fixed drive at `root` with `free` bytes free.
+/// A fixed drive at `root`, written for Windows, with `free` bytes free.
 fn drive(root: &str, free: u64) -> Drive {
     Drive {
-        root: Redacted::new(PathBuf::from(root)),
+        root: Redacted::new(native_path(root)),
         name: Redacted::new(root.to_owned()),
         free,
     }
@@ -35,16 +38,16 @@ fn scan(files: &[(&str, u64)]) -> FolderScan {
     }
 }
 
-/// The folder at `DIR` after a scan finding `files`.
+/// The folder at `dir` after a scan finding `files`.
 fn scanned(files: &[(&str, u64)]) -> Folder {
-    let mut folder = Folder::new(DIR);
+    let mut folder = Folder::new(&dir());
     folder.scanned(Ok(scan(files)));
     folder
 }
 
-/// File `name` in `DIR`, as `scanned` gives it.
+/// File `name` in `dir`, as `scanned` gives it.
 fn at(name: &str) -> PathBuf {
-    Path::new(DIR).join(name)
+    Path::new(&dir()).join(name)
 }
 
 /// Another fingerprint than any row's.
@@ -63,7 +66,7 @@ fn facts(langs: &[&str]) -> ModelFacts {
 #[test]
 fn a_file_already_in_the_folder_is_known_by_its_fingerprint() {
     let parakeet = row("parakeet-v3-q8");
-    let mut folder = Folder::new(DIR);
+    let mut folder = Folder::new(&dir());
     let read = folder.scanned(Ok(scan(&[("my copy.gguf", parakeet.bytes)])));
     assert_eq!(read, [(at("my copy.gguf"), parakeet.bytes)]);
     assert_eq!(folder.of(parakeet), None, "unread, and not under its name");
@@ -119,7 +122,7 @@ fn a_new_scan_reads_only_files_it_has_not_read() {
 fn a_late_fingerprint_for_a_file_no_longer_held_is_dropped() {
     let small = row("whisper-small-q5km");
     let mut folder = scanned(&[(&small.file, small.bytes)]);
-    let old = Path::new(r"E:\old").join(&small.file);
+    let old = native_path(r"E:\old").join(&small.file);
     assert_eq!(folder.printed(&old, small.bytes, Ok(stranger())), None);
     folder.printed(&at(&small.file), small.bytes - 1, Ok(stranger()));
     assert_eq!(folder.of(small).map(|f| f.print), Some(Print::Pending));
@@ -162,7 +165,7 @@ fn an_other_files_facts_are_kept_by_its_fingerprint() {
 #[test]
 fn a_finished_download_is_known_at_once() {
     let parakeet = row("parakeet-v3-q8");
-    let mut folder = Folder::new(DIR);
+    let mut folder = Folder::new(&dir());
     folder.fetched(parakeet);
     assert_eq!(
         folder.of(parakeet).map(|f| f.print),
@@ -180,28 +183,29 @@ fn the_offer_is_keyxtend_models_on_the_drive_with_the_most_room() {
         drive(r"D:\", 300 * MB),
     ];
     let (dir, shown) = offer(&drives).unwrap();
-    assert_eq!(dir, Path::new(r"E:\").join(OFFER[0]).join(OFFER[1]));
+    assert_eq!(dir, native_path(r"E:\").join(OFFER[0]).join(OFFER[1]));
     assert_eq!(shown.free, 900 * MB);
     assert!(path_ok(&dir));
 }
 
 #[test]
 fn a_relative_device_or_climbing_folder_is_refused() {
-    for bad in [
+    let bads = [
         "models",
         r"\\.\C:\models",
         r"D:\KeyXtend\..\models",
         r"D:\NUL\models",
         r"\\?\D:\models",
         "D:\\mod\u{7}els",
-    ] {
-        let mut folder = Folder::new(bad);
+    ];
+    for bad in bads.map(native) {
+        let mut folder = Folder::new(&bad);
         assert_eq!(folder.dir(), None, "{bad}");
-        assert!(!folder.set_dir(Path::new(bad)), "{bad}");
+        assert!(!folder.set_dir(Path::new(&bad)), "{bad}");
     }
     let mut folder = Folder::new("");
-    assert!(folder.set_dir(Path::new(DIR)));
-    assert_eq!(folder.dir(), Some(Path::new(DIR)));
+    assert!(folder.set_dir(Path::new(&dir())));
+    assert_eq!(folder.dir(), Some(Path::new(&dir())));
 }
 
 #[test]
@@ -209,18 +213,35 @@ fn a_new_folder_forgets_the_old_ones_files() {
     let small = row("whisper-small-q5km");
     let mut folder = scanned(&[(&small.file, small.bytes)]);
     folder.printed(&at(&small.file), small.bytes, Ok(small.print));
-    assert!(!folder.follow(DIR), "the same folder");
-    assert!(folder.follow(r"E:\models"));
+    assert!(!folder.follow(&dir()), "the same folder");
+    assert!(folder.follow(&native(r"E:\models")));
     assert_eq!(folder.of(small), None);
     assert!(folder.reading(), "the new folder is not read yet");
     let read = folder.scanned(Ok(scan(&[(&small.file, small.bytes)])));
-    let file = Path::new(r"E:\models").join(&small.file);
+    let file = native_path(r"E:\models").join(&small.file);
     assert_eq!(read, [(file, small.bytes)], "its fingerprint is read again");
 }
 
 #[test]
+fn a_drive_holds_a_folder_in_any_case_on_windows_alone() {
+    let at = |root: &str| Drive {
+        root: Redacted::new(PathBuf::from(root)),
+        name: Redacted::new(root.to_owned()),
+        free: MB,
+    };
+    let windows = [at(r"D:\Data")];
+    let held = drive_of(PathRoot::Drive, &windows, Path::new(r"d:\data\models"));
+    assert!(held.is_some(), "Windows names ignore case");
+    let unix = [at("/media/Data")];
+    let other = drive_of(PathRoot::Slash, &unix, Path::new("/media/data/models"));
+    assert!(other.is_none(), "Unix names keep their case");
+    let same = drive_of(PathRoot::Slash, &unix, Path::new("/media/Data/models"));
+    assert!(same.is_some());
+}
+
+#[test]
 fn a_missing_drive_or_too_little_room_refuses_a_download() {
-    let folder = Folder::new(DIR);
+    let folder = Folder::new(&dir());
     let other = [drive(r"E:\", 100 * MB)];
     assert_eq!(
         folder.room(&other, MB, 1),

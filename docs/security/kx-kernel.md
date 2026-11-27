@@ -13,7 +13,7 @@
 - A service is gated by the capability its provider stored, and a provider must itself hold that capability. Only the kernel builds `Grants`.
 - An event may name a capability (`Event::CAPABILITY`). To subscribe to, intercept or publish it, a module needs that grant, on its `ModuleCx` and on every clone of its `Bus`; only the kernel's own handle is unlimited.
 - Capabilities are policy inside one process, not a sandbox (ADR-0005).
-- `kx-module-api` adds `OpenFolder` (P11, ADR-0046): it gates `FolderRevealKey`, whose `FolderPath` takes a plain drive path only, with no part ending in a dot or a space, and prints none in `Debug` (`ports/reveal/tests.rs`).
+- `kx-module-api` adds `OpenFolder` (P11, ADR-0046): it gates `FolderRevealKey`, whose `FolderPath` takes a plain absolute path only (a drive path on Windows, ADR-0062), with no part ending in a dot or a space, and prints none in `Debug` (`ports/reveal/tests.rs`).
 - `kx-module-api` adds `Speech` (P12, ADR-0058): it gates `SpeechKey`, so `Microphone`, which Snip holds for its recorder's pass, no longer reaches speech (`the_microphone_which_snip_holds_for_its_recorder_never_reaches_speech`).
 
 ## Data handled

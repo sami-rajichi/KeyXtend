@@ -74,6 +74,7 @@ impl FolderReveal for FakeFolderReveal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kx_test_support::paths::native_path;
     use std::sync::Arc;
 
     /// How long a test waits for another thread's call.
@@ -81,7 +82,7 @@ mod tests {
 
     /// A checked folder under the test models folder.
     fn folder(name: &str) -> FolderPath {
-        FolderPath::new(format!(r"D:\KeyXtend\{name}").into()).unwrap()
+        FolderPath::new(native_path(&format!(r"D:\KeyXtend\{name}"))).unwrap()
     }
 
     #[test]
@@ -112,6 +113,6 @@ mod tests {
         assert_eq!(reveal.show(&folder("models")), Ok(()));
         let text = format!("{reveal:?}");
         assert!(text.contains("shown: 1"), "{text}");
-        assert!(!text.contains("KeyXtend\\"), "{text}");
+        assert!(!text.contains("KeyXtend"), "{text}");
     }
 }

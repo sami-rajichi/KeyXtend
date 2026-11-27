@@ -5,7 +5,7 @@ use super::{FileKind, put_path, read_path};
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
 use crate::frame::{Head, write_head};
-use crate::rules::{drive_path, file_name, typed};
+use crate::rules::{PathRoot, file_name, rooted_path, typed};
 use crate::wire::{Payload, Put, Sink, Size};
 use std::borrow::Cow;
 use std::fmt;
@@ -109,15 +109,23 @@ impl PickAsk<'_> {
         }
     }
 
-    /// Refuses `answer` unless it is a drive path of what this asks: a file of its kind for a Save, a folder for a
-    /// folder ask. The job checks before it answers and the host again before anything is written there.
+    /// Refuses `answer` unless it is an absolute path in this system's style (`PathRoot::NATIVE`) of what this asks:
+    /// a file of its kind for a Save, a folder for a folder ask. The job checks before it answers and the host again
+    /// before anything is written there.
     ///
     /// # Errors
     /// `BadField` for any other answer, and for every answer to goodbye.
     pub fn check(&self, answer: &str) -> Result<(), IpcError> {
+        self.check_in(PathRoot::NATIVE, answer)
+    }
+
+    /// `check` in `root`'s style, so both styles are tested on every system.
+    pub(crate) fn check_in(&self, root: PathRoot, answer: &str) -> Result<(), IpcError> {
         match self {
-            Self::Save { kind, .. } => drive_path(answer).and_then(|()| typed(answer, kind.ext())),
-            Self::Folder { .. } => drive_path(answer),
+            Self::Save { kind, .. } => {
+                rooted_path(root, answer).and_then(|()| typed(answer, kind.ext()))
+            }
+            Self::Folder { .. } => rooted_path(root, answer),
             Self::Bye => Err(IpcError::BadField),
         }
     }

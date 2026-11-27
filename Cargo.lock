@@ -1777,6 +1777,7 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-platform",
+ "kx-test-support",
  "proptest",
  "serde",
  "thiserror 2.0.21",

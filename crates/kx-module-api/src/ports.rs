@@ -80,7 +80,7 @@ pub use calendar::{
 };
 pub use clip::{
     AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, probe_ok,
+    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, PathRoot, probe_ok,
 };
 pub use clips::{
     CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage,

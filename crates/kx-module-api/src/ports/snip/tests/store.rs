@@ -3,8 +3,8 @@
 use super::{holds, keeps};
 use crate::REDACTED_MARKER;
 use crate::ports::snip::{FileKind, SaveError, SnipFile, UnsavedFile};
+use kx_test_support::paths::native_path;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::time::Duration;
 
 #[test]
@@ -24,7 +24,7 @@ fn save_errors_each_say_something_else_and_name_no_path() {
 
 #[test]
 fn an_unsaved_file_prints_its_kind_and_age_and_never_its_path() {
-    let path = PathBuf::from(r"C:\Users\Alex\snips\unsaved\a.mp4");
+    let path = native_path(r"C:\Users\Alex\snips\unsaved\a.mp4");
     let aged = UnsavedFile {
         file: SnipFile::new(path, FileKind::Mp4).unwrap(),
         age: Duration::from_hours(25),

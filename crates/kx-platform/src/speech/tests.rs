@@ -10,6 +10,7 @@ use kx_ipc::{
 };
 use kx_module_api::ports::{Memory, SpeechModel, SpeechNote};
 use kx_module_api::{Redacted, Zeroizing};
+use kx_test_support::paths::{native, native_path};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -66,10 +67,10 @@ fn limits() -> JobLimits {
     }
 }
 
-/// A test model in `file`.
+/// A test model in `file`, written for Windows and read in this system's style.
 fn model(file: &str) -> SpeechModel {
     SpeechModel {
-        file: Redacted::new(PathBuf::from(file)),
+        file: Redacted::new(native_path(file)),
         lang: LANG.to_owned(),
         runner: RUNNER.to_owned(),
         cpu_mb: MODEL_MB,

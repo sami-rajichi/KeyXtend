@@ -29,8 +29,8 @@ pub enum SpeechError {
     /// The ask's value of this name is outside its range.
     #[error("the ask's {0} is outside its range")]
     Range(&'static str),
-    /// A file to read is not a plain drive path (`path_ok`).
-    #[error("the path is not a plain drive path")]
+    /// A file to read is not a plain absolute path (`path_ok`).
+    #[error("the path is not a plain absolute path")]
     BadPath,
     /// No microphone was found.
     #[error("no microphone was found")]

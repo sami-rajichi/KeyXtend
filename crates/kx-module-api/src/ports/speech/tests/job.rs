@@ -3,7 +3,7 @@
 
 use super::ask::{Case, FILE, ask, job};
 use super::*;
-use std::path::PathBuf;
+use kx_test_support::paths::native_path;
 
 /// The name a `Range` refusal gives, or `None` when it passes.
 fn named(result: Result<(), SpeechError>) -> Option<&'static str> {
@@ -85,7 +85,7 @@ fn a_first_wait_longer_than_the_longest_is_refused() {
 fn facts() -> FactsAsk {
     FactsAsk {
         job: job(),
-        file: Redacted::new(PathBuf::from(FILE)),
+        file: Redacted::new(native_path(FILE)),
         size_mb: 1_530,
     }
 }
@@ -94,7 +94,7 @@ fn facts() -> FactsAsk {
 fn a_facts_ask_checks_its_path_size_and_job() {
     assert_eq!(facts().check(), Ok(()));
     for path in [r"models\x.gguf", r"D:\m\..\x.gguf", r"D:\m\NUL.gguf"] {
-        let file = Redacted::new(PathBuf::from(path));
+        let file = Redacted::new(native_path(path));
         let ask = FactsAsk { file, ..facts() };
         assert_eq!(ask.check(), Err(SpeechError::BadPath), "{path}");
     }

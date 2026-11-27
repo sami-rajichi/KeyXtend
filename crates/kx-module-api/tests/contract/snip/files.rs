@@ -12,11 +12,15 @@ use kx_module_api::ports::{
     SnipFolderKey,
 };
 use kx_module_api::{ModuleCx, Redacted};
+use kx_test_support::paths::native_path;
 
 /// A picture the user would name in the Save dialog.
-#[allow(clippy::unwrap_used, reason = "a plain drive path named as a picture")]
+#[allow(
+    clippy::unwrap_used,
+    reason = "a plain absolute path named as a picture"
+)]
 fn picture() -> SnipFile {
-    SnipFile::new(r"D:\Pictures\a.png".into(), FileKind::Png).unwrap()
+    SnipFile::new(native_path(r"D:\Pictures\a.png"), FileKind::Png).unwrap()
 }
 
 #[test]
@@ -46,7 +50,7 @@ fn example_a_snip_reaches_a_chosen_place_only_through_the_dialogs_answer() {
         Err(SaveError::BadPath),
         "a picture's answer takes no video"
     );
-    let film = SnipFile::new(r"D:\Videos\a.mp4".into(), FileKind::Mp4).unwrap();
+    let film = SnipFile::new(native_path(r"D:\Videos\a.mp4"), FileKind::Mp4).unwrap();
     let answer = dialogs.save(&film, &limits()).unwrap().unwrap();
     assert_eq!(answer.copy(&video("a.mp4")), Ok(()));
     assert_eq!(
@@ -88,7 +92,7 @@ fn example_the_unsaved_part_lists_its_videos_with_ages_and_deletes_only_its_own(
     assert_eq!(folder.mark_copied(&video("a.mp4")), Ok(()));
     assert_eq!(folder.prune_marks(), Ok(()));
     assert_eq!(folder.remove(&video("a.mp4")), Ok(()));
-    let outside = SnipFile::new(r"D:\Videos\a.mp4".into(), FileKind::Mp4).unwrap();
+    let outside = SnipFile::new(native_path(r"D:\Videos\a.mp4"), FileKind::Mp4).unwrap();
     assert_eq!(folder.mark_copied(&outside), Err(SaveError::BadPath));
     assert_eq!(folder.remove(&outside), Err(SaveError::BadPath));
 }

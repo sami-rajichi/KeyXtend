@@ -73,7 +73,7 @@ fn start(
     let (r, s) = (row(i), settings());
     let free = r.bytes + u64::from(s.min_free_mb) * MB;
     let drives = drive(if room { free } else { free - 1 });
-    let got = fetches.start(r, &Folder::new(DIR), &drives, &s);
+    let got = fetches.start(r, &Folder::new(&dir()), &drives, &s);
     if room {
         prop_assert_eq!(got.map(|ask| ask.bytes), Ok(r.bytes));
         let state = FetchState {

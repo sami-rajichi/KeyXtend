@@ -16,6 +16,7 @@ use kx_module_api::{
     ServiceKey, Zeroizing,
 };
 use kx_test_support::host::FakeHost;
+use kx_test_support::paths::native_path;
 use std::sync::Arc;
 use stub::Stub;
 
@@ -195,7 +196,7 @@ fn the_folder_reveal_needs_open_folder() {
     let reveal = ModuleCx::new(&mut granted)
         .service::<FolderRevealKey>()
         .unwrap();
-    let folder = FolderPath::new(r"D:\KeyXtend\models".into()).unwrap();
+    let folder = FolderPath::new(native_path(r"D:\KeyXtend\models")).unwrap();
     assert_eq!(reveal.show(&folder), Err(FolderError::Missing));
 }
 

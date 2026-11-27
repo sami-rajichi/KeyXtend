@@ -5,6 +5,7 @@ use kx_module_api::ports::{
     AskError, CaptureSheet, FolderError, FolderKey, RecordAsk, Rect, Screen, SnipAside, SnipClick,
     SnipKeyboard, SnipNote, SnipSheet, SnipTab, VideoRow, VideoSheet,
 };
+use kx_test_support::paths::native;
 use toml::Value;
 
 use super::fakes::{CHOSEN, Fakes, SCREEN, SNIPS, dir};
@@ -148,10 +149,10 @@ fn change_writes_the_folder_the_dialog_chose_and_cancel_keeps_it() {
     });
     rig.act(SnipClick::Open);
     rig.act(SnipClick::Folder(FolderKey::Change));
-    assert_eq!(rig.saved().save_dir, CHOSEN);
+    assert_eq!(rig.saved().save_dir, native(CHOSEN));
     for _ in 0..2 {
         rig.act(SnipClick::Folder(FolderKey::Change));
-        assert_eq!(rig.saved().save_dir, CHOSEN);
+        assert_eq!(rig.saved().save_dir, native(CHOSEN));
     }
     assert_eq!(
         rig.fake.dialogs.folders(),

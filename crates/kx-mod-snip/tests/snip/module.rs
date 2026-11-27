@@ -2,7 +2,6 @@
 //! screens, an ask tells the light and line again, the stop ends the snip, and a panic on the actor's thread ends it
 //! too and tells the user; a missing service or a refused section fails the start.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -23,6 +22,7 @@ use kx_platform_fake::{
     FakePictures, FakeRecorder, FakeScreenFreeze, FakeSnipFolder,
 };
 use kx_test_support::host::{FakeHost, Stored};
+use kx_test_support::paths::native_path;
 use toml::Value;
 
 /// How long a test waits for the actor's thread before it fails.
@@ -33,9 +33,9 @@ fn stored<K: ServiceKey>(api: Arc<K::Api>) -> (ServiceId, Stored) {
     (K::ID, (K::CAPABILITY, Box::new(api)))
 }
 
-/// `path` as a folder.
+/// `path`, written for Windows, as a folder of this system.
 fn dir(path: &str) -> FolderPath {
-    FolderPath::new(PathBuf::from(path)).unwrap()
+    FolderPath::new(native_path(path)).unwrap()
 }
 
 /// The screen freezer, shared with the test.

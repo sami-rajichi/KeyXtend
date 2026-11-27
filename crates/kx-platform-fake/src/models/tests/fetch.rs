@@ -23,7 +23,7 @@ fn ask() -> FetchAsk {
         },
         links: vec![link],
         hosts: vec!["huggingface.co".into()],
-        file: Redacted::new(PathBuf::from(FILE)),
+        file: Redacted::new(file()),
         bytes: BYTES,
         print: print(),
         min_free_mb: 2_048,
@@ -72,19 +72,16 @@ fn a_fetch_progresses_on_cue_then_its_file_takes_its_name() {
     let fake = with_dir();
     let (_run, heard) = fetching(&fake);
     assert!(fake.progress(BYTES / 2));
-    assert_eq!(fake.part(Path::new(FILE)), Some(BYTES / 2));
-    assert!(
-        !fake.has_file(Path::new(FILE)),
-        "no named file before the check"
-    );
+    assert_eq!(fake.part(&file()), Some(BYTES / 2));
+    assert!(!fake.has_file(&file()), "no named file before the check");
     assert!(fake.tell(FetchNote::Done));
     assert!(!fake.progress(BYTES), "an ended download tells no more");
     assert_eq!(notes(&heard), [progress(BYTES / 2), FetchNote::Done]);
     let me = thread::current().id();
     assert!(heard.lock().unwrap().iter().all(|(_, t)| *t == me));
-    assert_eq!(fake.part(Path::new(FILE)), None);
-    assert_eq!(fake.fingerprint(Path::new(FILE)), Ok(print()));
-    let listed = names(&fake.scan(Path::new(DIR), &exts()).unwrap()).1;
+    assert_eq!(fake.part(&file()), None);
+    assert_eq!(fake.fingerprint(&file()), Ok(print()));
+    let listed = names(&fake.scan(&dir(), &exts()).unwrap()).1;
     assert_eq!(listed, [("parakeet-5521.gguf".into(), BYTES)]);
     assert!(fake.fetches()[0].ended);
 }
@@ -97,14 +94,14 @@ fn a_stall_keeps_the_part_and_a_bad_fingerprint_deletes_it() {
     let stalled = FetchNote::Fault(ModelError::Stalled);
     assert!(fake.tell(stalled));
     assert_eq!(notes(&heard), [progress(50), stalled]);
-    assert_eq!(fake.part(Path::new(FILE)), Some(50), "kept to resume");
+    assert_eq!(fake.part(&file()), Some(50), "kept to resume");
     let (_second, again) = fetching(&fake);
     assert!(fake.progress(BYTES));
     let bad = FetchNote::Fault(ModelError::Print);
     assert!(fake.tell(bad));
     assert_eq!(notes(&again), [progress(BYTES), bad]);
-    assert_eq!(fake.part(Path::new(FILE)), None);
-    assert!(!fake.has_file(Path::new(FILE)), "a bad file is never named");
+    assert_eq!(fake.part(&file()), None);
+    assert!(!fake.has_file(&file()), "a bad file is never named");
 }
 
 #[test]
@@ -119,7 +116,7 @@ fn pause_and_resume_are_recorded_and_cancel_tells_its_fault_and_deletes_the_part
     run.cancel();
     let cancelled = FetchNote::Fault(ModelError::Cancelled);
     assert_eq!(notes(&heard), [progress(10), progress(20), cancelled]);
-    assert_eq!(fake.part(Path::new(FILE)), None);
+    assert_eq!(fake.part(&file()), None);
     let life = &fake.fetches()[0];
     let counts = (life.pauses, life.resumes, life.cancels);
     assert_eq!(counts, (1, 1, 1));
@@ -134,14 +131,14 @@ fn a_paused_fetch_moves_no_bytes_until_resumed_but_still_hears_a_fault() {
     run.pause();
     assert!(!fake.progress(20), "a paused download reads nothing");
     assert!(!fake.tell(FetchNote::Done));
-    assert_eq!(fake.part(Path::new(FILE)), Some(10));
+    assert_eq!(fake.part(&file()), Some(10));
     run.resume();
     assert!(fake.progress(20));
     run.pause();
     let gone = FetchNote::Fault(ModelError::Gone);
     assert!(fake.tell(gone));
     assert_eq!(notes(&heard), [progress(10), progress(20), gone]);
-    assert_eq!(fake.part(Path::new(FILE)), Some(20), "kept to resume");
+    assert_eq!(fake.part(&file()), Some(20), "kept to resume");
 }
 
 #[test]
@@ -149,14 +146,10 @@ fn a_part_vanishes_by_its_own_path_and_not_with_its_file() {
     let fake = with_dir();
     let (_run, _heard) = fetching(&fake);
     assert!(fake.progress(10));
-    fake.vanish(Path::new(FILE));
-    assert_eq!(
-        fake.part(Path::new(FILE)),
-        Some(10),
-        "the part is another file"
-    );
+    fake.vanish(&file());
+    assert_eq!(fake.part(&file()), Some(10), "the part is another file");
     fake.vanish(&ask().part().unwrap());
-    assert_eq!(fake.part(Path::new(FILE)), None);
+    assert_eq!(fake.part(&file()), None);
 }
 
 #[test]
@@ -197,10 +190,10 @@ fn dropping_a_fetch_pauses_it_and_keeps_the_part_until_removed() {
     let life = &fake.fetches()[0];
     assert!(life.dropped && life.paused && !life.ended);
     assert!(!fake.progress(20), "a dropped download tells no more");
-    assert_eq!(fake.part(Path::new(FILE)), Some(10));
+    assert_eq!(fake.part(&file()), Some(10));
     let part = ask().part().unwrap();
     assert_eq!(fake.remove(&part), Ok(()));
-    assert_eq!(fake.part(Path::new(FILE)), None);
+    assert_eq!(fake.part(&file()), None);
 }
 
 #[test]

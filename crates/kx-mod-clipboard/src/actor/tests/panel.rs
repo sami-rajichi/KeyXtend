@@ -3,6 +3,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipAct, ClipNote, FileFact, PanelKey, Preview};
+use kx_test_support::paths::native;
 use toml::Value;
 
 use super::super::Msg;
@@ -138,14 +139,13 @@ fn a_texts_preview_shows_it_with_its_count() {
 
 #[test]
 fn a_file_row_shows_its_size_and_leaves_at_the_next_look_once_gone() {
+    let report = native(r"C:\report.pdf");
     let mut rig = Rig::new();
-    rig.fakes
-        .clip
-        .set_file("C:\\report.pdf", FileFact::Size(2_527_068));
-    rig.copy(vec![files(&["C:\\report.pdf"])], None);
+    rig.fakes.clip.set_file(&report, FileFact::Size(2_527_068));
+    rig.copy(vec![files(&[&report])], None);
     rig.open();
     assert_eq!(rig.page().rows[0].bytes, Some(2_527_068));
-    rig.fakes.clip.set_file("C:\\report.pdf", FileFact::Gone);
+    rig.fakes.clip.set_file(&report, FileFact::Gone);
     rig.send(Msg::Open);
     rig.send(Msg::Open);
     assert!(rig.page().empty);

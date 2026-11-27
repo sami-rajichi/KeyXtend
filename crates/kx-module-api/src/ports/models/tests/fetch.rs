@@ -23,7 +23,7 @@ fn link_on(host: &str) -> Link {
 #[test]
 fn a_fetch_ask_passes_and_names_its_part_file_as_the_job_does() {
     assert_eq!(refused(|_| {}), None);
-    let file = format!(r"D:\{SECRET}\x.gguf");
+    let file = native(&format!(r"D:\{SECRET}\x.gguf"));
     let part = Some(PathBuf::from(format!("{file}{PART_EXT}")));
     assert_eq!(fetch().part(), part, "the fetch job writes this part");
 }
@@ -34,6 +34,17 @@ fn a_file_that_is_no_text_has_no_part_and_is_refused() {
     use std::os::windows::ffi::OsStringExt;
     let lone = [u16::from(b'D'), u16::from(b':'), u16::from(b'\\'), 0xD800];
     let file = Redacted::new(PathBuf::from(std::ffi::OsString::from_wide(&lone)));
+    let ask = FetchAsk { file, ..fetch() };
+    assert_eq!(ask.part(), None);
+    assert_eq!(ask.check(), Err(ModelError::Range("file")));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_unix_file_that_is_no_text_has_no_part_and_is_refused() {
+    use std::os::unix::ffi::OsStrExt;
+    let lone = std::ffi::OsStr::from_bytes(b"/\xff.gguf");
+    let file = Redacted::new(PathBuf::from(lone));
     let ask = FetchAsk { file, ..fetch() };
     assert_eq!(ask.part(), None);
     assert_eq!(ask.check(), Err(ModelError::Range("file")));
@@ -139,9 +150,10 @@ fn a_fetch_ask_past_the_frames_caps_is_refused() {
 #[test]
 fn a_fetch_file_whose_part_passes_the_frames_cap_is_refused() {
     let top = kx_ipc::MAX_PATH_BYTES - PART_EXT.len();
+    let root = native(DRIVE_ROOT);
     let at = |len: usize| {
-        let name = "a".repeat(len - DRIVE_ROOT.len());
-        Redacted::new(PathBuf::from(format!("{DRIVE_ROOT}{name}")))
+        let name = "a".repeat(len - root.len());
+        Redacted::new(PathBuf::from(format!("{root}{name}")))
     };
     let (fits, over) = (at(top), at(top + 1));
     assert_eq!(refused(|a| a.file = fits), None);

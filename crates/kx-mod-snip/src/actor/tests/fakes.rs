@@ -1,7 +1,6 @@
 //! The fakes behind the actor's ports, sharing one Snips folder and clock: a screen of 64 by 48 pixels, a picture's
 //! PNG the media worker gives, and a seal both the recorder and the passes hold.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
@@ -13,11 +12,12 @@ use kx_platform_fake::{
     FakeCalendar, FakeClipboardWriter, FakeClock, FakeFileAsk, FakeFolderReveal, FakeMediaOpen,
     FakePictures, FakeRecorder, FakeScreenFreeze, FakeSnipFolder,
 };
+use kx_test_support::paths::native_path;
 
 use super::super::{Leftovers, Ports};
 use super::rig::in_place;
 
-/// The Snips folder; forward slashes read as a drive path on every system.
+/// The Snips folder, written for Windows; `dir`, `file` and `native` give this system's form.
 pub(super) const SNIPS: &str = "C:/Users/Alex/KeyXtend/snips";
 /// Its unsaved part.
 pub(super) const UNSAVED: &str = "C:/Users/Alex/KeyXtend/snips/unsaved";
@@ -39,14 +39,14 @@ pub(super) const PNG: [u8; 4] = [0x89, 0x50, 0x4e, 0x47];
 /// When the rig's clock starts.
 const START: Mono = Mono::from_us(1_000);
 
-/// `path` as a folder.
+/// `path`, written for Windows, as a folder of this system.
 pub(super) fn dir(path: &str) -> FolderPath {
-    FolderPath::new(PathBuf::from(path)).unwrap()
+    FolderPath::new(native_path(path)).unwrap()
 }
 
-/// The file `name` of `kind` in the folder at `path`.
+/// The file `name` of `kind` in the folder at `path`, written for Windows, joined as this system's rules join it.
 pub(super) fn file(path: &str, name: &str, kind: FileKind) -> SnipFile {
-    SnipFile::new(PathBuf::from(path).join(name), kind).unwrap()
+    SnipFile::new(native_path(&format!(r"{path}\{name}")), kind).unwrap()
 }
 
 /// The fakes behind the actor's ports, shared with it.

@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipAct, ClipError, ClipPart, FileFact, PanelNote};
+use kx_test_support::paths::native;
 use toml::Value;
 
 use super::super::Msg;
@@ -127,17 +128,18 @@ fn a_paste_that_failed_or_never_came_stops_with_a_note() {
 
 #[test]
 fn a_file_entry_pastes_its_files_still_there_and_leaves_when_all_are_gone() {
+    let [a, b, c] = ["C:/a", "C:/b", "C:/c"].map(native);
     let mut rig = Rig::new();
-    for path in ["C:/a", "C:/b", "C:/c"] {
+    for path in [&a, &b, &c] {
         rig.fakes.clip.set_file(path, FileFact::Size(1));
     }
-    rig.copy(vec![files(&["C:/c"])], None);
-    rig.copy(vec![files(&["C:/a", "C:/b"])], None);
+    rig.copy(vec![files(&[&c])], None);
+    rig.copy(vec![files(&[&a, &b])], None);
     rig.open();
-    rig.fakes.clip.set_file("C:/b", FileFact::Gone);
-    rig.fakes.clip.set_file("C:/c", FileFact::Gone);
+    rig.fakes.clip.set_file(&b, FileFact::Gone);
+    rig.fakes.clip.set_file(&c, FileFact::Gone);
     insert(&mut rig, &[1, 0]);
-    let kept = ClipPart::Files(Redacted::new(vec![PathBuf::from("C:/a")]));
+    let kept = ClipPart::Files(Redacted::new(vec![PathBuf::from(a)]));
     assert_eq!(rig.fakes.writer.writes(), [vec![kept]]);
     assert_eq!(
         rig.titles(),
@@ -148,12 +150,13 @@ fn a_file_entry_pastes_its_files_still_there_and_leaves_when_all_are_gone() {
 
 #[test]
 fn a_file_out_of_reach_is_skipped_and_kept() {
+    let song = native("E:/song.mp3");
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Size(9));
-    rig.copy(vec![files(&["E:/song.mp3"])], None);
+    rig.fakes.clip.set_file(&song, FileFact::Size(9));
+    rig.copy(vec![files(&[&song])], None);
     rig.text("words");
     rig.open();
-    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Away);
+    rig.fakes.clip.set_file(&song, FileFact::Away);
     insert(&mut rig, &[1, 0]);
     assert_eq!(rig.fakes.writer.writes(), [vec![text("words")]]);
     pasted(&mut rig);
@@ -163,15 +166,15 @@ fn a_file_out_of_reach_is_skipped_and_kept() {
 
 #[test]
 fn a_share_path_row_stays_with_no_size_and_pastes_at_insert() {
-    let share = r"\\host\share\plan.pdf";
+    let share = native(r"\\host\share\plan.pdf");
     let mut rig = Rig::new();
-    rig.copy(vec![files(&[share])], None);
+    rig.copy(vec![files(&[&share])], None);
     rig.open();
     let rows = rig.page().rows;
     assert_eq!(rows.len(), 1, "never probed, so never gone");
     assert_eq!(rows[0].bytes, None, "its size reads as unknown");
     insert(&mut rig, &[0]);
-    assert_eq!(rig.fakes.writer.writes(), [vec![files(&[share])]]);
+    assert_eq!(rig.fakes.writer.writes(), [vec![files(&[&share])]]);
 }
 
 #[test]

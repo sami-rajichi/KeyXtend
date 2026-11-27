@@ -2,13 +2,13 @@
 //! default, English in front, the folder's drive and the processor.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 use kx_module_api::ports::{
     BarPlace, CardId, Device, DeviceKind, Drive, Fingerprint, FolderScan, LayoutChanged, LayoutId,
     LocalTime, MB, Memory, ModelFile, VoiceAct, VoiceBar, VoiceClick, VoicePage, VoicePanel,
 };
 use kx_module_api::{Redacted, Zeroizing};
+use kx_test_support::paths::{native, native_path};
 
 use super::{Do, Panel};
 use crate::VoiceSettings;
@@ -22,10 +22,13 @@ use crate::view::Facts;
 
 /// Rows a page shows, as `[ui] page_rows` is by default.
 pub(crate) const ROWS: u8 = 5;
-/// The models folder the tests use.
-pub(crate) const DIR: &str = r"D:\KeyXtend\models";
 /// The wall time now: 2026-11-14 12:00 UTC.
 const NOW_MS: i64 = 1_794_657_600_000;
+
+/// The models folder the tests use, in this system's form.
+pub(crate) fn dir() -> String {
+    native(r"D:\KeyXtend\models")
+}
 
 /// What the actor would hold.
 pub(crate) struct Rig {
@@ -84,10 +87,10 @@ impl Rig {
         rig
     }
 
-    /// The rig with the folder at `DIR` chosen, not read yet.
+    /// The rig with the folder at `dir` chosen, not read yet.
     pub(crate) fn foldered() -> Self {
         let mut rig = Self::new();
-        rig.settings.models_dir = DIR.into();
+        rig.settings.models_dir = dir();
         rig.with(Panel::follow);
         rig
     }
@@ -241,10 +244,10 @@ pub(crate) fn row(id: &str) -> &'static Row {
     table().unwrap().get(id).unwrap()
 }
 
-/// A fixed drive at `root` with `free` bytes free.
+/// A fixed drive at `root`, written for Windows, with `free` bytes free.
 pub(crate) fn drive(root: &str, free: u64) -> Drive {
     Drive {
-        root: Redacted::new(PathBuf::from(root)),
+        root: Redacted::new(native_path(root)),
         name: Redacted::new(root.trim_end_matches('\\').to_owned()),
         free,
     }

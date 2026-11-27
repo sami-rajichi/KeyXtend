@@ -4,6 +4,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Fingerprint, FolderScan};
+use kx_test_support::paths::native_path;
 
 use super::super::rig::{drive, model_file};
 use super::*;
@@ -19,7 +20,7 @@ fn the_first_download_asks_for_the_folder_on_the_drive_with_the_most_room() {
         "the folder comes first"
     );
     let offer = models(&rig.view().unwrap()).offer.clone().unwrap();
-    let dir = Path::new(r"D:\").join(OFFER[0]).join(OFFER[1]);
+    let dir = native_path(r"D:\").join(OFFER[0]).join(OFFER[1]);
     assert_eq!(offer.path.expose(), &dir.to_string_lossy());
     assert_eq!(
         rig.click(&VoiceClick::Confirm(true)),
@@ -47,7 +48,7 @@ fn a_copy_already_in_a_new_folder_is_not_downloaded_again() {
     let mut rig = Rig::new();
     rig.with(|p, f| p.download_for("en", f));
     rig.click(&VoiceClick::Confirm(true));
-    let dir = Path::new(r"D:\").join(OFFER[0]).join(OFFER[1]);
+    let dir = native_path(r"D:\").join(OFFER[0]).join(OFFER[1]);
     rig.panel.made(&dir, Ok(()));
     let read = rig.scan(vec![model_file("mine.gguf", parakeet.bytes)]);
     let file = dir.join("mine.gguf");
@@ -96,7 +97,7 @@ fn a_name_another_file_holds_offers_delete_file_not_download() {
     let out = rig.click(&VoiceClick::Button(PanelButton::Delete));
     assert_eq!(
         out,
-        [Do::Remove(Path::new(DIR).join(&small.file)), Do::Scan]
+        [Do::Remove(Path::new(&dir()).join(&small.file)), Do::Scan]
     );
     assert!(rig.with(|p, f| p.download(&small.id, f)).is_empty());
     let view = rig.view().unwrap();
@@ -121,12 +122,12 @@ fn the_folder_list_picks_a_folder_and_refuses_a_climbing_one() {
     rig.with(|p, f| p.download_for("en", f));
     rig.click(&VoiceClick::Button(PanelButton::Change));
     let out = rig.click(&VoiceClick::Row(1));
-    assert_eq!(out, [Do::Browse(r"D:\".into())]);
+    assert_eq!(out, [Do::Browse(native_path(r"D:\"))]);
     let names = ["..", "Models"]
         .map(|n| Redacted::new(n.to_owned()))
         .to_vec();
     rig.panel.browsed(
-        Path::new(r"D:\"),
+        &native_path(r"D:\"),
         Ok(FolderScan {
             folders: names,
             files: Vec::new(),
@@ -138,7 +139,7 @@ fn the_folder_list_picks_a_folder_and_refuses_a_climbing_one() {
     );
     assert_eq!(rig.view().unwrap().note, Some(BarHint::Folder));
     rig.click(&VoiceClick::Row(1));
-    let mine = Path::new(r"D:\").join("Models");
+    let mine = native_path(r"D:\").join("Models");
     assert_eq!(
         rig.click(&VoiceClick::Button(PanelButton::Here)),
         [Do::Make(mine.clone())]
@@ -160,7 +161,7 @@ fn a_folder_with_a_control_character_is_refused() {
     rig.click(&VoiceClick::Row(1));
     let names = vec![Redacted::new("a\u{7}b".to_owned())];
     rig.panel.browsed(
-        Path::new(r"D:\"),
+        &native_path(r"D:\"),
         Ok(FolderScan {
             folders: names,
             files: Vec::new(),
@@ -175,7 +176,7 @@ fn a_read_only_folder_or_a_full_drive_downloads_nothing_and_says_so() {
     let mut rig = Rig::new();
     rig.with(|p, f| p.download_for("en", f));
     rig.click(&VoiceClick::Confirm(true));
-    let dir = Path::new(r"D:\").join(OFFER[0]).join(OFFER[1]);
+    let dir = native_path(r"D:\").join(OFFER[0]).join(OFFER[1]);
     assert!(rig.panel.made(&dir, Err(ModelError::ReadOnly)).is_empty());
     assert_eq!(rig.view().unwrap().note, Some(BarHint::Folder));
     let mut full = Rig::foldered();

@@ -1,6 +1,8 @@
 //! The models table: every row valid, the table's refusals, the orders and defaults, picks, the fit and other files.
 
 use super::*;
+use kx_test_support::paths::native_path;
+use std::path::PathBuf;
 
 mod fit;
 mod orders;
@@ -19,5 +21,7 @@ fn row(id: &str) -> &'static Row {
     shipped().get(id).unwrap()
 }
 
-/// The folder the tests put models in.
-const FOLDER: &str = r"D:\KeyXtend\models";
+/// The folder the tests put models in, in this system's form.
+fn folder() -> PathBuf {
+    native_path(r"D:\KeyXtend\models")
+}

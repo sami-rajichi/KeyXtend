@@ -17,6 +17,8 @@ repository = "https://github.com/sami-rajichi/KeyXtend"
 # Deny, not forbid, so kx-platform-* and the test tools can allow it; other crate roots forbid it (tidy F2).
 unsafe_code = "deny"
 missing_docs = "warn"
+# `--cfg kx_slash_paths` runs the Unix path rules on Windows (kx-ipc `PathRoot::NATIVE`, ADR-0062).
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kx_slash_paths)"] }
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

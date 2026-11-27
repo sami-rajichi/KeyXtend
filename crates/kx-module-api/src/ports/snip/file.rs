@@ -5,7 +5,7 @@
 use super::store::SaveTo;
 use super::waits::PickLimits;
 use crate::ports::FolderPath;
-use crate::ports::clip::SEPARATORS;
+use crate::ports::clip::{PathRoot, SEPARATORS};
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -31,7 +31,7 @@ impl FileKind {
     }
 }
 
-/// `path`'s non-empty parts between separators of either kind, as Windows reads a drive path, on every system.
+/// `path`'s non-empty parts between separators of either kind; a Unix path holds no `\` (`PathRoot`).
 fn parts(path: &Path) -> impl Iterator<Item = &[u8]> {
     let bytes = path.as_os_str().as_encoded_bytes();
     bytes
@@ -45,8 +45,8 @@ fn extension(name: &[u8]) -> Option<&[u8]> {
     name.get(dot + 1..)
 }
 
-/// A snip's file: a path `FolderPath` takes, whose name ends in its kind's extension in any case. It reads `\` and `/`
-/// alike on every system, as `FolderPath` does, so a path means the same on Windows and Linux.
+/// A snip's file: a path `FolderPath` takes, whose name ends in its kind's extension in any case. A path is absolute
+/// in this system's style (`PathRoot`), so it means the same to every check.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SnipFile {
     /// The path, which may hold the user's name.
@@ -59,9 +59,14 @@ impl SnipFile {
     /// `path` as a file of `kind`; `None` unless `FolderPath::new` takes it and its extension is the kind's.
     #[must_use]
     pub fn new(path: PathBuf, kind: FileKind) -> Option<Self> {
+        Self::new_in(PathRoot::NATIVE, path, kind)
+    }
+
+    /// `new` in `root`'s style, so both styles are tested on every system.
+    pub(crate) fn new_in(root: PathRoot, path: PathBuf, kind: FileKind) -> Option<Self> {
         let ext = parts(&path).last().and_then(extension);
         let named = ext.is_some_and(|e| e.eq_ignore_ascii_case(kind.ext().as_bytes()));
-        let plain = named && FolderPath::new(path.clone()).is_ok();
+        let plain = named && FolderPath::new_in(root, path.clone()).is_ok();
         plain.then(|| Self {
             path: Redacted::new(path),
             kind,
@@ -80,17 +85,24 @@ impl SnipFile {
         self.kind
     }
 
-    /// True when it lies directly in `folder`, as a video of the `unsaved` part must before an adapter touches it; the
-    /// drive letter's case does not count, as on Windows.
+    /// True when it lies directly in `folder`, as a video of the `unsaved` part must before an adapter touches it; only
+    /// a drive letter's case does not count, as on Windows.
     #[must_use]
     pub fn lies_in(&self, folder: &FolderPath) -> bool {
+        self.lies_in_at(PathRoot::NATIVE, folder)
+    }
+
+    /// `lies_in` in `root`'s style, so both styles are tested on every system.
+    pub(crate) fn lies_in_at(&self, root: PathRoot, folder: &FolderPath) -> bool {
         let mut inside: Vec<&[u8]> = parts(self.expose()).collect();
         inside.pop();
         let around: Vec<&[u8]> = parts(folder.expose()).collect();
+        let same = |a: &[u8], b: &[u8]| match root {
+            PathRoot::Drive => a.eq_ignore_ascii_case(b),
+            PathRoot::Slash => a == b,
+        };
         match (inside.split_first(), around.split_first()) {
-            (Some((drive, rest)), Some((their, theirs))) => {
-                drive.eq_ignore_ascii_case(their) && rest == theirs
-            }
+            (Some((head, rest)), Some((their, theirs))) => same(head, their) && rest == theirs,
             _ => false,
         }
     }
@@ -99,8 +111,8 @@ impl SnipFile {
 /// Why a dialog gave no answer; no variant names a path.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum AskError {
-    /// The answer is no plain drive path of the asked kind, so nothing is written there.
-    #[error("the dialog's answer is not a plain drive path of the asked kind")]
+    /// The answer is no plain absolute path of the asked kind, so nothing is written there.
+    #[error("the dialog's answer is not a plain absolute path of the asked kind")]
     BadPath,
     /// The dialog could not show.
     #[error("the dialog could not show")]
@@ -121,8 +133,8 @@ pub trait FileAsk: Send + Sync {
     /// module's thread.
     ///
     /// # Errors
-    /// `Range` when `limits.check` refuses them, `BadPath` for an answer of another kind, no plain drive path or one in
-    /// the Snips folder's unsaved part, `Failed` or `Gone` when no dialog showed.
+    /// `Range` when `limits.check` refuses them, `BadPath` for an answer of another kind, no plain absolute path or one
+    /// in the Snips folder's unsaved part, `Failed` or `Gone` when no dialog showed.
     fn save(
         &self,
         proposed: &SnipFile,

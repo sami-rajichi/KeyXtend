@@ -1,8 +1,11 @@
 //! The models folder on a real disk: made with only its topmost new folder guarded, scanned A to Z without hidden
-//! entries, junctions or names that are not UTF-8, and files removed, a missing one with no error.
+//! entries, junctions, links or names that are not UTF-8, and files removed, a missing one with no error.
 
 use super::*;
 use std::fs;
+
+/// Bytes in a name longer than any supported file system takes, which allows 255.
+const TOO_LONG: usize = 256;
 
 /// A fresh folder for test `name` under the system's temporary folder, gone when dropped.
 struct Scratch(PathBuf);
@@ -66,8 +69,8 @@ fn a_folder_that_fails_below_the_guarded_one_takes_the_folders_made_away() {
         Arc::new(Hands::default()),
         disk.clone(),
     );
-    let made = models.make(&base.0.join("a").join("bad?name"));
-    assert_eq!(made, Err(ModelError::Io), "Windows refuses the name");
+    let made = models.make(&base.0.join("a").join("x".repeat(TOO_LONG)));
+    assert_eq!(made, Err(ModelError::Io), "the system refuses the name");
     assert!(!base.0.exists(), "only the empty folders it made went");
     assert_eq!(*disk.guarded.lock().unwrap(), std::slice::from_ref(&base.0));
 }
@@ -117,6 +120,7 @@ fn a_scan_lists_folders_and_model_files_a_to_z_without_hidden_ones() {
     assert_eq!(gone, Err(ModelError::Missing));
 }
 
+#[cfg(windows)]
 #[test]
 fn a_scan_skips_a_junction_and_a_name_that_is_not_utf8() {
     use std::os::windows::ffi::OsStringExt;
@@ -153,9 +157,39 @@ fn a_scan_skips_a_junction_and_a_name_that_is_not_utf8() {
 }
 
 /// A lone UTF-16 surrogate, which Windows takes in a file name and UTF-8 cannot spell.
+#[cfg(windows)]
 const UNPAIRED: u16 = 0xD800;
 /// The system's command shell, under the Windows folder.
+#[cfg(windows)]
 const SHELL: &str = r"System32\cmd.exe";
+
+// Linux only: macOS refuses a name that is not UTF-8, so it has nothing to skip.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_scan_skips_a_link_and_a_name_that_is_not_utf8() {
+    use std::os::unix::ffi::OsStrExt;
+    let base = Scratch::new("odd");
+    let (inside, target) = (base.0.join("in"), base.0.join("target"));
+    fs::create_dir_all(&inside).unwrap();
+    fs::create_dir_all(&target).unwrap();
+    let odd = inside.join(std::ffi::OsStr::from_bytes(LONE));
+    fs::write(odd, [1]).unwrap();
+    fs::write(inside.join("ok.gguf"), [1]).unwrap();
+    std::os::unix::fs::symlink(&target, inside.join("link")).unwrap();
+    let models = host(&Script::default(), roomy(need()));
+    let found = models.scan(&inside, &["gguf".to_owned()]).unwrap();
+    assert!(found.folders.is_empty(), "the link is left out");
+    let files: Vec<&str> = found
+        .files
+        .iter()
+        .map(|f| f.name.expose().as_str())
+        .collect();
+    assert_eq!(files, ["ok.gguf"]);
+}
+
+/// A model file's name with a byte UTF-8 cannot spell, which Linux takes.
+#[cfg(target_os = "linux")]
+const LONE: &[u8] = b"\xff.gguf";
 
 #[test]
 fn remove_deletes_a_file_and_one_already_gone_is_no_error() {

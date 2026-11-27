@@ -8,10 +8,10 @@ use crate::worker::fake::Hands;
 use kx_ipc::RecordEnd as End;
 use kx_module_api::ports::{FileKind, FolderPath, RecordWaits};
 use kx_platform_fake::{FakeSnipFolder, Stored};
+use kx_test_support::paths::native_path;
 use proptest::collection::vec;
 use proptest::prelude::*;
 use proptest::sample::select;
-use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
@@ -19,7 +19,7 @@ use std::time::Duration;
 const ID: u32 = 7;
 /// How long a switch waits by the clock: the start of its range.
 const SWITCH_MS: u32 = *RecordWaits::SWITCH_MS.start();
-/// The Snips folder, under a neutral user's folder.
+/// The Snips folder, under a neutral user's folder, written for Windows and joined by `/` (`native_path`).
 const SNIPS: &str = "C:/Users/someone/KeyXtend/snips";
 /// The most steps one case takes.
 const STEPS: usize = 40;
@@ -124,11 +124,13 @@ impl Bed {
     /// A run recording into a video of the fake folder, its start waiting.
     fn new() -> Self {
         let clock = Hands::default();
-        let snips = PathBuf::from(SNIPS);
-        let unsaved = FolderPath::new(snips.join(crate::UNSAVED_DIR)).unwrap();
-        let file = SnipFile::new(unsaved.expose().join("1.mp4"), FileKind::Mp4).unwrap();
+        let part = format!("{SNIPS}/{}", crate::UNSAVED_DIR);
+        let unsaved = FolderPath::new(native_path(&part)).unwrap();
+        let file = native_path(&format!("{part}/1.mp4"));
+        let file = SnipFile::new(file, FileKind::Mp4).unwrap();
         let shared: Arc<dyn Clock> = Arc::new(clock.clone());
-        let folder = FakeSnipFolder::new(shared, FolderPath::new(snips).unwrap(), unsaved);
+        let snips = FolderPath::new(native_path(SNIPS)).unwrap();
+        let folder = FakeSnipFolder::new(shared, snips, unsaved);
         folder.put(file.clone(), Stored::Video { length_ms: 1 });
         let (answer, started) = mpsc::channel();
         let switch = Duration::from_millis(u64::from(SWITCH_MS));

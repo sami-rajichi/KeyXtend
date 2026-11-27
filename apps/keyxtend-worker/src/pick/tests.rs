@@ -5,6 +5,7 @@
 use super::*;
 use kx_ipc::{FileKind, MAX_PATH_BYTES};
 use kx_platform_record::pick::Unshown;
+use kx_test_support::paths::native;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
@@ -15,7 +16,7 @@ const NAME: &str = "Snip 2026-11-24 10-30-05.png";
 const CHOSEN: &str = r"D:\المستندات\لقطاتي\لقطة الشاشة.png";
 /// A folder the folder dialog may answer.
 const FOLDER: &str = r"E:\Pictures";
-/// Answers off a drive or of another type than PNG, which no PNG Save tells.
+/// Answers that are no plain absolute path or of another type than PNG, which no PNG Save tells.
 const REFUSED: [&str; 6] = [
     r"\\server\share\snip.png",
     r"\\?\D:\snip.png",
@@ -81,9 +82,9 @@ impl Dialogs for Script {
     }
 }
 
-/// An answer of `path`.
+/// An answer of `path`, written for Windows and read in this system's style.
 fn path(path: &str) -> Act {
-    Act::Answer(Ok(Picked::Path(path.to_owned())))
+    Act::Answer(Ok(Picked::Path(native(path))))
 }
 
 /// A PNG Save ask `id` at `SNIPS`, proposing `NAME`.
@@ -127,7 +128,7 @@ fn a_save_shows_its_dialog_as_asked_and_tells_the_file_chosen() {
     assert_eq!(ended, Ok(()));
     let picked = PickReply::Picked {
         id: 1,
-        path: Cow::Borrowed(CHOSEN),
+        path: Cow::Owned(native(CHOSEN)),
     };
     assert_eq!(replies, [picked]);
     let asked = Shown::Save(SNIPS.to_owned(), NAME.to_owned(), FileKind::Png);
@@ -140,7 +141,7 @@ fn a_folder_ask_shows_the_folder_dialog_and_tells_the_folder_chosen() {
     let (_, replies) = run_over(&script, &[folder(2)]);
     let picked = PickReply::Picked {
         id: 2,
-        path: Cow::Borrowed(FOLDER),
+        path: Cow::Owned(native(FOLDER)),
     };
     assert_eq!(replies, [picked]);
     assert_eq!(*script.shown.borrow(), [Shown::Folder(SNIPS.to_owned())]);
@@ -161,7 +162,7 @@ fn a_cancel_is_told_and_a_dialog_that_did_not_show_tells_its_code() {
 }
 
 #[test]
-fn an_answer_off_a_drive_or_of_another_type_is_refused_never_told() {
+fn an_answer_of_no_plain_absolute_path_or_of_another_type_is_refused_never_told() {
     let script = Script::with(REFUSED.map(path));
     let ids = 1..=u32::try_from(REFUSED.len()).unwrap();
     let (_, replies) = run_over(&script, &ids.clone().map(save).collect::<Vec<_>>());

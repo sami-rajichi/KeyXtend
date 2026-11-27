@@ -23,11 +23,15 @@ use kx_platform_fake::{
     FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
 use kx_test_support::host::{FakeHost, Stored};
+use kx_test_support::paths::native;
 
 /// The longest a test waits for the module's threads; a pass takes milliseconds.
 pub const WAIT: Duration = Duration::from_secs(10);
-/// The models folder the tests use.
-pub const DIR: &str = r"D:\KeyXtend\models";
+
+/// The models folder the tests use, in this system's form.
+pub fn dir() -> String {
+    native(r"D:\KeyXtend\models")
+}
 
 /// The fakes behind the module's services.
 #[derive(Clone)]
@@ -62,12 +66,12 @@ impl Fakes {
             clock: FakeClock::new(Mono::from_us(1_000)),
         };
         fakes.files.set_drives(vec![Drive {
-            root: Redacted::new(r"D:\".into()),
+            root: Redacted::new(native(r"D:\").into()),
             name: Redacted::new("D:".into()),
             free: 900_000 * MB,
         }]);
         let row = table().unwrap().default_for("en").unwrap();
-        let file = Path::new(DIR).join(&row.file);
+        let file = Path::new(&dir()).join(&row.file);
         fakes.files.add_file(&file, row.bytes, row.print);
         fakes
     }
@@ -81,7 +85,7 @@ impl Fakes {
     pub fn host_with(&self, files: Arc<dyn ModelFiles>) -> FakeHost {
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();
-        host.put("models_dir", DIR.into());
+        host.put("models_dir", dir().into());
         host.clock = Arc::new(self.clock.clone());
         host.services.extend([
             stored::<SpeechKey>(Arc::new(self.speech.clone())),

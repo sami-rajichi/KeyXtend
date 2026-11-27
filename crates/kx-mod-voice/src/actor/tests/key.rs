@@ -7,7 +7,7 @@ use kx_module_api::ports::VoiceLit::{Off, Prep, Rec};
 use kx_module_api::ports::{SpeechNote, SpeechStage, VoiceBar};
 
 use super::Msg;
-use super::rig::{DIR, Rig, english};
+use super::rig::{Rig, dir, english};
 use super::taps::Heard;
 
 #[test]
@@ -45,7 +45,7 @@ fn the_run_opens_with_the_model_of_the_language_in_front() {
     let ask = rig.fake.speech.runs()[0].ask.clone();
     let model = ask.model.unwrap();
     let row = english();
-    assert_eq!(model.file.expose(), &Path::new(DIR).join(&row.file));
+    assert_eq!(model.file.expose(), &Path::new(&dir()).join(&row.file));
     assert_eq!(Some(model.lang.as_str()), row.code("en"));
     assert_eq!(ask.job, rig.actor.settings().job());
 }

@@ -17,7 +17,7 @@ use kx_test_support::tempdir::TempDir;
 
 use super::Msg;
 use super::cloud::{key, set_key};
-use super::fakes::{DIR, Fakes};
+use super::fakes::{Fakes, dir};
 use super::rig::Rig;
 use crate::panel::rig::ROWS;
 use crate::{ID, SPEC, models};
@@ -151,7 +151,7 @@ fn second_models(fake: &Fakes) {
     let table = models::table().unwrap();
     for (iso, _) in LANGS {
         let row = table.order(iso).rows[1];
-        let file = Path::new(DIR).join(&row.file);
+        let file = Path::new(&dir()).join(&row.file);
         fake.files.add_file(&file, row.bytes, row.print);
     }
 }

@@ -11,7 +11,8 @@ use std::path::{Path, PathBuf};
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    Drive, Fingerprint, FolderLine, FolderScan, MB, ModelError, ModelFacts, SpeechError, path_ok,
+    Drive, Fingerprint, FolderLine, FolderScan, MB, ModelError, ModelFacts, PathRoot, SpeechError,
+    path_ok,
 };
 
 use crate::models::{Other, Row, file_ok, table};
@@ -62,7 +63,7 @@ pub struct Folder {
 }
 
 impl Folder {
-    /// The folder `models_dir` names; none while it is empty or no plain drive path (`path_ok`).
+    /// The folder `models_dir` names; none while it is empty or no plain absolute path (`path_ok`).
     #[must_use]
     pub fn new(models_dir: &str) -> Self {
         let mut folder = Self::default();
@@ -237,7 +238,7 @@ impl Folder {
     #[must_use]
     pub fn line(&self, drives: &[Drive]) -> Option<FolderLine> {
         let dir = self.dir.as_deref()?;
-        let free = drive_of(drives, dir).map_or(0, |d| d.free);
+        let free = drive_of(PathRoot::NATIVE, drives, dir).map_or(0, |d| d.free);
         Some(line(dir, free))
     }
 
@@ -247,7 +248,7 @@ impl Folder {
     /// `Missing` when no folder is chosen or no fixed drive holds it, `Full` under that room.
     pub fn room(&self, drives: &[Drive], bytes: u64, min_free_mb: u32) -> Result<(), ModelError> {
         let dir = self.dir.as_deref().ok_or(ModelError::Missing)?;
-        let drive = drive_of(drives, dir).ok_or(ModelError::Missing)?;
+        let drive = drive_of(PathRoot::NATIVE, drives, dir).ok_or(ModelError::Missing)?;
         let need = bytes.saturating_add(u64::from(min_free_mb).saturating_mul(MB));
         (drive.free >= need).then_some(()).ok_or(ModelError::Full)
     }
@@ -264,10 +265,15 @@ pub fn offer(drives: &[Drive]) -> Option<(PathBuf, FolderLine)> {
     Some((dir, shown))
 }
 
-/// The fixed drive whose root holds `dir`, the longest root first, compared as text in any case with either
-/// separator, so it reads a drive path the same on every system.
-fn drive_of<'d>(drives: &'d [Drive], dir: &Path) -> Option<&'d Drive> {
-    let text = |p: &Path| p.to_string_lossy().to_lowercase().replace(SLASH, BACKSLASH);
+/// The fixed drive whose root holds `dir`, the longest root first, compared as text with either separator, in any
+/// case in the `Drive` style alone (ADR-0062).
+fn drive_of<'d>(style: PathRoot, drives: &'d [Drive], dir: &Path) -> Option<&'d Drive> {
+    let fold: fn(&str) -> String = if style == PathRoot::Drive {
+        str::to_lowercase
+    } else {
+        str::to_owned
+    };
+    let text = |p: &Path| fold(&p.to_string_lossy().replace(SLASH, BACKSLASH));
     let dir = text(dir);
     let holds = |d: &&Drive| {
         let root = text(d.root.expose());
@@ -278,7 +284,7 @@ fn drive_of<'d>(drives: &'d [Drive], dir: &Path) -> Option<&'d Drive> {
     drives.iter().filter(holds).max_by_key(longest)
 }
 
-/// A drive path's forward separator, which `drive_of` reads as `BACKSLASH`.
+/// A path's forward separator, which `drive_of` reads as `BACKSLASH`.
 const SLASH: char = '/';
 /// A drive path's own separator.
 const BACKSLASH: &str = "\\";

@@ -11,6 +11,7 @@ use kx_module_api::ports::{
     FileKind, Gear, MicPasses, Part, RecordDone, RecordEnd, Rect, Source, Speed,
 };
 use kx_platform_fake::{FakeSnipFolder, Stored};
+use kx_test_support::paths::native_path;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -26,7 +27,8 @@ type Says = fn(u32) -> Note;
 
 /// How long a test waits for a note or a call; a wait, never a sleep.
 const LONG: Duration = Duration::from_secs(10);
-/// The Snips folder, under a neutral user's folder; forward slashes read as a drive path on every system.
+/// The Snips folder, under a neutral user's folder; paths here are written for Windows, joined by `/` as `Path::join`
+/// writes `\` there, and read through `native_path`.
 const SNIPS: &str = "C:/Users/someone/KeyXtend/snips";
 /// The length a test run ends with.
 const LENGTH_MS: u32 = 2_500;
@@ -139,12 +141,17 @@ impl Rig {
 
 /// The unsaved part of `SNIPS`.
 fn unsaved() -> FolderPath {
-    FolderPath::new(PathBuf::from(SNIPS).join(UNSAVED_DIR)).unwrap()
+    FolderPath::new(native_path(&format!("{SNIPS}/{UNSAVED_DIR}"))).unwrap()
+}
+
+/// The file `name` in the unsaved part.
+fn unsaved_at(name: &str) -> PathBuf {
+    native_path(&format!("{SNIPS}/{UNSAVED_DIR}/{name}"))
 }
 
 /// The fake Snips folder with its unsaved part, reading `clock`.
 fn folder(clock: &Hands) -> FakeSnipFolder {
-    let snips = FolderPath::new(PathBuf::from(SNIPS)).unwrap();
+    let snips = FolderPath::new(native_path(SNIPS)).unwrap();
     FakeSnipFolder::new(Arc::new(clock.clone()), snips, unsaved())
 }
 
@@ -246,9 +253,7 @@ fn the_facts_are_the_kits() {
 #[test]
 fn a_fresh_name_is_counted_from_its_start_past_every_video_held() {
     let at = |n: u64| {
-        let path = unsaved()
-            .expose()
-            .join(format!("{n}.{}", FileKind::Mp4.ext()));
+        let path = unsaved_at(&format!("{n}.{}", FileKind::Mp4.ext()));
         SnipFile::new(path, FileKind::Mp4).unwrap()
     };
     assert_eq!(fresh(&unsaved(), 7, &[]), Some((7, at(7))));

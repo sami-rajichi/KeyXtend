@@ -13,6 +13,7 @@ use kx_module_api::ports::{
     RecordNote, RecordRun, RecordWaits, Recorder, Rect, SaveError, SaveTo, ScreenFreeze, Shot,
     ShotCap, SnipFile, SnipFolder, SpeedAsk, UnsavedFile,
 };
+use kx_test_support::paths::native_path;
 use std::sync::LazyLock;
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ pub(super) static SEAL: LazyLock<MicSeal> = LazyLock::new(MicSeal::new);
 pub(super) const LENGTH_MS: u32 = 1000;
 /// What the stub's desktop would take frozen, in MB: more than the least cap, less than the most.
 pub(super) const DESKTOP_MB: u32 = 128;
-/// The stub's Snips folder.
+/// The stub's Snips folder, written for Windows and read through `native_path`.
 const SNIPS: &str = r"C:\snips";
 /// The stub's `unsaved` part.
 const UNSAVED: &str = r"C:\snips\unsaved";
@@ -37,15 +38,15 @@ const REFUSED: i32 = -1;
 const PNG_HEAD: [u8; 8] = *b"\x89PNG\r\n\x1a\n";
 
 /// The stub's `unsaved` part.
-#[allow(clippy::unwrap_used, reason = "a plain drive path")]
+#[allow(clippy::unwrap_used, reason = "a plain absolute path")]
 pub(super) fn unsaved() -> FolderPath {
-    FolderPath::new(UNSAVED.into()).unwrap()
+    FolderPath::new(native_path(UNSAVED)).unwrap()
 }
 
 /// The video `name` of the stub's `unsaved` part; `name` must end in `.mp4`.
 #[allow(clippy::unwrap_used, reason = "the tests name only videos")]
 pub(super) fn video(name: &str) -> SnipFile {
-    SnipFile::new(unsaved().expose().join(name), FileKind::Mp4).unwrap()
+    SnipFile::new(native_path(&format!(r"{UNSAVED}\{name}")), FileKind::Mp4).unwrap()
 }
 
 /// Each job wait at the start of its range.
@@ -154,7 +155,7 @@ impl Recorder for Stub {
 
 impl SnipFolder for Stub {
     fn snips(&self) -> Option<FolderPath> {
-        FolderPath::new(SNIPS.into()).ok()
+        FolderPath::new(native_path(SNIPS)).ok()
     }
 
     fn unsaved(&self) -> Result<Vec<UnsavedFile>, SaveError> {

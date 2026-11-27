@@ -158,7 +158,7 @@ fn a_files_facts_are_read_in_a_job_capped_at_its_size_and_job_mb() {
     script.act(VoiceAct::Say(vec![facts]));
     let ask = FactsAsk {
         job: limits(),
-        file: Redacted::new(PathBuf::from(FILE_A)),
+        file: Redacted::new(native_path(FILE_A)),
         size_mb: MODEL_MB,
     };
     let read = speech.facts(&ask).unwrap();
@@ -168,7 +168,8 @@ fn a_files_facts_are_read_in_a_job_capped_at_its_size_and_job_mb() {
     };
     assert_eq!(read, want);
     assert_eq!(script.launches(), [job(limits().job_mb + MODEL_MB)]);
-    assert!(matches!(&asks(&script)[..], [VoiceAsk::Facts { path, .. }] if path == FILE_A));
+    let want = native(FILE_A);
+    assert!(matches!(&asks(&script)[..], [VoiceAsk::Facts { path, .. }] if **path == *want));
 }
 
 #[test]

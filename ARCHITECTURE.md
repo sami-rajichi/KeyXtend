@@ -58,7 +58,8 @@ crates/
                          `Capability::Power`: ADR-0031; the box watch, packs, sealed store and word events: ADR-0033;
                          `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures` and the clipboard panel's events:
                          ADR-0034, `ClipPanel` gated by `ReadClipboard`: ADR-0035; `Calendar` and `probe_ok`, the one
-                         rule that only an absolute drive path is looked at, any other being `FileFact::Unchecked`: P8;
+                         rule that only an absolute path in the system's own style is looked at (`PathRoot`, ADR-0062),
+                         any other being `FileFact::Unchecked`: P8;
                          `Boxes`, `Places`, `Random` and Quick-fill's events and pages: ADR-0038, ADR-0039;
                          `SelectionWatch`, `WebLink`, the chips' events and the strip's place, `geom::anchor`:
                          ADR-0041; the voice ports, events and views: P11, `SpeechKey` gated by `Capability::Speech`

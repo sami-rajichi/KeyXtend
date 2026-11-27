@@ -7,11 +7,12 @@ mod paths;
 use super::*;
 use crate::REDACTED_MARKER;
 use crate::ports::{JobLimits, Link};
+use kx_test_support::paths::native;
 use std::collections::HashSet;
 
 /// A folder name no output may show.
 const SECRET: &str = "Taxes-4417";
-/// A drive's root, which every model path starts with.
+/// A drive's root, which every model path starts with; wrap it in `native`.
 const DRIVE_ROOT: &str = r"D:\";
 /// A file's SHA-256 in lower-case hex.
 const HEX: &str = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
@@ -36,7 +37,7 @@ fn fetch() -> FetchAsk {
         job: job(),
         links: vec![link],
         hosts: vec!["huggingface.co".into(), ".hf.co".into()],
-        file: Redacted::new(PathBuf::from(format!(r"D:\{SECRET}\x.gguf"))),
+        file: Redacted::new(PathBuf::from(native(&format!(r"D:\{SECRET}\x.gguf")))),
         bytes: 776_000_000,
         print: Fingerprint::from_hex(HEX).unwrap(),
         min_free_mb: 2_048,
