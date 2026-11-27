@@ -1,5 +1,5 @@
-//! Media Foundation, loaded at run time: the worker delay-loads every library a video job calls, so each is first
-//! loaded here from the system folder, and a system without one answers `NoVideo` before any of its calls is made.
+//! Media Foundation, loaded at run time: the worker delay-loads its libraries, so each is first loaded here from the
+//! system folder, and a system without them (a Windows N edition) answers `NoVideo` before any of its calls is made.
 
 use windows::Win32::Media::MediaFoundation::{MF_VERSION, MFSTARTUP_LITE, MFShutdown, MFStartup};
 use windows::Win32::System::LibraryLoader::{LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW};

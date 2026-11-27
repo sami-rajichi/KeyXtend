@@ -1,4 +1,4 @@
-//! The recorder's adapter table (`record.toml`), compiled in and parsed once: the libraries a video job calls, the
+//! The recorder's adapter table (`record.toml`), compiled in and parsed once: Media Foundation's libraries, the
 //! encoder's rates, the capture's buffers and the sound's queue, cushion and downmix.
 
 use std::collections::BTreeMap;
@@ -41,7 +41,7 @@ pub enum TableError {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Table {
-    /// The libraries only a video job calls, Media Foundation's first, each loaded by the job before its first call.
+    /// Media Foundation's libraries, loaded by a video job first.
     pub media_dlls: Vec<String>,
     /// The video's values.
     pub video: Video,

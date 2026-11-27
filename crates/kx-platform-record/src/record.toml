@@ -1,10 +1,9 @@
 # The recorder's fixed values (ADR-0056 decisions 3 to 5), compiled in. They are not user settings: fps, the part, the
 # sound switches, the longest length and the free-space floor come in each start ask.
 
-# The libraries only a video job calls: Media Foundation's, Direct3D 11's for the capture and the property system's for
-# a file's length. The worker's build delay-loads them and a video job loads them first, so a system without one (a
-# Windows N edition, a bare server) still runs every other job and answers `NoVideo` (edge 14, ADR-0063).
-media_dlls = ["mfplat.dll", "mfreadwrite.dll", "d3d11.dll", "propsys.dll"]
+# Media Foundation's libraries. The worker's build delay-loads them and a video job loads them first, so a system
+# without them (a Windows N edition) still runs every other job and answers `NoVideo` (edge 14).
+media_dlls = ["mfplat.dll", "mfreadwrite.dll"]
 
 [video]
 # The H.264 video's bits a second.
