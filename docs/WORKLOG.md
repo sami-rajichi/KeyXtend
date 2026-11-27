@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-27 22:45 — P12: the clipboard file tests take each system's paths
+The next Linux run failed two clipboard file-fact tests that still wrote `C:/…` paths, which Linux rightly refuses. They now wrap them in `native`, as the other tests do. A sweep of every crate CI had not reached, as Linux CI runs them and under `--cfg kx_slash_paths`, found no other Linux failure beyond the emulation's known limits.
+
 ## 2026-11-27 22:30 — P12: a recording test no longer races on Linux
 With the paths fixed, PR #28's Linux job failed in one switch test. Its thread dropped the run once the switch was gone, and a dropped run tells nothing more, so the test's last note could be lost. The thread now hands the run back, so the run truly goes on; the product code is unchanged.
 

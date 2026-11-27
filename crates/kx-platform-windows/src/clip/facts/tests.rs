@@ -6,18 +6,24 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use kx_module_api::ports::FileFact;
+use kx_test_support::paths::native;
 use kx_test_support::tempdir::TempDir;
 
 use super::{Found, facts_by, seen, told};
 
+/// `windows` paths in this system's form (ADR-0062).
+fn natives(windows: &[&str]) -> Vec<String> {
+    windows.iter().map(|p| native(p)).collect()
+}
+
 /// What the fake filesystem says of each path: a link at each of `links`, else a 1-byte file.
-fn answer(links: &[&str], path: &Path) -> Found {
-    let link = links.iter().any(|l| Path::new(l) == path);
+fn answer<S: AsRef<str>>(links: &[S], path: &Path) -> Found {
+    let link = links.iter().any(|l| Path::new(l.as_ref()) == path);
     if link { Found::Link } else { Found::File(1) }
 }
 
 /// The facts of `paths` with every root answering, and each path the fake filesystem was asked, roots first.
-fn probed(paths: &[&str], links: &[&str]) -> (Vec<FileFact>, Vec<PathBuf>) {
+fn probed<S: AsRef<str>>(paths: &[S], links: &[S]) -> (Vec<FileFact>, Vec<PathBuf>) {
     let asked = RefCell::new(Vec::new());
     let reach = |root: &Path| {
         asked.borrow_mut().push(root.to_path_buf());
@@ -27,7 +33,7 @@ fn probed(paths: &[&str], links: &[&str]) -> (Vec<FileFact>, Vec<PathBuf>) {
         asked.borrow_mut().push(path.to_path_buf());
         Ok(answer(links, path))
     };
-    let paths: Vec<PathBuf> = paths.iter().map(PathBuf::from).collect();
+    let paths: Vec<PathBuf> = paths.iter().map(|p| PathBuf::from(p.as_ref())).collect();
     let found = facts_by(&paths, reach, look);
     (found, asked.into_inner())
 }
@@ -51,25 +57,25 @@ fn a_path_off_a_drive_is_unchecked_with_no_filesystem_call() {
 
 #[test]
 fn a_drive_path_is_looked_at_once_its_root_answers_and_each_path_once() {
-    let (found, asked) = probed(&["C:/d/a.txt", "C:/d/b.txt"], &[]);
+    let (found, asked) = probed(&natives(&["C:/d/a.txt", "C:/d/b.txt"]), &[]);
     assert_eq!(found, [FileFact::Size(1); 2]);
     for (n, path) in asked.iter().enumerate() {
         assert!(!asked[..n].contains(path), "{path:?} asked twice");
     }
     assert!(
-        asked.iter().any(|p| p == Path::new("C:/d")),
+        asked.iter().any(|p| p == Path::new(&native("C:/d"))),
         "its folder is looked at"
     );
 }
 
 #[test]
 fn a_link_on_the_way_or_at_the_end_is_unchecked_and_never_followed() {
-    let paths = ["C:/link/a.txt", "C:/d/linked.txt", "C:/d/b.txt"];
-    let (found, asked) = probed(&paths, &["C:/link", "C:/d/linked.txt"]);
+    let paths = natives(&["C:/link/a.txt", "C:/d/linked.txt", "C:/d/b.txt"]);
+    let (found, asked) = probed(&paths, &natives(&["C:/link", "C:/d/linked.txt"]));
     let want = [FileFact::Unchecked, FileFact::Unchecked, FileFact::Size(1)];
     assert_eq!(found, want);
     assert!(
-        !asked.iter().any(|p| p == Path::new(paths[0])),
+        !asked.iter().any(|p| p == Path::new(&paths[0])),
         "never through a link"
     );
 }
