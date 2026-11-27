@@ -26,7 +26,7 @@ A detail section of [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the ov
   - A busy clipboard is tried again `copy_again` times, `copy_again_ms` apart, each within `copy_ms`.
 - **The worker.** Two jobs, both under every UI limit and with no network: `record` streams its notes (ADR-0042), and `pick` answers one ask at a time. Tidy F5 keeps the network crate out of their files and the microphone and engine out of `src/pick`; D4 keeps `kx-platform-record` out of the app.
   - `record` films a part with Windows Graphics Capture, pointer on and border off, and hands each frame to Media Foundation on the graphics card. H.264 and AAC go into an MP4, with the microphone and the computer's sound mixed through `cpal`.
-  - A re-timed copy decodes and encodes on the processor. Media Foundation is delay-loaded from System32 only when a video job asks, so a Windows N edition runs every other job and dims video (`NoVideo`).
+  - A re-timed copy decodes and encodes on the processor. Media Foundation, Direct3D 11 and the property system are delay-loaded from System32 only when a video job asks, so a system without one runs every other job and dims video (`NoVideo`, ADR-0063).
   - The encoder's fixed values (bit rates, first-frame wait, buffers, sound queue, cushion, drift, downmix) sit in the adapter table `record.toml`, not in the settings.
   - `pick` shows one dialog at a time, owned by a hidden topmost window, with `FOS_DONTADDTORECENT`. It tells a path only once `PickAsk::check` passes it: an absolute path of the asked type in the system's style (ADR-0062) within `MAX_PATH_BYTES`.
   - `media` gains `Encode`: raw pixels in, a PNG out, within `png_most` of the pixels.

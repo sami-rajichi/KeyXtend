@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-27 23:20 — P12: the worker starts without a video job's libraries
+PR #28's Windows CI could not start the worker on any P12 commit (`0xC0000135`, a missing library). The recorder had made it import `d3d11.dll` and `propsys.dll` at start, and the latter is the likely gap there. Both now join Media Foundation in `media_dlls`, delay-loaded and loaded from System32 by a video job alone (ADR-0063), so a system without one still runs every other job.
+
 ## 2026-11-27 22:45 — P12: the clipboard file tests take each system's paths
 The next Linux run failed two clipboard file-fact tests that still wrote `C:/…` paths, which Linux rightly refuses. They now wrap them in `native`, as the other tests do. A sweep of every crate CI had not reached, as Linux CI runs them and under `--cfg kx_slash_paths`, found no other Linux failure beyond the emulation's known limits.
 

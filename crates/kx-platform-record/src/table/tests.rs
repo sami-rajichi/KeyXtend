@@ -26,10 +26,8 @@ fn a_zero_value_or_an_empty_list_is_refused() {
         ("bits_s = 8_000_000", "bits_s = 0"),
         ("buffers = 2", "buffers = 0"),
         ("cushion_ms = 100", "cushion_ms = 0"),
-        (
-            r#"media_dlls = ["mfplat.dll", "mfreadwrite.dll"]"#,
-            "media_dlls = []",
-        ),
+        // An empty list, the shipped names left behind as a comment, so this needs no edit when the list changes.
+        ("media_dlls = [", "media_dlls = [] # ["),
         (r#"["mfplat.dll","#, r#"[" ","#),
     ] {
         assert_eq!(

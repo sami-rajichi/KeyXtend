@@ -1,5 +1,5 @@
-//! The built worker loads Media Foundation only when a video job asks for it: none of its libraries is in the program's
-//! import table, which Windows loads at start, and each is in its delay-load table instead (edge 14, ADR-0056).
+//! The built worker loads a video job's libraries only when that job asks: none is in the program's import table,
+//! which Windows loads at start, and each is in its delay-load table instead (edge 14, ADR-0056, ADR-0063).
 #![cfg(windows)]
 #![allow(clippy::unwrap_used, reason = "a failed read should fail the test")]
 
@@ -91,7 +91,7 @@ impl<'a> Image<'a> {
 }
 
 #[test]
-fn media_foundation_is_delay_loaded_never_loaded_at_start() {
+fn a_video_jobs_libraries_are_delay_loaded_never_loaded_at_start() {
     let exe = std::fs::read(env!("CARGO_BIN_EXE_keyxtend-worker")).unwrap();
     let image = Image::read(&exe);
     let (now, later) = (image.names(IMPORTS), image.names(DELAYED));

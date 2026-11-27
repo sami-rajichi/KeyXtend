@@ -1,6 +1,6 @@
 //! Embeds the worker's Windows manifest: it runs as the user who starts it, with no elevation and never with uiAccess,
-//! which the stage check refuses (ADR-0004). It also delay-loads the Media Foundation libraries the recorder's table
-//! names, so a system without them still starts every other job (edge 14); `tests/imports.rs` checks the program.
+//! which the stage check refuses (ADR-0004). It also delay-loads the libraries only a video job calls, as the recorder's
+//! table names them, so a system without one still starts every other job (ADR-0063); `tests/imports.rs` checks it.
 
 use std::env;
 use std::error::Error;

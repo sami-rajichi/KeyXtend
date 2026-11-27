@@ -56,7 +56,7 @@ Nothing here logs. A fault leaves only a fixed kind or a system code; a dialog's
   - A dialog may stay open until the host's `[snip] dialog_min`; the job cannot read goodbye meanwhile, so the host relies on the job object to end it.
 - **Elevation:**
   - Both jobs run under the worker's restricted token at Medium integrity, with every UI limit kept (`JOBS_UI`, ADR-0056 decision 7).
-  - Media Foundation's `mfplat.dll` and `mfreadwrite.dll` are delay-loaded and loaded only from System32 (`LOAD_LIBRARY_SEARCH_SYSTEM32`) when a video job asks. The worker's `tests/imports.rs` checks its start-up imports name neither, so a Windows N edition still runs every other job.
+  - `mfplat.dll`, `mfreadwrite.dll`, `d3d11.dll` and `propsys.dll` are delay-loaded and loaded only from System32 (`LOAD_LIBRARY_SEARCH_SYSTEM32`) when a video job asks (ADR-0063). The worker's `tests/imports.rs` checks its start-up imports name none, so a system without one still runs every other job.
   - Media Foundation starts with `MFSTARTUP_LITE`, which opens no sockets, and an empty media buffer is refused before its lock (`an_empty_buffer_is_refused_before_any_copy`).
   - The crate root has `#![deny(unsafe_code)]`; each Windows call sits in a scoped allow with its `// SAFETY:` comment, over COM objects and buffers the call owns.
 
