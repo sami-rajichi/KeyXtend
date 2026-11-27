@@ -63,7 +63,8 @@ fn a_switch_the_job_never_answers_is_gone_once_its_time_passed_by_the_clock() {
     let (calls, asked) = mpsc::channel();
     rig.script.tell(calls);
     let pass = rig.seal.pass();
-    let switching = thread::spawn(move || run.mic(Some(pass)));
+    // The thread hands the run back, so a note told after the gone switch still has a live run to tell it.
+    let switching = thread::spawn(move || (run.mic(Some(pass)), run));
     assert!(matches!(sent(&asked), Ask::Mic { .. }));
     let half = ms(ask().waits.switch_ms) / 2;
     rig.clock.advance(half);
@@ -72,7 +73,8 @@ fn a_switch_the_job_never_answers_is_gone_once_its_time_passed_by_the_clock() {
     assert!(!switching.is_finished(), "still within its time");
     rig.clock.advance(half);
     rig.script.say(Ok(second(1)));
-    assert_eq!(switching.join().unwrap(), Err(RecordError::Gone));
+    let (switched, _run) = switching.join().unwrap();
+    assert_eq!(switched, Err(RecordError::Gone));
     assert_eq!(
         next(&heard),
         RecordNote::Time { ms: 1_000 },
