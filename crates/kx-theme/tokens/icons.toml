@@ -104,12 +104,13 @@ on = "chevron-down"
 icon = "keyboard"
 
 # The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364): Show keyboard, Dictation as the
-# Dictation key shows it, and Quit.
+# Dictation key shows it, Quit, and Snip as the Snip panel's title (design/snip-scene.js panel()).
 [tray]
 glyph = "keyboard"
 show = "keyboard"
 voice = "mic"
 quit = "power"
+snip = "scissors-line-dashed"
 
 # The selection strip's keycaps (design/selection-chips.html design 4, I): Copy, Cut and Paste as on the shortcuts
 # layer, Translate, and the tick a clicked keycap shows with its done word.

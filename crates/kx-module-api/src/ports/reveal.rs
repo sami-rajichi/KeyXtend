@@ -2,8 +2,8 @@
 //! own program, never with our rights. Only `OpenFolder` reaches it, and a path may hold the user's name, so it never
 //! prints.
 
-use super::clip::SEPARATORS;
-use super::path_ok;
+use super::clip::{PathRoot, SEPARATORS};
+use super::models::path_ok_in;
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -14,8 +14,8 @@ const DROPPED: &[u8] = b". ";
 /// Why a folder was refused or not shown; no variant names the folder.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum FolderError {
-    /// It is not a plain drive path, or `show` found it off a fixed local drive.
-    #[error("the path is not a plain local drive path")]
+    /// It is not a plain absolute path, or `show` found it off a fixed local drive.
+    #[error("the path is not a plain local path")]
     BadPath,
     /// No folder is there: nothing, or a file.
     #[error("no folder is there")]
@@ -28,7 +28,7 @@ pub enum FolderError {
     Refused(i32),
 }
 
-/// A checked folder: a plain drive path (`path_ok`) with no part ending in a dot or a space; it prints redacted.
+/// A checked folder: a plain absolute path (`path_ok`) with no part ending in a dot or a space; it prints redacted.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FolderPath(Redacted<PathBuf>);
 
@@ -39,10 +39,15 @@ impl FolderPath {
     /// `BadPath` for a share, a device, a stream, a dot part, a relative path or anything else `path_ok` refuses, and
     /// for a part ending in a dot or a space, which Windows would read as another name.
     pub fn new(path: PathBuf) -> Result<Self, FolderError> {
+        Self::new_in(PathRoot::NATIVE, path)
+    }
+
+    /// `new` in `root`'s style, so both styles are tested on every system.
+    pub(crate) fn new_in(root: PathRoot, path: PathBuf) -> Result<Self, FolderError> {
         let bytes = path.as_os_str().as_encoded_bytes();
         let mut parts = bytes.split(|b| SEPARATORS.contains(b));
         let dropped = parts.any(|p| p.last().is_some_and(|b| DROPPED.contains(b)));
-        if dropped || !path_ok(&path) {
+        if dropped || !path_ok_in(root, &path) {
             return Err(FolderError::BadPath);
         }
         Ok(Self(Redacted::new(path)))

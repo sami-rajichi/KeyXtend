@@ -75,7 +75,7 @@ fn a_keyboards_tip_and_list_stay_above_it_after_an_outside_drop_in_its_family() 
         let glow = Hidden::tip("KeyXtend test: family list shadow", Some(kb.0));
         let list = Hidden::topmost("KeyXtend test: family list", Some(glow.0));
         let all = [&shadow, &kb, &tip, &glow, &list];
-        guard_these(listed(&all), None, None).unwrap();
+        guard_these(listed(&all), &[], None).unwrap();
         put_after(all[dropped], HWND_NOTOPMOST);
         assert!(all.iter().all(|w| topmost(w)), "{dropped}: all stay");
         assert!(
@@ -97,7 +97,7 @@ fn a_lift_with_its_owned_windows_that_moves_nothing_goes_up_alone() {
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
     let shadow = Hidden::tip("KeyXtend test: tied shadow", None);
     let kb = Hidden::topmost("KeyXtend test: tied shadow's keyboard", Some(shadow.0));
-    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
     let ours: Proc = tied;
     // SAFETY: puts the test subclass in front of the guard on the test's own window; it hands every message on.
     TIED_BEHIND

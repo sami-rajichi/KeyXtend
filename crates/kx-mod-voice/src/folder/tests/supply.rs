@@ -77,7 +77,7 @@ fn the_default_in_the_folder_serves_with_its_own_code() {
     let ready = supplied(&folder, &settings(&[]), &[], &Checks::default(), "fr").unwrap();
     assert_eq!(
         ready.model.file.expose(),
-        &Path::new(DIR).join("renamed.gguf")
+        &Path::new(&dir()).join("renamed.gguf")
     );
     assert_eq!(ready.model.lang, parakeet.code("fr").unwrap());
     assert_eq!(ready.model.cpu_mb, parakeet.cpu_mb);

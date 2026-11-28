@@ -38,6 +38,8 @@ pub use bridges::install;
 #[cfg(feature = "qt")]
 pub use bridges::shadows::serve_shadows;
 #[cfg(feature = "qt")]
+pub use bridges::snips::serve_snips;
+#[cfg(feature = "qt")]
 pub use bridges::tint::serve_icons;
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use bridges::{
@@ -46,6 +48,10 @@ pub use bridges::{
     fonts::font_families,
     frames::{draw_window, mid_frame_draws},
     shadows::adopted,
+    snips::{
+        glow_pair_broken, owners_made_first, show_watched, snip_copied, snip_fits, snip_pixels,
+        titled_made, titled_owner_made,
+    },
     tint::{icon_mask, icon_pixels, icon_textures},
     wakes,
 };
@@ -53,8 +59,9 @@ pub use bridges::{
 pub use churn::{caps_flipped, flip_caps};
 pub use geom::{Area, Fitted};
 pub use hub::{
-    Answers, FillWaker, FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts,
-    VoiceWake, VoiceWaker, Wake, Waker, asks, clip_acts, fill_acts, voice_acts,
+    Answers, EditorAt, FillWaker, FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown,
+    SnipCounted, SnipOpened, SnipWake, SnipWaker, UiPorts, VoiceWake, VoiceWaker, Wake, Waker,
+    asks, clip_acts, fill_acts, snip_acts, voice_acts,
 };
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick, spoken};
 pub use settings::{Backdrop, PressFrame, SPEC, UiSettings};

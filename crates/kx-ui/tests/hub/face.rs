@@ -186,10 +186,11 @@ fn the_guard_tries_until_a_window_shows_then_gives_the_focus_back_once() {
         .iter()
         .filter(|c| matches!(c, GuardCall::GuardOwn(..)))
         .collect();
-    let menu = GuardCall::GuardOwn(None, Some("menu".into()));
+    let snips = crate::snip::order::spared(&rig);
+    let menu = GuardCall::GuardOwn(snips.clone(), Some("menu".into()));
     assert_eq!(
         runs,
-        [&GuardCall::GuardOwn(None, None), &menu],
+        [&GuardCall::GuardOwn(snips, None), &menu],
         "the window just shown comes last"
     );
     let GuardCall::Remember(focus) = calls[0] else {

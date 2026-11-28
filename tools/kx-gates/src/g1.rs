@@ -114,7 +114,7 @@ fn passed(equal: bool, stopped: Option<&str>, read_error: Option<&str>) -> bool 
 /// The app's pop-ups, what is in front, and a screenshot, for a blocked run.
 fn evidence(ctx: &Ctx, hwnd: HWND) -> Value {
     let file = ctx.file(&shot::named(SCREEN));
-    let screenshot = match shot::save(&file, ctx.spike.tools.shot_cap()) {
+    let screenshot = match shot::save(&file, ctx.spike.shot.cap()) {
         Ok(()) => json!(file),
         Err(e) => json!({ "error": e }),
     };

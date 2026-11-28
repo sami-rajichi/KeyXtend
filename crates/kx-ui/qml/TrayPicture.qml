@@ -63,9 +63,11 @@ Window {
         id: rescale
     }
 
+    // Sized by the picture's side, not the window, so a grab before the window's first resize never finds it empty.
     Rectangle {
         id: badge
-        anchors.fill: parent
+        width: pic.side
+        height: pic.side
         radius: pic.side * pic.sh.radius_share
         color: pic.lk.palette.badge_bg
         Icon {

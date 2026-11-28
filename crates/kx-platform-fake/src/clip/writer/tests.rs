@@ -57,6 +57,21 @@ fn a_lent_write_is_recorded_as_lent_and_takes_its_queued_result() {
 }
 
 #[test]
+fn each_way_to_write_is_told_apart_and_a_kept_one_takes_its_queued_result() {
+    let writer = FakeClipboardWriter::new();
+    writer.queue(Err(ClipError::Busy));
+    assert_eq!(writer.write_kept(&[text("a")], WAIT), Err(ClipError::Busy));
+    assert_eq!(writer.write_kept(&[text("b")], WAIT), Ok(()));
+    assert_eq!(writer.write(&[text("c")], WAIT), Ok(()));
+    assert_eq!(writer.write_lent(&[text("d")], WAIT), Ok(()));
+    let want = [WriteKind::Kept, WriteKind::Marked, WriteKind::Lent];
+    assert_eq!(writer.kinds(), want);
+    assert_eq!(writer.lent(), [false, false, true], "only a lent one");
+    assert_eq!(writer.writes().first(), Some(&vec![text("b")]));
+    assert_eq!(writer.tries(), 4, "the refused kept one counts");
+}
+
+#[test]
 fn queued_results_answer_writes_in_turn_then_writes_succeed() {
     let writer = FakeClipboardWriter::new();
     writer.queue(Ok(()));

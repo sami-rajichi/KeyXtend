@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-mod-selection", "crates/kx-mod-vault", "crates/kx-mod-voice", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-net", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-mod-selection", "crates/kx-mod-snip", "crates/kx-mod-vault", "crates/kx-mod-voice", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-net", "crates/kx-platform-record", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -17,6 +17,8 @@ repository = "https://github.com/sami-rajichi/KeyXtend"
 # Deny, not forbid, so kx-platform-* and the test tools can allow it; other crate roots forbid it (tidy F2).
 unsafe_code = "deny"
 missing_docs = "warn"
+# `--cfg kx_slash_paths` runs the Unix path rules on Windows (kx-ipc `PathRoot::NATIVE`, ADR-0062).
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kx_slash_paths)"] }
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
@@ -94,8 +96,9 @@ app = "keyxtend"
 banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls", "kx-platform-net"]
 # Media-decoding and box-format crates banned from the app (ARCHITECTURE.md invariant 5): the media worker alone decodes
 # PNG (ADR-0034), the vault worker alone opens boxes and KeePass files (ADR-0038), and the `voice` job alone hears the
-# microphone and runs the speech engine (ADR-0042).
-banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate", "age", "keepass", "cpal", "transcribe-cpp", "transcribe-cpp-sys"]
+# microphone and runs the speech engine (ADR-0042); the worker alone records the screen, encodes video and shows the
+# system's file dialogs (P12).
+banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate", "age", "keepass", "cpal", "transcribe-cpp", "transcribe-cpp-sys", "kx-platform-record"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
@@ -126,14 +129,17 @@ spawn_extensions = ["rs", "h", "hpp", "cpp", "cc", "cxx"]
 banned_spawns = ["std::process::Command", "QProcess"]
 # Build scripts, as paths inside their package; like tests and the test tools, they may start processes.
 build_scripts = ["build.rs", "qtbuild.rs"]
-# The worker's jobs kept apart (ADR-0042 decision 3, ADR-0047 decision 1, tidy F5): no file of a module, its `.rs`
-# file or its folder, names these crates, so the `voice` job never reaches the network, and the `fetch` and
-# `speech-net` jobs never hear the microphone or run the engine. F5 reads names only; the worker's `tests/root.rs`
-# keeps each crate unrenamed in its manifest.
+# The worker's jobs kept apart (ADR-0042 decision 3, ADR-0047 decision 1, ADR-0056, tidy F5): no file of a module, its
+# `.rs` file or its folder, names these crates, so the `voice`, `record` and `pick` jobs never reach the network, the
+# `voice` job never records the screen, the `record` job never runs the engine, the `pick` job never hears the
+# microphone or runs the engine, and the `fetch` and `speech-net` jobs never hear the microphone, run the engine or
+# record the screen. F5 reads names only; the worker's `tests/root.rs` keeps each crate unrenamed in its manifest.
 apart = [
-    { package = "keyxtend-worker", module = "src/voice", banned = ["kx-platform-net"] },
-    { package = "keyxtend-worker", module = "src/fetch", banned = ["cpal", "transcribe-cpp"] },
-    { package = "keyxtend-worker", module = "src/net", banned = ["cpal", "transcribe-cpp"] },
+    { package = "keyxtend-worker", module = "src/voice", banned = ["kx-platform-net", "kx-platform-record"] },
+    { package = "keyxtend-worker", module = "src/fetch", banned = ["cpal", "transcribe-cpp", "kx-platform-record"] },
+    { package = "keyxtend-worker", module = "src/net", banned = ["cpal", "transcribe-cpp", "kx-platform-record"] },
+    { package = "keyxtend-worker", module = "src/record", banned = ["kx-platform-net", "transcribe-cpp"] },
+    { package = "keyxtend-worker", module = "src/pick", banned = ["kx-platform-net", "cpal", "transcribe-cpp"] },
 ]
 
 [workspace.metadata.dco]

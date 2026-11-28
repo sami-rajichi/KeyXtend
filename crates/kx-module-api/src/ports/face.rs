@@ -128,6 +128,8 @@ pub enum FaceAction {
     },
     /// A press on the open panel: the letters go to the panel again (ADR-0040).
     AimPanel,
+    /// A press on Snip's windows: the keys go to them while their line shows, and the open panel stays (ADR-0057).
+    AimSnip,
 }
 
 /// What the UI must do after an action.

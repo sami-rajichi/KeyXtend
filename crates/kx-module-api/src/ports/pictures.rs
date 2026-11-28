@@ -1,7 +1,8 @@
-//! Pictures (ADR-0034 decisions 3 and 5): image bytes in, small RGBA pixels or a PNG's DIB out, made outside our
-//! process by the media worker, so it needs no capability. Both sides are copied content, so no `Debug` prints bytes.
+//! Pictures (ADR-0034 decisions 3 and 5, ADR-0056 decision 2): image bytes in, small RGBA pixels or a PNG's DIB out,
+//! or a snip's raw pixels in and a PNG out, made outside our process by the media worker, so it needs no capability.
+//! Both sides are private content, so no `Debug` prints bytes.
 
-use super::ImageCodec;
+use super::{BGRX_BYTES, ImageCodec, Shot};
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use std::sync::Arc;
 use std::time::Duration;
@@ -48,6 +49,68 @@ pub struct DibAsk {
     pub png: Redacted<Vec<u8>>,
     /// The most bytes the DIB may hold; a larger one is refused before it is decoded.
     pub max_bytes: u64,
+}
+
+/// A PNG to make from a snip's raw pixels, for Copy and Save; the worker drops each pixel's unused byte.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EncodeAsk {
+    /// The pixels.
+    pub shot: Shot,
+}
+
+impl EncodeAsk {
+    /// The most pixel bytes an ask holds: the largest frozen copy `shot_cap_mb` allows, the frames' own.
+    pub const MAX_BYTES: usize = kx_ipc::MAX_ENCODE_BYTES;
+
+    /// Refuses pixels past `MAX_BYTES`.
+    ///
+    /// # Errors
+    /// `PictureError::TooBig` past it.
+    pub fn check(&self) -> Result<(), PictureError> {
+        let (width, height) = (self.shot.width(), self.shot.height());
+        fits(width, height)
+            .then_some(())
+            .ok_or(PictureError::TooBig)
+    }
+}
+
+impl EncodeAsk {
+    /// The media job's memory cap this ask needs, in MB: its pixels, the PNG of its RGB rows at most, and a base.
+    #[must_use]
+    pub fn memory_mb(&self) -> u32 {
+        memory_mb(self.shot.width(), self.shot.height())
+    }
+}
+
+/// The media job's own memory beside an Encode's pixels and PNG, in MB, as an 8192 by 8192 noise picture peaking at
+/// 455 MiB showed.
+const ENCODE_BASE_MB: u64 = 16;
+/// The bytes of a pixel the worker drops before the PNG: the unused one.
+const UNUSED_BYTES: usize = 1;
+/// The byte a PNG row starts with: its filter type.
+const ROW_FILTER_BYTES: u64 = 1;
+
+/// The memory cap an Encode of `width` by `height` pixels needs, in MB, rounded up; `u32::MAX` past it.
+fn memory_mb(width: u32, height: u32) -> u32 {
+    let bytes = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
+    let (w, h) = (u64::from(width), u64::from(height));
+    let raw = w.saturating_mul(h).saturating_mul(bytes(BGRX_BYTES));
+    let rgb = bytes(BGRX_BYTES - UNUSED_BYTES);
+    let rows = w
+        .saturating_mul(rgb)
+        .saturating_add(ROW_FILTER_BYTES)
+        .saturating_mul(h);
+    let png = usize::try_from(rows).map_or(u64::MAX, |r| bytes(kx_ipc::png_most(r)));
+    let mb = raw.saturating_add(png).div_ceil(super::MB);
+    u32::try_from(mb.saturating_add(ENCODE_BASE_MB)).unwrap_or(u32::MAX)
+}
+
+/// True when `width` by `height` raw pixels hold at most `EncodeAsk::MAX_BYTES`.
+fn fits(width: u32, height: u32) -> bool {
+    let wide = usize::try_from(width).ok();
+    let len = wide.zip(usize::try_from(height).ok());
+    let bytes = len.and_then(|(w, h)| w.checked_mul(h)?.checked_mul(BGRX_BYTES));
+    bytes.is_some_and(|n| n <= EncodeAsk::MAX_BYTES)
 }
 
 /// Checked RGBA8 pixels, row by row from the top; cloning shares the bytes.
@@ -135,6 +198,12 @@ pub trait PictureRun: Send {
     /// # Errors
     /// As `draw`; `TooBig` also when the DIB would pass `max_bytes`.
     fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError>;
+
+    /// Makes the PNG of `ask`'s pixels, one ask at a time, within `deadline_ms`, so our process links no image crate.
+    ///
+    /// # Errors
+    /// As `draw`; `TooBig` when `ask.check` refuses it.
+    fn encode(&mut self, ask: EncodeAsk) -> Result<Redacted<Vec<u8>>, PictureError>;
 }
 
 /// Draws images outside our process; the platform provides it.

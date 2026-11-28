@@ -1,5 +1,5 @@
-//! Settings of the probes G7, G19 to G21, G24 and G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]`, `[g24]` and
-//! `[g25]`. G22's settings live in `g22cfg`, G23's in `p9cfg`.
+//! Settings of the probes G7, G19 to G21 and G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]` and `[g25]`. G22's
+//! settings live in `g22cfg`, G23's in `p9cfg` and G24's in `p12cfg`.
 #![cfg(windows)]
 
 use kx_mod_keyboard::legend::is_mark;
@@ -152,19 +152,6 @@ pub struct G7 {
     pub keys: Vec<Move>,
     /// Longest wait for the panel to open, in ms.
     pub open_ms: u64,
-}
-
-/// Snip probe.
-#[derive(Debug, Clone, Deserialize)]
-pub struct G24 {
-    /// Typed into target-window, so the snipped region holds a known pattern.
-    pub text: String,
-    /// The region from the text box's top-left: x, y, width and height in logical px.
-    pub region_px: [f32; 4],
-    /// Longest wait for the overlay to show or the snip file to appear, in ms.
-    pub wait_ms: u64,
-    /// Window class of the taskbar, which the overlay must cover (adapter table).
-    pub taskbar_class: String,
 }
 
 /// Language key and shortcut probe.

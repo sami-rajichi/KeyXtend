@@ -4,14 +4,13 @@
 
 use kx_module_api::ports::Point;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
-use windows::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
 use windows::Win32::Graphics::Gdi::ScreenToClient;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CWP_SKIPDISABLED, CWP_SKIPINVISIBLE, CWP_SKIPTRANSPARENT, ChildWindowFromPointEx, GWL_EXSTYLE,
-    GetWindowLongPtrW, GetWindowRect, IsWindowVisible,
+    CWP_SKIPDISABLED, CWP_SKIPINVISIBLE, CWP_SKIPTRANSPARENT, ChildWindowFromPointEx, GetWindowRect,
 };
 
 use crate::screen::{contains, rect_of};
+pub(super) use crate::window::{cloaked, ex_of, visible as shown};
 use crate::window::{is_ours, is_through, top_level};
 
 /// The first other app's window at `p` behind ours, as its deepest child window there; none when there is none.
@@ -31,13 +30,6 @@ pub(super) fn fits(hwnd: HWND, p: Point) -> bool {
     shown(hwnd) && holds(hwnd, p) && !is_through(ex_of(hwnd)) && !cloaked(hwnd)
 }
 
-/// True while `hwnd` is shown.
-#[allow(unsafe_code, reason = "A plain window query.")]
-pub(super) fn shown(hwnd: HWND) -> bool {
-    // SAFETY: a plain query; a gone window reads as hidden.
-    unsafe { IsWindowVisible(hwnd) }.as_bool()
-}
-
 /// True when the box of `hwnd` holds screen point `p`.
 #[allow(unsafe_code, reason = "A box query into a local.")]
 pub(super) fn holds(hwnd: HWND, p: Point) -> bool {
@@ -45,23 +37,6 @@ pub(super) fn holds(hwnd: HWND, p: Point) -> bool {
     // SAFETY: a plain query into a local rect; a gone window refuses it.
     let read = unsafe { GetWindowRect(hwnd, &raw mut r) }.is_ok();
     read && contains(rect_of([r.left, r.top, r.right, r.bottom]), p)
-}
-
-/// The extended style of `hwnd`; 0 for a gone window.
-#[allow(unsafe_code, reason = "A plain style query.")]
-pub(super) fn ex_of(hwnd: HWND) -> u32 {
-    // SAFETY: a plain query; a gone window gives 0.
-    u32::try_from(unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) }).unwrap_or_default()
-}
-
-/// True while the system cloaks `hwnd`, so it does not show though Windows calls it visible.
-#[allow(unsafe_code, reason = "A window attribute read into a local.")]
-pub(super) fn cloaked(hwnd: HWND) -> bool {
-    let mut value = 0u32;
-    let size = u32::try_from(size_of::<u32>()).unwrap_or_default();
-    // SAFETY: the call writes one u32 into a local that outlives it; a refusal reads as not cloaked.
-    let read = unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut value).cast(), size) };
-    read.is_ok() && value != 0
 }
 
 /// The deepest shown, enabled child window of `top` that takes clicks at screen point `p`; `top` when none does.

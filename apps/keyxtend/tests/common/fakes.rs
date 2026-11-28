@@ -2,8 +2,8 @@
 
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_ui::UiPorts;
 use std::sync::Arc;
@@ -38,5 +38,6 @@ pub fn ports(tray: Arc<FakeTray>) -> UiPorts {
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
         reveal: Arc::new(FakeReveal::new()),
+        esc: Arc::new(FakeEscWatch::new()),
     }
 }

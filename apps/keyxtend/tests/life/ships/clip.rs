@@ -1,7 +1,7 @@
 //! The clipboard history's grants (ADR-0034): its feature is a default and the build ships it, it holds the three
 //! gates, the keyboard adds both clipboard gates, the ui the read one, Quick-fill the read one for Paste's take, voice
-//! typing both for Copy and the key page's Paste (ADR-0047), the clipboard alone asks for the watch, and the watch, the
-//! writer and the shelf each reach only the modules holding their gate.
+//! typing both for Copy and the key page's Paste (ADR-0047), Snip the write one for Copy (ADR-0056), the clipboard
+//! alone asks for the watch, and the watch, the writer and the shelf each reach only the modules holding their gate.
 
 use super::{asking, defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
@@ -43,18 +43,18 @@ fn the_clipboard_holds_read_write_and_the_secret_store() {
 }
 
 #[test]
-fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predict_and_voice() {
+fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predict_voice_and_snip() {
     let (clip, keyboard) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID);
     assert_eq!(
         holders(Capability::ReadClipboard),
         readers(),
         "the panel's events and the Paste takes"
     );
-    let write = BTreeSet::from([clip, keyboard, kx_mod_voice::ID]);
+    let write = BTreeSet::from([clip, keyboard, kx_mod_voice::ID, kx_mod_snip::ID]);
     assert_eq!(
         holders(Capability::WriteClipboard),
         write,
-        "the paste ask and the bar's Copy"
+        "the paste ask, the bar's Copy and Snip's Copy"
     );
     let secret = BTreeSet::from([clip, kx_mod_predict::ID, kx_mod_voice::ID]);
     assert_eq!(holders(Capability::SecretStore), secret, "the sealed files");

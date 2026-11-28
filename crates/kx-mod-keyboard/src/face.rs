@@ -12,6 +12,7 @@ mod layer;
 mod outbox;
 mod pad;
 mod panels;
+mod snip;
 mod voice;
 mod words;
 
@@ -197,6 +198,7 @@ impl Face {
                 Ok(STATE)
             }
             Ok(Tapped::Voice) => Ok(self.voice_key()),
+            Ok(Tapped::Snip) => Ok(self.snip_key()),
             Ok(Tapped::Layer) => Ok(self.flip()),
             Ok(Tapped::Next) => Ok(self.lock().next_page()),
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),
@@ -251,6 +253,7 @@ impl Face {
             FaceAction::Pad { dir } => self.pad(dir),
             FaceAction::PadHover { on } => Ok(self.hover(on)),
             FaceAction::AimPanel => Ok(self.aim_panel()),
+            FaceAction::AimSnip => Ok(self.aim_snip()),
             other => self.lock().act(other),
         }
     }

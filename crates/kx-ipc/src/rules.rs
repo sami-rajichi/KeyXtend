@@ -1,6 +1,11 @@
 //! What a field's content may hold, checked by both sides after its length: a number within its range, a short ASCII
-//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag, host,
-//! host-list and cloud request rules are public, so the ports and the jobs refuse what the frames refuse.
+//! name, a host name, a path (`paths`) and a name without control characters or hidden format marks. The tag, host,
+//! host-list, cloud request and device-name rules are public, so the ports and the jobs refuse what the frames refuse.
+
+mod paths;
+
+pub use paths::{PathRoot, RESERVED_NAMES, SEPARATORS, names_device};
+pub(crate) use paths::{file_name, path, plain_path, rooted_path, typed};
 
 use crate::error::IpcError;
 use crate::limits::{HTTPS, MAX_HOST_BYTES, MAX_RECORD_BYTES, SAMPLE_BYTES};
@@ -259,11 +264,6 @@ pub fn covers(entry: &str, host: &str) -> bool {
 #[must_use]
 pub fn names(entry: &str, host: &str) -> bool {
     !entry.starts_with(UNDER) && covers(entry, host)
-}
-
-/// Refuses a path holding a NUL, which ends a path early for the OS.
-pub(crate) fn path(text: &str) -> Result<(), IpcError> {
-    ok_if(!text.contains('\0'))
 }
 
 /// Refuses a shown name holding a control character, such as a line break, or a `HIDDEN` mark.

@@ -87,6 +87,9 @@ QtObject {
     function aimPanel() {
         return note("aimPanel");
     }
+    function aimSnip() {
+        return note("aimSnip");
+    }
     function pad(dir) {
         return note("pad " + dir);
     }

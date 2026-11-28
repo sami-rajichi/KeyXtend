@@ -1,7 +1,9 @@
-//! The media job: the size check and the codec choice here; each reader, the scaler and the properties have files.
+//! The media job: the size check and the codec choice here; each reader, the encoder, the scaler and the properties
+//! have files.
 
 mod bitmap;
 mod dib;
+mod encode;
 mod png;
 mod props;
 mod scale;

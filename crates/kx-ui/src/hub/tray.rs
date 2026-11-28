@@ -1,9 +1,10 @@
 //! The tray side of the hub: the icon's picture and tooltip, its clicks, which reach the UI as wakes, and the menu's
-//! Dictation row.
+//! Dictation and Snip rows.
 
+use super::aside::Way;
 use super::{Hub, Mode, Wake};
 use crate::i18n::keys::WINDOW_KEYBOARD;
-use kx_module_api::ports::VoiceOpen;
+use kx_module_api::ports::{SnipClick, VoiceOpen};
 use kx_platform::ui::{OnTray, TrayIcon, TrayImage, UiError};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -55,6 +56,16 @@ impl Hub {
             self.wake_or_wait(Wake::Show);
         }
         self.voice_send(&VoiceOpen);
+    }
+
+    /// The tray menu's Snip row: a closed or minimised keyboard shows first, unless a capture hides it, then the Snip
+    /// panel opens above it. Call it on the Qt thread.
+    pub fn snip_open(&self) {
+        let (mode, aside) = self.mode_aside();
+        if mode != Mode::Shown && aside != Some(Way::Hidden) {
+            self.wake_or_wait(Wake::Show);
+        }
+        self.snip_now(SnipClick::Open);
     }
 
     /// Removes the tray icon for good, so no dead icon stays in the taskbar; call it before the app ends.

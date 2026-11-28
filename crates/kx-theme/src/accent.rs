@@ -47,8 +47,8 @@ pub fn with_accent(v: &LookView, fill: Rgba, min: f32, row_px: f32) -> Palette {
     }
 }
 
-/// `p` with the accent `fill` on Enter, on, locked, the LED, the ring and the badge. Each ink reaches `min` when any ink
-/// can (black or white reaches 4.58:1), so it reaches WCAG AA whenever `min` is at least AA.
+/// `p` with the accent `fill` on Enter, on, locked, the LED, both rings and the badge. Each ink reaches `min` when any
+/// ink can (black or white reaches 4.58:1), so it reaches WCAG AA whenever `min` is at least AA.
 fn accented(p: &Palette, fill: Rgba, min: f32) -> Palette {
     let mut a = p.clone();
     for c in [
@@ -57,6 +57,7 @@ fn accented(p: &Palette, fill: Rgba, min: f32) -> Palette {
         &mut a.lock,
         &mut a.led_on,
         &mut a.ring,
+        &mut a.ring_act,
         &mut a.badge_bg,
     ] {
         *c = fill;
@@ -196,7 +197,9 @@ mod tests {
         );
         let teal = Rgba::parse("#1D6978").expect("teal");
         let p = with_accent(&v, teal, WCAG_AA, TEST_ROW_PX);
-        let fills = [p.enter, p.on, p.lock, p.led_on, p.ring, p.badge_bg];
+        let fills = [
+            p.enter, p.on, p.lock, p.led_on, p.ring, p.ring_act, p.badge_bg,
+        ];
         assert!(fills.iter().all(|&c| c == teal), "{p:?}");
     }
 }

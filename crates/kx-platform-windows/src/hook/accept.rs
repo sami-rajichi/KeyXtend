@@ -28,11 +28,11 @@ const MOUSE: [(u32, Kind); 7] = [
     (0x0208, Kind::Up(Button::Middle)),
 ];
 /// `WM_KEYDOWN` and `WM_SYSKEYDOWN`: a key press, plain or with Alt held.
-const KEY_DOWNS: [u32; 2] = [0x0100, 0x0104];
+pub(crate) const KEY_DOWNS: [u32; 2] = [0x0100, 0x0104];
 /// `WM_KEYUP` and `WM_SYSKEYUP`: a key let go, plain or with Alt held.
-const KEY_UPS: [u32; 2] = [0x0101, 0x0105];
+pub(crate) const KEY_UPS: [u32; 2] = [0x0101, 0x0105];
 /// `VK_ESCAPE`.
-const VK_ESCAPE: u32 = 0x1B;
+pub(crate) const VK_ESCAPE: u32 = 0x1B;
 
 /// What the mouse hook does with an event.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -45,10 +45,15 @@ pub(crate) enum Take {
     Engine,
 }
 
-/// What happens to a mouse event with these marks. Ours (`TAG`, or `REPLAY` with any id) is an echo; the engine hears
-/// only the hand, or in simulated mode only the gate tool's `SIM_TAG`.
+/// True when marks `extra` say we sent the input: our keyboard's `TAG`, or the pointer hook's `REPLAY` with any id.
+pub(crate) fn ours(extra: usize) -> bool {
+    extra == TAG || is_replay(extra)
+}
+
+/// What happens to a mouse event with these marks. Ours is an echo; the engine hears only the hand, or in simulated
+/// mode only the gate tool's `SIM_TAG`.
 pub(crate) fn take(source: Source, injected: bool, extra: usize) -> Take {
-    if extra == TAG || is_replay(extra) {
+    if ours(extra) {
         return Take::Echo;
     }
     if heard(source, injected, extra) {

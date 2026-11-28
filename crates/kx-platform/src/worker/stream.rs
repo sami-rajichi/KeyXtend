@@ -195,7 +195,6 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Stream<S, F> {
     }
 
     /// Says goodbye to the worker now and drops every watch; the next fresh ask starts another.
-    #[cfg(test)]
     pub(crate) fn stop(&self) {
         let _ = self.run(Flow::stop);
     }

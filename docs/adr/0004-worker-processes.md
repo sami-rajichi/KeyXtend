@@ -1,7 +1,7 @@
 # 4. Untrusted data and network access live in worker processes
 
 - **Date:** 2026-09-26
-- **Status:** Accepted
+- **Status:** Accepted. Its line letting the voice worker open network connections is superseded by ADR-0042 (2026-11-14), and its `ocr` job by ADR-0055 (2026-11-23).
 
 ## Context
 The uiAccess keyboard process is privileged (ADR-0003). Several features touch outside data:

@@ -1,5 +1,6 @@
 //! The clipboard (spec §7, ADR-0034): a watch that tells each copy, marked copy and clear, a writer that sets parts
-//! with our marker, and what is at copied paths. The table and the rules are pure; the Win32 calls are Windows-only.
+//! with our marker, or none for a kept snip (ADR-0056), and what is at copied paths. The table and the rules are pure;
+//! the Win32 calls are Windows-only.
 #![cfg_attr(
     not(windows),
     allow(
@@ -33,8 +34,9 @@ use thiserror::Error;
 #[cfg(any(windows, test))]
 pub(crate) use facts::facts;
 pub(crate) use marks::Marks;
+pub use marks::private_by;
 #[cfg(windows)]
-pub use marks::{marked, markers};
+pub use marks::{marked, markers, probes};
 #[cfg(windows)]
 pub use read::read_text;
 #[cfg(windows)]

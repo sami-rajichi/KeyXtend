@@ -12,6 +12,8 @@ Window {
     required property rect at
     // Where it stands, which follows `at` while unseen.
     property rect spot: at
+    // Hidden while the keyboard is aside and hidden (Aside.qml), and back once that ends.
+    property bool hush: false
 
     // Its paint and whether it is on its way, for the tests.
     readonly property alias paint: paint
@@ -21,7 +23,7 @@ Window {
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     transientParent: null
     color: "transparent"
-    visible: true
+    visible: !hush
     // In whole Qt units around its part, at least one each way, as a window's place and size are whole.
     x: rescale.keep(Math.floor(spot.x))
     y: rescale.keep(Math.floor(spot.y))

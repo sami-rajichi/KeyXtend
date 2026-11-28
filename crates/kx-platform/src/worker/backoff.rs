@@ -52,9 +52,17 @@ impl Backoff {
     pub(super) fn reset(&mut self) {
         self.pause = self.first;
     }
+
+    /// Takes `times`' waits from the next failure on; a start already held back stays held.
+    pub(super) fn retime(&mut self, times: Times) {
+        *self = Self {
+            calm: self.calm,
+            ..Self::new(times)
+        };
+    }
 }
 
 /// `n` milliseconds.
-pub(super) fn ms(n: u32) -> Duration {
+pub(crate) fn ms(n: u32) -> Duration {
     Duration::from_millis(u64::from(n))
 }

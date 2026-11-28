@@ -12,6 +12,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
+mod exit;
 mod load;
 mod post;
 
@@ -185,6 +186,34 @@ fn a_worker_silent_past_its_wait_is_ended_once_the_clock_passes_it() {
     let retry_in = Duration::from_millis(TIMES.restart_ms.into());
     let down = Err(Unsent::Lost(Lost::Down { retry_in }));
     assert_eq!(stream.begin(list, Wait::Each(WAIT)), down);
+}
+
+#[test]
+fn a_late_worker_is_waited_for_once_ended_before_its_loss_is_told() {
+    let (script, clock) = (Script::<VoiceFrames>::default(), Hands::default());
+    let (said, heard) = mpsc::channel();
+    let seen = script.clone();
+    let tell = move |told| {
+        if matches!(told, Told::Lost(_)) {
+            drop(said.send(seen.calls()));
+        }
+    };
+    let spawner = Arc::new(script.clone());
+    let stream = Stream::open(
+        THREAD,
+        spawner,
+        Arc::new(clock.clone()),
+        TIMES,
+        launch(),
+        tell,
+    );
+    stream.begin(list, Wait::Each(WAIT)).unwrap();
+    clock.advance(WAIT);
+    stream.run(|_| ()).expect("the thread runs");
+    let calls = heard.recv_timeout(LONG).expect("told in time");
+    let within = Duration::from_millis(TIMES.deadline_ms.into());
+    let last = [Call::End, Call::Code { within }];
+    assert!(calls.ends_with(&last), "its files close first: {calls:?}");
 }
 
 #[test]

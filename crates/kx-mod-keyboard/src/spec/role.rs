@@ -49,6 +49,8 @@ pub enum Role {
     Fill,
     /// The Dictation key: a click asks the voice module to start or stop; it glows while the microphone is open.
     Voice,
+    /// The Snip key: a click asks the snip module to start or end a capture; it lights while one runs.
+    Snip,
     /// A shortcut on the layer; only the layer's generated cells have it.
     Shortcut,
     /// The layer's Next page key; only the layer's generated cell has it.
@@ -70,7 +72,7 @@ impl Role {
     pub fn side_only(self) -> bool {
         matches!(
             self,
-            Self::Layer | Self::Power | Self::Clip | Self::Fill | Self::Voice
+            Self::Layer | Self::Power | Self::Clip | Self::Fill | Self::Voice | Self::Snip
         )
     }
 }

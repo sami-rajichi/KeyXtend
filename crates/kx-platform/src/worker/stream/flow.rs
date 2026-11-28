@@ -251,15 +251,21 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Flow<S, F> {
         Ok(())
     }
 
-    /// Ends the worker for `fault`, drops every watch and tells it; a worker that quit is held back by no backoff.
+    /// Ends the worker for `fault`, drops every watch and tells it once the worker exited, so the files it held are
+    /// closed, waiting one deadline at most in all; a worker that quit is held back by no backoff.
     fn lose(&mut self, fault: Fault) {
         self.watches.clear();
         let Some(mut worker) = self.worker.take() else {
             return;
         };
+        let (wait, since) = (ms(self.times.deadline_ms), self.clock.now());
         let closed = matches!(fault, Fault::Ended | Fault::Quit);
-        let code = closed.then(|| worker.code(ms(self.times.deadline_ms)));
+        let code = closed.then(|| worker.code(wait));
         worker.end();
+        if code.flatten().is_none() {
+            let spent = self.clock.now().saturating_since(since);
+            let _ = worker.code(wait.saturating_sub(spent));
+        }
         let note = code.map(exit_note);
         tracing::warn!(job = F::JOB, ?fault, ?note, "a streamed worker was ended");
         if fault != Fault::Quit {

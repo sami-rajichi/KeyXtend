@@ -28,7 +28,7 @@ pub use common::Common;
 pub use hc::{contrast_common, contrast_palette, hover_line};
 pub use icons::{
     BarIcons, ChipsIcons, ClipIcons, DpadIcons, FillIcons, Icons, LangIcons, LayerIcons,
-    NoticeIcons, PageIcons, TrayIcons, VoiceIcons,
+    NoticeIcons, PageIcons, SnipIcons, TrayIcons, VoiceIcons,
 };
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use mode::{Mode, ModeChoice, mode_for};
@@ -36,18 +36,18 @@ pub use motion::{Amounts, CLIP_MOVES, FILL_MOVES, MOVES, Motion, Motions, SHOWS,
 pub use palette::{Palette, Shadow, Skirt};
 pub use rgba::Rgba;
 pub use ringmove::{RingAmounts, RingMotion};
-pub use shape::{ClipShape, FillShape, Shape, VoiceShape};
+pub use shape::{ClipShape, FillShape, Shape, SnipShape, VoiceShape};
 pub use theme::Theme;
 pub use view::{LookChoice, LookView, look_view, reach};
 
 use thiserror::Error;
 
-/// Name of the shared sizes file, for errors.
-const SHAPE_FILE: &str = "shape.toml";
+/// Name of the shared sizes files, for errors.
+const SHAPE_FILE: &str = "shape.toml or snip.toml";
 /// Name of the motion file, for errors.
 const MOTION_FILE: &str = "motion.toml";
-/// Name of the icons file, for errors.
-const ICONS_FILE: &str = "icons.toml";
+/// Name of the icons files, for errors.
+const ICONS_FILE: &str = "icons.toml or snip_icons.toml";
 /// Name of the sounds file, for errors.
 const SOUNDS_FILE: &str = "sounds.toml";
 /// The themes' parts in `tokens/themes/`, named once: the shared colours, then each theme in the theme button's order.
@@ -65,12 +65,18 @@ macro_rules! theme_parts {
     };
 }
 theme_parts!("common", "native", "et66", "dolch");
-/// The shared sizes, compiled in.
-const SHAPE: &str = include_str!("../tokens/shape.toml");
+/// The shared sizes, compiled in: the keyboard's and panels', then Snip's.
+const SHAPE: &str = concat!(
+    include_str!("../tokens/shape.toml"),
+    include_str!("../tokens/snip.toml")
+);
 /// The motion, compiled in.
 const MOTION: &str = include_str!("../tokens/motion.toml");
-/// The icon names, compiled in.
-const ICONS: &str = include_str!("../tokens/icons.toml");
+/// The icon names, compiled in: the keyboard's and panels', then Snip's.
+const ICONS: &str = concat!(
+    include_str!("../tokens/icons.toml"),
+    include_str!("../tokens/snip_icons.toml")
+);
 /// The sound tokens' file, written once for `include_str!` and `SOUNDS_PATH`.
 macro_rules! sounds_path {
     () => {

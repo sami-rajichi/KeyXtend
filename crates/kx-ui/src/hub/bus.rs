@@ -1,14 +1,14 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
-//! state, outline and page turns, the chip lane, the panels, the selection strip and voice typing, each through a
+//! state, outline and page turns, the chip lane, the panels, the selection strip, voice typing and Snip, each through a
 //! handler that holds the hub weakly, then asks the scroll, prediction, vault and voice modules for their state, and it
-//! sends the notices' answers. The keyboard's wake, power and vault changes and the Dictation key's light included, is
-//! heard only while a face is attached, after the face's own handlers.
+//! sends the notices' answers. The keyboard's wake, power and vault changes and the Dictation and Snip lights included,
+//! is heard only while a face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use crate::ui_module::MANIFEST;
 use kx_module_api::ports::{
     AssistChanged, AssistNote, FillLive, LatchesUsed, PointerMoved, PowerChanged, ScrollAimed,
-    ScrollAsk, ScrollChanged, ScrollPage, VoiceLit,
+    ScrollAsk, ScrollChanged, ScrollPage, SnipLit, VoiceLit,
 };
 use kx_module_api::{Bus, Event, EventError, Notice, NoticeAnswered, Subscription};
 use std::sync::{Arc, MutexGuard, PoisonError};
@@ -31,8 +31,8 @@ pub(super) fn send<E: Event>(handle: Option<Bus>, event: &E, what: &str) {
 }
 
 impl Hub {
-    /// Hears every notice, mouse-assist and scroll event, the chip lane, the panels, the selection strip and voice
-    /// typing on `bus` until the subscriptions drop; a pad page turns the open panel, else our open list. It keeps
+    /// Hears every notice, mouse-assist and scroll event, the chip lane, the panels, the selection strip, voice typing
+    /// and Snip on `bus` until the subscriptions drop; a pad page turns the open panel, else our open list. It keeps
     /// `bus` for the keyboard's wake and a copy limited to the `ui` module's grants for the answers, and asks the
     /// scroll, prediction, vault and voice modules for their state, so any start order works; the app calls it before
     /// the kernel loads.
@@ -59,13 +59,14 @@ impl Hub {
         heard.extend(self.hear_fill(bus)?);
         heard.extend(self.hear_sel(bus)?);
         heard.extend(self.hear_voice(bus)?);
+        heard.extend(self.hear_snip(bus)?);
         bus.publish(&ScrollAsk)?;
         Ok(heard)
     }
 
-    /// Wakes the keyboard on each mouse mode change, used latch, scroll change, power change, vault state and Dictation
-    /// light through new handlers, the light through the gated handle `listen` keeps. The face that `attach` takes
-    /// started first, so these run after its own and the window reads its new state; the last ones go.
+    /// Wakes the keyboard on each mouse mode change, used latch, scroll change, power change, vault state, Dictation
+    /// light and Snip light through new handlers, the lights through the gated handle `listen` keeps. The face that
+    /// `attach` takes started first, so these run after its own and the window reads its new state; the last ones go.
     pub(super) fn hear_keys(self: &Arc<Self>) {
         let kept = {
             let heard = self.heard();
@@ -81,6 +82,7 @@ impl Hub {
             self.hear(&bus, |hub, _: &PowerChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &FillLive| hub.wake(Wake::Keys)),
             self.hear(&gated, |hub, _: &VoiceLit| hub.wake(Wake::Keys)),
+            self.hear(&gated, |hub, _: &SnipLit| hub.wake(Wake::Keys)),
         ];
         let keys: Vec<Subscription> = keys
             .into_iter()

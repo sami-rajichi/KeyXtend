@@ -125,6 +125,22 @@ fn p9_lists_g23_on_the_product_only_and_asks_to_close_it_first() {
 }
 
 #[test]
+fn p12_lists_g24_on_the_product_only_and_asks_to_close_it_first() {
+    let (text, trap) = (usage(), crate::g24::TRAP);
+    assert!(text.contains(&format!("g24 <{NAME}|{trap}>")), "{text}");
+    assert!(!text.contains(&format!("{FACE}|{trap}")), "{text}");
+    for name in [NAME, trap] {
+        let told = text
+            .lines()
+            .find(|l| l.starts_with(&format!("g24 {name} ")));
+        assert!(
+            told.is_some_and(|l| l.contains("close the product first")),
+            "{name}: {text}"
+        );
+    }
+}
+
+#[test]
 fn p8_lists_g20_on_the_product_and_g8_clip_and_warns_of_the_clipboard() {
     let text = usage();
     let g20 = format!("g20 <{}|{NAME}|{}>", names(&g20::APPS), workertok::WORKER);

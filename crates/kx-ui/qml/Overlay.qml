@@ -33,6 +33,8 @@ Window {
     property var ringSeq: null
     property var burstSeq: null
     property bool made: false
+    // Hidden while Snip captures with the keyboard hidden, as nothing of ours may show then.
+    property bool hush: false
     // The badge's widest settled width once made: its word follows the keyboard's language, and its room only grows,
     // on the next pass, so a narrower word or a half-set one (new text, old font) never resizes the window.
     property real widest: 0
@@ -51,7 +53,7 @@ Window {
     transientParent: null
     title: res.tr("window.pointer")
     color: "transparent"
-    visible: ring.busy || !!at
+    visible: !hush && (ring.busy || !!at)
     x: rescale.keep(frame.x)
     y: rescale.keep(frame.y)
     width: rescale.keep(room.width)

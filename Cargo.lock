@@ -1474,6 +1474,7 @@ dependencies = [
  "kx-mod-predict",
  "kx-mod-scroll",
  "kx-mod-selection",
+ "kx-mod-snip",
  "kx-mod-vault",
  "kx-mod-voice",
  "kx-module-api",
@@ -1501,6 +1502,8 @@ dependencies = [
  "keepass",
  "kx-ipc",
  "kx-platform-net",
+ "kx-platform-record",
+ "kx-test-support",
  "png",
  "proptest",
  "serde",
@@ -1541,6 +1544,7 @@ dependencies = [
  "kx-mod-predict",
  "kx-mod-scroll",
  "kx-mod-selection",
+ "kx-mod-snip",
  "kx-mod-vault",
  "kx-mod-voice",
  "kx-module-api",
@@ -1696,6 +1700,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-snip"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "kx-settings",
+ "kx-test-support",
+ "proptest",
+ "serde",
+ "toml 1.1.6+spec-1.1.0",
+ "tracing",
+]
+
+[[package]]
 name = "kx-mod-vault"
 version = "0.0.0"
 dependencies = [
@@ -1759,6 +1777,7 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-platform",
+ "kx-test-support",
  "proptest",
  "serde",
  "thiserror 2.0.21",
@@ -1776,6 +1795,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-platform-record"
+version = "0.0.0"
+dependencies = [
+ "cpal",
+ "kx-ipc",
+ "serde",
+ "thiserror 2.0.21",
+ "toml 1.1.6+spec-1.1.0",
+ "windows",
+]
+
+[[package]]
 name = "kx-platform-windows"
 version = "0.0.0"
 dependencies = [
@@ -1785,6 +1816,7 @@ dependencies = [
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",
+ "kx-platform-record",
  "kx-test-support",
  "proptest",
  "serde",

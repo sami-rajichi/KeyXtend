@@ -185,4 +185,4 @@ impl Event for VoiceLevel {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

@@ -1,9 +1,10 @@
 //! The fake clipboard, held to the port: notes reach the live watch at once, the watch and its config are recorded, a
-//! refusal on cue, files answer as scripted, a path off a drive unchecked, and a marked clipboard is never read
-//! unmarked.
+//! refusal on cue, files answer as scripted, a path of no plain absolute form unchecked, and a marked clipboard is
+//! never read unmarked.
 
 use super::*;
 use kx_module_api::ports::{AppRef, ClipPart, ClipWait};
+use kx_test_support::paths::native_path;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::thread;
 use std::time::Duration;
@@ -141,20 +142,21 @@ fn a_scripted_refusal_comes_back_once_and_records_no_watch() {
 #[test]
 fn files_answer_as_scripted_in_order_and_unknown_paths_are_gone() {
     let clip = FakeClipboard::new();
-    clip.set_file("C:/docs/تقرير.pdf", FileFact::Size(SIZE));
-    clip.set_file("C:/docs/old.txt", FileFact::Gone);
+    clip.set_file(native_path("C:/docs/تقرير.pdf"), FileFact::Size(SIZE));
+    clip.set_file(native_path("C:/docs/old.txt"), FileFact::Gone);
     let paths = ["C:/docs/old.txt", "C:/docs/تقرير.pdf", "C:/never.txt"];
-    let paths = Redacted::new(paths.map(PathBuf::from).to_vec());
+    let paths = Redacted::new(paths.map(native_path).to_vec());
     let facts = [FileFact::Gone, FileFact::Size(SIZE), FileFact::Gone];
     assert_eq!(clip.files(&paths), facts);
-    clip.set_file("C:/docs/تقرير.pdf", FileFact::Gone);
+    clip.set_file(native_path("C:/docs/تقرير.pdf"), FileFact::Gone);
     assert_eq!(clip.files(&paths), [FileFact::Gone; 3], "deleted since");
     assert_eq!(clip.checks(), 2);
 }
 
 #[test]
-fn a_path_off_a_drive_is_unchecked_even_when_scripted() {
+fn a_path_of_no_plain_absolute_form_is_unchecked_even_when_scripted() {
     let clip = FakeClipboard::new();
+    // Kept as written: each has a `\` or no root, so both styles refuse it.
     let far = [
         r"\\host\share\a.txt",
         r"\??\UNC\host\share\a.txt",
@@ -164,7 +166,8 @@ fn a_path_off_a_drive_is_unchecked_even_when_scripted() {
     for path in far {
         clip.set_file(path, FileFact::Size(SIZE));
     }
-    let paths = Redacted::new(far.iter().chain(&["C:/c.txt"]).map(PathBuf::from).collect());
+    let near = native_path("C:/c.txt");
+    let paths = Redacted::new(far.map(PathBuf::from).into_iter().chain([near]).collect());
     let mut want = vec![FileFact::Unchecked; far.len()];
     want.push(FileFact::Gone);
     assert_eq!(clip.files(&paths), want);

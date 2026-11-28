@@ -170,6 +170,6 @@ mod tests {
         assert_eq!(id_of(Role::Lang).expect("one language key"), "lang");
         let all = ids().expect("the board reads");
         assert!(all.contains(&"esc".to_string()) && all.contains(&"c-0x0022".to_string()));
-        assert!(id_of(Role::Later).is_ok(), "the first of several");
+        assert_eq!(id_of(Role::Later).expect("one later key"), "settings");
     }
 }

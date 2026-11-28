@@ -1,0 +1,79 @@
+
+# Snip (design/snip-scene.js way(), strip(), recording(); snip-editor.js TOOLS); the loader joins this file after
+# icons.toml. The tick a keycap shows once it acted, the film before a video's length, each sound switch while off; the
+# capture bar's ways (the video ones with the red recording light), the strip's and the record bar's keys, the editor's
+# tools and keys (its grip, resize corner, Restore and a step's minus and plus too), each by the hub's or the view's
+# own id. Restore's icon is the owner's pick (2026-11-25), not the mock-up's; Speed's chevron stands in for a
+# fast-forward mark until one ships.
+[snip]
+tick = "check"
+length = "film"
+mic_off = "mic-off"
+sound_off = "volume-x"
+
+[snip.bar]
+region = "square-dashed"
+window = "app-window"
+full = "monitor"
+video-region = "video"
+video-full = "monitor-play"
+settings = "settings-2"
+close = "x"
+
+[snip.strip]
+copy = "copy"
+edit = "square-pen"
+save = "save"
+close = "x"
+record = "circle-dot"
+mic = "mic"
+sound = "volume-2"
+play = "play"
+speed = "chevron-right"
+
+[snip.rec]
+mic = "mic"
+sound = "volume-2"
+stop = "square"
+cancel = "x"
+
+[snip.tools]
+crop = "crop"
+pen = "pencil"
+highlighter = "highlighter"
+box = "square"
+circle = "circle"
+arrow = "move-up-right"
+line = "slash"
+text = "type"
+cover = "eye-off"
+steps = "list-ordered"
+eraser = "eraser"
+
+[snip.edit]
+undo = "undo-2"
+redo = "redo-2"
+close = "x"
+full = "maximize-2"
+back = "minimize-2"
+move = "grip-horizontal"
+size = "move-diagonal-2"
+less = "minus"
+more = "plus"
+
+# Crop's ✓ and ✗ while its frame waits, by the hub's id.
+[snip.crop]
+ok = "check"
+cancel = "x"
+
+# The close question (snip-editor.js ask()): its mark beside the words, then its answers by the hub's id; and the Snip
+# panel's folder keys (panel()).
+[snip.ask]
+mark = "save"
+save = "save"
+drop = "trash-2"
+back = "undo-2"
+
+[snip.panel]
+change = "folder"
+open = "folder-open"

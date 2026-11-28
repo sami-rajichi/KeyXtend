@@ -1,9 +1,10 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
 //! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
-//! panel, the Quick-fill panel, the selection strip, voice typing, the tray icon, and the requests the app drains on its
-//! own thread. No lock is held while a face call, a port call or a waker runs.
+//! panel, the Quick-fill panel, the selection strip, voice typing, Snip, the tray icon, and the requests the app
+//! drains on its own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
+mod aside;
 mod assist;
 mod bus;
 mod clip;
@@ -15,6 +16,7 @@ mod notices;
 mod ports;
 mod scroll;
 mod sel;
+mod snip;
 mod sound;
 mod spots;
 mod texts;
@@ -34,6 +36,9 @@ pub use fill::{FillWaker, acts as fill_acts};
 pub use fonts::FontBook;
 pub use notices::{Answers, Shown};
 pub use ports::UiPorts;
+#[cfg(feature = "qt")]
+pub(crate) use snip::SHOTS;
+pub use snip::{EditorAt, SnipCounted, SnipOpened, SnipWake, SnipWaker, acts as snip_acts};
 pub use voice::{VoiceWake, VoiceWaker, acts as voice_acts};
 pub use words::asks;
 
@@ -101,6 +106,8 @@ pub enum Wake {
     Clip,
     /// The selection strip shows a new view or hides; no other comes until QML reads `sel_json`.
     Sel,
+    /// The keyboard steps aside for a capture or comes back: call `shield_aside`, then read the mode again.
+    Aside,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -132,6 +139,9 @@ struct Live {
     ended: bool,
     /// How the user left the keyboard.
     mode: Mode,
+    /// The keyboard aside for a capture, and a stay that waits for its wake, after which the Qt thread answers it.
+    aside: Option<aside::Aside>,
+    stay: bool,
     /// The app's queue, until Quit ends it.
     requests: Option<Sender<Request>>,
 }
@@ -169,6 +179,8 @@ pub struct Hub {
     sel: sel::Sel,
     /// Voice typing's bar and panel, and its object's waker.
     voice: voice::Voice,
+    /// Snip's windows, and its object's waker.
+    snip: snip::Snip,
 }
 
 impl Hub {
@@ -179,8 +191,7 @@ impl Hub {
     /// `HubError` when the embedded defaults or theme tokens are broken.
     pub fn new(ports: UiPorts) -> Result<(Arc<Self>, Receiver<Request>), HubError> {
         let settings = UiSettings::from_defaults()?;
-        let themes = Themes::shipped()?;
-        let font_files = FontFiles::shipped()?;
+        let (themes, font_files) = (Themes::shipped()?, FontFiles::shipped()?);
         let sounds = sound::Sounds::new(&*ports.speaker, settings.sound_idle_ms);
         let (requests, drain) = mpsc::channel();
         let live = Live {
@@ -194,6 +205,8 @@ impl Hub {
             waker: None,
             ended: false,
             mode: Mode::Shown,
+            aside: None,
+            stay: false,
             requests: Some(requests),
         };
         let hub = Self {
@@ -214,6 +227,7 @@ impl Hub {
             fill: fill::Fill::default(),
             sel: sel::Sel::default(),
             voice: voice::Voice::default(),
+            snip: snip::Snip::default(),
         };
         Ok((Arc::new(hub), drain))
     }

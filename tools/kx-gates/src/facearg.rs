@@ -5,15 +5,15 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, product};
+use crate::{g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, g24, product};
 
 /// Gates aimed at the product, which take its name.
-pub(crate) const PRODUCT_GATES: [&str; 15] = [
-    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g19", "g22", "g23", "g26", "g27",
-    "close",
+pub(crate) const PRODUCT_GATES: [&str; 16] = [
+    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g19", "g22", "g23", "g24", "g26",
+    "g27", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
-pub(crate) const FACE_GATES: [&str; 3] = ["g7", "g24", "close"];
+pub(crate) const FACE_GATES: [&str; 2] = ["g7", "close"];
 
 /// The keyboards `gate` takes: the product, the frozen face, both or none.
 fn keyboards(gate: &str) -> Vec<&'static str> {
@@ -44,6 +44,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g19chips::LOOK,
         ],
         "g22" => &[g22::BENCH, g22::STAGED],
+        "g24" => &[g24::TRAP],
         _ => &[],
     }
 }
@@ -141,10 +142,11 @@ mod tests {
     }
 
     #[test]
-    fn g12_and_g23_take_the_product_now_and_refuse_the_frozen_face() {
-        for gate in ["g12", "g23"] {
+    fn g12_g23_and_g24_take_the_product_now_and_refuse_the_frozen_face() {
+        for gate in ["g12", "g23", "g24"] {
             assert!(check(gate, product::NAME).is_ok(), "{gate}");
             assert!(check(gate, FACE).is_err(), "{gate}");
+            assert!(check(gate, "notepad").is_err(), "{gate}");
         }
     }
 

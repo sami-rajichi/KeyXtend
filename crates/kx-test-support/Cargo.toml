@@ -1,6 +1,6 @@
 [package]
 name = "kx-test-support"
-description = "Test-only helpers: golden files, temp folders, file locks, percentiles and a fake kernel host."
+description = "Test-only helpers: golden files, temp folders, file locks, picture noise, percentiles and a fake kernel host."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

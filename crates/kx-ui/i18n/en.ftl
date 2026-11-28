@@ -224,6 +224,17 @@ window =
     .fill = { -app } Quick-fill
     .voice = { -app } dictation bar
     .voice-panel = { -app } dictation settings
+    .snip-panel = { -app } screen snip settings
+    .snip-screen = { -app } frozen screen
+    .snip-bar = { -app } capture bar
+    .snip-hint = { -app } capture hint
+    .snip-strip = { -app } snip actions
+    .snip-count = { -app } countdown
+    .snip-record = { -app } record bar
+    .snip-edge = { -app } recording edge
+    .snip-editor = { -app } snip editor
+    .snip-ask = { -app } snip question
+    .shadow = { -app } window shadow
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -236,11 +247,12 @@ badge =
     .fast = fast
     .join = {", "}
 
-## The tray menu's rows; Dictation opens the Voice panel.
+## The tray menu's rows; Dictation opens the Voice panel and Screen snip the Snip panel.
 tray =
     .show = Show keyboard
     .voice = Dictation
     .quit = Quit
+    .snip = Screen snip
 
 ## Buttons on a notice.
 button =
@@ -316,6 +328,7 @@ module =
     .predict = Word suggestions
     .scroll = Scroll pad
     .selection = Selection helper
+    .snip = Screen snip
     .ui = Appearance
     .vault = Quick-fill
     .voice = Dictation

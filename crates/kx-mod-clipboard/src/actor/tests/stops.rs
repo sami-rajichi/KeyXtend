@@ -6,6 +6,7 @@ use std::time::Duration;
 use kx_module_api::keys;
 use kx_module_api::ports::{ClipAct, ClipError, FileFact, PanelNote, SealedError};
 use kx_platform_fake::ShelfCall;
+use kx_test_support::paths::native;
 
 use super::super::Msg;
 use super::rig::Rig;
@@ -53,10 +54,11 @@ fn an_insert_whose_entries_are_all_gone_or_away_stays_open_with_a_note() {
     insert(&mut rig);
     stopped(&rig, PanelNote::PasteFailed);
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Size(9));
-    rig.copy(vec![files(&["E:/song.mp3"])], None);
+    let song = native("E:/song.mp3");
+    rig.fakes.clip.set_file(&song, FileFact::Size(9));
+    rig.copy(vec![files(&[&song])], None);
     rig.open();
-    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Away);
+    rig.fakes.clip.set_file(&song, FileFact::Away);
     rig.tick_row(0);
     insert(&mut rig);
     stopped(&rig, PanelNote::PasteFailed);
@@ -65,9 +67,10 @@ fn an_insert_whose_entries_are_all_gone_or_away_stays_open_with_a_note() {
 
 #[test]
 fn a_files_thread_gone_stops_the_insert_with_a_note() {
+    let a = native(r"C:\a.txt");
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("C:\\a.txt", FileFact::Size(9));
-    rig.copy(vec![files(&["C:\\a.txt"])], None);
+    rig.fakes.clip.set_file(&a, FileFact::Size(9));
+    rig.copy(vec![files(&[&a])], None);
     rig.open();
     rig.lose_files();
     rig.tick_row(0);
@@ -77,9 +80,10 @@ fn a_files_thread_gone_stops_the_insert_with_a_note() {
 
 #[test]
 fn a_file_check_past_check_ms_stops_the_insert_and_its_late_answer_is_dropped() {
+    let a = native(r"C:\a.txt");
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("C:\\a.txt", FileFact::Size(9));
-    rig.copy(vec![files(&["C:\\a.txt"])], None);
+    rig.fakes.clip.set_file(&a, FileFact::Size(9));
+    rig.copy(vec![files(&[&a])], None);
     rig.open();
     rig.hold_looks(true);
     rig.tick_row(0);

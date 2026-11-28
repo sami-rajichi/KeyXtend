@@ -1,7 +1,6 @@
-//! The frozen face's window and its tools' centres, and real mouse moves and clicks through `SendInput`.
+//! The frozen face's window, and real mouse moves and clicks through `SendInput`.
 #![cfg(windows)]
 
-use kx_mod_keyboard::Area;
 use kx_platform_windows::keys::TAG;
 use spike_core::config::SpikeConfig;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
@@ -11,7 +10,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_MOUSE, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN,
     MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_VIRTUALDESK, MOUSEINPUT,
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, USER_DEFAULT_SCREEN_DPI};
+use windows::Win32::UI::WindowsAndMessaging::GetClientRect;
 
 use crate::keys::After;
 
@@ -36,16 +35,6 @@ pub struct Face {
 )]
 pub fn round_px(v: f64) -> i32 {
     v.round() as i32
-}
-
-/// The physical screen centre of `place` for a face at `origin` and `dpi`.
-pub fn centre(place: &Area, origin: POINT, dpi: u32) -> POINT {
-    let scale = f64::from(dpi) / f64::from(USER_DEFAULT_SCREEN_DPI);
-    let mid = |start: f64, size: f64| round_px((start + size / 2.0) * scale);
-    POINT {
-        x: origin.x + mid(place.x, place.w),
-        y: origin.y + mid(place.y, place.h),
-    }
 }
 
 /// The running face window, found by its exact title from spike.toml; `name` only fills the error.
@@ -164,21 +153,6 @@ fn send(events: &[(i32, i32, MOUSE_EVENT_FLAGS)]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn centres_scale_to_dpi_144() {
-        let place = Area {
-            x: 4.0,
-            y: 4.0,
-            w: 48.0,
-            h: 48.0,
-        };
-        let origin = POINT { x: 100, y: 200 };
-        let p = centre(&place, origin, 144);
-        assert_eq!((p.x, p.y), (142, 242));
-        let p = centre(&place, origin, 96);
-        assert_eq!((p.x, p.y), (128, 228));
-    }
 
     #[test]
     fn normalise_maps_the_desktop_edges() {

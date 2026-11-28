@@ -1,5 +1,7 @@
 //! Tests of `keymap`.
 
+use windows::Win32::System::Variant::VT_BSTR;
+
 use super::*;
 
 #[test]
@@ -60,6 +62,31 @@ fn a_toggle_state_reads_as_on_or_off_and_a_button_without_one_as_none() {
         None,
         "not a toggle state"
     );
+}
+
+/// The text variant `v` holds.
+#[allow(
+    unsafe_code,
+    reason = "Reads the text member the variant's type names."
+)]
+fn text_of(v: &VARIANT) -> String {
+    assert_eq!(v.vt(), VT_BSTR);
+    // SAFETY: the type says the text member is set.
+    unsafe { v.Anonymous.Anonymous.Anonymous.bstrVal.to_string() }
+}
+
+#[test]
+fn a_dialogs_press_matches_its_id_only_on_a_button() {
+    let [(id, by_id), (kind, by_kind)] = button_props("2").expect("an id");
+    assert_eq!(id, UIA_AutomationIdPropertyId);
+    assert_eq!(text_of(&by_id), "2");
+    assert_eq!(kind, UIA_ControlTypePropertyId);
+    let ty = i32::try_from(&by_kind).expect("a control type is a number");
+    assert_eq!(
+        ty, UIA_ButtonControlTypeId.0,
+        "a button, not a list or tree"
+    );
+    assert!(button_props("").is_err(), "an empty id names no button");
 }
 
 #[test]

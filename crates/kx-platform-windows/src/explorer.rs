@@ -1,6 +1,9 @@
 //! The running Explorer's desktop shell object, under an apartment-threaded COM on the calling thread: its
 //! `ShellExecute` opens a folder or a link in Explorer itself (Raymond Chen's "launch from the shell" route), so nothing
-//! starts as our child and nothing inherits our uiAccess. The reveals and the link use it.
+//! starts as our child and nothing inherits our uiAccess. The reveals, the link and Snip's player use it.
+
+use std::os::windows::ffi::OsStrExt;
+use std::path::Path;
 
 use windows::Win32::Foundation::E_FAIL;
 use windows::Win32::System::Com::{
@@ -17,7 +20,7 @@ use windows::core::{BSTR, Interface};
 use crate::PlatformError;
 use crate::com::Com;
 
-/// The shell verb that opens a folder in Explorer or a link in the default browser.
+/// The shell verb that opens a folder in Explorer, a link in the default browser or a video in its default player.
 const OPEN: &str = "open";
 /// The shell verb that only folders have, so a file in a folder's place is never run.
 const EXPLORE: &str = "explore";
@@ -64,6 +67,12 @@ impl Explorer {
         let opened = unsafe { self.shell.ShellExecute(file, &empty, &empty, &verb, &show) };
         opened.map_err(|e| code(&e))
     }
+}
+
+/// `path` as the shell takes it.
+pub(crate) fn bstr(path: &Path) -> BSTR {
+    let wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    BSTR::from_wide(&wide)
 }
 
 /// The shell object of Explorer's desktop window, reached through its view; the caller has COM on.

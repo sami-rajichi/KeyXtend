@@ -45,7 +45,8 @@ tracing.workspace = true
 # places list the drives with their types and labels (`Storage_FileSystem`) with Windows' disk dialogs off
 # (`System_Diagnostics_Debug`), the session watch hears locks (`System_RemoteDesktop`) and sleeps (`System_Power`),
 # a models folder made gets rights its owner alone holds (`Security_Authorization`), and the folder reveal reads a
-# folder's link mark and holds it open (`Storage_FileSystem`).
+# folder's link mark and holds it open (`Storage_FileSystem`), and the recorder's facts read the default sound devices
+# (`Media_Audio`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -54,6 +55,7 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Dxgi",
     "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
     "Win32_Media_Audio_XAudio2",
     "Win32_Security",
     "Win32_Security_Authorization",
@@ -92,6 +94,8 @@ windows-core.workspace = true
 [dev-dependencies]
 # The worker tests write raw asks and goodbyes to the real media worker.
 kx-ipc = { path = "../kx-ipc" }
+# The P12 live tests read the record job's sound rate from the recorder itself.
+kx-platform-record = { path = "../kx-platform-record" }
 # The cloud speech smoke test takes its made-up asks from the shared cloud suite.
 kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
@@ -99,8 +103,11 @@ proptest.workspace = true
 
 [target.'cfg(windows)'.dev-dependencies]
 # The worker tests list every process, so a worker is seen to start none, not even a console host; the places tests
-# check the drive types against Windows' own (`Win32_System_WindowsProgramming`).
+# check the drive types against Windows' own (`Win32_System_WindowsProgramming`); the P12 probes read a recording back
+# with Media Foundation (`Win32_Media_MediaFoundation`, `Win32_System_Com_StructuredStorage`).
 windows = { workspace = true, features = [
+    "Win32_Media_MediaFoundation",
+    "Win32_System_Com_StructuredStorage",
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_WindowsProgramming",
 ] }

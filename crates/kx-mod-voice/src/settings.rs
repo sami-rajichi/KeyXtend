@@ -64,7 +64,7 @@ const BAD_POLL: &str = "copy_poll_ms must not pass copy_ms";
 const BAD_DEVICE: &str = "device must be auto, cpu or a card's id";
 const BAD_PLACE: &str = "place must be above, bottom or top";
 const BAD_INSERT: &str = "insert must be type or paste";
-const BAD_DIR: &str = "models_dir must be empty or an absolute drive path";
+const BAD_DIR: &str = "models_dir must be empty or an absolute path";
 const BAD_SUFFIX: &str =
     "type_suffix must stay within its length and hold only characters that show";
 const BAD_JOIN: &str =

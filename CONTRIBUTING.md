@@ -14,7 +14,7 @@ Building and running the code need the owner's written permission (`LICENSE`); t
 - Install Visual Studio 2022 Build Tools with the C++ workload (MSVC), and Rust through `rustup`; `rust-toolchain.toml` pins the toolchain.
 - Install Qt 6.11.2 for MSVC 2022 64-bit (`win64_msvc2022_64`), the version `qt_version` in the root `Cargo.toml` pins; CI installs it with aqtinstall (`.github/actions/qt`).
 - In each shell that builds, set `QMAKE` to Qt's `bin\qmake.exe` and put that `bin` folder first in `PATH`. Any folder works, a portable one too; nothing goes in the registry.
-- For the Qt Quick tests, run `cargo test -p kx-ui --test texts` first, then `qmltestrunner -input crates/kx-ui/qmltest` with `QML_DISABLE_DISK_CACHE=1`.
+- For the Qt Quick tests, run `cargo test -p kx-ui --test texts` first, then `qmltestrunner` as `crates/kx-ui/qmltest/README.md` says.
 - Without Qt, leave out the app and build `kx-ui` with `--no-default-features`, as CI's Linux job does.
 
 ## Rules
@@ -36,9 +36,10 @@ CI cannot test uiAccess, admin windows or real apps. Follow `.claude/skills/kx-w
 - Build the two test tools with `cargo build -p kx-target-window -p kx-gates`.
 - The gates move the real mouse and keyboard, so run them only when the owner agrees. `kx-gates` with no arguments prints its commands.
 - Gates that click the Qt keyboard need uiAccess on both sides. Install the keyboard and a release `kx-gates` with `cargo xtask dev-install <folder>`, then run `kx-gates` from there.
-- The installed `kx-gates` reads `kx-gates.toml` and each phase's file (`kx-gates-p3.toml` to `kx-gates-p11.toml`) beside it, else from `tools/kx-gates`. A relative path starts at its file's folder, so in copies beside the installed exe write the repo paths (`[paths] out`, `[apps.target] exe`, `[g22_bench] worker` and `weak_worker`, `[g22_product] program`) in full; `[g8] program` already points at the installed app. `[g22_bench] voice_dir` and `[g22_staged] stage` stay relative, as their checks refuse a full path and their gates run from the repo.
+- The installed `kx-gates` reads `kx-gates.toml` and each phase's file (`kx-gates-p3.toml` to `kx-gates-p12.toml`) beside it, else from `tools/kx-gates`. A relative path starts at its file's folder, so in copies beside the installed exe write the repo paths (`[paths] out`, `[apps.target] exe`, `[g22_bench] worker` and `weak_worker`, `[g22_product] program`) in full; `[g8] program` already points at the installed app. `[g22_bench] voice_dir` and `[g22_staged] stage` stay relative, as their checks refuse a full path and their gates run from the repo.
 - This PC's models folder goes in a git-ignored `kx-gates.local.toml` beside `kx-gates.toml`, as `[g22_bench] models_dir = 'D:\your\models'`; it may set only the keys `cfgfile::LOCAL_KEYS` lists, and an installed `kx-gates` reads it only beside its exe.
 - G22's cloud line also needs the owner's daily data folder in that file, as `[g22_cloud] daily_dir = 'D:\your\data'`; it borrows the sealed keys from there, and without it the line prints one skipped line.
 - `g22 keyxtend` and `g22 bench` pass the gate-only sound flag, so they run only from `cargo run -p kx-gates --features voice --`; the default build, which `dev-install` signs, holds no gate flag.
 - Build their gate worker with `cargo build --release -p keyxtend-worker --features gate,card`, with `VULKAN_SDK` set for the card part, and the app with `cargo build --release -p keyxtend --features gate-voice`. `kx-gates-p11.toml` keeps both lines beside the paths they build, and the features come from `g22::WORKER_FEATURES` and `APP_FEATURES`.
+- `cargo xtask stage` builds the worker with `[workspace.metadata.stage] worker_features`, which hold the card part, so it needs `VULKAN_SDK` set too. Set it once in the script that readies your build shell, not per command.
 - `g22 keyxtend --device <pick>` picks the device for one run in place of `[g22_product] device`, for example `cpu` or a card's id.

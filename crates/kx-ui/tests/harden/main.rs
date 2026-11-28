@@ -28,8 +28,8 @@ const PLANTED: [&str; 4] = [
 const ADAPTER: u32 = 1;
 /// A render loop another program chose, which the app's own value must replace (ADR-0021).
 const OUTSIDE: (&str, &str) = ("QSG_RENDER_LOOP", "threaded");
-/// A frame latency another program chose, which the `[ui]` setting must replace.
-const LATE: (&str, &str) = (LATENCY_VAR, "0");
+/// A frame latency another program chose, unlike the default, which the `[ui]` setting must replace.
+const LATE: (&str, &str) = (LATENCY_VAR, "3");
 /// A buffer pool another program chose, which the `[ui]` setting must replace (ADR-0028).
 const POOL: (&str, &str) = (POOL_VAR, "65536");
 /// Another scene graph variable from outside; nothing of ours sets it, so it must stay cleared.

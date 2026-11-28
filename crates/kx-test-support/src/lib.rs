@@ -1,5 +1,5 @@
-//! Helpers for tests and test tools: golden files, temp folders, file locks, percentiles, a source walk and a fake
-//! kernel host for module tests.
+//! Helpers for tests and test tools: golden files, temp folders, file locks, picture noise, percentiles, a source walk,
+//! example paths for every system and a fake kernel host for module tests.
 //! Shipped code never depends on this crate.
 
 #![forbid(unsafe_code)]
@@ -8,6 +8,8 @@ pub mod golden;
 pub mod host;
 #[cfg(windows)]
 pub mod lock;
+pub mod noise;
+pub mod paths;
 pub mod pct;
 pub mod source;
 pub mod tempdir;

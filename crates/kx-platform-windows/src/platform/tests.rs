@@ -3,6 +3,7 @@
 use super::*;
 use kx_module_api::Mono;
 mod cloud;
+mod snip;
 
 #[test]
 fn the_dirs_are_the_known_folder_ones() {
@@ -33,7 +34,7 @@ fn the_ui_ports_answer_on_another_thread() {
         (
             screens.work_areas(),
             look.ui_language(),
-            guard.guard_own(None, None),
+            guard.guard_own(&[], None),
         )
     });
     let (areas, language, guarded) = answers.join().unwrap();

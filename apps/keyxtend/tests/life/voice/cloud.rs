@@ -149,7 +149,7 @@ fn keyed(rig: &Rig, run: &Run, key: &str) -> (Boot, Arc<Watched>) {
     let keys = Keys::new(Arc::new(rig.voice.clone()), false);
     keys.set(&service().id, secret(key)).unwrap();
     let shelf = Arc::new(Watched::new(rig.voice.clone()));
-    let mut services = rig.services();
+    let mut services = rig.services(run);
     services.voice_shelf = Arc::clone(&shelf) as Arc<dyn SealedShelf>;
     let mut boot = rig.load_with(run, services);
     start(&mut boot, INSERTS[0].0);

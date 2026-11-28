@@ -1,12 +1,13 @@
 //! `Pictures` over the media worker (ADR-0004, ADR-0034 decision 5): each session's `kx-pictures` thread runs the
-//! neutral worker host on the media job, one draw or DIB at a time, and checks each reply. An adapter only starts it.
+//! neutral worker host on the media job, one draw, DIB or encode at a time, and checks each reply. An adapter only
+//! starts it.
 
 mod host;
 
 use crate::worker::{Host, Launch, MediaFrames, Session, Spawner, Times};
 use kx_ipc::{MAX_PIXELS_FLAG, MEDIA_JOB};
 use kx_module_api::ports::{
-    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
+    DibAsk, EncodeAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
 };
 use kx_module_api::{Clock, Redacted};
 use std::sync::Arc;
@@ -72,6 +73,11 @@ impl<S: Spawner<MediaFrames>> PictureRun for Run<S> {
 
     fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
         let made = self.0.run(move |host| host.dib(ask));
+        made.unwrap_or(Err(PictureError::Gone))
+    }
+
+    fn encode(&mut self, ask: EncodeAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        let made = self.0.run(move |host| host.encode(&ask));
         made.unwrap_or(Err(PictureError::Gone))
     }
 }

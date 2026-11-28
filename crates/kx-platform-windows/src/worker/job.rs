@@ -5,7 +5,10 @@
 use std::os::windows::io::{FromRawHandle, OwnedHandle};
 use std::thread;
 
-use kx_platform::worker::SpawnError;
+use kx_platform::worker::{
+    FetchFrames, Frames, Launch, MediaFrames, NetFrames, PickFrames, RecordFrames, SpawnError,
+    VaultFrames, VoiceFrames,
+};
 use windows::Win32::Foundation::{ERROR_PROCESS_ABORTED, HANDLE};
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_CPU_RATE_CONTROL,
@@ -50,6 +53,18 @@ pub(super) const UI: JOB_OBJECT_UILIMIT = JOB_OBJECT_UILIMIT(
         | JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS.0
         | JOB_OBJECT_UILIMIT_EXITWINDOWS.0,
 );
+/// Each job's shared-UI limits by its word on the command line: every job is barred from all of it, as the record
+/// job's capture and the pick job's dialogs proved to need none. Memory comes from each `Launch`, the processor cap
+/// from the spawner's weak mode.
+pub(super) const JOBS_UI: [(&str, JOB_OBJECT_UILIMIT); 7] = [
+    (MediaFrames::JOB, UI),
+    (VaultFrames::JOB, UI),
+    (VoiceFrames::JOB, UI),
+    (FetchFrames::JOB, UI),
+    (NetFrames::JOB, UI),
+    (RecordFrames::JOB, UI),
+    (PickFrames::JOB, UI),
+];
 /// Windows counts a job's processor rate in hundredths of a percent of the whole PC.
 const RATE_PER_PCT: u32 = 100;
 /// Weak mode's rate control: on, as a hard cap, so the job never borrows idle time.
@@ -92,13 +107,20 @@ pub(super) fn logical() -> usize {
     }
 }
 
+/// The shared-UI limits of the job `launch` starts; one the table lacks is barred from all of it.
+pub(super) fn ui_of(launch: &Launch) -> JOB_OBJECT_UILIMIT {
+    let word = launch.args.first().map(String::as_str);
+    let listed = JOBS_UI.iter().find(|(job, _)| Some(*job) == word);
+    listed.map_or(UI, |&(_, ui)| ui)
+}
+
 /// An unnamed job; closing it ends the processes in it.
 pub(super) struct Job(OwnedHandle);
 
 impl Job {
-    /// A job for one worker of at most `memory_mb` MB, barred from shared UI.
+    /// A job for one worker of at most `memory_mb` MB, barred from the shared UI `ui` names, its job's `ui_of`.
     #[allow(unsafe_code, reason = "Makes a job of our own.")]
-    pub(super) fn new(memory_mb: u32) -> Result<Self, SpawnError> {
+    pub(super) fn new(memory_mb: u32, ui: JOB_OBJECT_UILIMIT) -> Result<Self, SpawnError> {
         // SAFETY: no attributes and no name, so no other program can open it.
         let made =
             unsafe { CreateJobObjectW(None, PCWSTR::null()) }.map_err(refused("make a job"))?;
@@ -111,7 +133,7 @@ impl Job {
         limits.ProcessMemoryLimit = mb.saturating_mul(MIB);
         job.set(JobObjectExtendedLimitInformation, &limits, "cap the job")?;
         let ui = JOBOBJECT_BASIC_UI_RESTRICTIONS {
-            UIRestrictionsClass: UI,
+            UIRestrictionsClass: ui,
         };
         job.set(
             JobObjectBasicUIRestrictions,
@@ -205,58 +227,4 @@ impl WinChild {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A test job's memory cap, in MB.
-    const MB: u32 = 64;
-
-    /// `cores` cores at `pct` percent each.
-    const fn cap(cores: usize, pct: u8) -> CpuCap {
-        CpuCap { cores, pct }
-    }
-
-    #[test]
-    fn each_core_takes_its_share_of_the_whole_pc() {
-        assert_eq!(share(cap(2, 30), 16), 375, "0.6 of one processor in 16");
-        assert_eq!(share(cap(2, 30), 8), 750);
-        assert_eq!(share(cap(2, 30), 2), 3_000);
-    }
-
-    #[test]
-    fn the_share_is_never_zero_nor_past_the_pc() {
-        assert_eq!(share(cap(1, 1), 256), 1, "never 0, which Windows refuses");
-        assert_eq!(share(cap(1, 0), 4), 1, "no speed still runs");
-        assert_eq!(share(cap(0, 30), 4), 750, "at least one core");
-        assert_eq!(
-            share(cap(16, 30), 4),
-            3_000,
-            "no more cores than the PC has"
-        );
-        assert_eq!(share(cap(2, u8::MAX), 2), 10_000, "no core past its speed");
-        assert_eq!(
-            share(cap(usize::MAX, 100), usize::MAX),
-            10_000,
-            "no overflow"
-        );
-        assert_eq!(share(cap(2, 30), 0), 3_000, "an unknown PC counts one");
-    }
-
-    #[test]
-    fn the_pc_counts_at_least_the_processors_std_sees() {
-        let std = thread::available_parallelism().map_or(1, usize::from);
-        assert!(logical() >= std, "{} < {std}", logical());
-    }
-
-    #[test]
-    fn a_normal_job_has_no_processor_cap() {
-        assert_eq!(Job::new(MB).unwrap().cpu_cap(), None);
-    }
-
-    #[test]
-    fn a_weak_job_caps_each_core_and_reads_it_back() {
-        let job = Job::new(MB).unwrap();
-        job.weaken(cap(2, 30)).unwrap();
-        assert_eq!(job.cpu_cap(), Some(share(cap(2, 30), logical())));
-    }
-}
+mod tests;

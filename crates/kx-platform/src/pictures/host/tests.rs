@@ -3,6 +3,7 @@
 //! the frame's limit is clamped. The core's own rules are tested in `worker::host`.
 
 mod dib;
+mod encode;
 
 use super::*;
 use crate::pictures::times;

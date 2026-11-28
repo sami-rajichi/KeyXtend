@@ -103,6 +103,29 @@ fn every_theme_shares_one_set_of_mock_up_colours() {
     assert!(c.press.a > 0 && c.snip_dim.a > 0 && c.snip_tag.a > 0);
     assert_eq!(rgb(c.snip_edge), (255, 255, 255), ".snip-rect edge");
     assert_eq!(c.rec_dot, Rgba::parse("#E5484D").expect("red"), ".rec-dot");
+    let hex = |h: &str| Rgba::parse(h).expect("a colour");
+    assert_eq!(c.snip_rec, hex("#E81123"), "snip-data.js REC");
+    assert_eq!(rgb(c.snip_tag_ink), (255, 255, 255), ".tag");
+    let inks = [
+        "#E81123", "#FFD400", "#10893E", "#0063B1", "#1B1B1B", "#FFFFFF",
+    ];
+    assert_eq!(c.inks().map(|i| i.1), inks.map(hex), "snip-data.js INK");
+}
+
+#[test]
+fn a_step_number_names_the_ink_it_takes_and_on_green_is_black() {
+    let c = load().common;
+    let (white, ink_black) = (c.snip_ink_white, c.snip_ink_black);
+    let black = Rgba::parse("#000000").expect("black");
+    let want = [white, ink_black, black, white, white, ink_black];
+    assert_eq!(
+        c.inks().map(|i| i.2),
+        want,
+        "red, yellow, green, blue, black, white"
+    );
+    let file: toml::Table = toml::from_str(&text()).expect("themes/*.toml parses");
+    let red = file["common"]["snip_num_red"].as_str();
+    assert_eq!(red, Some("snip_ink_white"), "written by the ink's name");
 }
 
 #[test]
@@ -257,37 +280,4 @@ fn sculpted_caps_cannot_take_the_accent() {
     let at = "so Dolch never takes the accent.\naccent = ";
     let e = parse(&text().replacen(&format!("{at}false"), &format!("{at}true"), 1));
     assert!(e.expect_err("skirts keep their colours").contains("dolch"));
-}
-
-#[test]
-fn a_palette_without_plate_text_takes_legend_2() {
-    let (shipped, _) = parse(&text()).expect("themes/*.toml parses");
-    let et66 = &shipped[1].light;
-    assert_ne!(
-        et66.legend_2_plate, et66.legend_2,
-        "ET66 light writes its own"
-    );
-    let mut file: toml::Table = toml::from_str(&text()).expect("themes/*.toml parses");
-    let themes = file.get_mut("theme").and_then(toml::Value::as_array_mut);
-    let light = themes.and_then(|t| t[1].get_mut("light")?.as_table_mut());
-    let dropped = light.and_then(|l| l.remove("legend_2_plate"));
-    assert!(dropped.is_some(), "the token was there");
-    let gone = toml::to_string(&file).expect("the file writes back");
-    let (themes, _) = parse(&gone).expect("the plate token is optional");
-    let p = &themes[1].light;
-    assert_eq!(p.legend_2_plate, p.legend_2);
-}
-
-#[test]
-fn plate_text_is_written_only_where_it_differs() {
-    let file: toml::Table = toml::from_str(&text()).expect("themes/*.toml parses");
-    let themes = file["theme"].as_array().expect("a theme list");
-    let colour = |v: Option<&toml::Value>| v.and_then(toml::Value::as_str).map(Rgba::parse);
-    for (t, mode) in themes.iter().flat_map(|t| Mode::ALL.map(|m| (t, m))) {
-        let p = &t[mode.key()];
-        if let Some(plate) = p.get("legend_2_plate") {
-            let (plate, legend) = (colour(Some(plate)), colour(p.get("legend_2")));
-            assert_ne!(plate, legend, "{}.{}", t["id"], mode.key());
-        }
-    }
 }

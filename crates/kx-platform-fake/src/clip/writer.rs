@@ -1,5 +1,5 @@
-//! A fake clipboard writer: it records every write with its parts in order, and answers each with the result the test
-//! queued, or success.
+//! A fake clipboard writer: it records every write with its parts and its kind in order, and answers each with the
+//! result the test queued, or success.
 
 use crate::lock;
 use kx_module_api::ports::{ClipError, ClipPart, ClipWait, ClipboardWriter};
@@ -8,6 +8,17 @@ use std::fmt;
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
+/// Which of the writer's calls set the clipboard, so a test tells their markers apart.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum WriteKind {
+    /// `write`: with our "leave out of history" marker.
+    Marked,
+    /// `write_lent`: with that marker and the private ones.
+    Lent,
+    /// `write_kept`: with none of our markers, so both histories keep it.
+    Kept,
+}
+
 /// What the writes did, and what the test set for them.
 #[derive(Default)]
 struct Log {
@@ -15,8 +26,8 @@ struct Log {
     queued: VecDeque<Result<(), ClipError>>,
     /// The parts of each write that set the clipboard, oldest first.
     writes: Vec<Vec<ClipPart>>,
-    /// Whether each of those writes was lent, so it also carried the presence markers.
-    lent: Vec<bool>,
+    /// The kind of each of those writes.
+    kinds: Vec<WriteKind>,
     last_wait: Option<ClipWait>,
     tries: usize,
 }
@@ -51,7 +62,14 @@ impl FakeClipboardWriter {
     /// Whether each write that set the clipboard was lent, oldest first.
     #[must_use]
     pub fn lent(&self) -> Vec<bool> {
-        lock(&self.log).lent.clone()
+        let kinds = lock(&self.log).kinds.clone();
+        kinds.into_iter().map(|k| k == WriteKind::Lent).collect()
+    }
+
+    /// The kind of each write that set the clipboard, oldest first.
+    #[must_use]
+    pub fn kinds(&self) -> Vec<WriteKind> {
+        lock(&self.log).kinds.clone()
     }
 
     /// How many writes were asked, refused ones too.
@@ -90,8 +108,8 @@ impl fmt::Debug for FakeClipboardWriter {
 }
 
 impl FakeClipboardWriter {
-    /// Takes the next queued result for a write of `parts`, lent or not, and records it when it succeeds.
-    fn record(&self, parts: &[ClipPart], wait: ClipWait, lent: bool) -> Result<(), ClipError> {
+    /// Takes the next queued result for a write of `parts` of `kind`, and records it when it succeeds.
+    fn record(&self, parts: &[ClipPart], wait: ClipWait, kind: WriteKind) -> Result<(), ClipError> {
         let mut log = lock(&self.log);
         log.tries += 1;
         log.last_wait = Some(wait);
@@ -99,7 +117,7 @@ impl FakeClipboardWriter {
         let result = log.queued.pop_front().unwrap_or(Ok(()));
         if result.is_ok() {
             log.writes.push(parts.to_vec());
-            log.lent.push(lent);
+            log.kinds.push(kind);
         }
         result
     }
@@ -107,11 +125,15 @@ impl FakeClipboardWriter {
 
 impl ClipboardWriter for FakeClipboardWriter {
     fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
-        self.record(parts, wait, false)
+        self.record(parts, wait, WriteKind::Marked)
     }
 
     fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
-        self.record(parts, wait, true)
+        self.record(parts, wait, WriteKind::Lent)
+    }
+
+    fn write_kept(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+        self.record(parts, wait, WriteKind::Kept)
     }
 }
 

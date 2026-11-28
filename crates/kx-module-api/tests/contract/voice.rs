@@ -1,9 +1,9 @@
-//! Voice typing's events and ports (ADR-0042, ADR-0046): the voice events travel only with `Voice`, the level with no
-//! grant, the speech port needs `Microphone`, the model files port `Network`, the folder reveal `OpenFolder`, and the
-//! session watch nothing.
+//! Voice typing's events and ports (ADR-0042, ADR-0046, ADR-0058): the voice events travel only with `Voice`, the level
+//! with no grant, the speech port needs `Speech` and never takes `Microphone`, the model files port `Network`, the
+//! folder reveal `OpenFolder`, and the session watch nothing.
 
 use kx_module_api::Capability::{
-    Microphone, Network, OpenFolder, ReadFocusedText, SecretStore, Voice, WriteClipboard,
+    Microphone, Network, OpenFolder, ReadFocusedText, SecretStore, Speech, Voice, WriteClipboard,
 };
 use kx_module_api::ports::{
     BarPlace, FolderError, FolderPath, FolderRevealKey, JobLimits, ModelFilesKey, PanelKey,
@@ -16,12 +16,13 @@ use kx_module_api::{
     ServiceKey, Zeroizing,
 };
 use kx_test_support::host::FakeHost;
+use kx_test_support::paths::native_path;
 use std::sync::Arc;
 use stub::Stub;
 
 mod stub;
 
-/// A voice module declaring its powers (ADR-0042 decisions 7 and 8, ADR-0046).
+/// A voice module declaring its powers (ADR-0042 decision 7, ADR-0046, ADR-0058).
 static VOICE: Manifest = Manifest {
     id: ModuleId::new("voice"),
     version: env!("CARGO_PKG_VERSION"),
@@ -34,7 +35,7 @@ static VOICE: Manifest = Manifest {
     provides: &[],
     capabilities: &[
         Voice,
-        Microphone,
+        Speech,
         Network,
         SecretStore,
         ReadFocusedText,
@@ -46,7 +47,7 @@ static VOICE: Manifest = Manifest {
 
 /// The module's powers besides `Voice`, none of which opens a voice event.
 const OTHERS: &[Capability] = &[
-    Microphone,
+    Speech,
     Network,
     SecretStore,
     ReadFocusedText,
@@ -168,18 +169,26 @@ fn the_level_passes_with_no_grant() {
 }
 
 #[test]
-fn speech_needs_the_microphone_and_model_files_the_network() {
+fn speech_needs_speech_and_model_files_the_network() {
     let mut host = host(&[Voice, SecretStore]);
     let cx = ModuleCx::new(&mut host);
-    let speech = ServiceError::NotGranted(SpeechKey::ID, Microphone);
+    let speech = ServiceError::NotGranted(SpeechKey::ID, Speech);
     assert_eq!(cx.service::<SpeechKey>().err(), Some(speech));
     let files = ServiceError::NotGranted(ModelFilesKey::ID, Network);
     assert_eq!(cx.service::<ModelFilesKey>().err(), Some(files));
 }
 
 #[test]
+fn the_microphone_which_snip_holds_for_its_recorder_never_reaches_speech() {
+    let mut host = host(&[Microphone]);
+    let refused = ServiceError::NotGranted(SpeechKey::ID, Speech);
+    let got = ModuleCx::new(&mut host).service::<SpeechKey>();
+    assert_eq!(got.err(), Some(refused), "ADR-0058 decision 2");
+}
+
+#[test]
 fn the_folder_reveal_needs_open_folder() {
-    let mut bare = host(&[Voice, Microphone, Network]);
+    let mut bare = host(&[Voice, Speech, Network]);
     let cx = ModuleCx::new(&mut bare);
     let refused = ServiceError::NotGranted(FolderRevealKey::ID, OpenFolder);
     assert_eq!(cx.service::<FolderRevealKey>().err(), Some(refused));
@@ -187,13 +196,13 @@ fn the_folder_reveal_needs_open_folder() {
     let reveal = ModuleCx::new(&mut granted)
         .service::<FolderRevealKey>()
         .unwrap();
-    let folder = FolderPath::new(r"D:\KeyXtend\models".into()).unwrap();
+    let folder = FolderPath::new(native_path(r"D:\KeyXtend\models")).unwrap();
     assert_eq!(reveal.show(&folder), Err(FolderError::Missing));
 }
 
 #[test]
 fn the_speech_port_names_the_check_clips_languages() {
-    let mut host = host(&[Microphone]);
+    let mut host = host(&[Speech]);
     let speech = ModuleCx::new(&mut host).service::<SpeechKey>().unwrap();
     assert_eq!(
         speech.clips(),
@@ -247,6 +256,6 @@ fn a_listen_only_ask_passes_and_speech_is_reached_through_its_gate() {
         ..listen()
     };
     assert_eq!(over.check(), Err(SpeechError::Range("level_hz")));
-    let mut host = host(&[Microphone]);
+    let mut host = host(&[Speech]);
     assert!(ModuleCx::new(&mut host).service::<SpeechKey>().is_ok());
 }

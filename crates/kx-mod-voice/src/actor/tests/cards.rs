@@ -12,7 +12,7 @@ use kx_module_api::{Redacted, Secret, Zeroizing};
 use kx_platform_fake::SpeechCall;
 
 use super::Msg;
-use super::rig::{DIR, Rig, done, english, english_layout};
+use super::rig::{Rig, dir, done, english, english_layout};
 use super::taps::{held, release, waiting};
 use crate::counts::{Checked, Checks};
 use crate::models::{Row, table};
@@ -118,7 +118,7 @@ pub(super) fn build_picked(
         fake.speech.set_check(&id(CARD), Vec::new(), check.clone());
         fake.speech.set_check(&id(CARD2), Vec::new(), check);
         let row = arabic();
-        let file = Path::new(DIR).join(&row.file);
+        let file = Path::new(&dir()).join(&row.file);
         fake.files.add_file(&file, row.bytes, row.print);
         let opened = Store::open(Arc::new(fake.shelf.clone()), MAX_BLOB_BYTES).unwrap();
         opened.store.save_checks(&Checks::new(kept)).unwrap();

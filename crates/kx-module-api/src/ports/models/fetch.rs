@@ -41,7 +41,7 @@ pub struct FetchAsk {
     pub links: Vec<Link>,
     /// The hosts an address or a redirect may reach, in lower case, at most `MAX_HOSTS`; any other is refused.
     pub hosts: Vec<String>,
-    /// The file it becomes once checked: an absolute drive path (`path_ok`), and so is its part file.
+    /// The file it becomes once checked: an absolute path (`path_ok`), and so is its part file.
     pub file: Redacted<PathBuf>,
     /// Its size in bytes, from its row, at most `MAX_MODEL_BYTES`.
     pub bytes: u64,
@@ -60,7 +60,7 @@ impl FetchAsk {
     pub const STALL_S: RangeInclusive<u16> = kx_ipc::STALL_S;
 
     /// Refuses an ask with a value outside its range or cap, a host `host_ok` refuses, no address or one `link_named`
-    /// refuses, or a file that is no plain drive path.
+    /// refuses, or a file that is no plain absolute path.
     ///
     /// # Errors
     /// `ModelError::Range` naming the first such value.

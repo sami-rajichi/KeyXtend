@@ -2,8 +2,10 @@
 //! fake injector and layouts on the captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power
 //! dialog, box watch, word packs, sealed store, clipboard, shelf, pictures and calendar, Quick-fill's notebook in
 //! memory with seeded random bytes, boxes and places, the selection watch and web link, voice typing's speech, cloud
-//! speech, model files, session watch and shelf, and the shared fake UI ports with a reveal and a look the rig keeps; a
-//! waker keeps every wake.
+//! speech, model files, session watch and shelf, Snip's fakes (`snip`), and the shared fake UI ports with a reveal and
+//! a look the rig keeps; a waker keeps every wake.
+
+pub mod snip;
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -24,6 +26,7 @@ use kx_platform_fake::{
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
+use snip::Snips;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
@@ -109,16 +112,20 @@ pub struct Rig {
     pub session: FakeSessionWatch,
     /// Behind voice typing's sealed shelf, empty.
     pub voice: FakeShelf,
+    /// Behind Snip's ports, for either run.
+    pub snip: Snips,
 }
 
 impl Rig {
     /// Fresh folders and fakes, with an empty portable data folder.
     pub fn new() -> Self {
         let (exe, user, dirs) = folders();
+        let platform = Arc::new(FakePlatform::new(dirs));
         Self {
             exe,
             _user: user,
-            platform: Arc::new(FakePlatform::new(dirs)),
+            snip: Snips::new(&platform),
+            platform,
             injector: Arc::new(FakeInjector::new()),
             layouts: Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap()),
             pointer: Arc::new(FakePointerHook::new()),
@@ -173,7 +180,7 @@ impl Rig {
 
     /// The app loaded over the fakes as `run` says, normal or hidden.
     pub fn load_as(&self, run: &Run) -> Boot {
-        self.load_with(run, self.services())
+        self.load_with(run, self.services(run))
     }
 
     /// The app loaded over `services` as `run` says, with the rig's UI ports.
@@ -181,11 +188,12 @@ impl Rig {
         let mut ports = ports(self.tray.clone());
         ports.reveal = self.reveal.clone();
         ports.look = self.look.clone();
+        ports.esc = self.snip.esc.clone();
         Boot::load(self.platform(), services, ports, run).unwrap()
     }
 
-    /// The services over the rig's fakes.
-    pub fn services(&self) -> Services {
+    /// The services over the rig's fakes for `run`; Snip's follow the run, as the app's do.
+    pub fn services(&self, run: &Run) -> Services {
         Services {
             injector: self.injector.clone(),
             layouts: self.layouts.clone(),
@@ -213,6 +221,7 @@ impl Rig {
             models: Arc::new(self.files.clone()),
             session: Arc::new(self.session.clone()),
             voice_shelf: Arc::new(self.voice.clone()),
+            snip: self.snip.ports(run),
         }
     }
 

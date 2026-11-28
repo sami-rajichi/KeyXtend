@@ -41,7 +41,7 @@ fn the_clips_are_none_until_set_then_as_set_in_their_order() {
 fn facts_ask(file: &str) -> FactsAsk {
     FactsAsk {
         job: job(),
-        file: Redacted::new(PathBuf::from(file)),
+        file: Redacted::new(native_path(file)),
         size_mb: 800,
     }
 }
@@ -98,8 +98,8 @@ fn facts_answer_per_file_and_an_unknown_file_is_missing() {
         runner: "whisper".into(),
         langs: vec!["ar".into(), "fr".into()],
     };
-    fake.set_facts(Path::new(FILE), Ok(facts.clone()));
-    fake.set_facts(Path::new(OTHER), Err(SpeechError::Runner));
+    fake.set_facts(&native_path(FILE), Ok(facts.clone()));
+    fake.set_facts(&native_path(OTHER), Err(SpeechError::Runner));
     assert_eq!(fake.facts(&facts_ask(FILE)), Ok(facts));
     assert_eq!(fake.facts(&facts_ask(OTHER)), Err(SpeechError::Runner));
     let unknown = facts_ask(r"D:\Models\none.gguf");

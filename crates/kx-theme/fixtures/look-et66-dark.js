@@ -21,6 +21,7 @@ var lk = {
     "lock_ink": "#FFFFFFFF",
     "rec": "#FF3F3B37",
     "rec_ink": "#FFE6BE3A",
+    "rec_light": "#FFFF99A4",
     "prep": "#FFE0913A",
     "prep_ink": "#FF2A1D0E",
     "warn": "#FF4A3C24",
@@ -28,6 +29,7 @@ var lk = {
     "led_off": "#FF4A4642",
     "led_on": "#FF6CC08A",
     "ring": "#FFE6BE3A",
+    "ring_act": "#FFE6BE3A",
     "badge_bg": "#FF2A2418",
     "badge_ink": "#FFE6BE3A",
     "pop_bg": "#FF33302D",
@@ -95,7 +97,21 @@ var lk = {
     "rec_dot": "#FFE5484D",
     "snip_dim": "#6B000000",
     "snip_edge": "#FFFFFFFF",
-    "snip_tag": "#99000000"
+    "snip_tag": "#99000000",
+    "snip_tag_ink": "#FFFFFFFF",
+    "snip_rec": "#FFE81123",
+    "snip_ink_red": "#FFE81123",
+    "snip_ink_yellow": "#FFFFD400",
+    "snip_ink_green": "#FF10893E",
+    "snip_ink_blue": "#FF0063B1",
+    "snip_ink_black": "#FF1B1B1B",
+    "snip_ink_white": "#FFFFFFFF",
+    "snip_num_red": "#FFFFFFFF",
+    "snip_num_yellow": "#FF1B1B1B",
+    "snip_num_green": "#FF000000",
+    "snip_num_blue": "#FFFFFFFF",
+    "snip_num_black": "#FFFFFFFF",
+    "snip_num_white": "#FF1B1B1B"
   },
   "look": {
     "id": "et66",
@@ -317,18 +333,125 @@ var lk = {
       "tag_px": 11.0,
       "tag_weight": 500,
       "tag_pad_px": [
-        2.0,
-        6.0
+        4.0,
+        7.0
       ],
       "tag_radius_px": 4.0,
-      "tag_gap_px": 22.0,
-      "bar_top_px": 10.0,
-      "bar_pad_px": [
-        8.0,
+      "tag_gap_px": 24.0,
+      "hole_px": 1.5,
+      "hover_px": 3.0,
+      "hover_radius_px": 8.0,
+      "handle_px": 10.0,
+      "handle_hit_px": 32.0,
+      "bar_top_px": 12.0,
+      "plate_pad_px": 3.0,
+      "key_px": 34.0,
+      "key_pad_px": [
+        11.0,
         9.0
       ],
-      "bar_radius_px": 9.0,
-      "hint_px": 11.0
+      "word_px": 12.0,
+      "icon_px": 16.0,
+      "icon_gap_px": 6.0,
+      "sep_px": 6.0,
+      "ring_px": 2.0,
+      "hint_gap_px": 20.0,
+      "hint_pad_px": [
+        6.0,
+        12.0
+      ],
+      "hint_px": 12.5,
+      "gap_px": 10.0,
+      "count_px": 150.0,
+      "count_num_px": 64.0,
+      "count_weight": 600,
+      "count_word_px": 11.5,
+      "count_word_w_px": 120.0,
+      "count_gap_px": 10.0,
+      "edge_px": 2.0,
+      "glow_px": 6.0,
+      "glow_share": 0.3,
+      "soon_px": 2.0,
+      "dash_px": [
+        4.0,
+        3.0
+      ],
+      "rec_px": 40.0,
+      "rec_pad_px": [
+        4.0,
+        12.0
+      ],
+      "rec_gap_px": 2.0,
+      "rec_key_px": 32.0,
+      "rec_key_pad_px": 8.0,
+      "rec_dot_px": 10.0,
+      "rec_time_px": 13.0,
+      "rec_time_weight": 600,
+      "rec_time_gap_px": 8.0,
+      "rec_sep_px": 6.0,
+      "editor_px": [
+        980.0,
+        540.0
+      ],
+      "editor_min_px": [
+        740.0,
+        420.0
+      ],
+      "pen_px": [
+        2,
+        4,
+        6,
+        10
+      ],
+      "marker_px": [
+        12,
+        18,
+        26,
+        36
+      ],
+      "disc_px": [
+        22,
+        28,
+        36,
+        48
+      ],
+      "head_px": [
+        12,
+        16,
+        22,
+        30
+      ],
+      "text_px": [
+        16,
+        20,
+        28,
+        36
+      ],
+      "slop_px": 8,
+      "marker_share": 0.4,
+      "head_deg": 25.0,
+      "mark_weight": 600,
+      "step_share": 0.6,
+      "editor_rows_px": [
+        36.0,
+        44.0,
+        40.0
+      ],
+      "editor_pad_px": [
+        8.0,
+        14.0
+      ],
+      "ink_px": [
+        24.0,
+        2.0,
+        4.0
+      ],
+      "ask_px": [
+        440.0,
+        18.0
+      ],
+      "panel_px": 500.0,
+      "typing_gap_px": 6.0
     },
     "panel": {
       "width_px": 480.0,
@@ -845,6 +968,39 @@ var lk = {
           1.0
         ]
       },
+      "snip_count": {
+        "ms": 200,
+        "bez": [
+          0.0,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "snip_dot": {
+        "ms": 1200,
+        "bez": [
+          0.42,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "snip_pop": {
+        "ms": 180,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
       "stop": {
         "ms": 220,
         "bez": [
@@ -1111,7 +1267,8 @@ var lk = {
       "glyph": "keyboard",
       "show": "keyboard",
       "voice": "mic",
-      "quit": "power"
+      "quit": "power",
+      "snip": "scissors-line-dashed"
     },
     "words": {
       "domain": "at-sign",
@@ -1342,6 +1499,76 @@ var lk = {
         "hints": {
           "insert": "clipboard-paste"
         }
+      }
+    },
+    "snip": {
+      "tick": "check",
+      "length": "film",
+      "mic_off": "mic-off",
+      "sound_off": "volume-x",
+      "bar": {
+        "close": "x",
+        "full": "monitor",
+        "region": "square-dashed",
+        "settings": "settings-2",
+        "video-full": "monitor-play",
+        "video-region": "video",
+        "window": "app-window"
+      },
+      "strip": {
+        "close": "x",
+        "copy": "copy",
+        "edit": "square-pen",
+        "mic": "mic",
+        "play": "play",
+        "record": "circle-dot",
+        "save": "save",
+        "sound": "volume-2",
+        "speed": "chevron-right"
+      },
+      "rec": {
+        "cancel": "x",
+        "mic": "mic",
+        "sound": "volume-2",
+        "stop": "square"
+      },
+      "tools": {
+        "arrow": "move-up-right",
+        "box": "square",
+        "circle": "circle",
+        "cover": "eye-off",
+        "crop": "crop",
+        "eraser": "eraser",
+        "highlighter": "highlighter",
+        "line": "slash",
+        "pen": "pencil",
+        "steps": "list-ordered",
+        "text": "type"
+      },
+      "edit": {
+        "back": "minimize-2",
+        "close": "x",
+        "full": "maximize-2",
+        "less": "minus",
+        "more": "plus",
+        "move": "grip-horizontal",
+        "redo": "redo-2",
+        "size": "move-diagonal-2",
+        "undo": "undo-2"
+      },
+      "crop": {
+        "cancel": "x",
+        "ok": "check"
+      },
+      "ask": {
+        "back": "undo-2",
+        "drop": "trash-2",
+        "mark": "save",
+        "save": "save"
+      },
+      "panel": {
+        "change": "folder",
+        "open": "folder-open"
       }
     }
   },

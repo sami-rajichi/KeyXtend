@@ -23,6 +23,7 @@ Glow {
     readonly property bool noted: !!view.note
 
     lk: win.lk
+    res: win.res
     box: Qt.rect(pane.x, pane.y, pane.width, pane.height)
     radius: pane.radius
     follow: pane.body

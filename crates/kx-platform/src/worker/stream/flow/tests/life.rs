@@ -122,7 +122,7 @@ fn a_note_on_an_id_its_worker_was_never_asked_ends_it() {
         rig.script.say(Ok(level(stray)));
         rig.script.say(Ok(level(2)));
         assert_eq!(rig.heard(), [Told::Lost(Lost::Gone)], "{why}");
-        assert_eq!(rig.script.calls().last(), Some(&Call::End));
+        assert!(waited(&rig.script), "{:?}", rig.script.calls());
         let again = ms(TIMES.restart_ms) * 2;
         assert_eq!(rig.begin(start), down(again), "held back, {why}");
     }

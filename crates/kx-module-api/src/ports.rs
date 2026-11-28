@@ -60,6 +60,7 @@ mod selection;
 mod session;
 mod shelf;
 mod shortcut;
+mod snip;
 mod speech;
 mod voice;
 mod words;
@@ -79,7 +80,7 @@ pub use calendar::{
 };
 pub use clip::{
     AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, probe_ok,
+    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, PathRoot, probe_ok,
 };
 pub use clips::{
     CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage,
@@ -122,8 +123,8 @@ pub use packs::{
     PACK_INDEX, PackError, PackIndex, PackView, WordPacks, WordPacksKey, fits_iso, pack_file,
 };
 pub use pictures::{
-    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey, Pixels,
-    RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
+    DibAsk, EncodeAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey,
+    Pixels, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
 };
 pub use places::{
     BOX_HINT, Found, Place, PlaceError, PlaceKind, PlaceState, Places, PlacesKey, is_box_head,
@@ -154,6 +155,19 @@ pub use shelf::{Room, SealedShelf, SealedShelfKey, VoiceShelfKey};
 pub use shortcut::{
     COPY_ID, COPY_TERM_ID, CUT_ID, KeyName, MAX_ID_LEN, PASTE_ID, PASTE_TERM_ID, ShortcutError,
     ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
+};
+pub use snip::{
+    AskError, AskKey, BGRX_BYTES, BarKey, CaptureSheet, CloseAsk, Countdown, Crop, CropFrame,
+    CropKey, Dim, Drawing, EditKey, Editor, FileAsk, FileAskKey, FileKind, FolderKey, Frame,
+    FreezeError, Frozen, FrozenScreen, Gear, Grip, Handle, Ink, Keep, Keycap, Mark, MediaOpen,
+    MediaOpenKey, MicPass, MicPassKey, MicPasses, MicSeal, Part, PickLimits, Picking, PictureEdit,
+    PlayError, RecKey, RecordAsk, RecordDone, RecordEnd, RecordError, RecordFacts, RecordNote,
+    RecordRun, RecordWaits, Recorder, RecorderKey, Recording, SHOT_CAP_MB, SaveError, SaveTo,
+    Scale, ScreenFreeze, ScreenFreezeKey, Shape, Shot, ShotCap, SnipAct, SnipAside, SnipAsk,
+    SnipClick, SnipFile, SnipFit, SnipFolder, SnipFolderKey, SnipKeyboard, SnipLine, SnipLineKey,
+    SnipLit, SnipNote, SnipPage, SnipSheet, SnipSpot, SnipStage, SnipStart, SnipTab, SnipView,
+    Source, Speed, SpeedAsk, StripKey, Taken, TextEdit, TextSize, Thickness, Tool, UnsavedFile,
+    VideoRow, VideoSheet,
 };
 pub use speech::{
     CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, FactsAsk, Hundredths,

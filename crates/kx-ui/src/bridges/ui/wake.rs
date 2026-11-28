@@ -4,6 +4,7 @@
 
 use super::qobject;
 use crate::bridges::device::release_after_frame;
+use crate::bridges::snips::made;
 use crate::hub::{Hub, Wake};
 use cxx_qt::{CxxQtType, Threading};
 use kx_platform::ui::TrayEvent;
@@ -66,6 +67,11 @@ fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Clip => ui.as_mut().clip_changed(),
         Wake::Sel => ui.as_mut().sel_changed(),
         Wake::Page { back } => ui.with((), |h| h.turn_page(back)),
+        Wake::Aside => {
+            let shielded = ui.with(false, |h| h.shield_aside(&made));
+            ui.as_mut().aside_asked();
+            ui.with((), |h| h.aside_shown(shielded));
+        }
     }
     let dropped = relook && ui.with(false, Hub::drop_fonts);
     if loaded || dropped {

@@ -116,16 +116,21 @@ pub enum FileFact {
     Unchecked,
 }
 
-/// The separators a copied path may use.
-pub(super) const SEPARATORS: &[u8] = br"\/";
+// The separators a copied path may use and the path styles, the frames' own.
+pub use kx_ipc::rules::PathRoot;
+pub(super) use kx_ipc::rules::SEPARATORS;
 
-/// True only for an absolute drive path such as `C:\…`, which Windows parses as `Prefix::Disk` then `RootDir`. Every
-/// other form (a share, a device, an NT path, a relative path or a bare `C:foo`) could reach another machine, so no
-/// adapter probes it.
+/// True only for an absolute path in this system's style (`PathRoot::NATIVE`): `C:\…` on Windows, `/…` elsewhere.
+/// Every other form (a share, a device, an NT path, a relative path, a bare `C:foo` or `//host`) could reach another
+/// machine, so no adapter probes it.
 #[must_use]
 pub fn probe_ok(path: &Path) -> bool {
-    let sep = |b: &u8| SEPARATORS.contains(b);
-    matches!(path.as_os_str().as_encoded_bytes(), [drive, b':', s, ..] if drive.is_ascii_alphabetic() && sep(s))
+    probe_in(PathRoot::NATIVE, path)
+}
+
+/// `probe_ok` in `root`'s style, so both styles are tested on every system.
+pub(crate) fn probe_in(root: PathRoot, path: &Path) -> bool {
+    root.len_of(path.as_os_str().as_encoded_bytes()).is_some()
 }
 
 /// Why the clipboard could not be watched, read or set.
@@ -156,7 +161,7 @@ pub trait ClipRun: Send {}
 /// Watches the system clipboard; the platform provides it.
 pub trait Clipboard: Send + Sync {
     /// Starts a watch as `cfg` says; `tell` hears each copy, skip and clear, on any thread. Our own writes carry the
-    /// marker, so they come back as `Marked`, unread.
+    /// marker, so they come back as `Marked`, unread, but for a kept one (`write_kept`).
     ///
     /// # Errors
     /// `Refused` when the OS refuses to watch.
@@ -200,6 +205,13 @@ pub trait ClipboardWriter: Send + Sync {
     /// # Errors
     /// As `write`.
     fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
+
+    /// Sets the clipboard as `write` does, but with none of our markers, so our own and the system's clipboard
+    /// histories both keep it, as a copied snip (ADR-0056 decision 2).
+    ///
+    /// # Errors
+    /// As `write`.
+    fn write_kept(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
 }
 
 /// The clipboard watch service; it needs `ReadClipboard`.

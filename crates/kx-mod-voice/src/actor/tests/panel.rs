@@ -10,7 +10,7 @@ use kx_module_api::ports::{
 use kx_platform_fake::FileCall;
 
 use super::Msg;
-use super::rig::{DIR, Rig};
+use super::rig::{Rig, dir};
 use super::taps::{held, release, waiting};
 
 /// The note band of the panel told last.
@@ -25,7 +25,7 @@ fn open_shows_the_models_folder_through_the_folder_reveal() {
     rig.act(VoiceClick::Open(VoiceTab::Models));
     rig.act(VoiceClick::Button(PanelButton::Open));
     let shown = rig.fake.reveal.shown();
-    assert!(matches!(&shown[..], [f] if f.expose() == Path::new(DIR)));
+    assert!(matches!(&shown[..], [f] if f.expose() == Path::new(&dir())));
     assert_eq!(band(&rig), None);
 }
 

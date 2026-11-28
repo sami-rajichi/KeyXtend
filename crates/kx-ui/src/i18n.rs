@@ -51,6 +51,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/sel/en.ftl"),
             include_str!("../i18n/voice/en.ftl"),
             include_str!("../i18n/cloud/en.ftl"),
+            include_str!("../i18n/snip/en.ftl"),
         ],
     },
     Lang {
@@ -63,6 +64,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/sel/fr.ftl"),
             include_str!("../i18n/voice/fr.ftl"),
             include_str!("../i18n/cloud/fr.ftl"),
+            include_str!("../i18n/snip/fr.ftl"),
         ],
     },
     Lang {
@@ -75,6 +77,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/sel/ar.ftl"),
             include_str!("../i18n/voice/ar.ftl"),
             include_str!("../i18n/cloud/ar.ftl"),
+            include_str!("../i18n/snip/ar.ftl"),
         ],
     },
 ];

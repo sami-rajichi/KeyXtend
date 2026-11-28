@@ -135,10 +135,10 @@ fn folder_files(folder: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_clip_and_sel_folders_hold_exactly_the_languages_of_the_main_files() {
+fn the_clip_sel_and_snip_folders_hold_exactly_the_languages_of_the_main_files() {
     let mut ours: Vec<String> = FILES.iter().map(|(tag, ..)| format!("{tag}.ftl")).collect();
     ours.sort();
-    for folder in ["clip", "sel"] {
+    for folder in ["clip", "sel", "snip"] {
         assert_eq!(folder_files(folder), ours, "{folder}");
     }
 }

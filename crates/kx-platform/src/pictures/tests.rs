@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::worker::fake::{Act, Call, Hands, Script};
-use kx_module_api::ports::ImageCodec;
+use kx_module_api::ports::{ImageCodec, Shot};
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
@@ -79,6 +79,19 @@ fn a_session_makes_a_dib_on_its_thread_beside_its_draws() {
         .dib(DibAsk { png, max_bytes: 44 })
         .map(Redacted::into_inner);
     assert_eq!(made, Ok(vec![0; 44]));
+    assert!(run.draw(ask()).is_ok());
+    assert_eq!(script.spawns(), 1);
+}
+
+#[test]
+fn a_session_makes_a_png_on_its_thread_beside_its_draws() {
+    let script = Script::default();
+    let (pictures, _told) = pictures(&script);
+    let mut run = pictures.open(CFG);
+    script.act(Act::Png(12));
+    let shot = Shot::new(1, 1, vec![1, 2, 3, 0]).unwrap();
+    let made = run.encode(EncodeAsk { shot }).map(Redacted::into_inner);
+    assert_eq!(made, Ok(vec![0; 12]));
     assert!(run.draw(ask()).is_ok());
     assert_eq!(script.spawns(), 1);
 }

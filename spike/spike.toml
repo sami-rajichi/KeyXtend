@@ -1,48 +1,14 @@
-# Every number and path the spike's later-phase parts and kx-gates use; read beside the exe, else from spike/.
+# Every value the spike's later-phase parts and kx-gates use; read beside the exe, else from spike/.
 # The keyboard's sections moved to the product in P3 (docs/spike-move-map.md); the frozen staged face keeps its copy.
 
 [keyboard]
 # Window title, so kx-gates can find the face.
 title = "KeyXtend spike - Qt"
-# One key unit in logical pixels, and the gap between keys.
-key_px = 48.0
-gap_px = 4.0
-# Label font size in logical pixels.
-font_px = 16.0
-# The stage-1 5-row block the tools row sits under, for the frozen face's tool gates; 0xE0xx marks an extended key.
-rows = [
-    [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E],
-    [0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B],
-    [0x3A, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x1C],
-    [0x2A, 0x56, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36],
-    [0x1D, 0xE05B, 0x38, 0x39, 0xE038, 0xE01D],
-]
-# Key widths in key units; keys not listed are 1.0.
-widths = [
-    [0x0E, 2.0], [0x0F, 1.5], [0x2B, 1.5], [0x3A, 1.75], [0x1C, 2.25],
-    [0x2A, 1.25], [0x36, 2.75], [0x1D, 1.5], [0xE05B, 1.25], [0x38, 1.25],
-    [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
-]
 
-# Stage 1b: the tools row under the keys and snip; the pill left the source in P10 and the mic in P11.
-[tools]
-labels = { snip = "Snip" }
-# The frozen face's tools row holds four buttons: quick-fill's two (gone in P9, ADR-0038), snip, then the mic.
-slots = 4
-# Each button's place in that row, 0 on the left.
-slot = { snip = 2 }
-# The snip overlay's window title, so kx-gates can find it.
-overlay_title = "KeyXtend spike - snip"
-# Folder under TEMP for snips and the frozen screen; kx-gates deletes what it reads.
-snip_folder = "kx-spike-snips"
-# Largest screen copy made or read, in MiB; three 4K screens need about 100.
-shot_cap_mb = 256
-# Width of the snip region's edge (mock-up .snip-rect; drawn in the shared snip_edge colour), in logical pixels.
-snip_edge_px = 1.5
-# What the snip overlay tells a screen reader; it is also shown at the top of the screen.
-snip_hint = "Snip: click two corners of the region. Click the same spot twice to cancel."
-# The region's size tag, in physical pixels.
-snip_size = "{w} × {h}"
+# The cap on G1's desktop screenshot and G6's pictures; the tools row and the snip left in P12.
+[shot]
+# Largest screen copy made, in MiB; three 4K screens need about 100.
+cap_mb = 256
 
 # The Arabic test panel for gate G7 (mock-up .pop): a right-to-left stand-in for Settings, opened by the Settings key.
 # Rows per page (ADR-0008), the page text with {n} and {count}, the field's screen-reader name, and each button's icon and name.

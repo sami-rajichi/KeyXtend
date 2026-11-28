@@ -91,6 +91,12 @@ impl Hub {
         self.act(FaceAction::AimPanel)
     }
 
+    /// A press on a Snip window that shows a line: the letters go to Snip's windows (ADR-0057). The countdown and the
+    /// record bar never call it.
+    pub fn aim_snip(&self) -> Redraw {
+        self.act(FaceAction::AimSnip)
+    }
+
     /// Key `id` goes to the open list, `[ui] page_rows` rows per page.
     pub fn panel_key(&self, id: &str) -> Redraw {
         let rows = self.lock().settings.page_rows;
@@ -169,12 +175,15 @@ impl Hub {
         )
     }
 
-    /// Guard try number `attempt` (from 1), with the window titled `top` landing in front: true to try again after
-    /// `[ui] guard_delay_ms`; once done, the focus goes back to the app the user had in front, and the entry watch asked
-    /// next is the run's last. Call it on the UI thread.
+    /// Guard try number `attempt` (from 1), with the window titled `top` landing in front and Snip's windows spared, so
+    /// they may leave the top for a system dialog (ADR-0059): true to try again after `[ui] guard_delay_ms`; once done,
+    /// the focus goes back to the app the user had in front, and the entry watch asked next is the run's last. Call it
+    /// on the UI thread.
     pub fn guard(&self, attempt: u32, top: Option<&str>) -> bool {
         let tries = self.lock().settings.guard_tries;
-        let result = self.ports.guard.guard_own(None, top);
+        let snips = self.snip_titles();
+        let spare: Vec<&str> = snips.iter().map(String::as_str).collect();
+        let result = self.ports.guard.guard_own(&spare, top);
         let next = guard::next(&result, attempt, tries);
         self.guard_tried(next == Next::Done);
         match (&result, next) {

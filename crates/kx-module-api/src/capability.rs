@@ -36,7 +36,7 @@ capabilities! {
     WriteClipboard => "write-clipboard",
     /// Read what is typed into the focused box, the words before its cursor, and its selection.
     ReadFocusedText => "read-focused-text",
-    /// Record from the microphone.
+    /// Hand the app's microphone pass to a recorder; the snip module alone holds it (ADR-0056, ADR-0058).
     Microphone => "microphone",
     /// Reach the network.
     Network => "network",
@@ -64,8 +64,17 @@ capabilities! {
     /// Carry voice typing's events: the key, its light, the bar's view, its clicks and the text to type; the voice
     /// module, the keyboard and the ui hold it as an event gate (ADR-0042).
     Voice => "voice",
-    /// Show a folder in the system's file manager; the voice module alone holds it, for its models folder (ADR-0046).
+    /// Show a folder in the system's file manager: the voice module for its models folder (ADR-0046), Snip for its
+    /// folder and to play a video (ADR-0056).
     OpenFolder => "open-folder",
+    /// Ask where to save through the system's Save and folder dialogs; the snip module alone holds it (ADR-0056).
+    SaveFile => "save-file",
+    /// Carry Snip's events: the key, its light, the views, their clicks and the editor's line; the snip module, the
+    /// keyboard and the ui hold it as an event gate, as `Voice` (ADR-0056).
+    Snip => "snip",
+    /// Hear the microphone and turn speech into text in the worker's speech jobs; the voice module alone holds it
+    /// (ADR-0058).
+    Speech => "speech",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -171,6 +180,39 @@ mod tests {
         let voice = at(Capability::Voice);
         assert_eq!(at(folder), voice.map(|i| i + 1), "ADR-0046");
         let others = Capability::ALL.iter().filter(|&&c| c != folder);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+    }
+
+    #[test]
+    fn save_file_follows_open_folder_and_is_listed_once() {
+        let save = Capability::SaveFile;
+        assert_eq!(save.name(), "save-file");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let folder = at(Capability::OpenFolder);
+        assert_eq!(at(save), folder.map(|i| i + 1), "ADR-0056 decision 10");
+        let others = Capability::ALL.iter().filter(|&&c| c != save);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+    }
+
+    #[test]
+    fn snip_follows_save_file_and_is_listed_once() {
+        let snip = Capability::Snip;
+        assert_eq!(snip.name(), "snip");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let save = at(Capability::SaveFile);
+        assert_eq!(at(snip), save.map(|i| i + 1), "an event gate, as Voice");
+        let others = Capability::ALL.iter().filter(|&&c| c != snip);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+    }
+
+    #[test]
+    fn speech_follows_snip_and_is_listed_once() {
+        let speech = Capability::Speech;
+        assert_eq!(speech.name(), "speech");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let snip = at(Capability::Snip);
+        assert_eq!(at(speech), snip.map(|i| i + 1), "ADR-0058");
+        let others = Capability::ALL.iter().filter(|&&c| c != speech);
         assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
     }
 

@@ -1,5 +1,6 @@
 //! Keeps our guarded windows in the topmost band: a window lifted back brings its guarded owners and the windows they
-//! own back too, each above its owner. It runs on the windows' own thread, which also lifts or lays named ones here.
+//! own back too, each above its owner. It runs on the windows' own thread, which also lifts or lays named ones here,
+//! and lays the frozen screens under the rest of ours.
 
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
@@ -8,15 +9,14 @@ use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GW_OWNER, GetWindow, GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW,
-    RegisterWindowMessageW, SET_WINDOW_POS_FLAGS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER,
-    SWP_NOSIZE, SetWindowPos,
+    GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW,
+    SET_WINDOW_POS_FLAGS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SetWindowPos,
 };
 use windows::core::{PCWSTR, w};
 
-use super::band::{dropped, family, is_top, to_lift};
+use super::band::{dropped, family, first_error, is_top, no_focus, to_lift, to_raise};
 use super::guard::{ex_of, guarded};
-use super::win::{own_titled, own_windows, title, top_level};
+use super::win::{is_ours, own_titled, own_windows, owner, title, top_level};
 use crate::refused;
 
 /// The name of the message the guard posts to check a window again after the window has answered the move.
@@ -103,11 +103,8 @@ fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
 }
 
 /// The window that owns `hwnd`, when the guard holds it on this thread; another thread's window is never followed.
-#[allow(unsafe_code, reason = "A plain owner query.")]
 fn guarded_owner(hwnd: HWND) -> Option<HWND> {
-    // SAFETY: a plain query; a window with no owner gives an error.
-    let owner = unsafe { GetWindow(hwnd, GW_OWNER) }.ok()?;
-    (!owner.is_invalid() && guarded(owner) && on_this_thread(owner)).then_some(owner)
+    owner(hwnd).filter(|&o| guarded(o) && on_this_thread(o))
 }
 
 /// Our window, then each owner the guard holds on this thread, nearest first.
@@ -176,6 +173,38 @@ pub(super) fn lay_under(title_is: &str, under: &str) -> Result<(), UiError> {
     let above = own_titled(under).ok_or(UiError::NoWindow)?;
     let named = shown_titled(title_is)?;
     named.into_iter().rev().try_for_each(|w| below(w, above))
+}
+
+/// Puts our windows titled `title_is` on this thread, shown or not, under every other no-focus window of ours here
+/// in the topmost band, never activating any: Qt makes a window on top of the band and shows it where it lies. The
+/// others go up in their order, and only when one lies under such a window; a refused one leaves the rest to go up.
+///
+/// # Errors
+/// `NoWindow` without such a window on this thread, `Refused` when Windows says no to the first refused one.
+pub(super) fn lay_low(title_is: &str) -> Result<(), UiError> {
+    lay_low_with(title_is, front)
+}
+
+/// `lay_low` with each lift made by `lift`, so a test can refuse one.
+///
+/// # Errors
+/// As `lay_low`, with the first error `lift` gave.
+pub(super) fn lay_low_with(
+    title_is: &str,
+    mut lift: impl FnMut(HWND) -> Result<(), UiError>,
+) -> Result<(), UiError> {
+    let ours: Vec<HWND> = top_level()
+        .into_iter()
+        .filter(|&w| is_ours(w) && on_this_thread(w) && no_focus(ex_of(w)))
+        .collect();
+    let z: Vec<(bool, bool)> = ours
+        .iter()
+        .map(|&w| (title(w) == title_is, is_top(ex_of(w))))
+        .collect();
+    if !z.iter().any(|&(low, _)| low) {
+        return Err(UiError::NoWindow);
+    }
+    first_error(to_raise(&z).into_iter().map(|i| lift(ours[i])))
 }
 
 /// Our shown windows titled `title_is`, front first.

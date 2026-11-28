@@ -33,6 +33,7 @@ static CLIP: Manifest = Manifest {
     settings: None,
 };
 
+mod kept;
 mod stuck;
 
 use stuck::Stuck;

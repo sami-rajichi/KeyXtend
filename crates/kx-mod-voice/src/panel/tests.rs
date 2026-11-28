@@ -8,7 +8,7 @@ use kx_module_api::ports::{
     VoicePanel, VoiceSheet, VoiceTab,
 };
 
-use super::rig::{DIR, Rig, row};
+use super::rig::{Rig, dir, row};
 use super::*;
 
 mod cloud;
@@ -53,12 +53,12 @@ fn the_models_page_shows_the_folder_with_change_and_open() {
     let line = models(&view).folder.clone().unwrap();
     assert_eq!(
         (line.path.expose().as_str(), line.free),
-        (DIR, 900_000 * MB_TEST)
+        (dir().as_str(), 900_000 * MB_TEST)
     );
     assert!(view.acts.contains(&PanelButton::Change) && view.acts.contains(&PanelButton::Open));
     assert_eq!(
         rig.click(&VoiceClick::Button(PanelButton::Open)),
-        [Do::Reveal(DIR.into())]
+        [Do::Reveal(dir().into())]
     );
     rig.click(&VoiceClick::Button(PanelButton::Change));
     assert_eq!(rig.panel.page(), Some(Page::Folders));
@@ -124,7 +124,7 @@ fn a_ready_row_is_used_for_the_language_or_deleted() {
     let out = rig.click(&VoiceClick::Button(PanelButton::Delete));
     assert_eq!(
         out,
-        [Do::Remove(Path::new(DIR).join(&small.file)), Do::Scan]
+        [Do::Remove(Path::new(&dir()).join(&small.file)), Do::Scan]
     );
 }
 

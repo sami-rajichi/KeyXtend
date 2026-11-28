@@ -241,13 +241,7 @@ Replaced by [`2026-11-07-selection-chips-design.md`](2026-11-07-selection-chips-
 
 ### 8.4 Snip
 
-- Capture modes: **Region** (click, move, click; no dragging), **Window**, **Full screen**, **Scrolling**, **3-second timer**.
-- **Editor:**
-  - compact icon-only toolbars (labels appear at size L);
-  - tools: arrow, box, text, highlighter, pen, numbered steps, crop, undo/redo;
-  - actions: **copy text (OCR)**, copy image, save, pin on screen.
-- **OCR** (in a worker): Windows.Media.Ocr first, then Tesseract `tessdata_fast` (ara/fra/eng), then PaddleOCR via ONNX for hard Arabic.
-- **Capture API:** Windows.Graphics.Capture or DXGI duplication. The overlay is a full-screen topmost window in the main process.
+Replaced by [`2026-11-23-snip-design.md`](2026-11-23-snip-design.md) (ADR-0055, ADR-0056): pictures of a region, a window or the screen, short screen recordings with optional sound, a keycap strip to copy, edit or save, a small editor and the system's Save dialog. OCR, pin on screen, scrolling capture and the picture timer are out (owner, 2026-11-23).
 
 ### 8.5 Power key
 

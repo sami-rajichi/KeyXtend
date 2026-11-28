@@ -1,16 +1,13 @@
 //! A speech-net job's size and times: its memory cap from its run's sound, its requests in flight and their replies,
 //! and how long a piece may take once the one before it is told.
 
-use crate::worker::{Launch, Times};
+use crate::worker::{Launch, NEVER_IDLE_S, Times};
 use kx_ipc::{
     MAX_NET_REPLY_BYTES, MIB, NET_JOB, NET_TRY_WAITS, NET_UPLOAD_TIMES, SOUND_BYTES_PER_S,
 };
 use kx_module_api::MS_PER_S;
 use kx_module_api::ports::JobLimits;
 use std::time::Duration;
-
-/// A run's job never ends on its own when idle: it lives while its run does, however long a piece takes.
-const NEVER_IDLE_S: u32 = u32::MAX;
 
 /// The room a run needs past `job_mb`, in MB: its `sound`, then `at_once` requests in flight, each a body of its
 /// longest `piece` and a reply at `MAX_NET_REPLY_BYTES`.

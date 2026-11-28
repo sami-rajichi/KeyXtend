@@ -1,14 +1,13 @@
 //! The voice frames' fields and their caps, on the shared field machinery in `crate::wire`.
 
 use crate::limits::{
-    MAX_DEVICES, MAX_LANGS, MAX_NAME_BYTES, MAX_PATH_BYTES, MAX_PERCENT, MAX_SOUND_BYTES,
-    MAX_SOUND_PIECES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_TEXT_BYTES, SAMPLE_BYTES,
+    MAX_DEVICES, MAX_LANGS, MAX_NAME_BYTES, MAX_PERCENT, MAX_SOUND_BYTES, MAX_SOUND_PIECES,
+    MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_TEXT_BYTES, SAMPLE_BYTES,
 };
 use crate::wire::{FOUR, ONE, Spec, TWO};
 use std::ops::RangeInclusive;
 
-/// A file path: UTF-8 without a NUL.
-pub(crate) const PATH: Spec = Spec::new(TWO, 1, MAX_PATH_BYTES);
+pub(crate) use crate::wire::PATH;
 /// A short ASCII name: a language code, a runner or a card's id.
 pub(crate) const TAG: Spec = Spec::new(ONE, 1, MAX_TAG_BYTES);
 /// A device name or driver version, possibly empty.

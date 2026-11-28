@@ -1,0 +1,110 @@
+# Settings P12 adds: G24 on the product (`g24 keyxtend`), in `[g24]`. kx-gates reads them with kx-gates.toml, from its
+# folder; a section sits in one file only.
+
+# G24: the test build twice, its keyboard as a bubble then hidden, judged by sizes and pixel counts only.
+[g24]
+# Typed into target-window so the snip holds a known pattern; the caret ends up right of the region.
+text = "KeyXtend snip 0123456789 ABCDEFGHIJ abcdefghij KeyXtend snip"
+# Region from the text box's top-left: x, y, width, height in logical px.
+region_px = [4.0, 4.0, 160.0, 28.0]
+# Longest wait for a Snip window, a part or the clipboard to show, in ms; longer than [snip]'s countdown.
+wait_ms = 5000
+# Window class of the taskbar, which the frozen screen must cover.
+taskbar_class = "Shell_TrayWnd"
+# The screen's DPI the exact checks are judged at, 120 being 125 %; on another scale they are skipped, as the gate never
+# changes it.
+dpi = 120
+# The editor's part from the text box's top-left: x, y, width, height in logical px. Its size lands between whole
+# logical pixels at dpi, so the editor's Copy must trim it.
+edit_px = [4.8, 4.8, 160.8, 29.6]
+# Wait after a copy's keyboard shows before the first click, and after each click, in ms.
+ready_ms = 1500
+settle_ms = 300
+# Wait after a snip ends before memory is read, so freed memory has gone back, in ms.
+idle_ms = 3000
+# The most time from the Snip click until the frozen screen covers target-window and the taskbar, in ms; it holds the
+# keyboard's step aside ([snip] aside_ms).
+cover_ms = 1500
+# The most passes a reset makes to close what a failed part left open, each up to wait_ms: Stop, Close, Don't save.
+reset_passes = 3
+# The most share of target-window's pixels a window's picture may differ by: its blinking caret.
+frame_share = 0.001
+# The most share of the keyboard's place a full-screen picture may hold as the keyboard showed it, and of the bubble's
+# middle as the bubble draws itself.
+same_most = 0.9
+# The most the copy's working set and commit may grow from idle after the snips and the recording, in MB: less than one
+# frozen 1080p screen (8.3 MB), so a kept freeze fails.
+back_mb = 8.0
+# The recording of target-window, its length's slack, the long full-screen recording and the speed it is copied at.
+# Each recording stops once the record bar's clock, which holds at 0:00 until the first recorded frame and counts from
+# it, reads its seconds.
+record_s = 5
+slack_ms = 500
+long_s = 30
+speed = 2
+# The warm-up recording before idle memory, stopped and closed unsaved so every Snip window has shown, in seconds.
+warm_s = 1
+# The largest picture Windows' clipboard history keeps, in decimal MB, the smaller reading: 4 MB an item (Microsoft,
+# "Clipboard in Windows").
+history_item_mb = 4
+# How long after a Copy's read back Windows may stamp its picture in clipboard history, in ms.
+history_pad_ms = 1000
+# Longest wait for the sped copy to reach the clipboard, in ms. It is shorter than the product's own deadline
+# (`[snip] speed_ms` plus `speed_mb_ms` a MB, about 154 s here), as a longer wait would pass the mouse guard's limit.
+speed_wait_ms = 101000
+# Longest wait for the copy's workers to end before its data folder, which holds the videos, is removed, in ms.
+gone_ms = 3000
+# The most clicks on a kept video's Close, and the wait after each for its strip to go, in ms. The strip ignores a Close
+# that lands before its Copy told its end, so the gate clicks again.
+close_tries = 2
+close_ms = 500
+# Longest wait for our windows, or the Save dialog, to lie over every frozen screen once they show, in ms (ADR-0059).
+order_ms = 1000
+# The window class of the system's Save dialog (adapter table).
+dialog_class = "#32770"
+# The Save dialog's Cancel button by UI Automation id, its control id IDCANCEL (adapter table); `g24 trap` presses it.
+cancel_id = "2"
+
+# Snip's gate ids, as kx-ui names its buttons.
+[g24.ids]
+region = "snip.bar.region"
+window = "snip.bar.window"
+full = "snip.bar.full"
+video_region = "snip.bar.video-region"
+video_full = "snip.bar.video-full"
+bar_close = "snip.bar.close"
+copy = "snip.strip.copy"
+edit = "snip.strip.edit"
+save = "snip.strip.save"
+close = "snip.strip.close"
+record = "snip.strip.record"
+stop = "snip.rec.stop"
+drop = "snip.ask.drop"
+keep_copy = "snip.keep.copy"
+edit_close = "snip.edit.close"
+# A recorded video's strip: Play shows only there, and each click on Speed steps to the next speed.
+play = "snip.strip.play"
+speed = "snip.strip.speed"
+
+# kx-ui's text keys of the record bar's clock as a screen reader hears it: its word, the join and the %1:%2 time.
+[g24.clock]
+word = "snip.live"
+join = "snip.join"
+time = "snip.time"
+
+# kx-ui's window title keys: the frozen screen, the capture windows, the editor, the close question, the keyboard and
+# its bubble.
+[g24.titles]
+frozen = "window.snip-screen"
+capture = [
+    "window.snip-bar",
+    "window.snip-hint",
+    "window.snip-strip",
+    "window.snip-count",
+    "window.snip-record",
+    "window.snip-edge",
+]
+editor = "window.snip-editor"
+ask = "window.snip-ask"
+keyboard = "window.keyboard"
+bubble = "window.bubble"

@@ -1,5 +1,17 @@
 //! The protocol's and the backup box's magic, versions, names and limits, in one place.
 
+mod media;
+pub(crate) mod snip;
+
+pub use media::{
+    DECODE_BYTES, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_PNG_BYTES, MAX_REPLY_LEN, MAX_RGBA_BYTES,
+    MAX_SIDE, READ_TIMES, RGBA_BYTES, png_most,
+};
+pub(crate) use media::{
+    DRAW_HEAD, ENCODE_HEAD, FAILED_LEN, MAKE_HEAD, MAX_DRAW_LEN, MAX_ENCODE_LEN, MAX_PIXELS_LEN,
+    MIN_IMAGE_BYTES, PIXELS_HEAD, READ_CHUNK,
+};
+
 use crate::vault::wire;
 use std::ops::RangeInclusive;
 
@@ -14,37 +26,6 @@ pub(crate) const MAGIC: [u8; 4] = *b"KXIP";
 pub const VERSION: u8 = 1;
 /// The fixed header: magic, version, kind, request id and payload length.
 pub(crate) const HEADER_LEN: usize = MAGIC.len() + 2 * size_of::<u8>() + 2 * size_of::<u32>();
-
-/// Bytes in one RGBA8 pixel.
-pub const RGBA_BYTES: usize = 4;
-/// The longest side, in pixels, that a draw may ask for and a reply may hold.
-pub const MAX_SIDE: u32 = 4096;
-/// The largest image a draw may carry: the largest clipboard entry the settings allow, 64 MiB.
-pub const MAX_IMAGE_BYTES: usize = 64 * MIB;
-/// The largest pixels a reply may carry: `MAX_SIDE` by `MAX_SIDE` in RGBA8, 64 MiB.
-pub const MAX_RGBA_BYTES: usize = MAX_SIDE as usize * MAX_SIDE as usize * RGBA_BYTES;
-
-/// A draw's fields before its image: the codec and the longest side.
-pub(crate) const DRAW_HEAD: usize = size_of::<u8>() + size_of::<u32>();
-/// A DIB ask's field before its PNG: the most bytes the DIB may hold.
-pub(crate) const MAKE_HEAD: usize = size_of::<u32>();
-/// The fewest image bytes a draw carries: an empty image is refused.
-pub(crate) const MIN_IMAGE_BYTES: usize = 1;
-/// A pixel reply's fields before its pixels: the width and the height.
-pub(crate) const PIXELS_HEAD: usize = 2 * size_of::<u32>();
-/// A failure reply's only field: the reason.
-pub(crate) const FAILED_LEN: usize = size_of::<u8>();
-/// The largest media ask payload: a draw's fields and the largest image.
-pub const MAX_ASK_LEN: usize = DRAW_HEAD + MAX_IMAGE_BYTES;
-/// The largest media reply payload: a pixel reply's fields and the largest pixels.
-pub const MAX_REPLY_LEN: usize = PIXELS_HEAD + MAX_RGBA_BYTES;
-
-/// The first buffer a payload read takes; it then doubles only as bytes arrive, up to the declared length.
-pub(crate) const READ_CHUNK: usize = 64 * KIB;
-/// The most times its length a payload read holds while its buffer grows: the old and new buffers together.
-pub const READ_TIMES: usize = 2;
-/// What the worker's PNG decoder may allocate for its rows and chunks: 16 MiB, rows up to 4 million pixels wide.
-pub const DECODE_BYTES: usize = 16 * MIB;
 
 /// The bytes every backup box starts with, before its format version (ADR-0038 decision 5).
 pub const BOX_MARK: [u8; 5] = *b"KXBOX";
@@ -255,9 +236,7 @@ const fn longest(names: &[&str]) -> usize {
     most
 }
 
-// Every payload length fits the header's `u32` field, and so does the largest box.
-const _: () = assert!(MAX_ASK_LEN <= u32::MAX as usize);
-const _: () = assert!(MAX_REPLY_LEN <= u32::MAX as usize);
+// The largest box fits the header's `u32` field; `media.rs` checks the media payloads.
 const _: () = assert!(MAX_BOX_BYTES <= u32::MAX as usize);
 // A `KeePass` read fits the vault job's memory: Argon2 beside the file as it is read, then the file's copies.
 const _: () = assert!(
@@ -276,9 +255,6 @@ const _: () = assert!(MAX_ENTRIES <= u16::MAX as usize);
 const _: () = assert!(MAX_FIELD_BYTES <= u16::MAX as usize);
 const _: () = assert!(MAX_LOCKED_BYTES <= u16::MAX as usize);
 const _: () = assert!(MAX_PASSWORD_BYTES <= u16::MAX as usize);
-// A DIB ask and its reply fit within the largest payloads.
-const _: () = assert!(MAKE_HEAD + MAX_IMAGE_BYTES <= MAX_ASK_LEN);
-const _: () = assert!(MAX_IMAGE_BYTES <= MAX_REPLY_LEN);
 // A sound piece is whole samples, each index fits its two bytes, 0 is free for no silence stop, and a `.part` name
 // fits a path; `Spec::new` checks the other voice and fetch widths.
 const _: () = assert!(MAX_SOUND_BYTES.is_multiple_of(SAMPLE_BYTES));

@@ -1,20 +1,24 @@
 //! UI ports: the window guard, screens, the system look, backdrops, the one running copy, the tray icon, the heaps'
-//! free memory, the speaker, the file manager's reveal and the hidden-run probe. The data types are OS-neutral;
-//! adapters keep their own handles behind them.
+//! free memory, the speaker, the file manager's reveal, the hidden-run probe and the Esc watch. The data types are
+//! OS-neutral; adapters keep their own handles behind them.
 
+mod esc;
+mod guard;
 mod hidden;
 mod memory;
 mod reveal;
 mod sound;
 mod tray;
 
+pub use esc::{EscWatch, OnEsc};
+pub use guard::{FocusToken, Watched, WindowGuard};
 pub use hidden::{Hidden, HiddenCopy, HiddenError, Probe};
 pub use memory::Memory;
 pub use reveal::{Reveal, RevealError};
 pub use sound::{Clip, ClipId, Speaker, SpeakerConfig, level};
 pub use tray::{BadImage, OnTray, Tray, TrayEvent, TrayIcon, TrayImage};
 
-use kx_module_api::ports::{Point, Rect, Screen};
+use kx_module_api::ports::{Point, Screen};
 use std::fmt;
 use thiserror::Error;
 
@@ -32,94 +36,10 @@ pub enum UiError {
     Refused(i32),
 }
 
-/// What a request to watch a window's entries found.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Watched {
-    /// The guard watches the window's entries now.
-    Held,
-    /// The window shows, but the guard does not hold it yet.
-    Unguarded,
-}
-
 /// Another copy of the app already runs in this user session.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 #[error("another copy is running")]
 pub struct Running;
-
-/// Which window had the focus before ours, so it can get it back.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct FocusToken(u64);
-
-impl FocusToken {
-    /// Wraps the adapter's raw window handle.
-    #[must_use]
-    pub const fn new(raw: u64) -> Self {
-        Self(raw)
-    }
-
-    /// The raw window handle.
-    #[must_use]
-    pub const fn raw(self) -> u64 {
-        self.0
-    }
-}
-
-/// Keeps our windows from taking the focus, and shapes where they take clicks.
-pub trait WindowGuard: Send + Sync {
-    /// Guards our visible windows except the one titled `spare`, with the one titled `top` last so it lands in front (a
-    /// hidden window shows again at its old place), and says how many. Call it on the UI thread, which owns the windows.
-    ///
-    /// # Errors
-    /// `Refused` when the OS will not guard a window, as from another thread.
-    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError>;
-
-    /// Lets clicks outside `rects` pass through the window titled `title`, a call for the UI thread.
-    /// The rects are physical pixels relative to the window's top-left corner.
-    ///
-    /// # Errors
-    /// `NoWindow` for an unknown title, `Refused` when the OS says no.
-    fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError>;
-
-    /// Lifts our shown windows titled `title` alone in front of our others, leaving their owners where they are, as a
-    /// tip does when it shows; a call for the UI thread.
-    ///
-    /// # Errors
-    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
-    fn lift_alone(&self, title: &str) -> Result<(), UiError>;
-
-    /// Until `unwatch_entries`, each time the pointer enters our guarded window titled `title`, keeps the last point it
-    /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread. `Unguarded` while the
-    /// window shows but the guard does not hold it yet; the caller asks again after a later guard try.
-    ///
-    /// # Errors
-    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
-    fn watch_entries(&self, title: &str) -> Result<Watched, UiError>;
-
-    /// Stops the entry watch on our windows titled `title`, shown or not, and forgets the point it kept, as the scroll
-    /// module stops; a call for the UI thread.
-    fn unwatch_entries(&self, title: &str);
-
-    /// Puts our shown windows titled `title` just under our window titled `under`, never activating them, as the
-    /// outline goes just under the keyboard; a call for the UI thread.
-    ///
-    /// # Errors
-    /// `NoWindow` while either is not shown, `Refused` when the OS says no.
-    fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError>;
-
-    /// Marks our shown window titled `title` as one that pages, as an open list does (ADR-0029). While a marked window
-    /// shows, every platform's scroll target aims at it whatever point it kept, so a pad tap turns its page, and it
-    /// passes over our other windows. The mark goes with the window; a call for the UI thread, as the window opens.
-    ///
-    /// # Errors
-    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
-    fn mark_pages(&self, title: &str) -> Result<(), UiError>;
-
-    /// Notes the window that has the focus now.
-    fn remember(&self) -> FocusToken;
-
-    /// Gives the focus back to the noted window, if it still exists.
-    fn give_back(&self, token: FocusToken);
-}
 
 /// The screens and the pointer.
 pub trait Screens: Send + Sync {

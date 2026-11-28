@@ -6,7 +6,7 @@ use crate::{FetchAsk, FetchNote, NetAsk, NetNote, VaultAsk, VaultReply, ask, rep
 
 #[test]
 fn every_kind_belongs_to_exactly_one_reader_and_the_codes_have_no_gap() {
-    let lists: [&[Kind]; 10] = [
+    let lists: [&[Kind]; 14] = [
         ask::KINDS,
         reply::KINDS,
         crate::vault::ask::KINDS,
@@ -17,6 +17,10 @@ fn every_kind_belongs_to_exactly_one_reader_and_the_codes_have_no_gap() {
         crate::fetch::note::KINDS,
         crate::net::ask::KINDS,
         crate::net::note::KINDS,
+        crate::record::ask::KINDS,
+        crate::record::note::KINDS,
+        crate::pick::ask::KINDS,
+        crate::pick::reply::KINDS,
     ];
     for kind in Kind::ALL {
         let owners = lists.iter().filter(|l| l.contains(kind)).count();

@@ -1,4 +1,5 @@
 {
+  "aim": null,
   "aimed": false,
   "at": null,
   "dpad": {
@@ -2050,7 +2051,7 @@
     },
     "snip": {
       "blank": null,
-      "dim": true,
+      "dim": false,
       "lit": "off",
       "main": "",
       "main_ar": false,
@@ -2059,9 +2060,9 @@
       "name": "",
       "on": false,
       "paint": {
-        "fill": "dim",
-        "ink": "dim_ink",
-        "skirt": "dim"
+        "fill": "key_act",
+        "ink": "legend_act",
+        "skirt": "key_mod"
       },
       "second": "",
       "second_ar": false,

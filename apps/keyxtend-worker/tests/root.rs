@@ -1,7 +1,8 @@
 //! The root `Cargo.toml`'s settings about this worker: the stage builds it with features it has, none of which turns its
-//! gate feature on, so the staged worker never takes a sound file (ADR-0044), and tidy F5 keeps its `voice` job from the
-//! network crate and its `fetch` and `speech-net` jobs from the audio crate and the engine, each named here unrenamed
-//! (ADR-0042, ADR-0047).
+//! gate feature on, so the staged worker never takes a sound file (ADR-0044), and tidy F5 keeps its `voice`, `record`
+//! and `pick` jobs from the network crate, the `pick` job from the audio crate and the engine, and its `fetch` and
+//! `speech-net` jobs from the audio crate, the engine and the recorder, each named here unrenamed (ADR-0042, ADR-0047,
+//! ADR-0056).
 #![allow(clippy::unwrap_used, reason = "a failed read should fail the test")]
 
 use toml::{Table, Value};
@@ -11,10 +12,15 @@ const ROOT_MANIFEST: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.to
 /// This crate's manifest.
 const OWN_MANIFEST: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml");
 /// Each job's module with the crates it must never name.
-const KEPT: [(&str, &[&str]); 3] = [
+const KEPT: [(&str, &[&str]); 5] = [
     ("src/voice", &["kx-platform-net"]),
-    ("src/fetch", &["cpal", "transcribe-cpp"]),
-    ("src/net", &["cpal", "transcribe-cpp"]),
+    (
+        "src/fetch",
+        &["cpal", "transcribe-cpp", "kx-platform-record"],
+    ),
+    ("src/net", &["cpal", "transcribe-cpp", "kx-platform-record"]),
+    ("src/record", &["kx-platform-net"]),
+    ("src/pick", &["kx-platform-net", "cpal", "transcribe-cpp"]),
 ];
 /// The key that renames a dependency, which would leave F5 reading the wrong name.
 const RENAME: &str = "package";

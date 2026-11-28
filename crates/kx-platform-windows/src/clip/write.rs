@@ -11,50 +11,69 @@ use super::{Table, read, table};
 /// The 32-bit number that turns a Windows switch format off.
 const OFF: [u8; 4] = 0u32.to_ne_bytes();
 
-/// Sets the Windows clipboard; every write carries our marker and keeps out of Windows' history and cloud.
+/// Sets the Windows clipboard; a write carries our marker and keeps out of Windows' history and cloud, but a kept one.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WinClipboardWriter;
 
 impl ClipboardWriter for WinClipboardWriter {
     fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
-        put_all(parts, wait, false)
+        put_all(parts, wait, Kind::Marked)
     }
 
     fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
-        put_all(parts, wait, true)
+        put_all(parts, wait, Kind::Lent)
+    }
+
+    fn write_kept(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+        put_all(parts, wait, Kind::Kept)
     }
 }
 
-/// Sets the clipboard to `parts` with the markers `marks` names for a write, `lent` or not.
-fn put_all(parts: &[ClipPart], wait: ClipWait, lent: bool) -> Result<(), ClipError> {
+/// Which write sets the clipboard, so it sets that write's markers.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Kind {
+    /// `write`: our marker and the cloud switch.
+    Marked,
+    /// `write_lent`: those and the presence markers.
+    Lent,
+    /// `write_kept`: no marker, so our history keeps it, and Windows' too for a picture (ADR-0056 decision 2).
+    Kept,
+}
+
+/// Sets the clipboard to `parts` with the markers of a `kind` write.
+fn put_all(parts: &[ClipPart], wait: ClipWait, kind: Kind) -> Result<(), ClipError> {
     let table = table()?;
     let formats = read::ids(table)?;
     let open = open::open(wait)?;
     open::empty(&open)?;
-    // The markers go first, so a part that fails never leaves a half copy that becomes a row.
-    mark(&open, table, lent)?;
+    // Markers go first, so a part that fails never leaves a half copy that becomes a row. A kept write has none, so one
+    // that fails leaves the formats put before it, which both histories may keep.
+    mark(&open, table, kind)?;
     let encoded = formats.encode_all(parts);
     encoded
         .iter()
         .try_for_each(|(format, bytes)| open::put(&open, *format, bytes))
 }
 
-/// Sets each marker `marks` names for a write, `lent` or not, to 0 on the open clipboard.
-fn mark(open: &Open, table: &Table, lent: bool) -> Result<(), ClipError> {
-    for name in marks(table, lent) {
+/// Sets each marker of a `kind` write to 0 on the open clipboard.
+fn mark(open: &Open, table: &Table, kind: Kind) -> Result<(), ClipError> {
+    for name in marks(table, kind) {
         open::put(open, open::format_id(&name)?, &OFF)?;
     }
     Ok(())
 }
 
-/// The markers a write sets: our marker and the cloud switch, and for a `lent` text the presence markers too, whose
-/// mere presence keeps other clipboard tools away from a text that is never written back.
-pub(crate) fn marks(table: &Table, lent: bool) -> Vec<String> {
+/// The markers a `kind` write sets: our marker and the cloud switch, and for a lent text the presence markers too, whose
+/// mere presence keeps other clipboard tools away from a text that is never written back; a kept write sets none.
+pub(crate) fn marks(table: &Table, kind: Kind) -> Vec<String> {
+    if kind == Kind::Kept {
+        return Vec::new();
+    }
     let present = table.marks().presence();
-    let lent_ones = present.names().filter(|_| lent).map(str::to_owned);
+    let lent_ones = present.names().filter(|_| kind == Kind::Lent);
     [table.marker.clone(), table.cloud_off.clone()]
         .into_iter()
-        .chain(lent_ones)
+        .chain(lent_ones.map(str::to_owned))
         .collect()
 }
 

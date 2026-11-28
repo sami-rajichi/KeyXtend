@@ -14,6 +14,9 @@ QtObject {
 
     // The scroll state as last read (`Ui.scrollJson`), null before the first read.
     property var st: null
+    // The edges hide while the keyboard is aside and hidden, and lie under the keyboard again once that ends.
+    property bool hush: false
+    onHushChanged: if (!hush) Qt.callLater(outline.lay)
     // The box to outline in Qt units, null for none.
     readonly property var box: st && st.area && face.lk && face.spots ? cut(st.area) : null
     // The box the edges lie inside: our own window's grows by an edge each way, as our opaque list lies over the edges.
@@ -34,6 +37,7 @@ QtObject {
             title: outline.title
             colour: outline.colour
             at: outline.edge(modelData)
+            hush: outline.hush
         }
         // The first of a set shows; the guard and the keyboard take them once all four are made.
         onObjectAdded: Qt.callLater(outline.lay)

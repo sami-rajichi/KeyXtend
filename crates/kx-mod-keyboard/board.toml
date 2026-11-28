@@ -25,9 +25,9 @@ rows = [
     # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
     # "lang", { assist = "rclick" | "grab" } (flips a mouse-assist mode, spec §5.1), "layer" (shows or hides the
     # shortcuts layer, spec §4.2), "power" (asks for the system's power dialog, spec §8.5), "clip" (opens or closes
-    # the clipboard panel, spec §7), "fill" (opens or closes the Quick-fill panel, spec §8.1) and "voice" (starts or
-    # stops a dictation, spec §8.2), all side keys only, or "later" (dimmed, coming in a later version); "shortcut" and
-    # "next" are only for the layer's own keys.
+    # the clipboard panel, spec §7), "fill" (opens or closes the Quick-fill panel, spec §8.1), "voice" (starts or
+    # stops a dictation, spec §8.2) and "snip" (starts or ends a capture, ADR-0056), all side keys only, or "later"
+    # (dimmed, coming in a later version); "shortcut" and "next" are only for the layer's own keys.
     #
     # `repeat` makes a "send" key repeat while held (spec §4.6); character keys always do.
     # `lone = true` in a latch role makes a second click with nothing used since the first let go and send the key
@@ -35,10 +35,10 @@ rows = [
     # `tell` says what a "send" key tells word prediction when it goes out alone (spec §6, ADR-0033): "erase",
     # "advance" (the word ends and a new line or field starts) or { text = "..." }; any other send, or a chord, breaks.
     [
-        # `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter"
-        # or "esc"; such a click goes to the panel, never to the app. "tick", "erase" and "delete" go only to the clipboard
-        # and Quick-fill panels, which take the character keys too for their search or line (spec §7), and the language
-        # list does nothing with "delete"; every other key types as usual.
+        # `nav` says what a key does while one of our panels is aimed at (spec §3.3): "up", "down", "left", "right",
+        # "enter" or "esc"; such a click goes to the panel, never to the app. "tick", "erase" and "delete" go to every
+        # panel's line with the character keys (spec §7, ADR-0049, ADR-0057), but the language list keeps Space and
+        # Backspace typing and does nothing with "delete"; every other key types as usual.
         { id = "esc", w = 1.0, kind = "danger", sc = 0x01, role = "send", nav = "esc" },
         { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] },
         { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E, role = "send", nav = "erase", repeat = true, tell = "erase" },
@@ -75,15 +75,15 @@ rows = [
 ]
 
 # Side keys by column and row (1-based). Right-click and Grab flip mouse assist, Shortcuts shows the layer, Clip opens the
-# clipboard panel, Mic starts or stops a dictation, Fill opens Quick-fill and Power asks for the power dialog; the
-# others come in a later version (owner, 2026-09-29), so they are dimmed for now.
+# clipboard panel, Mic starts or stops a dictation, Snip starts or ends a capture, Fill opens Quick-fill and Power asks
+# for the power dialog; Settings comes in a later version (owner, 2026-09-29), so it is dimmed for now.
 side = [
     { id = "rclick", col = 1, row = 1, role = { assist = "rclick" } },
     { id = "grab", col = 2, row = 1, role = { assist = "grab" } },
     { id = "shortcuts", col = 3, row = 1, role = "layer" },
     { id = "mic", col = 3, row = 2, role = "voice" },
     { id = "clip", col = 3, row = 3, role = "clip" },
-    { id = "snip", col = 3, row = 4, role = "later" },
+    { id = "snip", col = 3, row = 4, role = "snip" },
     { id = "fill", col = 1, row = 5, role = "fill" },
     { id = "settings", col = 2, row = 5, role = "later" },
     { id = "power", col = 3, row = 5, role = "power" },

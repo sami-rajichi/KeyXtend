@@ -9,7 +9,11 @@ mod piped;
 mod session;
 mod stream;
 
-pub use frames::{FetchFrames, MediaFrames, NetFrames, VaultFrames, VoiceFrames};
+pub(crate) use backoff::ms;
+pub(crate) use frames::sound_fault;
+pub use frames::{
+    FetchFrames, MediaFrames, NetFrames, PickFrames, RecordFrames, VaultFrames, VoiceFrames,
+};
 pub(crate) use host::Host;
 pub use piped::{Child, Piped};
 pub(crate) use session::Session;
@@ -21,6 +25,9 @@ use std::io::{Read, Write};
 use std::thread;
 use std::time::Duration;
 use thiserror::Error;
+
+/// The idle time of a job that lives as long as its run does, reading or waiting, and never ends on its own.
+pub(crate) const NEVER_IDLE_S: u32 = u32::MAX;
 
 /// How to start the worker: its command line after the program, and the most memory it may take.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,6 +86,23 @@ pub trait Frames: 'static {
     /// # Errors
     /// The frame's `IpcError`; `Closed` when the job ended between frames.
     fn read<R: Read + ?Sized>(r: &mut R) -> Result<Self::Reply, IpcError>;
+
+    /// The most payload bytes the reply to `ask` may carry, when it is not `read`'s own bound.
+    fn most(_ask: &Self::Ask) -> Option<usize> {
+        None
+    }
+
+    /// Reads one reply within `most` payload bytes when given, else as `read`.
+    ///
+    /// # Errors
+    /// As `read`; `TooLong` past `most`.
+    fn read_within<R: Read + ?Sized>(
+        r: &mut R,
+        most: Option<usize>,
+    ) -> Result<Self::Reply, IpcError> {
+        let _ = most;
+        Self::read(r)
+    }
 }
 
 /// What a wait for the worker's reply heard.
@@ -98,7 +122,7 @@ pub trait Worker<F: Frames>: Send {
     /// The worker's next reply, waiting `within` at most.
     fn reply(&mut self, within: Duration) -> Heard<F::Reply>;
 
-    /// Ends the worker now; harmless once it has ended.
+    /// Ends the worker now, without waiting until it exited; harmless once it has ended.
     fn end(&mut self);
 
     /// Its exit code, waiting `within` at most for it to end; `None` while it runs.
@@ -107,6 +131,11 @@ pub trait Worker<F: Frames>: Send {
     /// The most memory its job has taken, in MB; `None` when the system cannot tell.
     fn peak_mb(&mut self) -> Option<u32> {
         None
+    }
+
+    /// Lets the worker bring its own window to the front, as a system dialog needs; false when the system refuses.
+    fn grant_front(&mut self) -> bool {
+        false
     }
 }
 

@@ -16,6 +16,13 @@ fn the_shortcuts_power_clip_and_fill_keys_ask_the_face() {
 }
 
 #[test]
+fn the_snip_key_asks_the_face_with_any_latch() {
+    let g = Given::new(false).latch(Latch::Ctrl, CTRL);
+    assert_eq!(g.plan(Role::Snip, None), Plan::Snip);
+    assert_eq!(format!("{:?}", Plan::Snip), "Snip");
+}
+
+#[test]
 fn a_layer_role_without_its_cell_does_nothing() {
     let g = Given::new(false);
     assert_eq!(g.plan(Role::Shortcut, None), Plan::Later, "no id to send");

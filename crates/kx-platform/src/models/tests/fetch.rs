@@ -36,7 +36,7 @@ fn a_download_runs_in_a_job_of_its_own_capped_at_job_mb() {
     let models = host(&script, roomy(need()));
     script.act(says(vec![started]));
     let (tell, heard) = ear();
-    let _run = models.fetch(ask(FILE), tell).unwrap();
+    let _run = models.fetch(ask(&file()), tell).unwrap();
     assert_eq!(
         next(&heard),
         FetchNote::Progress {
@@ -64,7 +64,7 @@ fn a_download_runs_in_a_job_of_its_own_capped_at_job_mb() {
     };
     assert_eq!(
         (&urls[..], &hosts[..], &**path),
-        (&[URL.into()][..], &[HOST.into()][..], FILE)
+        (&[URL.into()][..], &[HOST.into()][..], &*file())
     );
     assert_eq!((*size, *sha256), (BYTES, PRINT));
     script.say(Ok(named(1)));
@@ -76,16 +76,16 @@ fn a_drive_without_room_for_the_rest_and_min_free_mb_is_full_before_any_job() {
     let script = Script::default();
     let short = host(&script, roomy(need() - 1));
     assert_eq!(
-        short.fetch(ask(FILE), ear().0).err(),
+        short.fetch(ask(&file()), ear().0).err(),
         Some(ModelError::Full)
     );
     let gone = host(&script, FakeDisk::default());
     assert_eq!(
-        gone.fetch(ask(FILE), ear().0).err(),
+        gone.fetch(ask(&file()), ear().0).err(),
         Some(ModelError::Missing)
     );
     assert_eq!(script.tries(), 0);
-    let mut odd = ask(FILE);
+    let mut odd = ask(&file());
     odd.stall_s = 0;
     let range = host(&script, roomy(need())).fetch(odd, ear().0).err();
     assert_eq!(range, Some(ModelError::Range("stall_s")));
@@ -97,7 +97,7 @@ fn a_job_that_cannot_start_is_gone() {
     script.refuse(1);
     let models = host(&script, roomy(need()));
     assert_eq!(
-        models.fetch(ask(FILE), ear().0).err(),
+        models.fetch(ask(&file()), ear().0).err(),
         Some(ModelError::Gone)
     );
 }
@@ -108,7 +108,7 @@ fn pause_resume_and_cancel_go_to_its_job_and_a_cancel_tells_cancelled() {
     let models = host(&script, roomy(need()));
     script.act(says(vec![started]));
     let (tell, heard) = ear();
-    let mut run = models.fetch(ask(FILE), tell).unwrap();
+    let mut run = models.fetch(ask(&file()), tell).unwrap();
     next(&heard);
     run.pause();
     run.resume();
@@ -150,7 +150,7 @@ fn a_dropped_download_pauses_says_goodbye_and_tells_nothing_more() {
     let models = host(&script, roomy(need()));
     script.act(says(vec![started]));
     let (tell, heard) = ear();
-    let run = models.fetch(ask(FILE), tell).unwrap();
+    let run = models.fetch(ask(&file()), tell).unwrap();
     next(&heard);
     let (to, seen) = mpsc::channel();
     script.tell(to);
@@ -175,7 +175,7 @@ fn a_job_lost_mid_download_is_gone_once_and_one_lost_after_the_end_tells_nothing
     let models = host(&script, roomy(need()));
     script.act(says(vec![started]));
     let (tell, heard) = ear();
-    let mut run = models.fetch(ask(FILE), tell).unwrap();
+    let mut run = models.fetch(ask(&file()), tell).unwrap();
     next(&heard);
     script.quit(3);
     assert_eq!(next(&heard), FetchNote::Fault(ModelError::Gone));
@@ -187,7 +187,7 @@ fn a_job_lost_mid_download_is_gone_once_and_one_lost_after_the_end_tells_nothing
     );
     script.act(says(vec![started, named]));
     let (tell, heard) = ear();
-    let _done = models.fetch(ask(FILE), tell).unwrap();
+    let _done = models.fetch(ask(&file()), tell).unwrap();
     assert_eq!(
         next(&heard),
         FetchNote::Progress {
@@ -201,12 +201,11 @@ fn a_job_lost_mid_download_is_gone_once_and_one_lost_after_the_end_tells_nothing
     assert!(late.is_err(), "nothing after its end: {late:?}");
 }
 
-#[cfg(windows)]
 #[test]
 fn a_part_counts_toward_the_room_and_a_cancel_after_the_job_deletes_it_here() {
-    let dir = std::env::temp_dir().join(format!("kx-fetch-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let file = dir.join("a.gguf");
+    // A temp folder that goes even when the test fails.
+    let dir = kx_test_support::tempdir::TempDir::new("fetch").unwrap();
+    let file = dir.path().join("a.gguf");
     let ask = ask(file.to_str().unwrap());
     let part = ask.part().unwrap();
     let held: u16 = 1_000;
@@ -220,9 +219,7 @@ fn a_part_counts_toward_the_room_and_a_cancel_after_the_job_deletes_it_here() {
     script.quit(3);
     next(&heard);
     run.cancel();
-    let left = part.exists();
-    drop(std::fs::remove_dir_all(&dir));
-    assert!(!left, "the part went");
+    assert!(!part.exists(), "the part went");
 }
 
 /// The kind of fetch ask `ask` is.

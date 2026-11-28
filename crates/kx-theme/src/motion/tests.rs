@@ -7,6 +7,7 @@
 
 use super::*;
 
+mod snip;
 mod voice;
 
 fn text() -> String {

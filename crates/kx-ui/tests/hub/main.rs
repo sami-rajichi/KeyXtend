@@ -1,5 +1,5 @@
 //! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
-//! sounds, the pointer overlay, the scroll pad, the chip lane, the panels, the selection strip and voice typing.
+//! sounds, the pointer overlay, the scroll pad, the chip lane, the panels, the selection strip, voice typing and Snip.
 
 #![allow(
     clippy::expect_used,
@@ -25,6 +25,7 @@ mod module;
 mod notices;
 mod scroll;
 mod sel;
+mod snip;
 // Without `qt` the sound table is empty, so these tests would check no play.
 #[cfg(feature = "qt")]
 mod sound;
@@ -41,8 +42,8 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{ModuleId, Notice, ServiceKey, keys};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
@@ -147,6 +148,8 @@ struct Rig {
     speaker: Arc<FakeSpeaker>,
     /// The fake file manager.
     reveal: Arc<FakeReveal>,
+    /// The hand's Esc, which a test presses.
+    esc: Arc<FakeEscWatch>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
 }
@@ -191,6 +194,7 @@ impl Rig {
         let memory = Arc::new(FakeMemory::new());
         let speaker = Arc::new(FakeSpeaker::new());
         let reveal = Arc::new(FakeReveal::new());
+        let esc = Arc::new(FakeEscWatch::new());
         let ports = UiPorts {
             guard: guard.clone(),
             screens: screens.clone(),
@@ -200,6 +204,7 @@ impl Rig {
             memory: memory.clone(),
             speaker: speaker.clone(),
             reveal: reveal.clone(),
+            esc: esc.clone(),
         };
         let (hub, requests) = Hub::new(ports).expect("the hub starts");
         let wakes = Arc::new(Mutex::new(Vec::new()));
@@ -216,6 +221,7 @@ impl Rig {
             memory,
             speaker,
             reveal,
+            esc,
             wakes,
         }
     }
@@ -231,6 +237,7 @@ impl Rig {
             memory: self.memory.clone(),
             speaker: self.speaker.clone(),
             reveal: self.reveal.clone(),
+            esc: self.esc.clone(),
         }
     }
 

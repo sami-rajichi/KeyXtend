@@ -2,31 +2,13 @@
 //! asks Qt to start on top.
 
 use crate::{all, qml_files};
-use kx_ui::i18n::keys::{
-    CATCH, SEL_NAME, WINDOW_BUBBLE, WINDOW_CLIP, WINDOW_FILL, WINDOW_KEYBOARD, WINDOW_LIST,
-    WINDOW_MENU, WINDOW_NOTICE, WINDOW_OUTLINE, WINDOW_POINTER, WINDOW_TIP, WINDOW_VOICE,
-    WINDOW_VOICE_PANEL,
-};
+use kx_ui::i18n::keys::{SNIP_WINDOWS, TRAY_WINDOWS, WINDOWS};
 use std::collections::BTreeMap;
 
-/// Every window title the UI names; the guard, `shape`, the backdrops, a tip's lift and UI Automation find windows by them.
-/// The selection strip's title is its reader name.
-pub const TITLES: [&str; 14] = [
-    WINDOW_KEYBOARD,
-    WINDOW_BUBBLE,
-    WINDOW_NOTICE,
-    WINDOW_MENU,
-    WINDOW_LIST,
-    WINDOW_TIP,
-    WINDOW_POINTER,
-    WINDOW_OUTLINE,
-    WINDOW_CLIP,
-    WINDOW_FILL,
-    WINDOW_VOICE,
-    WINDOW_VOICE_PANEL,
-    SEL_NAME,
-    CATCH,
-];
+/// Every window title the UI names, from the lists the hub keeps them in: ours, the tray's and Snip's.
+pub fn titles() -> impl Iterator<Item = &'static str> {
+    WINDOWS.into_iter().chain(TRAY_WINDOWS).chain(SNIP_WINDOWS)
+}
 /// What may come before a file's root type: comments, pragmas and imports.
 const HEAD: [&str; 3] = ["//", "pragma ", "import "];
 /// A root type that makes a window.
@@ -39,7 +21,7 @@ const ON_TOP: &str = "Qt.WindowStaysOnTopHint";
 const KEYBOARD: &str = "KbWindow.qml";
 
 /// The root type's line of `qml`: its first line that is not blank or a head line.
-fn root(qml: &str) -> Option<&str> {
+pub fn root(qml: &str) -> Option<&str> {
     let head = |l: &str| l.is_empty() || HEAD.iter().any(|h| l.starts_with(h));
     qml.lines().map(str::trim).find(|l| !head(l))
 }
@@ -50,7 +32,7 @@ fn root(qml: &str) -> Option<&str> {
 fn each_window_title_names_one_kind_of_window_in_every_language() {
     let mut seen: BTreeMap<String, &str> = BTreeMap::new();
     for t in all() {
-        for key in TITLES {
+        for key in titles() {
             let was = seen.insert(t.text(key), key);
             let tag = t.lang().tag;
             assert!(

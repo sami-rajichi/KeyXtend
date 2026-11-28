@@ -76,11 +76,10 @@ impl PanelConfig {
 
 /// Every window title the spike opens, the keyboard's first.
 pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
-    let named = [&cfg.panel.title, &cfg.tools.overlay_title];
-    std::iter::once(&cfg.keyboard.title).chain(named).collect()
+    vec![&cfg.keyboard.title, &cfg.panel.title]
 }
 
-/// Refuses an empty or shared window title: the focus guard spares the panel, and kx-gates finds our windows, by title.
+/// Refuses an empty or shared window title: kx-gates finds our windows by title.
 pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
     let all = titles(cfg);
     let shared = all.iter().enumerate().any(|(i, t)| all[..i].contains(t));
@@ -142,14 +141,10 @@ mod tests {
             f(&mut c);
             super::check_titles(&c)
         };
-        let snip = with(&|c| c.panel.title = c.tools.overlay_title.clone());
-        assert!(snip.expect_err("snip").contains("title"));
+        let shared = with(&|c| c.panel.title = c.keyboard.title.clone());
+        assert!(shared.expect_err("the keyboard's").contains("title"));
         assert!(
-            with(&|c| c.panel.title = c.keyboard.title.clone()).is_err(),
-            "the keyboard's"
-        );
-        assert!(
-            with(&|c| c.tools.overlay_title.clear()).is_err(),
+            with(&|c| c.panel.title.clear()).is_err(),
             "untitled windows"
         );
     }

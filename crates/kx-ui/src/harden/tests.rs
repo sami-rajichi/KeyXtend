@@ -23,8 +23,10 @@ fn every_drawing_variable_is_a_qt_one_so_the_clear_drops_an_outside_value_first(
     }
 }
 
-/// What Qt 6.11.2 does alone: two frames may wait, the vblank thread runs, and the update timer waits 5 ms.
-const QT_OWN: [(&str, &str); 3] = [(LATENCY_VAR, "2"), (NO_VBLANK_VAR, "0"), (IDLE_VAR, "5")];
+/// No frame start waits, where Qt lets two frames queue and its wait stalls a window shown again.
+const NO_WAIT: (&str, &str) = (LATENCY_VAR, "0");
+/// What Qt 6.11.2 does alone, kept: the vblank thread runs and the update timer waits 5 ms.
+const QT_OWN: [(&str, &str); 2] = [(NO_VBLANK_VAR, "0"), (IDLE_VAR, "5")];
 /// The renderer keeps no spare buffers, where Qt keeps 2 MiB of each kind (ADR-0028).
 const NO_POOL: (&str, &str) = (POOL_VAR, "0");
 
@@ -34,10 +36,10 @@ fn defaults() -> UiSettings {
 }
 
 #[test]
-fn the_default_timing_is_qts_own_no_spare_buffer_is_kept_and_frames_wait_for_the_refresh() {
+fn the_default_timing_drops_the_frame_wait_keeps_qts_rest_and_waits_for_the_refresh() {
     let set = timing_vars(&defaults());
     let set: Vec<(&str, &str)> = set.iter().map(|(n, v)| (*n, v.as_str())).collect();
-    assert_eq!(set, [QT_OWN.as_slice(), &[NO_POOL]].concat());
+    assert_eq!(set, [&[NO_WAIT], QT_OWN.as_slice(), &[NO_POOL]].concat());
     assert_eq!(
         swap_interval(&defaults()),
         1,

@@ -8,28 +8,31 @@ Rectangle {
     // The look and size.
     required property var lk
     required property real s
+    // Its size and the move of one pulse; Snip's record dot gives its own.
+    property real px: lk.shape.caption.dot_px * s
+    property var move: lk.motion.moves.dot
 
     // The pulse runs, for the tests.
     readonly property bool pulsing: pulse.running
 
-    width: lk.shape.caption.dot_px * s
+    width: px
     height: width
     radius: width / 2
     color: lk.contrast ? lk.palette.ring : lk.common.rec_dot
 
     SequentialAnimation on opacity {
         id: pulse
-        running: dot.visible && dot.lk.motion.moves.dot.ms > 0
+        running: dot.visible && dot.move.ms > 0
         loops: Animation.Infinite
         onStopped: dot.opacity = 1
 
         Tween {
-            move: dot.lk.motion.moves.dot
+            move: dot.move
             share: 0.5
             to: dot.lk.motion.amount.pulse_low
         }
         Tween {
-            move: dot.lk.motion.moves.dot
+            move: dot.move
             share: 0.5
             to: 1
         }

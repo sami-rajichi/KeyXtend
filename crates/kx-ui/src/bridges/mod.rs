@@ -1,6 +1,6 @@
 //! The cxx-qt objects QML makes (ADR-0013): `Ui` for the app's look, texts, notices and commands, `Keyboard` for the
-//! keyboard window, `QuickFill` for the Quick-fill panel, and `Voice` for the dictation bar and the Voice panel. They
-//! reach the app's hub through `install`, since QML makes them without arguments.
+//! keyboard window, `QuickFill` for the Quick-fill panel, `Voice` for the dictation bar and the Voice panel, and `Snip`
+//! for Snip's windows. They reach the app's hub through `install`, since QML makes them without arguments.
 #![allow(
     unsafe_code,
     reason = "each cxx-qt bridge declares its C++ side in an unsafe extern block (ADR-0013, tidy F3)"
@@ -18,6 +18,8 @@ pub mod frames;
 pub mod harden;
 mod keyboard;
 pub mod shadows;
+mod snip;
+pub mod snips;
 pub mod tint;
 mod ui;
 mod voice;

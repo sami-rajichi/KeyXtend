@@ -1,8 +1,7 @@
-//! Where the spike's later windows go: the test panel (P13) and a snip's pointer (P12).
-//! Built on the product's screens and windows (`kx_platform_windows`, ADR-0014) and kx-mod-keyboard's boxes.
+//! Where the spike's test panel goes (P13), built on the product's screens and windows (`kx_platform_windows`,
+//! ADR-0014) and kx-mod-keyboard's boxes.
 
 use kx_mod_keyboard::Area;
-use kx_module_api::ports::Point;
 use kx_platform::ui::UiError;
 use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, work_area};
 use kx_platform_windows::window::own_bounds;
@@ -17,11 +16,6 @@ const NOT_SHOWN: &str = "the keyboard window is not shown";
 /// A product error as the face's text.
 fn text(e: UiError) -> String {
     e.to_string()
-}
-
-/// A ports point as the face's point.
-fn pt(p: Point) -> Pt {
-    Pt { x: p.x, y: p.y }
 }
 
 /// Where a `size` panel goes by our window `title` (see `pop_in`); the spot is in physical pixels.
@@ -77,11 +71,6 @@ fn own_rect(title: &str) -> Result<RECT, String> {
         UiError::NoWindow => NOT_SHOWN.to_string(),
         other => text(other),
     })
-}
-
-/// Where the mouse pointer is, in physical pixels.
-pub fn cursor() -> Result<Pt, String> {
-    Ok(pt(kx_platform_windows::screen::cursor().map_err(text)?))
 }
 
 #[cfg(test)]

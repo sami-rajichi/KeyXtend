@@ -1,7 +1,7 @@
-//! The worker's start on Windows, for the media and vault jobs alike (ADR-0004, ADR-0034 decision 5, ADR-0038
-//! decision 6): `keyxtend-worker.exe` beside us, from a restricted copy of our token (no privilege, Administrators
-//! deny-only, no uiAccess, Medium integrity), inheriting only its two pipe ends, in a job that caps its memory and ends
-//! it with us. The neutral host in `kx_platform::worker` drives it.
+//! The worker's start on Windows, for every job alike (ADR-0004, ADR-0034 decision 5, ADR-0038 decision 6):
+//! `keyxtend-worker.exe` beside us, from a restricted copy of our token (no privilege, Administrators deny-only, no
+//! uiAccess, Medium integrity), inheriting only its two pipe ends, in a job that caps its memory at the job's own, bars
+//! it from shared UI by the job's table, and ends it with us. The neutral host in `kx_platform::worker` drives it.
 
 mod access;
 mod env;
@@ -18,8 +18,12 @@ use std::time::Duration;
 
 use kx_platform::worker::{Child, Frames, Launch, Piped, SpawnError, Spawner};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
-use windows::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
+use windows::Win32::System::Threading::{
+    GetExitCodeProcess, GetProcessId, INFINITE, WaitForSingleObject,
+};
+use windows::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow;
 
+pub(crate) use env::system_dir;
 pub use job::CpuCap;
 use job::Job;
 
@@ -68,7 +72,7 @@ impl WinSpawner {
         if !self.exe.is_absolute() || !self.exe.is_file() {
             return Err(SpawnError::Missing);
         }
-        start::start(&self.exe, launch, self.cap)
+        start::start(&self.exe, launch, self.cap, job::ui_of(launch))
     }
 }
 
@@ -94,6 +98,13 @@ impl Child for WinChild {
 
     fn peak_mb(&mut self) -> Option<u32> {
         self.job.peak_mb()
+    }
+
+    /// Lets the worker's process take the foreground once, as its next dialog needs to come in front.
+    #[allow(unsafe_code, reason = "Grants our own worker the foreground.")]
+    fn grant_front(&mut self) -> bool {
+        // SAFETY: our live process handle; the grant takes a plain process id.
+        unsafe { AllowSetForegroundWindow(GetProcessId(raw(&self.process))) }.is_ok()
     }
 
     #[allow(unsafe_code, reason = "Waits on and reads our own process handle.")]

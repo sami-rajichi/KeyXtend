@@ -1,7 +1,7 @@
 //! Every file parses, has the same keys and holds every text the UI names.
 
 use crate::all;
-use crate::windows::TITLES;
+use crate::windows::titles;
 use fluent_bundle::FluentResource;
 use fluent_bundle::concurrent::FluentBundle;
 use kx_module_api::NoticeAsk;
@@ -201,7 +201,7 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
             .iter()
             .map(|m| format!("{MODE}.{}", m.as_str().unwrap_or_default())),
     );
-    let fixed = TITLES.iter().map(|k| (*k).to_owned());
+    let fixed = titles().map(str::to_owned);
     let named: Vec<String> = named.chain(fixed).collect();
     for t in all() {
         let missing: Vec<&String> = named.iter().filter(|k| !t.has(k)).collect();

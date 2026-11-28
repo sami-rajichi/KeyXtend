@@ -1,5 +1,5 @@
 //! The speech port (ADR-0042, ADR-0044): a dictation run in the worker's `voice` job and the notes it tells, the
-//! devices, a model file's facts and a card's check. Only `Microphone` reaches it, and text and sound stay redacted.
+//! devices, a model file's facts and a card's check. Only `Speech` reaches it, and text and sound stay redacted.
 
 mod ask;
 mod device;
@@ -29,8 +29,8 @@ pub enum SpeechError {
     /// The ask's value of this name is outside its range.
     #[error("the ask's {0} is outside its range")]
     Range(&'static str),
-    /// A file to read is not a plain drive path (`path_ok`).
-    #[error("the path is not a plain drive path")]
+    /// A file to read is not a plain absolute path (`path_ok`).
+    #[error("the path is not a plain absolute path")]
     BadPath,
     /// No microphone was found.
     #[error("no microphone was found")]
@@ -232,13 +232,13 @@ pub trait Speech: Send + Sync {
     fn clips(&self) -> Vec<String>;
 }
 
-/// The speech service; it needs `Microphone` (ADR-0042 decision 8).
+/// The speech service; it needs `Speech`, which only the voice module holds, never `Microphone` (ADR-0058).
 pub struct SpeechKey;
 
 impl ServiceKey for SpeechKey {
     type Api = dyn Speech;
     const ID: ServiceId = ServiceId::new("speech");
-    const CAPABILITY: Option<Capability> = Some(Capability::Microphone);
+    const CAPABILITY: Option<Capability> = Some(Capability::Speech);
 }
 
 #[cfg(test)]

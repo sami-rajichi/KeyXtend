@@ -99,7 +99,7 @@ fn a_model_change_hands_the_sound_over_in_wiped_pieces() {
     );
     assert!(
         matches!(again, VoiceAsk::Again { id: again_id, setup } if again_id == id
-        && setup.model.as_ref().is_some_and(|m| m.path == FILE_B))
+        && setup.model.as_ref().is_some_and(|m| m.path == native(FILE_B)))
     );
 }
 

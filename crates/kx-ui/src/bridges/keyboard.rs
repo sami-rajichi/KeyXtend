@@ -11,6 +11,7 @@ use cxx_qt_lib::QString;
 use kx_module_api::ports::{FaceAction, KeyId, Rect};
 use std::sync::Arc;
 
+mod aim;
 mod frame;
 mod held;
 mod pad;
@@ -100,6 +101,10 @@ pub mod qobject {
         /// A press on the open panel: the letters go to the panel again.
         #[qinvokable]
         fn aim_panel(&self) -> QString;
+
+        /// A press on a Snip window that shows a line: the letters go to Snip's windows.
+        #[qinvokable]
+        fn aim_snip(&self) -> QString;
 
         /// A click on the scroll pad: arrow `dir` (`up`, `down`, `left` or `right`), or Stop when empty.
         #[qinvokable]
@@ -253,15 +258,6 @@ impl qobject::Keyboard {
         self.run(FaceAction::LangPick {
             index: place(index),
         })
-    }
-
-    fn panel_key(&self, id: &QString) -> QString {
-        let id = id.to_string();
-        self.redraw(|h| h.panel_key(&id))
-    }
-
-    fn aim_panel(&self) -> QString {
-        self.redraw(Hub::aim_panel)
     }
 
     fn placed(&self, x: f64, y: f64, w: f64, h: f64, overhang: f64) -> QString {

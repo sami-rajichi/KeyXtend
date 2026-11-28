@@ -1,12 +1,16 @@
-//! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`. Quick-fill's
-//! are in `fill`, the selection strip's in `sel`, voice typing's in `voice`.
+//! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`.
+//! Quick-fill's are in `fill`, the selection strip's in `sel`, Snip's ids in `snip`, voice typing's in `voice`.
 
 mod fill;
 mod sel;
+mod snip;
+mod snip_edit;
 mod voice;
 
 pub use fill::*;
 pub use sel::*;
+pub use snip::*;
+pub use snip_edit::*;
 pub use voice::*;
 
 use kx_module_api::ports::{ClipKind, Filter, MAX_PRESETS, PanelNote};
@@ -65,6 +69,30 @@ pub const WINDOW_TIP: &str = "window.tip";
 pub const WINDOW_POINTER: &str = "window.pointer";
 /// The title of the scroll pad's outline windows.
 pub const WINDOW_OUTLINE: &str = "window.outline";
+/// The one title of every shadow window (`Glow.qml`), so a capture's shields find the shadows with their windows.
+pub const WINDOW_SHADOW: &str = "window.shadow";
+/// Every window title in the keyboard's language but Snip's own (`SNIP_WINDOWS`: its capture windows, editor and close
+/// question), the keyboard's and its bubble's first. The guard, `shape`, the backdrops, a tip's lift and a capture's
+/// shields find our windows by them; the selection strip's title is its reader name.
+pub const WINDOWS: [&str; 15] = [
+    WINDOW_KEYBOARD,
+    WINDOW_BUBBLE,
+    WINDOW_NOTICE,
+    WINDOW_LIST,
+    WINDOW_TIP,
+    WINDOW_POINTER,
+    WINDOW_OUTLINE,
+    WINDOW_CLIP,
+    WINDOW_FILL,
+    WINDOW_VOICE,
+    WINDOW_VOICE_PANEL,
+    WINDOW_SNIP_PANEL,
+    SEL_NAME,
+    CATCH,
+    WINDOW_SHADOW,
+];
+/// The window titles in the tray's language: the tray menu's.
+pub const TRAY_WINDOWS: [&str; 1] = [WINDOW_MENU];
 /// The badge's word while the pad scrolls slowly.
 pub const BADGE_SLOW: &str = "badge.slow";
 /// The badge's word while the pad scrolls fast.

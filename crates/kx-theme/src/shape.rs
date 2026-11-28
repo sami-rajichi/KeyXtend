@@ -4,17 +4,20 @@ use serde::{Deserialize, Serialize};
 
 use crate::extras::{
     BadgeShape, CaptionShape, ChipsShape, ListShape, MenuShape, NoticeShape, PanelShape, RingShape,
-    SnipShape, TrayShape,
+    TrayShape,
 };
 
 mod check;
 mod clip;
 mod fill;
+mod snip;
+mod snip_sizes;
 mod voice;
 mod whole;
 
 pub use clip::ClipShape;
 pub use fill::FillShape;
+pub use snip::SnipShape;
 pub use voice::VoiceShape;
 pub use whole::{BackdropShape, DimShape, DotsShape, WidthShape};
 
@@ -247,7 +250,7 @@ pub struct Shape {
     pub chips: ChipsShape,
     /// The dictation bar's status and words.
     pub caption: CaptionShape,
-    /// The snip overlay.
+    /// Snip's capture windows and editor, from `snip.toml`.
     pub snip: SnipShape,
     /// The Arabic test panel.
     pub panel: PanelShape,

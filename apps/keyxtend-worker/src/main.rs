@@ -1,8 +1,9 @@
-//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images,
-//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, `keyxtend-worker voice` records
-//! the microphone with no network, `keyxtend-worker fetch` downloads model files with no microphone (ADR-0042), and
-//! `keyxtend-worker speech-net` sends a dictation to a cloud service with no microphone (ADR-0047), for the keyboard
-//! at normal rights, over stdin and stdout.
+//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images and makes snips'
+//! PNGs, `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, `keyxtend-worker voice` records
+//! the microphone with no network, `keyxtend-worker fetch` downloads model files with no microphone (ADR-0042),
+//! `keyxtend-worker speech-net` sends a dictation to a cloud service with no microphone (ADR-0047), and
+//! `keyxtend-worker record` records a part of the screen into a video and `keyxtend-worker pick` shows the Save and
+//! folder dialogs, with no network (ADR-0056), for the keyboard at normal rights, over stdin and stdout.
 #![forbid(unsafe_code)]
 
 mod args;
@@ -12,6 +13,8 @@ mod fetch;
 mod fixture;
 mod media;
 mod net;
+mod pick;
+mod record;
 mod riff;
 mod serve;
 mod stream;
@@ -20,6 +23,8 @@ mod voice;
 
 use args::Job;
 use kx_ipc::{Ask, CLEAN_EXIT, IpcError, REFUSED_EXIT, VaultAsk};
+use kx_platform_record::LiveStudio;
+use kx_platform_record::pick::LiveDialogs;
 use std::fmt::Display;
 use std::io;
 use std::process::ExitCode;
@@ -42,20 +47,31 @@ fn main() -> ExitCode {
             &mut io::stdout().lock(),
             net::live(),
         )),
+        Ok(Job::Record) => exit(record::serve(
+            io::stdin(),
+            &mut io::stdout().lock(),
+            LiveStudio,
+        )),
         #[cfg(feature = "gate")]
         Ok(Job::Played(path)) => match voice::played(&path) {
             Ok(parts) => voice_job(parts),
             Err(fault) => fail(&format!("{fault:?}")),
         },
+        Ok(Job::Pick) => exit(pick::serve(
+            &mut io::stdin().lock(),
+            &mut io::stdout().lock(),
+            &LiveDialogs,
+        )),
         Err(e) => fail(&e),
     }
 }
 
-/// Answers draws and DIB asks on stdin and stdout until goodbye or the end of input.
+/// Answers draws, DIB asks and encodes on stdin and stdout until goodbye or the end of input.
 fn media_job(max_pixels: u64) -> ExitCode {
     let draw = |codec, bytes: &[u8], side| media::draw(codec, bytes, side, max_pixels);
     let make = |png: &[u8], max_bytes| media::make_dib(png, max_bytes, max_pixels);
-    let work = |ask: Ask<'static>| media::reply(ask, draw, make);
+    let encode = |raw: &media::Raw<'_>| media::encode(raw, max_pixels);
+    let work = |ask: Ask<'static>| media::reply(ask, draw, make, encode);
     exit(serve::answer(
         &mut io::stdin().lock(),
         &mut io::stdout().lock(),

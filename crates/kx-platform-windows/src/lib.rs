@@ -14,6 +14,7 @@ pub mod dirs;
 pub mod disk;
 #[cfg(windows)]
 pub mod dll;
+pub mod esc;
 #[cfg(windows)]
 mod explorer;
 pub mod field;
@@ -45,6 +46,8 @@ pub mod scroll;
 pub mod selection;
 pub mod session;
 pub mod shortcut;
+#[cfg(windows)]
+pub mod snip;
 pub mod sound;
 pub mod strokes;
 pub mod sysui;
@@ -74,6 +77,8 @@ pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
 pub use disk::WinDiskRoom;
+#[cfg(windows)]
+pub use esc::WinEscWatch;
 #[cfg(windows)]
 pub use field::WinFieldWatch;
 #[cfg(windows)]
@@ -111,6 +116,8 @@ pub use selection::WinSelectionWatch;
 pub use session::WinSessionWatch;
 #[cfg(windows)]
 pub use shortcut::WinShortcuts;
+#[cfg(windows)]
+pub use snip::{WinKit, WinMediaOpen, WinScreenFreeze};
 #[cfg(windows)]
 pub use sound::WinSpeaker;
 #[cfg(windows)]

@@ -10,7 +10,7 @@ use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
     IUIAutomationElement6, ToggleState_On, TreeScope_Descendants, UIA_AutomationIdPropertyId,
-    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
+    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId, UIA_PROPERTY_ID,
     UIA_ToggleToggleStatePropertyId,
 };
 use windows::core::{BSTR, Interface};
@@ -58,6 +58,17 @@ fn wanted(id: &str) -> Result<&str, String> {
     } else {
         Ok(id)
     }
+}
+
+/// What a button with id `id` has: that id and the Button control type, so a press never reaches a dialog's tree, list
+/// or toolbar view that holds the same id.
+fn button_props(id: &str) -> Result<[(UIA_PROPERTY_ID, VARIANT); 2], String> {
+    let id = VARIANT::from(BSTR::from(wanted(id)?));
+    let button = VARIANT::from(UIA_ButtonControlTypeId.0);
+    Ok([
+        (UIA_AutomationIdPropertyId, id),
+        (UIA_ControlTypePropertyId, button),
+    ])
 }
 
 /// The centre of box `r`.
@@ -121,6 +132,33 @@ impl Reader {
     pub fn invoke(&self, hwnd: HWND, id: &str) -> Result<(), String> {
         mouseguard::allowed()?;
         self.restore(hwnd, id)
+    }
+
+    /// Presses the button with id `id` inside window `hwnd`, such as a system dialog's Cancel, as `invoke` does; any
+    /// other element with that id is passed over.
+    #[allow(
+        unsafe_code,
+        reason = "UI Automation calls on objects this client made."
+    )]
+    pub fn press_button(&self, hwnd: HWND, id: &str) -> Result<(), String> {
+        mouseguard::allowed()?;
+        let [(id, by_id), (kind, by_kind)] = button_props(id)?;
+        // SAFETY: plain calls on live UI Automation objects; a missing button gives an error.
+        let el = unsafe {
+            let with_id = self.0.CreatePropertyCondition(id, &by_id).map_err(err)?;
+            let a_button = self
+                .0
+                .CreatePropertyCondition(kind, &by_kind)
+                .map_err(err)?;
+            let both = self
+                .0
+                .CreateAndCondition(&with_id, &a_button)
+                .map_err(err)?;
+            self.root(hwnd)?
+                .FindFirst(TreeScope_Descendants, &both)
+                .map_err(err)?
+        };
+        uia::invoke(&el).map_err(|e| e.to_string())
     }
 
     /// Like `invoke`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.

@@ -118,8 +118,10 @@ pub fn navs(spec: &BoardSpec) -> Vec<(String, Nav)> {
     all_navs(spec).filter(lists).collect()
 }
 
-/// One of our panels that take the board's keys while open, above the keyboard; one shows at a time.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// One of our panels, or Snip's windows, which may show beside one other panel; one at a time takes the board's keys
+/// while aimed at (ADR-0057). The state names it in lowercase.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Panel {
     /// The clipboard history (spec §7).
     Clip,
@@ -127,6 +129,9 @@ pub enum Panel {
     Fill,
     /// The Voice panel, whose keys go to its key page's lines only (ADR-0049).
     Voice,
+    /// Snip's windows: the capture bar, strip, question, editor and panel (ADR-0056). They take every key while aimed
+    /// at, aim only by the user's own press, and neither close nor are closed by the other panels (ADR-0057).
+    Snip,
 }
 
 /// What a board key does while one of our panels is open.

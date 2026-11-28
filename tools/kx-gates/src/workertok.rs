@@ -22,6 +22,7 @@ use windows::Win32::System::Threading::{
 
 use crate::apps::{Ctx, same_name};
 use crate::g3::ui_access;
+use crate::out::full;
 use crate::product::{self, NAME};
 use crate::win::size32;
 
@@ -96,13 +97,15 @@ pub fn verdict(product: Rights, workers: &[Rights]) -> Verdict {
     }
 }
 
-/// The processes of `found`, by id and program path, that run the worker program in folder `dir`.
+/// The processes of `found`, by id and program path, that run the worker program in folder `dir`; both sides are
+/// compared in full form (`out::full`), so a folder the settings name with `..` still finds them.
 pub fn beside(found: &[(u32, String)], dir: &Path) -> Vec<u32> {
+    let dir = full(dir).to_string_lossy().into_owned();
     let ours = |path: &str| {
         let p = Path::new(path);
         let folder = p
             .parent()
-            .is_some_and(|f| same_name(&f.to_string_lossy(), &dir.to_string_lossy()));
+            .is_some_and(|f| same_name(&full(f).to_string_lossy(), &dir));
         let file = p
             .file_name()
             .is_some_and(|n| same_name(&n.to_string_lossy(), WORKER_EXE));
@@ -188,7 +191,7 @@ fn read_each(
 
 /// Every running process's id and program path, as far as Windows names it.
 #[allow(unsafe_code, reason = "Windows fills our own buffer of process ids.")]
-fn processes() -> Vec<(u32, String)> {
+pub(crate) fn processes() -> Vec<(u32, String)> {
     let mut pids = vec![0u32; FIRST_PIDS];
     loop {
         let (cap, mut used) = (

@@ -4,7 +4,6 @@ use super::*;
 use crate::settings::VoiceSettings;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{MB, Memory, ModelFacts, ModelState, SpeechModel};
-use std::path::{Path, PathBuf};
 
 /// A processor with `total_mb` of memory, half of it free.
 fn pc(total_mb: u32) -> Memory {
@@ -103,12 +102,9 @@ fn a_file_no_row_names_is_an_other_file_capped_at_its_size_plus_job_mb() {
         "its size, rounded up to a whole MB"
     );
     assert_eq!(other.cap_mb(s.job_mb), Some(191 + 512));
-    let ask = other.facts(Path::new(FOLDER), s.job()).unwrap();
+    let ask = other.facts(&folder(), s.job()).unwrap();
     assert_eq!((ask.size_mb, ask.check()), (191, Ok(())));
-    assert_eq!(
-        ask.file.expose(),
-        &Path::new(FOLDER).join("ggml-small-q5_1.bin")
-    );
+    assert_eq!(ask.file.expose(), &folder().join("ggml-small-q5_1.bin"));
     for (bytes, need) in [
         (1, Some(1)),
         (MB, Some(1)),
@@ -140,14 +136,14 @@ fn an_other_file_serves_the_languages_its_facts_name() {
     assert_eq!(code_in(&told, "ar"), Some("ar"));
     assert_eq!(code_in(&told, "pt"), Some("PT_br"));
     assert_eq!(code_in(&told, "de"), None);
-    let model = other.model(Path::new(FOLDER), &told, "fr").unwrap();
+    let model = other.model(&folder(), &told, "fr").unwrap();
     let want = SpeechModel {
-        file: Redacted::new(PathBuf::from(FOLDER).join("my-model.gguf")),
+        file: Redacted::new(folder().join("my-model.gguf")),
         lang: "fr-FR".into(),
         runner: "transcribe".into(),
         cpu_mb: 600,
     };
     assert_eq!(model, want);
     assert_eq!(s.ask(Some(model), None).check(), Ok(()));
-    assert!(other.model(Path::new(FOLDER), &told, "de").is_none());
+    assert!(other.model(&folder(), &told, "de").is_none());
 }

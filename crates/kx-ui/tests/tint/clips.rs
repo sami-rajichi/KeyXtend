@@ -7,8 +7,8 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Bus, Redacted};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
-    FakeWindowGuard,
+    FakeBackdrop, FakeEscWatch, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook,
+    FakeTray, FakeWindowGuard,
 };
 use kx_test_support::host::FakeCore;
 use kx_ui::{Hub, UiPorts};
@@ -28,8 +28,8 @@ fn pixels(p: (u32, u32, [u8; 8])) -> Result<Pixels, String> {
     Pixels::new(p.0, p.1, p.2.to_vec(), p.0.max(p.1)).ok_or_else(|| "bad test pixels".to_owned())
 }
 
-/// A hub over fake ports on one plain screen.
-fn hub() -> Result<Arc<Hub>, String> {
+/// A hub over fake ports on one plain screen, with `guard` as its window guard.
+pub fn fresh(guard: Arc<FakeWindowGuard>) -> Result<Arc<Hub>, String> {
     let rect = Rect {
         x: 0,
         y: 0,
@@ -42,7 +42,7 @@ fn hub() -> Result<Arc<Hub>, String> {
         primary: true,
     };
     let ports = UiPorts {
-        guard: Arc::new(FakeWindowGuard::new(0)),
+        guard,
         screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
         look: Arc::new(FakeSystemLook::new()),
         backdrop: Arc::new(FakeBackdrop::new()),
@@ -50,6 +50,7 @@ fn hub() -> Result<Arc<Hub>, String> {
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
         reveal: Arc::new(FakeReveal::new()),
+        esc: Arc::new(FakeEscWatch::new()),
     };
     Ok(Hub::new(ports).map_err(|e| e.to_string())?.0)
 }
@@ -114,12 +115,9 @@ fn serves(id: &str, width: u32, rgba: &[u8]) -> Result<(), String> {
     Err(format!("{id} served {got:?}, not {width} wide {rgba:?}"))
 }
 
-/// The provider copies the kept round's pictures and nothing else; it installs the binary's one hub.
+/// The provider copies the kept round's pictures and nothing else, over the binary's one hub.
 pub fn serves_the_kept_round_only() -> Result<(), String> {
-    let hub = hub()?;
-    if !kx_ui::install(Arc::clone(&hub)) {
-        return Err("a hub was installed already".to_owned());
-    }
+    let hub = crate::hub()?;
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let _heard = hub.listen(&bus).map_err(|e| e.to_string())?;
     serves(&format!("{ROUND}/7"), CLEAR.0, &CLEAR.1)?;

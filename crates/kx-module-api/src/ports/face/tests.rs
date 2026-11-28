@@ -4,7 +4,7 @@ use super::*;
 
 const KEY: &str = "key-q";
 /// The number of `FaceAction` variants, the same in every build; `row` fails to build when one is added.
-const VARIANTS: usize = 18;
+const VARIANTS: usize = 19;
 
 /// Each variant's place in `wire`, by an exhaustive match.
 fn row(action: &FaceAction) -> usize {
@@ -27,6 +27,7 @@ fn row(action: &FaceAction) -> usize {
         FaceAction::Pad { .. } => 15,
         FaceAction::PadHover { .. } => 16,
         FaceAction::AimPanel => 17,
+        FaceAction::AimSnip => 18,
     }
 }
 
@@ -79,6 +80,7 @@ fn tail() -> Vec<(FaceAction, &'static str)> {
             r#"{"act":"pad_hover","on":true}"#,
         ),
         (FaceAction::AimPanel, r#"{"act":"aim_panel"}"#),
+        (FaceAction::AimSnip, r#"{"act":"aim_snip"}"#),
     ]
 }
 

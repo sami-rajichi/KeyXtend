@@ -13,11 +13,17 @@ mod band;
 #[cfg(windows)]
 pub(crate) mod entry;
 #[cfg(windows)]
+mod focus;
+#[cfg(windows)]
 mod guard;
 #[cfg(windows)]
 mod pages;
 #[cfg(windows)]
 mod prop;
+#[cfg(windows)]
+mod shape;
+#[cfg(windows)]
+mod shield;
 #[cfg(test)]
 mod tests;
 #[cfg(windows)]
@@ -27,16 +33,17 @@ mod watch;
 mod win;
 
 #[cfg(windows)]
+pub use focus::{foreground, give_back};
+#[cfg(windows)]
 pub use guard::guarded;
 #[cfg(windows)]
 pub(crate) use pages::{paging, whose};
 #[cfg(windows)]
-pub use win::{
-    WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
-    own_windows, shape, title,
-};
+pub use shape::shape;
 #[cfg(windows)]
-pub(crate) use win::{on_ours, top_level, window_at};
+pub use win::{WinGuard, from_raw, guard_own, is_ours, own_bounds, own_titled, own_windows, title};
+#[cfg(windows)]
+pub(crate) use win::{cloaked, ex_of, on_ours, top_level, visible, window_at};
 
 /// `WS_EX_TOPMOST`: above every window that is not topmost.
 const WS_EX_TOPMOST: u32 = 0x0000_0008;
@@ -92,9 +99,14 @@ pub fn guard_order<T>(mut front_first: Vec<T>, is_top: impl Fn(&T) -> bool) -> V
     rest
 }
 
-/// A window titled `title` is left alone when it is the `spare` one.
-fn spared(title: &str, spare: Option<&str>) -> bool {
-    spare == Some(title)
+/// Which of `windows`, each with its owner and whether its title is spared, a guard run leaves alone: a spared one,
+/// the window that owns it, as its shadow, and the windows it owns, as its tip.
+fn spared<T: Copy + PartialEq>(windows: &[(T, Option<T>, bool)]) -> Vec<bool> {
+    let named = || windows.iter().filter(|w| w.2);
+    let owns_one = |w: T| named().any(|n| n.1 == Some(w));
+    let owned = |o: Option<T>| o.is_some_and(|o| named().any(|n| n.0 == o));
+    let left = |&(w, owner, own): &(T, Option<T>, bool)| own || owns_one(w) || owned(owner);
+    windows.iter().map(left).collect()
 }
 
 /// A window of process `pid` is ours when we are process `me`, unless it is the console host's window,
@@ -185,11 +197,24 @@ mod rules {
     }
 
     #[test]
-    fn only_the_spare_window_is_left_alone() {
-        assert!(spared("Settings", Some("Settings")));
-        assert!(!spared("Keyboard", Some("Settings")));
-        assert!(!spared("Settings", None), "nothing spared");
-        assert!(!spared("", None));
+    fn a_spared_window_its_shadow_and_its_tip_are_left_alone() {
+        let (kb, kb_shadow, screen, bar, bar_shadow, tip) = (1, 2, 3, 4, 5, 6);
+        let windows = [
+            (tip, Some(bar), false),
+            (bar, Some(bar_shadow), true),
+            (bar_shadow, None, false),
+            (screen, None, true),
+            (kb, Some(kb_shadow), false),
+            (kb_shadow, None, false),
+        ];
+        let left = [true, true, true, true, false, false];
+        assert_eq!(
+            spared(&windows),
+            left,
+            "the keyboard and its shadow stay guarded"
+        );
+        assert_eq!(spared(&[(kb, None, false)]), [false], "nothing spared");
+        assert!(spared::<u8>(&[]).is_empty());
     }
 
     #[test]

@@ -5,7 +5,7 @@
 //! scrolls, the Power key opens the dialog, prediction opens the language in front, a copy goes from the clipboard
 //! history's panel back into the app through the keyboard, Quick-fill types a saved login through the keyboard and
 //! keeps what it saved, the selection chips watch and Translate follows the system's language, a dictation's text goes
-//! out through the keyboard, and a hidden run writes nothing in its data folder.
+//! out through the keyboard, a snip shows through the ui, and a hidden run writes nothing in its data folder.
 
 #![allow(
     clippy::unwrap_used,
@@ -25,6 +25,7 @@ mod scroll;
 mod second;
 mod sel;
 mod ships;
+mod snip;
 mod stop;
 mod vault;
 mod voice;
@@ -42,7 +43,7 @@ use rig::{OS, Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 11] = [
+const SHIPPED: [ModuleId; 12] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
@@ -53,6 +54,7 @@ const SHIPPED: [ModuleId; 11] = [
     kx_mod_vault::ID,
     kx_mod_selection::ID,
     kx_mod_voice::ID,
+    kx_mod_snip::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -61,7 +63,7 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_layouts_keyboard_mouse_scroll_power_predict_clipboard_vault_selection_voice_and_ui()
+fn the_app_ships_layouts_keyboard_mouse_scroll_power_predict_clipboard_vault_selection_voice_snip_and_ui()
  {
     let boot = Rig::new().load();
     let shipped = modules(&boot.hub, OS, &Run::Normal);

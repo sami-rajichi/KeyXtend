@@ -92,6 +92,24 @@ fn the_screen_under_a_point_else_the_primary_else_the_first() {
 }
 
 #[test]
+fn only_a_screen_whose_work_area_holds_a_point_holds_it() {
+    let main = screen(rect(0, 0, 1920, 1040), BASE_DPI, true);
+    let right = screen(rect(1920, 0, 2560, 1400), 144, false);
+    let both = [main, right];
+    assert_eq!(screen_holding(at(1920, 1100), &both), Some(&right));
+    assert_eq!(
+        screen_holding(at(100, 1100), &both),
+        None,
+        "under a work area"
+    );
+    assert_eq!(
+        screen_holding(at(-50, -50), &both),
+        None,
+        "off every screen"
+    );
+}
+
+#[test]
 fn a_real_rounds_to_a_whole_pixel_and_saturates() {
     assert_eq!((whole(10.5), whole(-3.4), whole(899.6)), (11, -3, 900));
     assert_eq!(

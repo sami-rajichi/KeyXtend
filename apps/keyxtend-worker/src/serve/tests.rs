@@ -62,12 +62,14 @@ fn test_dib(png: &[u8], max_bytes: usize) -> Result<Vec<u8>, Why> {
 
 /// The tests' media job, whose draw and DIB maker panic on `BOOM`.
 fn test_work(ask: Ask<'static>) -> Reply {
-    media::reply(ask, test_draw, test_dib)
+    media::reply(ask, test_draw, test_dib, |raw| {
+        media::encode(raw, MAX_PIXELS)
+    })
 }
 
 /// The media job without a panic.
 fn plain_work(ask: Ask<'static>) -> Reply {
-    media::reply(ask, drawing, making)
+    media::reply(ask, drawing, making, |raw| media::encode(raw, MAX_PIXELS))
 }
 
 /// Every reply in `out`.

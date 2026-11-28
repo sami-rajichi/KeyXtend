@@ -1,4 +1,4 @@
-//! The media job as the script fakes it: pixels, DIBs and failures for each ask's id.
+//! The media job as the script fakes it: pixels, DIBs, PNGs and failures for each ask's id.
 
 use super::{Call, Faked};
 use crate::worker::{Heard, MediaFrames};
@@ -11,6 +11,8 @@ pub enum Act {
     Draw(u32, u32),
     /// A DIB of this many bytes for the ask's id.
     Dib(usize),
+    /// A PNG of this many bytes for the ask's id.
+    Png(usize),
     /// A failure for the ask's id.
     Fail(Why),
     /// This reply, whatever the ask's id.
@@ -32,6 +34,9 @@ impl Faked for MediaFrames {
         match ask {
             Ask::Draw { id, side, .. } => Some((id, Call::Draw { id, side })),
             Ask::Dib { id, max_bytes, .. } => Some((id, Call::Dib { id, max_bytes })),
+            Ask::Encode {
+                id, width, height, ..
+            } => Some((id, Call::Encode { id, width, height })),
             Ask::Bye => None,
         }
     }
@@ -49,6 +54,10 @@ impl Faked for MediaFrames {
                 }))
             }
             Act::Dib(len) => Heard::Frame(Ok(Reply::Dib {
+                id,
+                bytes: vec![0; len],
+            })),
+            Act::Png(len) => Heard::Frame(Ok(Reply::Png {
                 id,
                 bytes: vec![0; len],
             })),

@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::common::Common;
 use crate::look::Look;
 use crate::mode::Mode;
-use crate::palette::{Palette, own_press, plate_default};
+use crate::palette::{Palette, defaults, named, own_press};
 
 mod files;
 pub(crate) use files::{Part, load};
@@ -44,12 +44,12 @@ impl Theme {
     }
 }
 
-/// The file as written: a list of theme tables and the colours they share.
+/// The file as written: a list of theme tables and the colours they share, whose tokens may name one another.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ThemeFile {
     theme: Vec<toml::Table>,
-    common: Common,
+    common: toml::Table,
 }
 
 /// The first of `values` outside 0 to 1, NaN included, with its name.
@@ -70,8 +70,12 @@ pub(crate) fn bez(curves: &BTreeMap<String, [f32; 4]>, name: &str) -> Option<[f3
 pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     let ThemeFile {
         theme: tables,
-        common,
+        mut common,
     } = toml::from_str(text).map_err(|e| e.to_string())?;
+    named(&mut common);
+    let common: Common = toml::Value::Table(common)
+        .try_into()
+        .map_err(|e| format!("common: {e}"))?;
     let themes = tables
         .into_iter()
         .map(|t| theme(t, &common))
@@ -109,7 +113,7 @@ fn theme(mut t: toml::Table, common: &Common) -> Result<Theme, String> {
     Ok(Theme { look, light, dark })
 }
 
-/// One mode table, with its plate text and press shade defaulted, the shared badge shadow, and errors prefixed
+/// One mode table, with its left-out tokens and press shade defaulted, the shared badge shadow, and errors prefixed
 /// `<id>.<mode>`. Unless it writes its own, a light table lays the shared press over its darkening hover, so a press
 /// reads darker still.
 fn palette(
@@ -121,7 +125,7 @@ fn palette(
     let at = format!("{id}.{}", mode.key());
     let mut table = table.ok_or_else(|| format!("{at}: missing"))?;
     let own = table.as_table_mut().is_some_and(|t| {
-        plate_default(t);
+        defaults(t);
         own_press(t)
     });
     let mut p: Palette = table.try_into().map_err(|e| format!("{at}: {e}"))?;
@@ -137,6 +141,8 @@ fn palette(
 
 #[cfg(test)]
 mod derived;
+#[cfg(test)]
+mod left_out;
 #[cfg(test)]
 mod parts;
 #[cfg(test)]

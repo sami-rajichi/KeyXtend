@@ -11,6 +11,7 @@ use windows::Win32::Foundation::{
     ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND, HANDLE, HANDLE_FLAG_INHERIT, SetHandleInformation,
     WIN32_ERROR,
 };
+use windows::Win32::System::JobObjects::JOB_OBJECT_UILIMIT;
 use windows::Win32::System::Pipes::CreatePipe;
 use windows::Win32::System::Threading::{
     CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessAsUserW, DETACHED_PROCESS,
@@ -34,13 +35,15 @@ struct Made {
     thread: OwnedHandle,
 }
 
-/// Starts `exe` as `launch` says, its job capped by `cap` if any, and hands back its stdin, its stdout and its process.
+/// Starts `exe` as `launch` says, its job capped by `cap` if any and barred from the shared UI `ui` names, and hands
+/// back its stdin, its stdout and its process.
 pub(super) fn start(
     exe: &Path,
     launch: &Launch,
     cap: Option<CpuCap>,
+    ui: JOB_OBJECT_UILIMIT,
 ) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
-    let (job, home) = (Job::new(launch.memory_mb)?, home(exe)?);
+    let (job, home) = (Job::new(launch.memory_mb, ui)?, home(exe)?);
     if let Some(cap) = cap {
         job.weaken(cap)?;
     }

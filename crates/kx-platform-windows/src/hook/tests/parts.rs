@@ -5,7 +5,7 @@ use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
 use super::ms;
 use crate::hook::Source;
-use crate::hook::accept::{Kind, Take, act, esc, key_act, kind, take};
+use crate::hook::accept::{Kind, Take, act, esc, key_act, kind, ours, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::timing::{Histogram, event_at, timer_ms};
 use crate::keys::{REPLAY, SIM_TAG, TAG, replay_tag};
@@ -31,6 +31,14 @@ fn our_input_passes_as_an_echo_whatever_the_source_and_whatever_act_it_names() {
             assert_eq!(take(source, true, tag), Take::Echo, "{source:?}");
             assert_eq!(take(source, false, tag), Take::Echo, "{source:?}");
         }
+    }
+}
+
+#[test]
+fn ours_is_our_keyboards_tag_or_any_replay_and_nothing_else() {
+    assert!(ours(TAG) && ours(REPLAY) && ours(REPLAY | 0xFFFF));
+    for other in [0, SIM_TAG, OTHER] {
+        assert!(!ours(other), "{other:#x}");
     }
 }
 

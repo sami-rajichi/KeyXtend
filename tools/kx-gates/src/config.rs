@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p11.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p12.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -11,13 +11,14 @@ use crate::boxed::BoxProofs;
 use crate::capture::Capture;
 use crate::cfgfile::{self, FILE, OWN};
 use crate::cfgload;
-use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G24, G25};
+use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
 use crate::g22cfg::{G22Bench, G22Cloud, G22Product, G22Staged};
 use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
+use crate::out;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
 use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
 use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
@@ -25,6 +26,7 @@ use crate::p7cfg::{self, G8Predict, G21Product, G27, OwnerSettings};
 use crate::p8cfg::{self, G8Clip, G20Product};
 use crate::p9cfg::{self, G23};
 use crate::p10cfg::{self, G19Product};
+use crate::p12cfg::{self, G24};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 use crate::weakcfg::Weak;
@@ -227,11 +229,12 @@ impl GatesConfig {
             .ok_or_else(|| format!("no [apps.{app}] in {FILE}"))
     }
 
-    /// `exe` as a program to run: relative paths with a folder start at the settings folder.
+    /// `exe` as a program to run: relative paths with a folder start at the settings folder, and any path with a
+    /// folder is in full form (`out::full`), as Windows names the program once it runs.
     pub fn program(&self, exe: &str) -> PathBuf {
         let path = Path::new(exe);
-        if path.is_relative() && path.components().count() > 1 {
-            self.dir.join(path)
+        if path.components().count() > 1 {
+            out::full(&self.dir.join(path))
         } else {
             path.to_path_buf()
         }
@@ -264,6 +267,7 @@ pub fn load() -> Result<GatesConfig, String> {
     p8cfg::check(&config)?;
     p9cfg::check(&config)?;
     p10cfg::check(&config)?;
+    p12cfg::check(&config)?;
     config.g22_bench.check()?;
     config.g22_product.check(&config.g22_bench)?;
     config.g22_cloud.check()?;

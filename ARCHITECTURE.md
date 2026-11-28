@@ -19,7 +19,8 @@ This file is a short map for anyone working on the code, human or agent. For *wh
          │ inherited anonymous pipes, versioned frames (kx-ipc)
 ┌────────┴─────────── keyxtend-worker.exe (normal rights, one process per job) ────────────┐
 │  voice (mic, transcribe.cpp, no network) · fetch (model downloads over HTTPS) ·          │
-│  speech-net (cloud speech over HTTPS, no mic) · ocr · media thumbnails ·                 │
+│  speech-net (cloud speech over HTTPS, no mic) · media thumbnails and snip PNGs ·         │
+│  record (screen video and sound, no network) · pick (Save and folder dialogs) ·          │
 │  vault (backup boxes, KeePass files) · update check                                      │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -49,22 +50,24 @@ apps/
   keyxtend-worker/       worker binary over its stdin and stdout: the `media` job decodes PNG and DIB images into small
                          RGBA pixels, and makes the `CF_DIB` an inserted PNG goes with (P8, ADR-0034); the `vault` job
                          makes padlocks, seals, opens and checks backup boxes and reads KeePass files, with `age` and
-                         `keepass` (P9, ADR-0038); the `voice`, `fetch` and `speech-net` jobs (P11); OCR and update
-                         come later
+                         `keepass` (P9, ADR-0038); the `voice`, `fetch` and `speech-net` jobs (P11); the `record`
+                         and `pick` jobs and the media job's `Encode` (P12, ADR-0056); the update check comes later
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer hook's too: ADR-0027,
                          the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and `PowerDialog`, by
                          `Capability::Power`: ADR-0031; the box watch, packs, sealed store and word events: ADR-0033;
                          `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures` and the clipboard panel's events:
                          ADR-0034, `ClipPanel` gated by `ReadClipboard`: ADR-0035; `Calendar` and `probe_ok`, the one
-                         rule that only an absolute drive path is looked at, any other being `FileFact::Unchecked`: P8;
+                         rule that only an absolute path in the system's own style is looked at (`PathRoot`, ADR-0062),
+                         any other being `FileFact::Unchecked`: P8;
                          `Boxes`, `Places`, `Random` and Quick-fill's events and pages: ADR-0038, ADR-0039;
                          `SelectionWatch`, `WebLink`, the chips' events and the strip's place, `geom::anchor`:
-                         ADR-0041; the voice ports, events and views: P11), events, Clock and Mono, settings contract,
-                         notices, Redacted<T> and `Secret`, and `text`: folding and casing, which prediction and the
-                         clipboard search share (P8), and Quick-fill's search too; it re-exports the worker's memory
-                         figures and the box facts from `kx-ipc` (`READ_TIMES`, `DECODE_BYTES`), so the settings
-                         checks follow the worker (P8, ADR-0036)
+                         ADR-0041; the voice ports, events and views: P11, `SpeechKey` gated by `Capability::Speech`
+                         and Snip's `MicPassKey` by `Microphone`: ADR-0058), events, Clock and Mono,
+                         settings contract, notices, Redacted<T> and `Secret`, and `text`: folding and casing, which
+                         prediction and the clipboard search share (P8), and Quick-fill's search too; it re-exports the
+                         worker's memory figures and the box facts from `kx-ipc` (`READ_TIMES`, `DECODE_BYTES`), so the
+                         settings checks follow the worker (P8, ADR-0036)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
@@ -73,10 +76,12 @@ crates/
                          the vault job's frames, with secrets in wiped buffers, and the box's facts and caps (P9); the
                          voice, fetch and net frames, the `[voice]` ranges and the gate's names (P11)
   kx-platform/          Platform (clock, AppDirs and the data folder rule, `VAULT_DIR`) and the UI ports (WindowGuard,
-                         with the entry watch and `lay_under` from P5, Screens, SystemLook, Backdrop, Instance, Tray:
-                         ADR-0019, Memory: ADR-0023, Speaker: P4, `Reveal`, which shows a folder in the file manager:
-                         P8, and `Hidden`, the hidden-run probe and its copies: ADR-0037); the OS-neutral halves that
-                         every adapter shares: `packs` (folder order, file name, size, over an adapter's `PackDisk`)
+                         with the entry watch and `lay_under` from P5, and `lay_low` and spared titles from P12;
+                         EscWatch, the Esc presses we did not send while frozen screens show: ADR-0059; Screens,
+                         SystemLook, Backdrop, Instance, Tray: ADR-0019, Memory: ADR-0023, Speaker: P4, `Reveal`,
+                         which shows a folder in the file manager: P8, and `Hidden`, the hidden-run probe and its
+                         copies: ADR-0037); the OS-neutral halves that every adapter shares: `packs` (folder order,
+                         file name, size, over an adapter's `PackDisk`)
                          and `field` (the watch's run, its `kx-field` thread and read deadline, a dead watch, our own
                          focus keeping the last box, the kind order, over an adapter's `Probe` and `Reader`; P7),
                          `worker` (P8: the one worker host, which starts a job on demand, one ask at a time within a
@@ -101,7 +106,8 @@ crates/
                          watch (`WinSelectionWatch`, kinds from `selection.toml`) and the web link (`WinWebLink`,
                          through Explorer's desktop shell as the reveal, `explorer.rs`), with every UIA handler locked
                          (P10); the worker's kept variables and own folder (`worker/env.toml`) and the voice adapters
-                         (`voice`, `WinSessionWatch`, `WinFolderReveal`; P11)
+                         (`voice`, `WinSessionWatch`, `WinFolderReveal`; P11); the frozen screens' order
+                         (`window::top::lay_low`) and the Esc watch (`WinEscWatch`, `esc`; P12, ADR-0059)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock, golden layout tables, a
@@ -119,6 +125,8 @@ crates/
                          contract test uses it too
   kx-platform-net/      worker-only HTTPS (WinHTTP): the `fetch` job's downloads and the `speech-net` job's POSTs, which
                          follow no redirect; `keyxtend` must never depend on it (P11)
+  kx-platform-record/   worker-only screen recording, re-timed copies and the system's file dialogs (the `record` and
+                         `pick` jobs, `record.toml`); `keyxtend` must never depend on it (P12, ADR-0056)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
                          language, the tray's in the system's (ADR-0020); the `keysTip` and `keysText` bridge calls
@@ -181,7 +189,8 @@ crates/
                          `kx-selection` actor over the watch and the link; `[selection]`
   kx-mod-voice/         voice typing (P11, ADR-0042 to ADR-0052): the `kx-voice` actor, its tables, flow, panel, cloud
                          pick and sealed keys; `[voice]`; each crate's voice parts: docs/architecture/voice.md
-  kx-mod-snip/          capture overlay, editor, OCR client (P12)
+  kx-mod-snip/          Snip and screen recording (P12, ADR-0055 to ADR-0060): the `kx-snip` actor, its flow, picking
+                         rules and picture editor; `[snip]`; each crate's Snip parts: docs/architecture/snip.md
   kx-crypto/            sealed files: XChaCha20-Poly1305 under a data key the `KeyGuard` port wraps
                          (DPAPI/Keychain/Secret Service); `SealedFiles` backs the `SealedStore` port (P7), and
                          `SealedShelfFiles` the `SealedShelf` port: folders of blobs under a root with its own
@@ -200,7 +209,8 @@ tools/
                          product, `[g23]`, test values only) and kx-gates-p10.toml (G19 on the product,
                          `[g19_product]`) and kx-gates-p11.toml (G22 on the product, its bench and the staged edges,
                          `boxed`, and the cloud line, `[g22_cloud]`, on sealed keys the local file's `daily_dir`
-                         names); uses spike-core widely until its gates are aimed at the product;
+                         names) and kx-gates-p12.toml (G24 on the product, `[g24]`); uses spike-core
+                         widely until its gates are aimed at the product;
                          `capture-layouts` writes the fake's golden layout tables from the layouts installed on the PC
   kx-target-window/      test window that logs every character it receives (CI); a library plus a binary; reads
                          kx-target-window.toml; times its log with the QPC clock from kx-platform-windows;
@@ -242,10 +252,11 @@ The module trait, its lifecycle, services, events and settings: [docs/architectu
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
    - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
    - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`. Tidy enforces this for `tools/` and for `kx-ui`, where rule F3 refuses `unsafe` outside `src/bridges/` and any block without a `// SAFETY:` comment.
-4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`, or `kx-platform-net`, which only the worker's `fetch` and `speech-net` jobs use (ADR-0042, ADR-0047).
+4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls`, `native-tls` or `kx-platform-net`, which only the worker's `fetch` and `speech-net` jobs use (ADR-0042, ADR-0047), never its `record` and `pick` jobs (ADR-0056).
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
    - The worker is the only PNG and DIB decoder and the only reader of backup boxes and KeePass files, and tidy D4 (`banned_media`) keeps `png`, `fdeflate`, `age` and `keepass` out of the app's tree (ADR-0034, ADR-0038).
-   - The worker's `voice` job alone hears the microphone and runs the speech engine, so D4 keeps `cpal`, `transcribe-cpp` and `transcribe-cpp-sys` out of the app's tree too (ADR-0042).
+   - The worker's `voice` job hears the microphone for dictation and alone runs the speech engine, so D4 keeps `cpal`, `transcribe-cpp` and `transcribe-cpp-sys` out of the app's tree too (ADR-0042).
+   - The app freezes the screen as raw pixels and decodes no file. The worker's `record` job alone records the screen, hears sound for a video and loads the video encoders, and its `pick` job alone shows the system's file dialogs, so D4 keeps `kx-platform-record` out of the app's tree (ADR-0056).
 6. No module logs typed text, learned words, emails, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
 7. Every new dependency passes `cargo deny check` (licences that allow a closed, sold app: ADR-0030 and `deny.toml`) and is recorded in `THIRD_PARTY.md` if it ships data, fonts, models or icons.
    - No outside code is merged, and the licence-key check and signing secrets never enter this repository (ADR-0030).
@@ -261,7 +272,7 @@ The module trait, its lifecycle, services, events and settings: [docs/architectu
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
 13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5), and kx-mod-predict's `build` (the pack writer), which only xtask turns on.
 14. Product code in `apps/` and `crates/` starts no process with `std::process::Command` or `QProcess` (tidy F4, `banned_spawns`). A worker starts through the platform's spawner (`WinSpawner`), which lowers its rights and lets it inherit only its pipes; tests, test modules, build scripts and `tools/` may start processes.
-15. The worker's three P11 jobs stay apart (tidy F5, `apart`): no file of its `src/voice` names `kx-platform-net`, and none of its `src/fetch` or `src/net` names `cpal` or `transcribe-cpp`. F5 reads names only (`docs/security/keyxtend-worker.md`).
+15. The worker's jobs stay apart (tidy F5, `apart`): no file of its `src/voice` names `kx-platform-net` or `kx-platform-record`, none of its `src/record` names `kx-platform-net` or `transcribe-cpp`, none of its `src/fetch` or `src/net` names `cpal`, `transcribe-cpp` or `kx-platform-record`, and none of its `src/pick` names `kx-platform-net`, `cpal` or `transcribe-cpp`. F5 reads names only (`docs/security/keyxtend-worker.md`).
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
@@ -295,4 +306,5 @@ Window flags, the window guard, owners and drawing: [docs/architecture/qt-window
 - [Quick-fill (P9, ADR-0037, ADR-0038, ADR-0039)](docs/architecture/quick-fill.md)
 - [Selection chips (P10, ADR-0041)](docs/architecture/selection.md)
 - [Voice typing (P11, ADR-0042 to ADR-0052)](docs/architecture/voice.md)
+- [Snip and screen recording (P12, ADR-0055 to ADR-0060)](docs/architecture/snip.md)
 - [Platform notes](docs/architecture/platforms.md): each concern on Windows, macOS and Linux.

@@ -10,8 +10,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
 };
 
-use crate::pt::Pt;
-
 /// "BM", the BMP file signature.
 const MAGIC: &[u8; 2] = b"BM";
 /// Size of the BMP file header, in bytes.
@@ -145,16 +143,6 @@ pub fn screen(cap: usize) -> Result<Shot, String> {
     })
 }
 
-/// The box between two picked corners, whatever order they were picked in; both corner pixels are inside.
-pub fn region(a: Pt, b: Pt) -> RECT {
-    RECT {
-        left: a.x.min(b.x),
-        top: a.y.min(b.y),
-        right: a.x.max(b.x).saturating_add(1),
-        bottom: a.y.max(b.y).saturating_add(1),
-    }
-}
-
 impl Shot {
     /// The part of this copy inside screen box `r`, or `None` when they do not overlap.
     pub fn crop(&self, r: &RECT) -> Option<Shot> {
@@ -201,32 +189,6 @@ impl Shot {
             .flat_map(|&[b, g, r, _]| [r, g, b, u8::MAX])
             .collect()
     }
-}
-
-/// Reads a BMP file written by `Shot::to_bmp`, up to `cap` pixel bytes; its place on the screen is unknown, so it is (0, 0).
-pub fn from_bmp(b: &[u8], cap: usize) -> Result<Shot, String> {
-    let u32_at = |at: usize| -> Option<u32> {
-        Some(u32::from_le_bytes(b.get(at..at + 4)?.try_into().ok()?))
-    };
-    let bad = || "not a BMP file from a snip".to_string();
-    if b.get(..2) != Some(MAGIC.as_slice()) || u32_at(10) != Some(PIXELS_AT) {
-        return Err(bad());
-    }
-    let width = u32_at(18).ok_or_else(bad)? as i32;
-    let height = (u32_at(22).ok_or_else(bad)? as i32)
-        .checked_neg()
-        .ok_or_else(bad)?;
-    let size = byte_len(width, height, cap).ok_or_else(bad)?;
-    let bgra = b
-        .get(PIXELS_AT as usize..PIXELS_AT as usize + size)
-        .ok_or_else(bad)?;
-    Ok(Shot {
-        left: 0,
-        top: 0,
-        width,
-        height,
-        bgra: bgra.to_vec(),
-    })
 }
 
 #[cfg(test)]

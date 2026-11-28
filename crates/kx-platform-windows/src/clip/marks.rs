@@ -53,16 +53,28 @@ impl Marks {
         self.present.iter().any(|n| has(n)) || self.zero.iter().any(|n| dword(n) == Some(0))
     }
 
-    /// Whether the open clipboard carries one of these markers. A marker Windows cannot name, or a number marker it
-    /// cannot read, counts as there, so a failure never reads a marked copy.
+    /// Whether the open clipboard carries one of these markers, as `probes` reads them.
     #[cfg(windows)]
     pub(crate) fn on(&self, open: &Open) -> bool {
-        let there = |id: u32| open::available(open, id);
-        let has = |n: &str| open::format_id(n).map_or(true, there);
-        let read = |id: u32| open::dword_of(open, id);
-        let dword = |n: &str| number(open::format_id(n).ok(), there, read);
+        let (has, dword) = probes(open);
         self.marked(has, dword)
     }
+}
+
+/// What the open clipboard says of a format by name: whether it has it, and the number it holds. A marker Windows
+/// cannot name, or a number it cannot read, counts as there, so a failure never reads a marked copy.
+#[cfg(windows)]
+pub fn probes(
+    open: &Open,
+) -> (
+    impl Fn(&str) -> bool + '_,
+    impl Fn(&str) -> Option<u32> + '_,
+) {
+    let there = move |id: u32| open::available(open, id);
+    let has = move |n: &str| open::format_id(n).map_or(true, there);
+    let read = move |id: u32| open::dword_of(open, id);
+    let dword = move |n: &str| number(open::format_id(n).ok(), there, read);
+    (has, dword)
 }
 
 /// The number a marker format with `id` holds (`None` when Windows cannot register it): none when it is not
@@ -84,6 +96,14 @@ pub(crate) fn number(
 #[must_use]
 pub fn marked(open: &Open) -> bool {
     super::table().map_or(true, |t| t.marks().on(open))
+}
+
+/// Whether a copy carries a shipped presence marker, which only a private copy sets, as a put-back's read checks, given
+/// whether it `has` a format and a format's number (`dword`); number markers, ours among them, pass. A table that does
+/// not parse says yes.
+#[must_use]
+pub fn private_by(has: impl Fn(&str) -> bool, dword: impl Fn(&str) -> Option<u32>) -> bool {
+    super::table().map_or(true, |t| t.marks().presence().marked(has, dword))
 }
 
 /// Every shipped marker's name, so a test tool can write marked copies; none when the table does not parse.

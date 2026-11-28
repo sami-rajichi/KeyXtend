@@ -1,17 +1,17 @@
 //! The models host over a fake disk and scripted fetch workers on a clock that moves only when a test moves it;
-//! folder tests use a real folder under the system's temporary folder on Windows, where paths are drive paths.
+//! folder tests use a real folder under the system's temporary folder, on every system (ADR-0062).
 
 use super::*;
 use crate::worker::fake::{Call, FetchAct, Hands, Script};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{JobLimits, Link};
+use kx_test_support::paths::native;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
 mod fetch;
-#[cfg(windows)]
 mod folder;
 
 /// How long a test waits for a note; a wait, never a sleep.
@@ -20,10 +20,14 @@ const LONG: Duration = Duration::from_secs(10);
 const BYTES: u64 = 4_000;
 const MIN_FREE_MB: u32 = 256;
 const PRINT: [u8; SHA256_BYTES] = [7; SHA256_BYTES];
-/// A test download's address and host, and a file on a drive no test machine has.
+/// A test download's address and host.
 const URL: &str = "https://models.example/a.gguf";
 const HOST: &str = "models.example";
-const FILE: &str = r"Q:\kx-test\a.gguf";
+
+/// A file on a drive no test machine has, in this system's style.
+fn file() -> String {
+    native(r"Q:\kx-test\a.gguf")
+}
 
 /// A disk with `free` bytes on every drive, `None` when the folder is gone, that hides the names in `hidden`.
 #[derive(Default)]
@@ -153,14 +157,15 @@ fn each_system_error_is_the_ports_and_a_read_knows_only_missing_or_io() {
 }
 
 #[test]
-fn a_path_that_is_no_plain_drive_path_is_refused_before_the_disk() {
+fn a_path_that_is_no_plain_absolute_path_is_refused_before_the_disk() {
     let models = host(&Script::default(), roomy(need()));
     for bad in [
         r"relative\models",
         r"Q:\models\..\up",
         r"Q:\models\a.gguf:stream",
     ] {
-        let path = Path::new(bad);
+        let bad = native(bad);
+        let path = Path::new(&bad);
         assert_eq!(models.make(path), Err(ModelError::BadPath), "{bad}");
         assert_eq!(models.scan(path, &[]), Err(ModelError::BadPath));
         assert_eq!(models.fingerprint(path), Err(ModelError::BadPath));
@@ -172,12 +177,13 @@ fn a_path_that_is_no_plain_drive_path_is_refused_before_the_disk() {
 fn the_drives_and_a_files_fingerprint_come_from_the_disk() {
     let models = host(&Script::default(), roomy(need()));
     assert_eq!(models.drives()[0].free, need());
+    let file = file();
     assert_eq!(
-        models.fingerprint(Path::new(FILE)),
+        models.fingerprint(Path::new(&file)),
         Ok(Fingerprint::new(PRINT))
     );
     let gone = host(&Script::default(), FakeDisk::default());
-    assert_eq!(gone.fingerprint(Path::new(FILE)), Err(ModelError::Missing));
+    assert_eq!(gone.fingerprint(Path::new(&file)), Err(ModelError::Missing));
 }
 
 /// The fetch asks a script's workers took, in order.

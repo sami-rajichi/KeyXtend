@@ -14,17 +14,18 @@ pub mod models;
 pub mod packs;
 pub mod pictures;
 pub mod selection;
+pub mod snip;
 pub mod speech;
 pub mod ui;
 pub mod worker;
 
 pub use dirs::{
-    APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, VAULT_DIR, VOICE_DIR,
-    pick_data_dir,
+    APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, SNIP_DIR, UNSAVED_DIR,
+    VAULT_DIR, VOICE_DIR, pick_data_dir, snip_dirs, unsaved_dir,
 };
 
 use kx_module_api::Clock;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 /// What an OS adapter hands the kernel. Later phases add more ports.
@@ -41,4 +42,9 @@ pub trait Platform: Send + Sync {
 pub fn deadline(cap: Duration) -> Instant {
     let now = Instant::now();
     now.checked_add(cap).unwrap_or(now)
+}
+
+/// The lock of `m`, whose state stays whole even if a holder panicked.
+pub(crate) fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(PoisonError::into_inner)
 }

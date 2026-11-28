@@ -23,8 +23,10 @@ const SHIPPED_P9: &str = include_str!("../../kx-gates-p9.toml");
 const SHIPPED_P10: &str = include_str!("../../kx-gates-p10.toml");
 /// The shipped settings P11 adds.
 const SHIPPED_P11: &str = include_str!("../../kx-gates-p11.toml");
+/// The shipped settings P12 adds.
+const SHIPPED_P12: &str = include_str!("../../kx-gates-p12.toml");
 /// Every shipped settings file, by name.
-const SHIPPED_ALL: [(&str, &str); 9] = [
+const SHIPPED_ALL: [(&str, &str); 10] = [
     (FILE, SHIPPED),
     (P3_FILE, SHIPPED_P3),
     (P4_FILE, SHIPPED_P4),
@@ -34,6 +36,7 @@ const SHIPPED_ALL: [(&str, &str); 9] = [
     (P9_FILE, SHIPPED_P9),
     (P10_FILE, SHIPPED_P10),
     (P11_FILE, SHIPPED_P11),
+    (P12_FILE, SHIPPED_P12),
 ];
 /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
 const WORKSPACE: &str = include_str!("../../../../Cargo.toml");

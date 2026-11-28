@@ -19,6 +19,7 @@ Glow {
 
     transientParent: null
     lk: face.lk
+    res: face.res
     box: Qt.rect(chips.x, chips.y, chips.width, chips.height)
     radius: face.lk ? face.lk.look.window_radius_px : 0
     follow: chips.body

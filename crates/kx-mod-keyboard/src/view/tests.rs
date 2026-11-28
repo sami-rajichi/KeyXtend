@@ -6,7 +6,7 @@ use crate::settings::{KeyboardSettings, Modifiers};
 use crate::spec::{BoardSpec, Latch, Nav};
 use kx_module_api::ports::{
     AssistChanged, KeyChars, LangLabel, LayoutId, LayoutTable, Scan, ScrollChanged, ShortcutId,
-    VoiceLit,
+    SnipLit, VoiceLit,
 };
 use std::collections::{BTreeMap, HashSet};
 
@@ -135,8 +135,9 @@ fn state_with(
         power: others.power,
         fill: others.fill,
         panel: others.panel,
-        aimed: false,
+        aim: None,
         voice: VoiceLit::Off,
+        snip: SnipLit::Off,
     })
 }
 
@@ -182,8 +183,8 @@ fn a_key_that_types_nothing_with_altgr_shows_nothing_and_is_named_empty() {
 #[test]
 fn dimmed_keys_paint_dim_and_named_keys_have_no_legend() {
     let s = state(&none(), false, None);
-    assert_eq!(s.keys["snip"].paint, DIM);
-    assert!(!s.keys["snip"].on);
+    assert_eq!(s.keys["settings"].paint, DIM);
+    assert!(!s.keys["settings"].on);
     assert_eq!(s.keys["esc"].legend, Legend::default());
     assert_eq!(s.keys["esc"].paint.fill, "danger");
 }

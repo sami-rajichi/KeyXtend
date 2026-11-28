@@ -144,7 +144,7 @@ fn a_key_edge_is_a_hairline_wide() {
 fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
     let base = themes().common;
     let c = contrast_common(&HC, &base);
-    let allowed = [HC.window, HC.highlight, HC.button].map(Rgba::from);
+    let allowed = [HC.window, HC.window_text, HC.highlight, HC.button].map(Rgba::from);
     for (n, v) in c.named() {
         assert!(allowed.iter().any(|&a| rgb(a) == rgb(v)), "{n}");
     }
@@ -152,6 +152,17 @@ fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
     assert_eq!(
         (c.snip_dim.a, c.snip_tag.a),
         (base.snip_dim.a, base.snip_tag.a)
+    );
+    let (text, mark) = (Rgba::from(HC.window_text), Rgba::from(HC.highlight));
+    assert_eq!(
+        (c.snip_tag_ink, c.snip_rec),
+        (text, mark),
+        "text on a tag, the red edge"
+    );
+    assert_eq!(
+        c.inks(),
+        base.inks(),
+        "the editor's inks are the picture's, not the UI's"
     );
 }
 

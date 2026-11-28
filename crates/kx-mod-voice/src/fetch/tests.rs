@@ -5,12 +5,15 @@ use super::*;
 use crate::models::table;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Fingerprint, FolderScan, MB, ModelFile};
-use std::path::{Path, PathBuf};
+use kx_test_support::paths::{native, native_path};
+use std::path::Path;
 
 mod props;
 
-/// The folder the tests use.
-const DIR: &str = r"D:\KeyXtend\models";
+/// The folder the tests use, in this system's form.
+fn dir() -> String {
+    native(r"D:\KeyXtend\models")
+}
 
 fn parakeet() -> &'static Row {
     table().unwrap().get("parakeet-v3-q8").unwrap()
@@ -23,7 +26,7 @@ fn settings() -> VoiceSettings {
 /// The folder's drive with `free` bytes free.
 fn drive(free: u64) -> [Drive; 1] {
     [Drive {
-        root: Redacted::new(PathBuf::from(r"D:\")),
+        root: Redacted::new(native_path(r"D:\")),
         name: Redacted::new("D:".into()),
         free,
     }]
@@ -38,7 +41,7 @@ fn roomy() -> [Drive; 1] {
 fn started() -> Fetches {
     let mut fetches = Fetches::default();
     fetches
-        .start(parakeet(), &Folder::new(DIR), &roomy(), &settings())
+        .start(parakeet(), &Folder::new(&dir()), &roomy(), &settings())
         .unwrap();
     fetches
 }
@@ -47,9 +50,9 @@ fn started() -> Fetches {
 fn the_ask_fetches_the_rows_file_into_the_folder() {
     let (row, s) = (parakeet(), settings());
     let ask = Fetches::default()
-        .start(row, &Folder::new(DIR), &roomy(), &s)
+        .start(row, &Folder::new(&dir()), &roomy(), &s)
         .unwrap();
-    assert_eq!(ask.file.expose(), &Path::new(DIR).join(&row.file));
+    assert_eq!(ask.file.expose(), &Path::new(&dir()).join(&row.file));
     assert_eq!(
         (ask.bytes, ask.print, &ask.hosts),
         (row.bytes, row.print, &row.hosts)
@@ -121,7 +124,7 @@ fn a_bad_fingerprint_or_size_tells_a_note() {
 
 #[test]
 fn a_missing_drive_or_too_little_room_starts_no_download() {
-    let (row, s, folder) = (parakeet(), settings(), Folder::new(DIR));
+    let (row, s, folder) = (parakeet(), settings(), Folder::new(&dir()));
     let mut fetches = Fetches::default();
     assert_eq!(
         fetches.start(row, &folder, &[], &s),
@@ -146,7 +149,7 @@ fn a_missing_drive_or_too_little_room_starts_no_download() {
 #[test]
 fn a_name_another_file_holds_starts_no_download() {
     let row = parakeet();
-    let mut folder = Folder::new(DIR);
+    let mut folder = Folder::new(&dir());
     let file = ModelFile {
         name: Redacted::new(row.file.clone()),
         bytes: row.bytes,
@@ -156,7 +159,7 @@ fn a_name_another_file_holds_starts_no_download() {
         files: vec![file],
     }));
     folder.printed(
-        &Path::new(DIR).join(&row.file),
+        &Path::new(&dir()).join(&row.file),
         row.bytes,
         Ok(Fingerprint::new([7; Fingerprint::BYTES])),
     );

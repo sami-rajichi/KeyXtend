@@ -72,6 +72,26 @@ fn workers_are_the_ones_beside_the_product_in_any_letter_case() {
 }
 
 #[test]
+fn a_folder_the_settings_name_with_dots_and_slashes_finds_the_workers_windows_names_in_full() {
+    let dir = Path::new(r"D:\p\tools\kx-gates\../../target/gate-input/release");
+    let found = [
+        (
+            4,
+            r"D:\p\target\gate-input\release\keyxtend-worker.exe".to_string(),
+        ),
+        (
+            5,
+            r"\\?\D:\P\TARGET\gate-input\release\keyxtend-worker.exe".to_string(),
+        ),
+        (
+            6,
+            r"D:\p\tools\target\gate-input\release\keyxtend-worker.exe".to_string(),
+        ),
+    ];
+    assert_eq!(beside(&found, dir), [4, 5]);
+}
+
+#[test]
 fn each_workers_rights_are_logged_as_level_and_ui_access() {
     let line = json!({ "workers": [rights(false, MEDIUM)] });
     assert_eq!(line["workers"][0]["level"], MEDIUM);

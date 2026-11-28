@@ -3,9 +3,9 @@
 //! `job`.
 
 use super::*;
-use std::path::PathBuf;
+use kx_test_support::paths::native_path;
 
-/// A model path no output may show.
+/// A model path no output may show, written for Windows; wrap it in `native_path`.
 pub(super) const FILE: &str = r"D:\Models\parakeet-9913.gguf";
 
 /// A value's name and a change that puts it just past its range.
@@ -25,7 +25,7 @@ pub(super) fn job() -> JobLimits {
 }
 
 fn model() -> SpeechModel {
-    let file = Redacted::new(PathBuf::from(FILE));
+    let file = Redacted::new(native_path(FILE));
     SpeechModel {
         file,
         lang: "fr-FR".into(),
@@ -200,7 +200,7 @@ fn a_model_with_a_bad_path_or_size_is_refused() {
         r"D:\m\x.gguf:s",
     ];
     for path in paths {
-        let file = Redacted::new(PathBuf::from(path));
+        let file = Redacted::new(native_path(path));
         let why = refused(|a| a.model.as_mut().unwrap().file = file);
         assert_eq!(why, Some("file"), "{path}");
     }

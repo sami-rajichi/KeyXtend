@@ -130,6 +130,52 @@ fn a_silent_worker_is_late_without_a_wait() {
     assert_eq!(worker.reply(WAIT), Heard::Frame(Err(IpcError::Closed)));
 }
 
+/// An encode of `len` raw bytes, one row.
+fn encode(id: u32, len: usize) -> Ask<'static> {
+    let wide = u32::try_from(len).unwrap();
+    Ask::Encode {
+        id,
+        width: wide / u32::try_from(kx_ipc::BGRX_BYTES).unwrap(),
+        height: 1,
+        stride: wide,
+        bgrx: Cow::Owned(vec![0; len]),
+    }
+}
+
+/// A PNG reply of `len` bytes.
+fn png(id: u32, len: usize) -> Reply {
+    Reply::Png {
+        id,
+        bytes: vec![1; len],
+    }
+}
+
+/// Writes `reply` into `theirs` on a thread of its own, so a reader that stops early never blocks the test.
+fn tell(theirs: &io::PipeWriter, reply: &Reply) -> thread::JoinHandle<()> {
+    let (mut pipe, bytes) = (
+        theirs.try_clone().unwrap(),
+        frames(std::slice::from_ref(reply)),
+    );
+    thread::spawn(move || drop(pipe.write_all(&bytes)))
+}
+
+#[test]
+fn an_encodes_png_is_read_within_png_most_of_its_pixels_and_a_draws_reply_within_the_usual_bound() {
+    let (out, theirs) = io::pipe().unwrap();
+    let mut worker = media(io::sink(), out, Kid::default()).unwrap();
+    let (raw, at_most) = (8, kx_ipc::png_most(8));
+    worker.send(encode(1, raw));
+    tell(&theirs, &png(1, at_most)).join().unwrap();
+    assert_eq!(worker.reply(WAIT), Heard::Frame(Ok(png(1, at_most))));
+    worker.send(draw(2));
+    tell(&theirs, &png(2, at_most + 1)).join().unwrap();
+    let usual = Heard::Frame(Ok(png(2, at_most + 1)));
+    assert_eq!(worker.reply(WAIT), usual, "a draw keeps the usual bound");
+    worker.send(encode(3, raw));
+    let _told = tell(&theirs, &png(3, at_most + 1));
+    assert_eq!(worker.reply(WAIT), Heard::Frame(Err(IpcError::TooLong)));
+}
+
 #[test]
 fn asks_are_written_in_turn_and_a_drop_closes_the_input() {
     let (mut theirs, input) = io::pipe().unwrap();

@@ -1,10 +1,11 @@
-//! The media job on the neutral host: a draw's pixels within its side, a DIB within its cap, the worker's reasons as
-//! the port's errors, and asks the worker would refuse refused before any worker starts.
+//! The media job on the neutral host: a draw's pixels within its side, a DIB within its cap, a PNG within `png_most`
+//! of its pixels, the worker's reasons as the port's errors, and asks the worker would refuse refused before any
+//! worker starts.
 
 use crate::worker::{Host, Lost, MediaFrames, Spawner};
-use kx_ipc::{Ask, Codec, IpcError, MAX_IMAGE_BYTES, MAX_SIDE, Reply, Why};
+use kx_ipc::{Ask, BGRX_BYTES, Codec, IpcError, MAX_IMAGE_BYTES, MAX_SIDE, Reply, Why, png_most};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{DibAsk, ImageCodec, PictureAsk, PictureError, Pixels};
+use kx_module_api::ports::{DibAsk, EncodeAsk, ImageCodec, PictureAsk, PictureError, Pixels};
 use std::borrow::Cow;
 use std::io;
 
@@ -29,7 +30,7 @@ impl<S: Spawner<MediaFrames>> Host<S, MediaFrames> {
                 ..
             } => Pixels::new(width, height, rgba, side).map(Ok),
             Reply::Failed { why, .. } => Some(Err(refusal(why))),
-            Reply::Dib { .. } => None,
+            Reply::Dib { .. } | Reply::Png { .. } => None,
         })
     }
 
@@ -48,9 +49,39 @@ impl<S: Spawner<MediaFrames>> Host<S, MediaFrames> {
         self.call(make, |reply| match reply {
             Reply::Dib { bytes, .. } if in_cap(&bytes) => Some(Ok(Redacted::new(bytes))),
             Reply::Failed { why, .. } => Some(Err(refusal(why))),
-            Reply::Dib { .. } | Reply::Pixels { .. } => None,
+            Reply::Dib { .. } | Reply::Pixels { .. } | Reply::Png { .. } => None,
         })
     }
+
+    /// Makes the PNG of `ask`'s pixels on the worker, within the deadline; its reply is read within `png_most` of the
+    /// pixels sent, and only its length is checked, never its bytes.
+    pub(super) fn encode(&mut self, ask: &EncodeAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        ask.check()?;
+        let (width, height) = (ask.shot.width(), ask.shot.height());
+        let stride = row(width).ok_or(PictureError::TooBig)?;
+        let bgrx = ask.shot.bgrx().expose().to_vec();
+        let most = png_most(bgrx.len());
+        let make = |id| {
+            fits(Ask::Encode {
+                id,
+                width,
+                height,
+                stride,
+                bgrx: Cow::Owned(bgrx),
+            })
+        };
+        self.call(make, |reply| match reply {
+            Reply::Png { bytes, .. } if bytes.len() <= most => Some(Ok(Redacted::new(bytes))),
+            Reply::Failed { why, .. } => Some(Err(refusal(why))),
+            Reply::Png { .. } | Reply::Pixels { .. } | Reply::Dib { .. } => None,
+        })
+    }
+}
+
+/// The bytes of a row of `width` raw pixels, a shot's stride; `None` past a frame's field.
+fn row(width: u32) -> Option<u32> {
+    let bytes = usize::try_from(width).ok()?.checked_mul(BGRX_BYTES)?;
+    u32::try_from(bytes).ok()
 }
 
 impl From<Lost> for PictureError {

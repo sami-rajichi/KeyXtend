@@ -47,8 +47,24 @@ fn program_resolves_only_relative_paths_with_a_folder() {
         ..load().expect("loads")
     };
     assert_eq!(cfg.program("notepad.exe"), PathBuf::from("notepad.exe"));
+    assert_eq!(cfg.program("../t/x.exe"), PathBuf::from(r"t\x.exe"));
+}
+
+#[test]
+fn a_program_with_a_folder_is_named_in_full_as_windows_names_it_running() {
+    let cfg = GatesConfig {
+        dir: PathBuf::from(r"D:\p\tools\kx-gates"),
+        ..load().expect("loads")
+    };
+    let exe = cfg.program("../../target/gate-input/release/keyxtend.exe");
     assert_eq!(
-        cfg.program("../t/x.exe"),
-        Path::new("base").join("../t/x.exe")
+        exe,
+        PathBuf::from(r"D:\p\target\gate-input\release\keyxtend.exe")
+    );
+    let named = cfg.program(r"C:\tools\.\bin\..\x.exe");
+    assert_eq!(
+        named,
+        PathBuf::from(r"C:\tools\x.exe"),
+        "an absolute one too"
     );
 }

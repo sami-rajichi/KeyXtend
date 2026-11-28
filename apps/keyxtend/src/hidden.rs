@@ -1,6 +1,6 @@
 //! A run whose saves would be hidden saves nothing (ADR-0037): it reads nothing from the data folder, keeps its words,
-//! copies, notebook and voice history in memory with Quick-fill off, logs to standard error alone and shows a banner.
-//! Only a normal run asks about the hidden copies earlier runs left.
+//! copies, notebook and voice history in memory with Quick-fill off, makes no Snips folder, so Snip offers no Video and
+//! no Save, logs to standard error alone and shows a banner. Only a normal run asks about the hidden copies left.
 
 mod copies;
 #[cfg(test)]

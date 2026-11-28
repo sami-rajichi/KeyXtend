@@ -1,7 +1,7 @@
 //! The Windows side of the screens: monitors, their work areas and DPI, and the pointer.
 //! Boxes are in physical pixels while the process is per-monitor DPI aware, as Qt makes it.
 
-use kx_module_api::ports::{Point, Screen};
+use kx_module_api::ports::{Point, Rect, Screen};
 use kx_platform::ui::{Screens, UiError};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
@@ -80,6 +80,19 @@ fn area(mon: HMONITOR) -> Option<Screen> {
         dpi: monitor_dpi(mon),
         primary: is_primary(info.dwFlags),
     })
+}
+
+/// Every screen's whole box, taskbar included, with its DPI, in Windows' order; one Windows will not describe is left
+/// out.
+pub(crate) fn whole_screens() -> Vec<(Rect, u32)> {
+    let whole = |mon| {
+        let r = info(mon)?.rcMonitor;
+        Some((
+            rect_of([r.left, r.top, r.right, r.bottom]),
+            monitor_dpi(mon),
+        ))
+    };
+    monitors().into_iter().filter_map(whole).collect()
 }
 
 /// The monitor nearest to box `r`.

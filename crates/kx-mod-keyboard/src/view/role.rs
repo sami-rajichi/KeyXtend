@@ -1,18 +1,18 @@
 //! The keys whose role alone sets their state: a later key, a mouse mode, the Shortcuts and Power keys, the fill key,
-//! dimmed with a tip while the vault module is not running (ADR-0037 decision 2), and the Dictation key's light.
+//! dimmed with a tip while the vault module is not running (ADR-0037 decision 2), and the Dictation and Snip keys' lights.
 
 use super::{DIM, KeyState, PREP, REC, StateInput, assist, layer, paint, power};
 use crate::geom::KeyBox;
 use crate::spec::{KeyKind, Role};
-use kx_module_api::ports::{FillLive, VoiceLit};
+use kx_module_api::ports::{FillLive, SnipLit, VoiceLit};
 
 /// The fill key's tip while the vault module is not running: "Quick-fill is off".
 pub const FILL_OFF_TIP: &str = "tip.fill-off";
 /// The Dictation key's name while the microphone starts, which readers hear in place of its own.
 pub const PREP_NAME: &str = "voice.preparing";
 
-/// Key `k`'s state when its role alone sets it: a later key, a mouse mode, the Shortcuts, Power, stopped fill or
-/// Dictation key.
+/// Key `k`'s state when its role alone sets it: a later key, a mouse mode, the Shortcuts, Power, stopped fill,
+/// Dictation or Snip key.
 pub(super) fn role_state(i: &StateInput<'_>, k: &KeyBox) -> Option<KeyState> {
     match k.role {
         Role::Later => Some(KeyState {
@@ -25,7 +25,18 @@ pub(super) fn role_state(i: &StateInput<'_>, k: &KeyBox) -> Option<KeyState> {
         Role::Power => Some(power::power_key(i.power, k.kind)),
         Role::Fill => fill_key(i.fill),
         Role::Voice => Some(voice_key(i.voice, k.kind)),
+        Role::Snip => Some(snip_key(i.snip, k.kind)),
         _ => None,
+    }
+}
+
+/// The Snip key of `kind` under light `lit`: on, in a turned-on side key's paint, while a capture runs.
+fn snip_key(lit: SnipLit, kind: KeyKind) -> KeyState {
+    let on = lit == SnipLit::On;
+    KeyState {
+        on,
+        paint: paint(kind, on),
+        ..KeyState::default()
     }
 }
 

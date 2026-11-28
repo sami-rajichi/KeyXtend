@@ -34,7 +34,6 @@ fn the_extra_windows_take_the_mock_up_sizes() {
         s.caption.bar_px, 38.0,
         ".vbar: 3 + 6 + the 26 px wave box + 3"
     );
-    assert_eq!(s.snip.bar_radius_px, 9.0, ".snip-bar");
     assert_eq!(s.caption.shimmer_px, [10.0, 6.0], ".shimmer");
     assert_eq!(s.caption.shimmer_span, 2.0, ".shimmer background-size 200%");
     assert_eq!(s.panel.row_px[0], 46.0, ".lrow");
@@ -49,6 +48,18 @@ fn the_extra_windows_take_the_mock_up_sizes() {
             .expect_err("weight")
             .contains("caption.status_weight")
     );
+}
+
+#[test]
+fn the_snip_editor_opens_at_the_mock_up_size_and_never_below_its_least() {
+    let s = load().expect("shape.toml loads");
+    assert_eq!(s.snip.editor_px, [980.0, 540.0], "snip-editor.js ED");
+    let kept = "editor_min_px = [740.0, 420.0]";
+    for bad in ["[990.0, 420.0]", "[0.0, 420.0]"] {
+        let least = text().replacen(kept, &format!("editor_min_px = {bad}"), 1);
+        let refused = parse(&least).expect_err(bad);
+        assert!(refused.contains("snip.editor_min_px"), "{refused}");
+    }
 }
 
 #[test]
@@ -279,5 +290,7 @@ mod dots;
 mod fill;
 /// The scroll pad's arrows, Stop's speed dots and the target's outline.
 mod pad;
+/// Snip's capture windows and the editor's steps.
+mod snip;
 /// The dictation bar's and the Voice panel's own sizes.
 mod voice;

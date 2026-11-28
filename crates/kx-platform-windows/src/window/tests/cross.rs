@@ -119,7 +119,7 @@ fn a_keyboard_and_its_shadow_dropped_in_turn_from_another_thread_both_come_back(
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
     let shadow = Hidden::tip("KeyXtend test: shadow dropped from afar", None);
     let kb = Hidden::topmost("KeyXtend test: keyboard dropped from afar", Some(shadow.0));
-    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
     drop_elsewhere(&[kb.0, shadow.0]);
     assert!(topmost(&kb), "the keyboard stays");
     assert!(topmost(&shadow), "and its shadow");
@@ -133,7 +133,7 @@ fn a_lift_that_does_not_land_during_another_threads_drop_is_made_again_after_it(
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
     let shadow = Hidden::tip("KeyXtend test: stuck shadow", None);
     let kb = Hidden::topmost("KeyXtend test: stuck shadow's keyboard", Some(shadow.0));
-    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
     stall(&shadow);
     drop_elsewhere(&[kb.0, shadow.0]);
     assert!(topmost(&kb), "the keyboard stays");
@@ -149,7 +149,7 @@ fn the_checks_end_when_a_lift_never_lands() {
     MOVES.set((0, 0));
     let shadow = Hidden::tip("KeyXtend test: shadow never lifted", None);
     let kb = Hidden::topmost("KeyXtend test: keyboard over it", Some(shadow.0));
-    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    guard_these(listed(&[&kb, &shadow]), &[], None).unwrap();
     STUCK_ALWAYS.set(true);
     stall(&shadow);
     put_after(&kb, HWND_NOTOPMOST);

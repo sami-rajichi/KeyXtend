@@ -1,0 +1,69 @@
+# Snip and screen recording (P12, ADR-0055 to ADR-0060)
+
+A detail section of [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the overview, the code map and the invariants. The design is [`2026-11-23-snip-design.md`](../superpowers/specs/2026-11-23-snip-design.md), whose "As built" says where P12 departs from it; OCR left v1 (ADR-0055).
+
+- **The app freezes, the worker records and asks (ADR-0056).** The uiAccess app holds raw pixels and checked paths only. PNG files, recording, sound, the MP4 encoder and the system's file dialogs all run in `keyxtend-worker` jobs with normal rights.
+- **The module.** `kx-mod-snip`'s pure flow runs on the injected clock: Idle, Freezing, Picking, Strip, Count, Record and Edit, with the close question beside them. The `kx-snip` actor carries out its steps on the ports, each blocking call on a short job thread whose answer comes back as an event.
+  - The editor's model (`edit`) holds the tools, inks, sizes, Crop and its waiting frame, Undo and Redo and the text being typed. Apply cuts the frame's part as one step; Cancel, another tool or Undo drops it.
+  - The picking rules (`part`) say what a click takes, and `strip` places the strip and the record bar.
+  - The frame rules (`frame`) move a region's or Crop's held handle by the pointer's travel: past the opposite side it swaps, it stays in its box, and each side it moves keeps at least `frame_min_px`. A handle's reach scales with the screen holding the click, and no click acts while a tick ends the snip.
+  - After Stop the strip shows the video's length, Play, Speed, Copy, Save and Close; a video has no editor (ADR-0060). Play and a sped Copy or Save share one re-timed copy per speed in `unsaved/`.
+  - The Snip key starts a snip, ends one picking or counting down, stops a recording, and closes the strip or editor, asking first when nothing was kept; from the editor a new snip then starts (edge 22). Esc does the same but never starts one. At the question it means Back over the editor and Don't save over frozen screens (ADR-0059), and a held handle drops first.
+- **Events.** All need the `Snip` event gate (ADR-0057 decision 5):
+  - `SnipStart` (keyboard to module: the Snip key) and `SnipLit` (module to keyboard: the key's light, off once the editor opens);
+  - `SnipLine` (the line Snip's windows show), `SnipLineKey` (a key while a Snip window is aimed) and `SnipAsk` (a late starter asks for the light and line again);
+  - `SnipView` (module to ui: the page, once per change, shared), `SnipAct` (ui to module: a click with the view's round) and `SnipAside` (module to ui: the keyboard steps aside, stays put while Snip's own windows hide for a snip from the editor, or comes back).
+  - The ui's clicks also carry `Screens` (each screen's work area, for the record bar and a video's strip), `Aside` (the step aside is done), `Bare` (a capture window could not be shielded), `Fit` (the theme's sizes) and `Flat` (the editor's flattened picture).
+- **Ports.**
+  - `ScreenFreeze` (`ScreenCapture`) grabs every screen as raw BGRX pixels with the shown windows' frames and the pointer, refused past `shot_cap_mb`. The module cuts pictures with `Part::spanning` and `Part::cut`.
+  - `Recorder` (`ScreenCapture`) records a part at `fps` with the Mic and Sound switches into a new video of `unsaved/`, and tells the time, the end and faults. It also writes a re-timed copy at one of `SNIP_SPEEDS`.
+  - `MicPasses` (`Microphone`) hands the app's pass, without which the recorder never hears the microphone. The app makes one `MicSeal` and registers the recorder behind one check of it (`Sealed`).
+  - `SnipFolder` (`ScreenCapture`) lists the files of `unsaved/` with their ages and copy marks, marks and deletes there only, and reads the drive's room.
+  - `FileAsk` (`SaveFile`) shows the system's Save and folder dialogs in the worker's `pick` job; a Save writes the snip at the answer. `MediaOpen` (`OpenFolder`) plays an MP4 of the Snips folder through the running Explorer.
+  - The module also takes `ClipboardWriter` (`WriteClipboard`), `Pictures` (the media job's `Encode`), `FolderReveal` (`OpenFolder`) and `Calendar`.
+- **Who holds what** (`tests/life/ships/snip.rs` pins each list): `Snip` the module, the keyboard and the ui; `ScreenCapture`, `Microphone` and `SaveFile` the module alone. `OpenFolder` the module and voice, which never asks for `MediaOpen` (ADR-0058).
+- **Copy.** A picture goes as the module's own `CF_DIB` and a PNG from the media job's `Encode`, a video as a file drop of its `unsaved/` file. Both use `write_kept`, so KeyXtend's history keeps them; Windows' own history may keep a picture, never a file.
+  - A busy clipboard is tried again `copy_again` times, `copy_again_ms` apart, each within `copy_ms`.
+- **The worker.** Two jobs, both under every UI limit and with no network: `record` streams its notes (ADR-0042), and `pick` answers one ask at a time. Tidy F5 keeps the network crate out of their files and the microphone and engine out of `src/pick`; D4 keeps `kx-platform-record` out of the app.
+  - `record` films a part with Windows Graphics Capture, pointer on and border off, and hands each frame to Media Foundation on the graphics card. H.264 and AAC go into an MP4, with the microphone and the computer's sound mixed through `cpal`.
+  - A re-timed copy decodes and encodes on the processor. Media Foundation is delay-loaded from System32 only when a video job asks, so a Windows N edition runs every other job and dims video (`NoVideo`).
+  - The encoder's fixed values (bit rates, first-frame wait, buffers, sound queue, cushion, drift, downmix) sit in the adapter table `record.toml`, not in the settings.
+  - `pick` shows one dialog at a time, owned by a hidden topmost window, with `FOS_DONTADDTORECENT`. It tells a path only once `PickAsk::check` passes it: an absolute path of the asked type in the system's style (ADR-0062) within `MAX_PATH_BYTES`.
+  - `media` gains `Encode`: raw pixels in, a PNG out, within `png_most` of the pixels.
+- **The hosts (`kx-platform` `snip`).**
+  - `Freezer` reads an adapter's `Desk` (screens, one grab of all of them, windows and the pointer) and checks the cap before any grab. `offered` keeps the windows the Window way may take (edge 3).
+  - `WorkerRecorder` runs each recording and each copy in a `record` job of its own, capped at `record_mb`. It checks the ranges, the seal, the unsaved part and `min_free_mb` first, and deletes a video a fault, a lost job or Cancel leaves.
+  - `WorkerFileAsk` runs the `pick` job on its `kx-pick` thread, grants the worker the foreground before each dialog, and checks each answer again. `DiskSnips` is the folder on disk, and `playable` the rule Play follows.
+- **The ui (`kx-ui`).** The hub keeps the newest `SnipView` and serves its pictures through the `image://snip` provider, never as JSON. QML reads `snip_json` and sends clicks through a handle limited to the ui's grants.
+  - The views: `SnipOverlay` (one per frozen screen), `SnipBar` with `SnipHint`, `SnipStrip`, `SnipCount`, `SnipEdge`, `SnipRecord`, `SnipEditor` (with `SnipTools` and `SnipCanvas`), `SnipAsk` and `SnipPanel`. `SnipApp.qml` holds them over the `Snip` object.
+  - None takes focus. A press on a Snip window calls `aimSnip`, so its line takes the keys only after the user's own press, beside one other panel (ADR-0057).
+  - The editor sits above other apps and under the keyboard, sized and placed by the user (`[snip] editor`), never smaller than the theme's `editor_min_px`; `editor_full` keeps the work area it filled when maximised, so it opens maximised again on that screen. Its Copy and Save flatten the picture in QML, without the outline or caret.
+  - The editor, the close question and the Snip panel are made hidden at start, each after its shadow (`Snip.make`), so each lies over its shadow from its first show. Their order in `SnipApp.qml` is their stacking order, so the question starts above the editor.
+- **The shield and the aside.**
+  - Each capture window (bar, hint, strip, countdown, edge and record bar) is shielded once Qt makes it, before it shows (`Snip.shield`, then `WindowGuard::shield`). One the system refuses stays hidden while a countdown or recording runs, and the module hears `Bare`.
+  - With `keyboard` at Bubble or Hidden, or in every mode for a snip from the editor or its question (`Stay` when Shown), `start` sends `SnipAside` and the freeze waits for the ui's `Aside`, at most `aside_ms`. Meanwhile the hub shields every window of ours on `i18n::keys::WINDOWS` and the tray menu, shadows included, and one shown later before it shows (`ShowWatch`).
+  - Snip's own windows stay off that list (`SNIP_WINDOWS`): the capture windows shield themselves, and the overlay, the editor and the close question are not shielded. None of these three shows while a freeze or a recording runs, as the question shows only over the done strip or the editor, and Record hides it.
+  - While a Save or folder dialog's job is out, the view's `dialog` takes Snip's windows out of the topmost band, and the keyboard stays above for typing.
+- **Files.** `<data>/snips/` (`SNIP_DIR`) is the Snips folder and the dialog's default; a recording goes to its `unsaved/` part (`UNSAVED_DIR`) as `<unix seconds>.mp4`. Don't save, Cancel and Close delete it.
+  - A copied video gets a `.copied` mark beside it. Each start and each snip's start keeps a video marked within `copied_days`, and deletes every other PNG and MP4 of `unsaved/` that no job uses, with its mark, then marks whose video is gone.
+  - Save writes `<name>.<process id>-<n>.kxpart` beside the answer and renames it over the target only when whole, so a failed write leaves the place as it was.
+- **A hidden run (ADR-0037)** makes no Snips folder. Video, Record and Save dim (`Dim::Hidden`), and Copy still works.
+- **The gate.** G24 runs on the product only: `kx-gates g24 keyxtend`, with `[g24]` in `kx-gates-p12.toml`. It runs the test build twice, judged by sizes, pixel shares and lengths, and logs only numbers.
+  - Bubble copy: `apart`, `full`, `freeze`, `region`, `edit`, `warm`, `window`, `record`, `memory` and `low`. Hidden copy: `apart`, `full` and `speed`.
+  - A watch thread counts windows of ours left unshielded or shown during a capture. The owner's clipboard is kept and put back, and the gate's own pictures leave Windows' history.
+  - `region` and `edit` are exact only at the scale `[g24] dpi` names, and skipped on other scales. The live runs are in the P12 test report.
+  - `kx-gates g24 trap` runs only the trap part (ADR-0059) in about a minute: steps `keys`, `esc`, `twice` and `save`, each checking within `[g24] order_ms` that a frozen screen shows on each screen and our windows lie over them. It drives the plain test build only, so the uiAccess build keeps its own live check.
+- **Where the code is.**
+  - `keyxtend`: `snip.rs` (the Snips folder made at boot and the six ports registered) and `snip/sealed.rs` (the recorder behind the seal check).
+  - `keyxtend-worker`: the `record` job (`record.rs`, `record/job.rs`), the `pick` job (`pick.rs`) and the media job's PNG writer (`media/encoder.rs`). A test checks the start-up imports name no Media Foundation library (`tests/imports.rs`).
+  - `kx-platform-record`: the recorder, mixer and speed change (`record`, `speed`), the Windows studio (`win/`), the dialogs (`pick`), `record.toml` and its reader (`table`), and `NoStudio` and `NoDialogs` off Windows.
+  - `kx-module-api`: the snip ports, events, views and clicks (`ports/snip`), `Part::spanning` and `cut`, and `write_kept` on `ClipboardWriter`.
+  - `kx-ipc`: the `record` and `pick` frames, the `Encode` ask and its PNG, the `[snip]` ranges the frames share, `MAX_VIDEO_MS` and `PickAsk::check`.
+  - `kx-platform`: the hosts above, and `snip_dirs`.
+  - `kx-platform-windows`: the freeze (`snip/grab.rs`, `frames.rs`, `aware.rs`; `WinScreenFreeze`), the recorder's facts (`WinKit`, `kit.toml`), Play (`WinMediaOpen`), the shield (`window/shield.rs`), `write_kept` (`clip/write.rs`) and the per-job UI table (`worker/job.rs` `JOBS_UI`).
+  - `kx-platform-fake`: the snip fakes, whose freeze offers windows by the platform's own rules.
+  - `kx-ui`: the hub (`hub/snip`, `hub/aside`), the `Snip` bridge and provider (`bridges/snip.rs`, `snips.rs`, `cpp/snips.h`), the views above and their texts (`i18n/snip/`).
+  - `kx-theme`: `snip.toml` (sizes), `snip_icons.toml`, and the theme colours `snip_*`, `rec_light` and `ring_act`.
+  - `kx-mod-keyboard`: the Snip key (`snip` role) and its face (`face/snip.rs`).
+- **Other platforms (P15).** The four ports are neutral: freeze and list windows, shield, record into MP4 with the system's encoder, and the system's dialogs. Off Windows today `NoStudio` answers `NoVideo` and `NoDialogs` shows none.
+  - On Wayland the system asks through its portal before a capture. Where a window cannot be shielded, ours step aside for that moment.

@@ -54,6 +54,12 @@ pub fn arrow(text: &str, at: usize, side: Side) -> usize {
     }
 }
 
+/// How many drawn graphemes `text` holds, so a base letter and its marks count once.
+#[must_use]
+pub fn graphemes(text: &str) -> usize {
+    text.graphemes(true).filter(|part| drawn(part)).count()
+}
+
 /// True when `text` draws nothing, as hidden marks alone do.
 #[must_use]
 pub fn empty(text: &str) -> bool {

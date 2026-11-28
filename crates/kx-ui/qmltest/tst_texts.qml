@@ -103,10 +103,10 @@ Item {
             verify(button(app, t.texts["key.esc"]), where + "readers hear the keys in it");
             compare(sizeButtons(app).map(b => b.text), t.lang.sizes.map(z => z.label), where + "the size letters");
             compare(Board.tipOf(app.face).name, "", where + "a tip in the last language closes");
-            const snip = button(app, t.texts["key.snip"]);
+            const later = button(app, t.texts["key.settings"]);
             mouseMove(app.face.contentItem, 1, 1);
-            mouseMove(snip, snip.width / 2, snip.height / 2);
-            compare(Board.tipOf(app.face).name, t.texts["key.snip"] + "\n" + t.texts["tip.later"], where + "the tip");
+            mouseMove(later, later.width / 2, later.height / 2);
+            compare(Board.tipOf(app.face).name, t.texts["key.settings"] + "\n" + t.texts["tip.later"], where + "the tip");
             compare(app.notice.shown.text, t.texts[noticeKey], where + "the banner");
             verify(named(app.notice.contentItem, Accessible.Button, t.texts["button.ok"]), where + "its button");
             compare(app.face.title, t.texts["window.keyboard"], where + "the window's name");
@@ -115,6 +115,11 @@ Item {
         // The owner's case: an English layout in front of a Windows in another language, then French, then English.
         function test_the_layouts_language_switches_the_keyboards_texts_at_once_and_not_the_trays() {
             const app = make();
+            // ET66 bundles both its Latin and Arabic families, so the fonts differ on any system, offscreen too.
+            app.ui.look = E.lk;
+            app.ui.fontsChanged();
+            app.ui.lookChanged();
+            tryVerify(() => app.face.res.fam.arabic === E.lk.look.arabic_fonts[0], 2000, "ET66's fonts");
             const board = app.face.board;
             const keys = labelled(app).concat([button(app, En.texts["bar.grip"])]);
             const was = places(app, keys);

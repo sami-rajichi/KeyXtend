@@ -42,6 +42,14 @@ jobs:
         with:
           # cxx-qt builds against Qt, so a new Qt starts a new cache.
           key: qt-${{ steps.qt.outputs.version }}
+      # The engine's build script copies its DLLs beside each program, but the cache keeps neither the copies nor a
+      # reason to run it again, so the worker could not start. Forgetting its fingerprint makes it copy them again.
+      - name: Run the engine's build script again
+        run: |
+          $prints = Get-Item -Path target/*/.fingerprint/transcribe-cpp-sys-* -ErrorAction SilentlyContinue
+          # A cached build without them means the engine's crate was renamed, so this step needs its new name.
+          if ((Test-Path target) -and -not $prints) { '::warning title=Engine build script::no fingerprint to forget' }
+          $prints | Remove-Item -Recurse -Force
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
@@ -63,7 +71,7 @@ jobs:
       # checks that this list is the default features without `mod-scroll`.
       - run: >-
           cargo clippy -p keyxtend --all-targets --no-default-features
-          --features mod-clipboard,mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict,mod-selection,mod-vault,mod-voice
+          --features mod-clipboard,mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict,mod-selection,mod-snip,mod-vault,mod-voice
           --locked -- -D warnings
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
@@ -104,8 +112,9 @@ jobs:
       PACKAGES: >-
         -p kx-crypto -p kx-gates -p kx-ipc -p kx-kernel -p kx-mod-clipboard -p kx-mod-keyboard
         -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power -p kx-mod-predict -p kx-mod-scroll -p kx-mod-selection
-        -p kx-mod-vault -p kx-mod-voice -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-net
-        -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme -p xtask
+        -p kx-mod-snip -p kx-mod-vault -p kx-mod-voice -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-net
+        -p kx-platform-record -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme
+        -p xtask
       NO_DEFAULT: -p keyxtend-worker -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:

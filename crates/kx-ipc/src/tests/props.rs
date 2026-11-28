@@ -1,7 +1,7 @@
 //! Properties: what is written reads back, and any bytes are refused cleanly, within the frame and the caps.
 
 use super::*;
-use crate::{ask, reply};
+use crate::{BGRX_BYTES, MAX_ENCODE_BYTES, ask, reply};
 use proptest::prelude::*;
 use proptest::sample::Index;
 
@@ -31,7 +31,27 @@ fn an_ask() -> impl Strategy<Value = Ask<'static>> {
         max_bytes,
         bytes: Cow::Owned(bytes),
     });
-    prop_oneof![draw, dib, Just(Ask::Bye)]
+    prop_oneof![draw, dib, an_encode(), Just(Ask::Bye)]
+}
+
+fn an_encode() -> impl Strategy<Value = Ask<'static>> {
+    let sides = (
+        any::<u32>(),
+        1..=MAX_CASE_SIDE,
+        1..=MAX_CASE_SIDE,
+        0..MAX_CASE_SIDE,
+    );
+    sides.prop_flat_map(|(id, width, height, spare)| {
+        let stride = width * u32::try_from(BGRX_BYTES).unwrap() + spare;
+        let len = stride as usize * height as usize;
+        prop::collection::vec(any::<u8>(), len).prop_map(move |bgrx| Ask::Encode {
+            id,
+            width,
+            height,
+            stride,
+            bgrx: Cow::Owned(bgrx),
+        })
+    })
 }
 
 fn a_reply() -> impl Strategy<Value = Reply> {
@@ -47,9 +67,10 @@ fn a_reply() -> impl Strategy<Value = Reply> {
     });
     let why = prop::sample::select(Why::ALL);
     let failed = (any::<u32>(), why).prop_map(|(id, why)| Reply::Failed { id, why });
-    let bytes = prop::collection::vec(any::<u8>(), 1..MAX_CASE_BYTES);
-    let dib = (any::<u32>(), bytes).prop_map(|(id, bytes)| Reply::Dib { id, bytes });
-    prop_oneof![pixels, failed, dib]
+    let bytes = || prop::collection::vec(any::<u8>(), 1..MAX_CASE_BYTES);
+    let dib = (any::<u32>(), bytes()).prop_map(|(id, bytes)| Reply::Dib { id, bytes });
+    let png = (any::<u32>(), bytes()).prop_map(|(id, bytes)| Reply::Png { id, bytes });
+    prop_oneof![pixels, failed, dib, png]
 }
 
 /// Payload lengths: small ones, ones around each cap, and any at all.
@@ -63,6 +84,7 @@ fn a_len() -> impl Strategy<Value = u32> {
         near(MAX_ASK_LEN),
         near(MAX_REPLY_LEN),
         near(MAX_IMAGE_BYTES),
+        near(MAX_ENCODE_BYTES),
         any::<u32>()
     ]
 }
@@ -122,6 +144,27 @@ proptest! {
     ) {
         check_bounded(kind, len, &tail, read_ask, ask::KINDS)?;
         check_bounded(kind, len, &tail, read_reply, reply::KINDS)?;
+    }
+
+    #[test]
+    fn a_read_within_never_panics_or_reads_past_its_bound(
+        kind in any::<u8>(),
+        len in a_len(),
+        most in a_len(),
+        tail in prop::collection::vec(any::<u8>(), 0..MAX_JUNK_BYTES),
+    ) {
+        let bytes = [head(MAGIC, VERSION, kind, 0, len), tail.clone()].concat();
+        let (len, most) = (usize::try_from(len).unwrap(), usize::try_from(most).unwrap());
+        let mut r = Counted::new(&bytes[..]);
+        let got = Reply::read_within(&mut r, most);
+        prop_assert!(r.taken <= HEADER_LEN + len.min(most));
+        let ours = Kind::from_code(kind).is_some_and(|k| reply::KINDS.contains(&k));
+        if ours && len > most {
+            prop_assert!(got.is_err());
+            prop_assert_eq!(r.taken, HEADER_LEN);
+        }
+        let mut r = &tail[..];
+        while Reply::read_within(&mut r, most).is_ok() {}
     }
 
     #[test]

@@ -10,10 +10,10 @@ use keyxtend::hidden::{Asked, Deletes, Probed, Run};
 #[cfg(feature = "gate-voice")]
 use keyxtend::played;
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, voice, words};
+use keyxtend::{UI_ACCESS, clip, drain, log, quiet, snip, vault, voice, words};
 use kx_crypto::OsRandom;
 use kx_kernel::KernelSettings;
-use kx_module_api::ports::{CloudSpeech, PointerHook, Speech};
+use kx_module_api::ports::{CloudSpeech, MicSeal, PointerHook, Speech};
 use kx_platform::Platform;
 use kx_platform::speech::Assets;
 use kx_platform::ui::UiError;
@@ -106,12 +106,15 @@ fn run(
     (code, deletes)
 }
 
-/// Opens the `probed` run's log from `boot`'s settings, then logs a clipboard folder that could not be made, the
-/// version, and a second copy that cannot reach this one, as `listened` says.
+/// Opens the `probed` run's log from `boot`'s settings, then logs a clipboard or Snips folder that could not be made,
+/// the version, and a second copy that cannot reach this one, as `listened` says.
 fn tell_booted(boot: &Boot, probed: &Probed, files: &Files, listened: Result<(), UiError>) {
     start_log(probed, boot.kernel.kernel_settings(), files);
     if let Some(kind) = boot.no_clip_dir {
         tracing::warn!(error = %kind, "the clipboard folder could not be made, so its history may not save");
+    }
+    if let Some(kind) = boot.no_snip_dir {
+        tracing::warn!(error = %kind, "the Snips folder could not be made, so a video may not record");
     }
     let ui_access = uiaccess::active();
     tracing::info!(version = VERSION, ui_access, "KeyXtend started");
@@ -157,6 +160,7 @@ fn boot(platform: &Arc<WindowsPlatform>, flags: &Flags, run: &Run) -> Result<Boo
         models: platform.model_files(),
         session: platform.session_watch(),
         voice_shelf,
+        snip: snip::Ports::of(&**platform, run, MicSeal::new()),
     };
     Boot::load(platform.clone(), services, ports(platform), run)
 }
@@ -247,6 +251,7 @@ fn ports(platform: &WindowsPlatform) -> UiPorts {
         memory: platform.memory(),
         speaker: platform.speaker(),
         reveal: platform.reveal(),
+        esc: platform.esc(),
     }
 }
 

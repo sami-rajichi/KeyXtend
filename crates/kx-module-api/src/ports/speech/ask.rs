@@ -76,7 +76,7 @@ impl JobLimits {
 /// The model a job loads, as its row or its file says.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpeechModel {
-    /// The model file in the models folder: an absolute drive path (`path_ok`).
+    /// The model file in the models folder: an absolute path (`path_ok`).
     pub file: Redacted<PathBuf>,
     /// The model's own code for the language, such as `fr` or `fr-FR`, within `TAG_LEN`.
     pub lang: String,
@@ -230,14 +230,14 @@ impl CheckAsk {
 pub struct FactsAsk {
     /// The job's limits and waits.
     pub job: JobLimits,
-    /// The file: an absolute drive path (`path_ok`).
+    /// The file: an absolute path (`path_ok`).
     pub file: Redacted<PathBuf>,
     /// Its size in MB, within `SpeechModel::CPU_MB`; the job is capped at it plus `job_mb`.
     pub size_mb: u32,
 }
 
 impl FactsAsk {
-    /// Refuses an ask with a job value outside its range, a file that is no plain drive path, or a size outside
+    /// Refuses an ask with a job value outside its range, a file that is no plain absolute path, or a size outside
     /// `SpeechModel::CPU_MB`.
     ///
     /// # Errors

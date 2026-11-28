@@ -136,6 +136,14 @@ fn down(retry_in: Duration) -> Result<u32, Unsent> {
     Err(Unsent::Lost(Lost::Down { retry_in }))
 }
 
+/// True when `script`'s last worker was ended, then waited for until it exited, as a lost one is.
+fn waited(script: &Script<VoiceFrames>) -> bool {
+    let within = ms(TIMES.deadline_ms);
+    script
+        .calls()
+        .ends_with(&[Call::End, Call::Code { within }])
+}
+
 #[test]
 fn a_fresh_ask_starts_the_worker_and_its_notes_are_told_in_order() {
     let mut rig = rig();
@@ -205,7 +213,7 @@ fn a_worker_silent_past_its_wait_is_ended_and_held_back_by_a_doubling_backoff() 
         assert!(rig.begin(list).is_ok(), "a start after the backoff");
         assert_eq!(rig.after(WAIT.saturating_sub(TICK)), [], "not late yet");
         assert_eq!(rig.after(TICK), [Told::Lost(Lost::Late)]);
-        assert_eq!(rig.script.calls().last(), Some(&Call::End));
+        assert!(waited(&rig.script), "{:?}", rig.script.calls());
         assert_eq!(rig.begin(list), down(wait), "failure {n} in a row");
         rig.clock.advance(wait.saturating_sub(TICK));
         assert_eq!(rig.begin(list), down(TICK), "still resting");
@@ -240,7 +248,7 @@ fn a_note_of_an_unknown_kind_or_past_its_size_ends_the_worker() {
         rig.script.say(Ok(level(1)));
         let lost = Told::Lost(Lost::Gone);
         assert_eq!(rig.heard(), [Told::Note(open(1)), lost], "nothing after it");
-        assert_eq!(rig.script.calls().last(), Some(&Call::End));
+        assert!(waited(&rig.script), "{:?}", rig.script.calls());
         assert_eq!(rig.begin(start), down(ms(TIMES.restart_ms)));
     }
 }

@@ -1,7 +1,8 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, and recording fakes
 //! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures, the
-//! calendar, the backup box and its places, speech and cloud speech, model files, the folder reveal, the session and
-//! seeded randomness. Only tests, tools and test-only crates use it.
+//! calendar, the backup box and its places, speech and cloud speech, Snip's screens, recorder, dialogs and folder,
+//! model files, the folder reveal, the session, the Esc watch and seeded randomness. Only tests, tools and test-only
+//! crates use it.
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +11,7 @@ mod calendar;
 mod clip;
 mod clock;
 mod cloud;
+mod esc;
 mod field;
 mod folder;
 mod hidden;
@@ -35,6 +37,7 @@ mod selection;
 mod session;
 mod shelf;
 mod shortcut;
+mod snip;
 mod sound;
 mod speech;
 mod tray;
@@ -42,10 +45,11 @@ mod ui;
 
 pub use boxes::{BoxCall, FakeBoxes};
 pub use calendar::{FakeCalendar, PARIS};
-pub use clip::{FakeClipboard, FakeClipboardWriter};
+pub use clip::{FakeClipboard, FakeClipboardWriter, WriteKind};
 pub use clock::FakeClock;
 pub use cloud::suite as cloud_suite;
 pub use cloud::{CloudAnswer, CloudCalls, CloudLog, CloudState, CloudTestLog, FakeCloud};
+pub use esc::FakeEscWatch;
 pub use field::FakeFieldWatch;
 pub use folder::FakeFolderReveal;
 pub use hidden::FakeHidden;
@@ -71,6 +75,10 @@ pub use selection::{FakeSelectionWatch, SelCalls};
 pub use session::FakeSessionWatch;
 pub use shelf::{FakeShelf, ShelfCall};
 pub use shortcut::FakeShortcuts;
+pub use snip::{
+    FakeFileAsk, FakeMediaOpen, FakeRecorder, FakeScreenFreeze, FakeSnipFolder, Heard, Pick,
+    RecLog, RecordCall, Seen, Stored, painted, pixel_at,
+};
 pub use sound::{FakeSpeaker, Prepared};
 pub use speech::{FakeSpeech, NO_MODEL, RunLog, SpeechCall};
 pub use tray::FakeTray;
@@ -78,11 +86,25 @@ pub use ui::{FakeBackdrop, FakeScreens, FakeWindowGuard, GuardCall};
 
 use kx_module_api::{Clock, Mono};
 use kx_platform::{AppDirs, Platform};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
 /// Locks `m`, taking the value even when a panicking test poisoned it.
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Waits up to `within` until `done` holds for `m`'s value, woken by `changed`, so a test never sleeps; true when it
+/// does.
+fn wait_for<T>(
+    m: &Mutex<T>,
+    changed: &Condvar,
+    within: Duration,
+    done: impl Fn(&T) -> bool,
+) -> bool {
+    let waited = changed.wait_timeout_while(lock(m), within, |value| !done(value));
+    let (value, _) = waited.unwrap_or_else(PoisonError::into_inner);
+    done(&value)
 }
 
 /// A `Platform` built from a `FakeClock` and folders the test names.

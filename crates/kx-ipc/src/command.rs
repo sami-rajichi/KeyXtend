@@ -1,6 +1,6 @@
 //! The worker's command words and exit codes, read by the host that starts it and by the worker itself.
 
-/// The job that draws pictures, the first argument.
+/// The job that draws pictures and makes snips' PNGs, the first argument.
 pub const MEDIA_JOB: &str = "media";
 /// The flag before the most pixels an image may hold.
 pub const MAX_PIXELS_FLAG: &str = "--max-pixels";
@@ -12,6 +12,11 @@ pub const VOICE_JOB: &str = "voice";
 pub const FETCH_JOB: &str = "fetch";
 /// The job that sends a dictation's sound to the cloud service the user switched on, with no microphone (ADR-0047).
 pub const NET_JOB: &str = "speech-net";
+/// The job that records parts of the screen with their sound into videos and writes re-timed copies, with no network
+/// (ADR-0056 decision 3).
+pub const RECORD_JOB: &str = "record";
+/// The job that shows the system's Save and folder dialogs, with no network (ADR-0056 decision 6).
+pub const PICK_JOB: &str = "pick";
 /// Gate builds only: the flag after `VOICE_JOB` that names a WAV file played in place of the microphone; the stage
 /// refuses any program holding its text.
 pub const SOUND_FLAG: &str = "--sound";

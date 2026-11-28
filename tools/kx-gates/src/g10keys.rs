@@ -131,8 +131,8 @@ fn step(id: &str, presses: &[&str], expect: Expect, toggles: bool) -> Step {
     }
 }
 
-/// The step for key `id` with `role` and scan code `sc`; none for a character key, the language key or the Power key.
-/// Win's step latches `spare` between its presses.
+/// The step for key `id` with `role` and scan code `sc`; none for a character key, the language, Power, Dictation or
+/// Snip key. Win's step latches `spare` between its presses.
 fn step_for(
     id: &str,
     role: Role,
@@ -168,7 +168,7 @@ fn step_for(
         }),
         (Role::Later, _) => Some(step(id, &[id], Expect::Nothing, false)),
         // The Power key is never pressed: with the power module running, it opens the system's shut-down dialog.
-        // Nor is the Dictation key, which would open the microphone.
+        // Nor is the Dictation key, which would open the microphone, or the Snip key, which would freeze the screens.
         _ => None,
     }
 }

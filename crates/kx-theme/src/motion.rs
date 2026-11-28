@@ -8,7 +8,7 @@ use crate::ringmove::{RingFile, RingMotion};
 use crate::theme::{bez, outside_unit};
 
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 22] = [
+pub const MOVES: [&str; 25] = [
     "press",
     "colour",
     "plate",
@@ -31,6 +31,9 @@ pub const MOVES: [&str; 22] = [
     "layer",
     "wave",
     "run",
+    "snip_pop",
+    "snip_count",
+    "snip_dot",
 ];
 /// Every animation the clipboard panel plays, by what it moves.
 pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];

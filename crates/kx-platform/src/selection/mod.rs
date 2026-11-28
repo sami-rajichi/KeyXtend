@@ -6,7 +6,7 @@ mod inbox;
 mod pace;
 mod run;
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use crate::lock;
 use std::time::Instant;
 
 use kx_module_api::Redacted;
@@ -152,11 +152,6 @@ pub fn late(by: Instant) -> Result<(), SelError> {
     } else {
         Ok(())
     }
-}
-
-/// Locks `m`, taking the value even when a panicking thread poisoned it.
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[cfg(test)]

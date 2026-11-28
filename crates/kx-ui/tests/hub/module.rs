@@ -2,7 +2,7 @@
 
 use crate::{FakeFace, Rig, provide};
 use kx_module_api::Capability::{
-    KeyboardUi, ReadClipboard, ReadFocusedText, Selection, Vault, Voice,
+    KeyboardUi, ReadClipboard, ReadFocusedText, Selection, Snip, Vault, Voice,
 };
 use kx_module_api::ports::KeyboardFaceKey;
 use kx_module_api::{Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError};
@@ -11,7 +11,7 @@ use kx_ui::{ID, MANIFEST, UiModule, Wake};
 use std::sync::Arc;
 
 #[test]
-fn it_needs_the_face_reads_the_lane_clipboard_quick_fill_the_chips_and_voice_and_owns_ui() {
+fn it_needs_the_face_reads_the_lane_clipboard_quick_fill_the_chips_voice_and_snip_and_owns_ui() {
     assert_eq!(ID.as_str(), "ui");
     assert_eq!(MANIFEST.requires, [KeyboardFaceKey::ID]);
     assert!(MANIFEST.provides.is_empty());
@@ -23,7 +23,8 @@ fn it_needs_the_face_reads_the_lane_clipboard_quick_fill_the_chips_and_voice_and
             ReadClipboard,
             Vault,
             Selection,
-            Voice
+            Voice,
+            Snip
         ]
     );
     assert_eq!(KeyboardFaceKey::CAPABILITY, Some(KeyboardUi));

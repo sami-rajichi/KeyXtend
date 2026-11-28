@@ -115,7 +115,7 @@ impl<'a> Scene<'a> {
 
     /// The window's picture above the keyboard, and its percents.
     pub fn snap(&self) -> Result<Snap, String> {
-        let pic = scroll::picture(self.band, self.ctx.spike.tools.shot_cap())?;
+        let pic = scroll::picture(self.band, self.ctx.spike.shot.cap())?;
         Ok(Snap {
             pic,
             pair: self.pair(),

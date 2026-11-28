@@ -92,8 +92,8 @@ Item {
             compare(checkable, latches);
             verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
             const side = Face.board.keys.filter(k => k.side && k.checkable).map(k => k.id).sort();
-            const turnOn = "Clipboard, Quick-fill, Right-click, Grab, Dictation and Shortcuts are the side keys that turn on";
-            compare(side, ["clip", "fill", "grab", "mic", "rclick", "shortcuts"], turnOn);
+            const turnOn = "Clipboard, Quick-fill, Right-click, Grab, Dictation, Shortcuts and Snip are the side keys that turn on";
+            compare(side, ["clip", "fill", "grab", "mic", "rclick", "shortcuts", "snip"], turnOn);
         }
 
         function test_dimmed_keys_announce_coming_in_a_later_version_and_others_their_state_tip() {
@@ -135,7 +135,7 @@ Item {
             // A key that repeats while held sends its press and let-go instead of a tap.
             const taps = () => win.keyboard.calls.filter(c => /^(tap|press|letGo)\b/.test(c));
             compare(taps(), ["press c-0x0010", "letGo c-0x0010", "tap lang true"]);
-            mouseClick(keyed(win, "snip"));
+            mouseClick(keyed(win, "settings"));
             tryCompare(win.presses, "waiting", null);
             compare(taps().length, 3, "a dimmed key sends nothing, not even once its frame is drawn");
             win.visible = false;
@@ -185,7 +185,7 @@ Item {
             win.visible = true;
             waitForRendering(win.contentItem);
             const tip = Board.tipOf(win);
-            const said = [[keyed(win, "snip"), "key.snip", "tip.later"], [named(win, En.texts["key.dpad"]), "key.dpad", win.st.dpad.tip]];
+            const said = [[keyed(win, "settings"), "key.settings", "tip.later"], [named(win, En.texts["key.dpad"]), "key.dpad", win.st.dpad.tip]];
             for (const [it, name, why] of said) {
                 mouseMove(it, it.width / 2, it.height / 2);
                 compare(tip.name, En.texts[name] + "\n" + En.texts[why]);

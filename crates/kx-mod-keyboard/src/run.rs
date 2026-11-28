@@ -173,6 +173,7 @@ impl Typing {
             Plan::Clip => return Ok(Tapped::Clip),
             Plan::Fill => return Ok(Tapped::Fill),
             Plan::Voice => return Ok(Tapped::Voice),
+            Plan::Snip => return Ok(Tapped::Snip),
             Plan::Next => return Ok(Tapped::Next),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),

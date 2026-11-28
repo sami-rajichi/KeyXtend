@@ -4,6 +4,117 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-28 10:46 — P12: Snip's canvas tests ignore the real pointer
+With the worker starting, PR #28's Windows job reached the Qt Quick tests for the first time, and three canvas and Crop tests failed. The runner's real pointer rested over the editor, so the canvas took a hover before the tests' own moves. Their editor window now lets the real pointer pass through from before it shows (`pointer.js`, as 30 other test files do); the product is unchanged.
+
+## 2026-11-27 23:45 — P12: CI's worker starts again, and the late-loaded DLLs are undone
+PR #28's Windows job failed because the speech engine's build script copies its DLLs beside each program, and the CI cache drops those copies but keeps the script's fingerprint, so it never ran again and the worker could not start. A step after the cache now removes that fingerprint, so the script copies them again in about 15 seconds. The earlier guess, loading two more Windows DLLs late (ADR-0063), did not help and is undone before it reached `main`.
+
+## 2026-11-27 22:45 — P12: the clipboard file tests take each system's paths
+The next Linux run failed two clipboard file-fact tests that still wrote `C:/…` paths, which Linux rightly refuses. They now wrap them in `native`, as the other tests do. A sweep of every crate CI had not reached, as Linux CI runs them and under `--cfg kx_slash_paths`, found no other Linux failure beyond the emulation's known limits.
+
+## 2026-11-27 22:30 — P12: a recording test no longer races on Linux
+With the paths fixed, PR #28's Linux job failed in one switch test. Its thread dropped the run once the switch was gone, and a dropped run tells nothing more, so the test's last note could be lost. The thread now hands the run back, so the run truly goes on; the product code is unchanged.
+
+## 2026-11-27 21:18 — P12: the path rules take each system's own paths
+PR #28's Linux job failed because the shared path rules took only Windows drive paths, so Linux's `/tmp/…` was refused. kx-ipc's `PathRoot` now checks drive paths on Windows, exactly as before, and `/` paths elsewhere, just as strictly (ADR-0062); both styles are tested on every system, and tests write their example paths for Windows and wrap them in `native`. The models folder tests, kept to Windows only for the old rule, now run on Linux too, and `--cfg kx_slash_paths` runs Linux's rules on Windows before a push.
+
+## 2026-11-27 19:34 — P12: the final review's fixes and the last live check
+Four reviewers read the whole handfeel round; one fix wave closed their findings, among them a 2× Save whose strip lost stay-on-top and a close question kept over the editor only by declaration order, now tested. The install with the shipped `frame_latency = 0` passed G24, the trap run and three G8 key-light runs (median 14–15 ms, as ADR-0025 measured). The owner's final check passed the countdown after a Cancel, a video Save at 2× and the close question.
+
+## 2026-11-27 17:02 — P12: a window shown again no longer stalls for a second
+The countdown after a Cancel stayed blank because Qt's Direct3D frame-latency wait blocked the UI thread about 1 s a frame on a window shown again; every later Snip window also lost about 1 s. `[ui] frame_latency` now defaults to 0, which skips that wait (ADR-0061). The owner's live check with debug logs showed each countdown second drawn on time and re-shown windows ready in about 0.2 s.
+
+## 2026-11-27 15:16 — P12: Play at the picked speed, and no darker panel or question
+Play at 2× or 4× opens the same re-timed copy Copy and Save use, and a key shows a moving line while its copy is made, shared with the voice panel's line. The Snip panel and the close question are made at start with their shadow first, so neither sits under its shadow. The countdown drops the frozen screens in its own turn, ends a held press when it hides and draws each second, with numbers-only debug lines.
+
+## 2026-11-27 00:16 — P12: G24 and the docs follow the hands-on changes
+G24 drives a video's Speed, Copy and Close from the strip, clicking Close again if the strip stays, and its full run still fits the 15-minute mouse guard. A video no longer carries its frozen picture through the recording, and the strip's Play tells readers it opens the user's own player. The spec, README, security note and ADR-0059, now Accepted, describe the frame, Crop's Apply and `editor_full`.
+
+## 2026-11-26 22:55 — P12: the shadow shows with its bar, and the editor opens at once
+Each Snip shadow drew at full strength while Qt held back its window's first show, so the shadow came first; it now waits for its window's first frame, under full and reduced motion. The editor's windows are made once at start, shadow first, and it shows in the turn its view comes. Debug lines time the Snip key and each window's opening in milliseconds only.
+
+## 2026-11-26 20:39 — P12: Crop shows a frame and waits for Apply
+After Crop's second click, the frame with eight handles shows over the picture, and Apply (✓) cuts it as one step that Undo gives back whole. Cancel (✗) or another tool drops the frame; Esc drops a held handle first, then the frame. While a handle is held the two keys hide, so a set click never cuts or cancels by mistake.
+
+## 2026-11-26 17:45 — P12: a region's frame can be adjusted by its handles
+After a region's second corner, its frame shows eight handles: a click picks one up, the pointer moves it and a second click sets it, never a drag. The frame keeps within its screen and at least `[snip] frame_min_px`, and the strip hides while a handle is held. Each handle has a spoken name in EN, FR and AR, and Esc drops a held handle before it ends the snip.
+
+## 2026-11-26 15:24 — P12: videos have no editor; the strip plays and speeds them
+After Stop, a video's strip shows its length, Play, Speed (1×, 2×, 4×), Copy, Save and Close, and the editor opens only for pictures (ADR-0060). Play opens the user's own player, while our keyboard and the strip stay on top. Copy and Save use the picked speed.
+
+## 2026-11-26 13:59 — P12: the editor remembers being maximised
+A maximised editor reopens maximised on the same screen, keeping its normal size and place underneath (`[snip] editor_full`). If that screen is gone, it opens at its default size, centred on the main screen.
+
+## 2026-11-26 12:37 — P12: the editor no longer comes back darker
+Qt raised each window alone on every flags change, so after a Save dialog the shadow ended above the editor and every reopen looked dark. Each Snip window now sets its flags after its shadow's, so it stays above its one shadow, and a Quick test proves it after a dialog and a reopen.
+
+## 2026-11-25 23:43 — P12: a one-minute live check that Snip cannot trap
+`kx-gates g24 trap` runs G24's new trap part alone on the plain test build: our keyboard's Esc, another program's Esc, Esc twice at an unkept picture, and Save with its dialog above every frozen screen. Full G24 now judges every on-top check by the order over the frozen screens and fails when it reads none. The gates keep a clipboard that carries only number markers, such as the keyboard's own put-back, and still refuse a private copy.
+
+## 2026-11-25 21:56 — P12: the frozen screen never traps the user
+The owner was trapped twice because each snip's new frozen screens stacked above the capture bar, the hint and the keyboard's bubble. Our other windows now lift above the frozen screens each time one shows or a stage changes, guard runs spare Snip's windows so a Save dialog stays on top, and a physical or assistive Esc ends a frozen snip, a second Esc dropping an unkept picture. ADR-0059 (Proposed) records it; 11,226 workspace tests pass, and a live check on this PC comes next.
+
+## 2026-11-25 16:44 — P12: ready for the live G24 run, Restore's icon, ADRs accepted
+The record bar's clock now holds 0:00 until the first recorded frame, so it never steps back. G24 deletes from Windows' clipboard history only the pictures its own Copies made, bounds `PrintWindow`, stops recordings by the bar's clock, and counts those waits in its mouse budget. The editor's Restore key has its own Lucide icon, and the owner accepted ADR-0057 and ADR-0058.
+
+## 2026-11-25 14:45 — P12: final review fixes
+A copied recording is no longer deleted when Snip stops while a second Copy waits for a busy clipboard. A microphone or computer sound that fails at a recording's start brings the strip back with that switch off and a note, and one that fails mid-recording now says so too. The settings test draws every `[snip]` range again, and ADR-0057 now states what the keyboard's Snip gate can reach.
+
+## 2026-11-25 13:14 — P12: review and security fixes
+Twelve reviews of the whole Snip branch found about 22 important and 140 minor issues; three fixers closed each one or accepted it with a reason. Every host wait and cap is now a `[snip]` setting, a video part stays on one screen, a Save into `unsaved/` is refused with its own note, and `unsaved/` is swept at each snip. The security notes record P12's accepted risks, the English, French and Arabic texts are polished, and every workspace check passes.
+
+## 2026-11-25 05:41 — P12: Snip's docs
+`docs/architecture/snip.md`, the security notes (with a new one for `kx-platform-record`), ARCHITECTURE.md, the README and the spec's As built now describe Snip as built, and the OCR lines are gone. Docs point at the settings, ranges and tokens instead of copying their numbers. ADR-0057 and ADR-0058 stay Proposed until the owner accepts them.
+
+## 2026-11-25 04:35 — P12: the spike's snip is gone
+The spike's snip, its tools row and G24's spike half are deleted, and the move map says where each part went. `tool_box` went too, against the plan's note, because G7 and G25 never called it; `capture.rs` stays for G1, G6, G13 and G24 on the product. The spike's shot limit is now `[shot] cap_mb`, read by G1 and G6.
+
+## 2026-11-25 04:09 — P12: G24 on the product
+`kx-gates g24 keyxtend` now checks the test build's Snip on the real screen: freeze time, an exact region at 125 %, a window's frame, the keyboard out of every picture in Bubble and Hidden, focus kept, a recording's length, and memory back to idle. It deletes only its own pictures from Windows' clipboard history, puts the owner's clipboard back, and removes every video and file it made. The editor no longer holds its flattened picture once the hub has it, and the live run waits for the owner's hands-on session.
+
+## 2026-11-25 02:14 — P12: Snip wired into the app, and speech gets its own gate
+The app now hands Snip its freeze, shield, recorder, dialogs, clipboard and folder ports, makes the Snips folder and `unsaved/` at boot, and refuses any recorder start whose microphone pass does not carry the app's own seal. A hidden run makes no folder and dims Video and Save while Copy and Edit still work, and the staged download is 68 MB of its 80 MB budget. Speech now has its own capability held by voice alone, so the microphone gate is Snip's only (ADR-0058, proposed).
+
+## 2026-11-25 00:33 — P12: Snip's editor, close question and panel
+Snip's editor now shows the kept picture with its tools on top: crop, pen, highlighter, circle, arrow, line, numbered steps and text, including Arabic typed right to left. It can be maximised, keeps its size and place for next time, and never goes below a minimum that fits every theme's top row in all three languages. Copy and Save keep the drawing at the picture's exact pixel size without our outline or caret. Closing the editor lets the picture go from memory, and the close question and the Snip panel carry the keyboard's look in English, French and Arabic.
+
+## 2026-11-24 21:55 — P12: Snip's capture windows, tokens and texts
+Snip now shows its capture bar, frozen screens, size tag, length strip, countdown with a Cancel key, red recording edge and record bar, in the keyboard's own keycap look, in English, French and Arabic. Every size, colour, move and icon comes from new Snip token files, and the light and ring on the video keys pass 3:1 contrast in every theme and high contrast. While the keyboard is fully hidden for a capture, every window of ours stays hidden until the capture ends, and the 17 covered screen tests now pass off-screen at both display scalings.
+
+## 2026-11-24 18:34 — P12: the ui's Snip hub, bridge and frozen picture
+The ui now hands Snip's view to its windows, serves the frozen screens without copying their pixels, turns each click into the module's units, and remembers the editor's size and place. While the keyboard steps aside, every window of ours, shadows included, stays out of pictures and videos, and Snip waits for that before it freezes the screens. If Windows refuses to keep a capture control out, video is turned off with a note saying why, so a recording can always be stopped with one click.
+
+## 2026-11-24 14:40 — P12: the keyboard's Snip key and Snip's text line
+The side block's Snip key takes the place `later` held: it starts or ends a snip and stays lit while one runs, asking again after a keyboard restart. The keyboard's letters, Arabic included, go to the editor's text and Snip's windows only while one of them shows, so an Esc meant for a recorded app never stops it. ADR-0057 (proposed) lets Snip's windows sit beside another panel and take the keys only after the user's own click, so a window that opens by itself never steals typing from an app.
+
+## 2026-11-24 12:53 — P12: the Snip module copies, saves and records
+The Snip module now carries out every step of a capture: it copies a picture as a PNG and a bitmap, copies a video as a file, saves through the system's dialog, records with room and length checks, re-times, plays and opens the folder. Every slow call runs off the module's own thread, a busy clipboard is tried again by `[snip]` settings, and the keyboard and the Snip key's light come back at every end. A copied video gets a mark beside it in `unsaved/`, so each start deletes every leftover recording and keeps a copied one only `copied_days`.
+
+## 2026-11-24 11:10 — P12: picking a part, the strip's place and the editor's model
+Every click on the frozen screen now passes through one set of picking rules: two corners in any order, the same spot twice drops the corner, the top window under the pointer cut to what showed, or the screen holding the click; the strip and the record bar are placed on the screen holding most of the part. The editor's model holds all eleven tools with click, move, click gestures, Undo and Redo bounded by `undo_max`, an Eraser for one drawing, and Steps that count on after an Undo. The Eraser aims by the theme's real sizes and a tolerance in screen pixels, so a big snip shown small stays easy to hit with one finger.
+
+## 2026-11-24 09:47 — P12: the Snip module, its settings and its capture flow
+The new `kx-mod-snip` module holds its `[snip]` settings, refusing each value past its ends and reusing the limits it shares with the worker. Its capture flow, a pure state machine, takes every path from the first click through picking, the strip, the countdown, recording, the close question and the editor, and names each step for the actor to carry out. A property test drives random click sequences and proves that one snip runs at a time and that no path keeps a file the user did not choose, apart from a copied recording.
+
+## 2026-11-24 08:21 — P12: the app drives the recorder, the dialogs and the player
+Platform hosts run the worker's record and pick jobs with each job's own limits: they relay notes in order, refuse bad asks before any worker starts, and turn a lost job into one fault, deleting its broken video once the worker has really exited. A Save writes a uniquely named part file and renames it into place only when whole, so a failed Save never leaves a broken file or loses the one it was replacing. Cancel never waits for the job, the dialog gets the foreground before it shows, and a video plays through Explorer, never inside the keyboard's process.
+
+## 2026-11-24 06:33 — P12: screens frozen, our windows shielded, snips kept in history
+The app freezes every screen in physical pixels, with the frames of the windows a user can pick in z-order, leaving out our own, cloaked, minimised, tool and click-through windows; a freeze past `shot_cap_mb` is refused before any pixel is read, and one that cannot read physical pixels is refused too. A shield keeps our windows out of every capture, and a refused shield lets all of them back in rather than leaving some half-hidden. A copied snip skips our "leave out of history" markers, so both clipboard histories keep it.
+
+## 2026-11-24 05:24 — P12: the worker's Save and folder dialogs, and PNG encode
+A new worker job shows Windows' Save and folder dialogs without adding to recent files, and checks each answer before it leaves the worker: only a plain drive path of the asked type passes, and a refused place gets its own answer so the app can say why. The media job turns a snip's pixels into a PNG, and the app reads the answer within the PNG's own bound; a 256 MiB picture peaks at 455 MiB, which sets the formula for the job's memory cap. The Task 1 dialog probe is gone.
+
+## 2026-11-24 03:53 — P12: the worker's record job and speed copies
+A new worker job films a screen part through Windows Graphics Capture on the graphics card into an H.264 and AAC MP4, mixing the microphone and the PC's sound by capture time; a run that falls behind skips to the current frame so the sound stays in step. Speed writes a 2× or 4× copy that keeps every second or fourth frame, and every told length stays within the longest video. Media Foundation now loads only when a video job needs it, so a Windows N edition without it still runs every other job, and a test reads the worker's import tables to prove it.
+
+## 2026-11-24 01:49 — P12: Snip's API, fakes and worker frames
+The module API gains Snip's ports (freeze, recorder, Save and folder dialogs, the Snips folder, the player, PNG encode, kept clipboard writes and the window shield), its events behind a new `Snip` gate, and the `SaveFile` capability; a microphone pass comes only from the app's one seal. Scripted fakes cover every Snip edge case, and a snip path reads the same on Windows and Linux. `kx-ipc` adds the `record`, `pick` and `Encode` frames with checked sizes, redacted paths and pixels, an ack for each Mic or Sound switch, and property tests that random bytes never panic.
+
+## 2026-11-23 21:32 — P12: probes for the recorder, the shield and the Save dialog
+Live probes behind `KX_LIVE_SNIP=1` show that the worker, under its restricted token and full job limits, records a screen part through Windows Graphics Capture into a 3 s H.264 and AAC MP4 at 30 fps, here and in weak mode, with the microphone and the PC's sound both heard. A window shielded with `WDA_EXCLUDEFROMCAPTURE` is never in a GDI grab when shielded before it shows, and leaves it at the next grab when shielded later. The Save dialog opens from the worker in front of a topmost window and returns the path; the uiAccess z-band and the foreground grant wait for a dev-install check in Task 7.
+
 ## 2026-11-23 16:30 — P11: a stream note stamped in time is waited for, and a PNG ends at its end chunk
 CI's Linux run failed a stream test, as once on 2026-11-17: its spy clock said "stamped" before the reader read the time, so the test could move the clock first; it now reads first. The stream could also call a note late between its reader's stamp and hand-over, so readers count the frames they carry and a wait that ends while one is on its way waits for it; a test holds the reader mid hand-over and failed without that. CI's Windows run read a test PNG back with different bytes, probably past its end, so a PNG is now read up to its `IEND` chunk, and the live test writes a real small PNG and prints the image lengths it heard if it fails again.
 

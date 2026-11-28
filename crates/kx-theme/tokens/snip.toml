@@ -1,0 +1,93 @@
+
+# Snip's capture windows and editor (design/snip-parts.css, snip-scene.js, snip-editor.js), in logical pixels; the
+# loader joins this file after shape.toml. Snip's windows sit on the live or frozen screen, so they never take the
+# keyboard's size.
+[snip]
+# The size tag above a region (.tag): text size, weight, padding (top and bottom, sides), radius, and how far its top
+# sits above the region (top: -24px).
+tag_px = 11.0
+tag_weight = 500
+tag_pad_px = [4.0, 7.0]
+tag_radius_px = 4.0
+tag_gap_px = 24.0
+# The region's edge (.hole 1.5px), and the outline of the window under the pointer (.hover 3px ring, radius 8).
+hole_px = 1.5
+hover_px = 3.0
+hover_radius_px = 8.0
+# A frame's handles after a region's second corner or a crop's (Lightshot's dashed region with its eight squares): the
+# square drawn at each corner and side, and its click area, at least WCAG 2.2's 24 by 24 target so one finger finds it.
+handle_px = 10.0
+handle_hit_px = 32.0
+# The capture bar B "Keycaps" (.cbar top 12, .cb-keys padding 3, .cw 34 high, padding 0 11 or 0 9 for an icon alone,
+# 12 px words, .i 16 px, 6 px gap, .sep 6 px, the picked way's 2 px ring); the strip and the countdown's Cancel share it.
+bar_top_px = 12.0
+plate_pad_px = 3.0
+key_px = 34.0
+key_pad_px = [11.0, 9.0]
+word_px = 12.0
+icon_px = 16.0
+icon_gap_px = 6.0
+sep_px = 6.0
+ring_px = 2.0
+# The hint under the bar (.hint at top 72: 20 under the bar), its padding and text size.
+hint_gap_px = 20.0
+hint_pad_px = [6.0, 12.0]
+hint_px = 12.5
+# The gap between a part and the strip or record bar (strip r.y + r.h + 10); it clears the red edge and its glow.
+gap_px = 10.0
+# The countdown (.count): the disc, the number's size and weight, the word's size and width, and the gap to Cancel.
+count_px = 150.0
+count_num_px = 64.0
+count_weight = 600
+count_word_px = 11.5
+count_word_w_px = 120.0
+count_gap_px = 10.0
+# The red edge outside a recorded part (.edge 2 px ring, 10 px glow at 30 %, here a 6 px fade that stays inside the
+# gap), its glow's strength, and the countdown's dashed outline (.soon 2 px dashed: 4 on, 3 off).
+edge_px = 2.0
+glow_px = 6.0
+glow_share = 0.3
+soon_px = 2.0
+dash_px = [4.0, 3.0]
+# The record bar (.recbar 40 high, padding 0 4 0 12, gap 2), its keys (.rb 32 high, padding 0 8), the dot (.dot 10),
+# the time (.time 600 13px, 8 after the dot), and how far a separator stays from the bar's top and bottom (.sep 6px).
+rec_px = 40.0
+rec_pad_px = [4.0, 12.0]
+rec_gap_px = 2.0
+rec_key_px = 32.0
+rec_key_pad_px = 8.0
+rec_dot_px = 10.0
+rec_time_px = 13.0
+rec_time_weight = 600
+rec_time_gap_px = 8.0
+rec_sep_px = 6.0
+# The editor (snip-editor.js ED): its size, and the least that keeps its top row of keys on one line over a picture in
+# every theme and language (Modern Dolch's French row is the widest, 727; tst_snip_look checks it).
+editor_px = [980.0, 540.0]
+editor_min_px = [740.0, 420.0]
+# The editor's steps, thinnest first, which the editor multiplies by the capture screen's display scale into the
+# picture's own pixels (the mock-up's step disc is 22 across, its text 17):
+# a pen's and a shape's line, the Highlighter, a step's disc and an arrow's head; then the text heights.
+pen_px = [2, 4, 6, 10]
+marker_px = [12, 18, 26, 36]
+disc_px = [22, 28, 36, 48]
+head_px = [12, 16, 22, 30]
+text_px = [16, 20, 28, 36]
+# How far a click may miss a drawing in window pixels, and how much the Highlighter's ink covers.
+slop_px = 8
+marker_share = 0.4
+# The marks drawn (snip-editor.js drawings()): how far each side of an arrow's head opens from its shaft, the weight of
+# typed text and step numbers, and a step number's size as a share of its disc (13 on 22).
+head_deg = 25.0
+mark_weight = 600
+step_share = 0.6
+# The editor's frame (.ed-title 36, .ed-row 44, .opts 40; rows padded 0 8, the picture 14 in), an ink (.ink-b 24 across,
+# its 2 px edge, 4 apart), the close question (.ask 440 wide, padding 18) and the Snip panel (.panel 500 wide).
+editor_rows_px = [36.0, 44.0, 40.0]
+editor_pad_px = [8.0, 14.0]
+ink_px = [24.0, 2.0, 4.0]
+ask_px = [440.0, 18.0]
+panel_px = 500.0
+# The gap between typed text and its dashed outline, in window pixels (snip-editor.js drawings(): the box at 380, the
+# text at 386).
+typing_gap_px = 6.0

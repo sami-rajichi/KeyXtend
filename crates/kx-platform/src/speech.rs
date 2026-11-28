@@ -12,6 +12,7 @@ mod run;
 mod shipped;
 mod spoken;
 
+use crate::lock;
 use crate::worker::{Spawner, Split, Stream, VoiceFrames};
 use job::{Key, Live};
 use kx_module_api::Clock;
@@ -23,7 +24,7 @@ use router::{Router, Tell};
 use run::WorkerRun;
 pub use shipped::{CLIPS, DETECTOR, VOICE_FILES};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /// The value `again` names in its `Range` refusal when its ask names no model, as the fake does.
 pub const NO_MODEL: &str = "model";
@@ -161,11 +162,6 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> Speech for WorkerSpeec
         let clips = self.shared.assets.clips.iter();
         clips.map(|(lang, _)| lang.clone()).collect()
     }
-}
-
-/// Locks `m`, taking the value even when a panicking thread poisoned it.
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// The processor threads to ask for: `asked`, or the real cores for 0, never past them or the frames' top.

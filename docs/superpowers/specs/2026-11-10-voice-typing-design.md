@@ -217,6 +217,7 @@ Worker times (deadline, restart, load and warm-up waits) follow the pattern of `
 - Model files are data, read only inside the sandboxed worker; no code is ever downloaded. Addresses come from the table.
 - The engine's parts are loaded from the worker's own folder only, never from the models folder. One program holds both jobs, so a check keeps the `voice` job's code from the network part and the `fetch` job's code from the microphone part.
 - The module asks for Microphone, Network (downloads only), SecretStore, ReadFocusedText and WriteClipboard (for Copy). `cargo xtask tidy` gains the engine and audio crates in the lists the app may not reach.
+  - As built (P12, 2026-11-25): the speech port has its own `Speech` gate, which the module holds in place of Microphone, now Snip's alone (ADR-0058).
 - `docs/security/kx-mod-voice.md` is new; the worker's, `kx-ipc`'s and the platform notes gain the voice parts.
 
 ## Edge cases for the plan

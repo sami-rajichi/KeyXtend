@@ -8,8 +8,11 @@
 mod calls;
 mod cross;
 mod entries;
+mod low;
 mod owners;
 mod pages;
+mod shield;
+mod spare;
 mod under;
 mod z_order;
 
@@ -264,7 +267,7 @@ fn hidden_windows_are_ours_but_never_guarded_shaped_or_lifted() {
         "only visible windows count"
     );
     assert_eq!(
-        WinGuard.guard_own(None, None),
+        WinGuard.guard_own(&[], None),
         Ok(0),
         "the test program shows no window"
     );

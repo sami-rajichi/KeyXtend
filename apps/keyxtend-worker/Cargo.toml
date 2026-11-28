@@ -1,6 +1,6 @@
 [package]
 name = "keyxtend-worker"
-description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone, downloads model files and sends dictations to a cloud service outside the uiAccess keyboard (ADR-0004, ADR-0042, ADR-0047)."
+description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone, records the screen into videos, downloads model files and sends dictations to a cloud service outside the uiAccess keyboard (ADR-0004, ADR-0042, ADR-0047, ADR-0056)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -41,6 +41,9 @@ serde_json.workspace = true
 # Gemini's request writes the sound as Base64 (ADR-0047): `base64` 0.23.1, checked on 2026-11-20, the release
 # `keepass` already builds into this program with the same features, so no new crate.
 base64 = "0.23.1"
+# The record job's recorder and re-timed copies, and the pick job's Save and folder dialogs (ADR-0056); tidy D4 keeps
+# the crate out of the app.
+kx-platform-record = { path = "../../crates/kx-platform-record" }
 
 # The voice job's microphone; other systems build without it until P15, as Linux needs ALSA's headers for it.
 [target.'cfg(windows)'.dependencies]
@@ -49,6 +52,11 @@ cpal.workspace = true
 # The manifest that runs the worker as its caller, never with uiAccess.
 [build-dependencies]
 embed-manifest.workspace = true
+# The recorder's own table reader, compiled into the build for the Media Foundation libraries to delay-load; all three
+# are already in the workspace.
+toml.workspace = true
+serde.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
@@ -58,3 +66,7 @@ toml.workspace = true
 keepass = { workspace = true, features = ["save_kdbx4"] }
 # The scripted server the fetch tests download from; no shipped build turns `fake` on.
 kx-platform-net = { path = "../../crates/kx-platform-net", features = ["fake"] }
+# The scripted studio the record tests film with; no shipped build turns `fake` on.
+kx-platform-record = { path = "../../crates/kx-platform-record", features = ["fake"] }
+# The encode tests' picture noise, one copy beside the live measurement's.
+kx-test-support = { path = "../../crates/kx-test-support" }
