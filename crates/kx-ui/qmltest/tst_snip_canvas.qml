@@ -7,6 +7,7 @@ import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
+import "pointer.js" as Pointer
 import "snipkit.js" as Kit
 import "fixtures/snip.js" as Snip
 import "../../kx-theme/fixtures/look-native-light.js" as N
@@ -30,11 +31,13 @@ Item {
             failOnWarning(/./);
         }
         // Snip's windows over a stand-in showing view `name` (or that view itself) in language `tag`, once the editor
-        // shows, drawn and still, so a click lands where its pop-in ends.
+        // shows, drawn and still, so a click lands where its pop-in ends. The real pointer passes through the editor
+        // from before it shows, so only the test's own moves reach the canvas.
         function make(name, tag) {
             const snip = createTemporaryObject(snipC, root);
             const win = createTemporaryObject(winC, root);
             const app = createTemporaryObject(appC, root, { snip: snip, lk: N.lk, res: Kit.resOf(N.lk, tag || "en"), win: win });
+            Pointer.through([app.editor.editor]);
             snip.page = typeof name === "string" ? Kit.view(name) : name;
             const ed = app.editor;
             tryVerify(() => ed.ready, 2000, "the editor shows, drawn and still");

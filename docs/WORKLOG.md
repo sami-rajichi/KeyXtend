@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries: [P8 to P10](worklog/p8-p10.md), [P4 to P7](worklog/p4-p7.md) and [P0 to P3](worklog/p0-p3.md).
 
+## 2026-11-28 10:46 — P12: Snip's canvas tests ignore the real pointer
+With the worker starting, PR #28's Windows job reached the Qt Quick tests for the first time, and three canvas and Crop tests failed. The runner's real pointer rested over the editor, so the canvas took a hover before the tests' own moves. Their editor window now lets the real pointer pass through from before it shows (`pointer.js`, as 30 other test files do); the product is unchanged.
+
 ## 2026-11-27 23:45 — P12: CI's worker starts again, and the late-loaded DLLs are undone
 PR #28's Windows job failed because the speech engine's build script copies its DLLs beside each program, and the CI cache drops those copies but keeps the script's fingerprint, so it never ran again and the worker could not start. A step after the cache now removes that fingerprint, so the script copies them again in about 15 seconds. The earlier guess, loading two more Windows DLLs late (ADR-0063), did not help and is undone before it reached `main`.
 
